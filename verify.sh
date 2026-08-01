@@ -79,7 +79,27 @@ announce "Compile — warnings are errors"
 
 # ---------------------------------------------------------------------------
 announce "Unit tests (excluding the Property tag and modules/it)"
-"$MILL" "${UNIT_MODULES[@]}" --exclude-tags=Property || fail "unit tests"
+# Mill needs `+` between targets. Writing them space-separated instead makes
+# Mill read the later ones as test-NAME FILTERS for the first module, so every
+# suite reports "1 ignored, 0 total" and the run still exits 0. That is a
+# false-green gate, so the separator is load-bearing and the assertion below
+# exists to make sure a future edit cannot reintroduce it.
+test_targets=()
+for target in "${UNIT_MODULES[@]}"; do
+  [[ ${#test_targets[@]} -eq 0 ]] || test_targets+=("+")
+  test_targets+=("$target")
+done
+
+test_log=$(mktemp)
+trap 'rm -f "$test_log"' EXIT
+"$MILL" "${test_targets[@]}" --exclude-tags=Property 2>&1 | tee "$test_log" || fail "unit tests"
+
+executed=$(grep -oE 'finished: [0-9]+ failed, [0-9]+ ignored, [0-9]+ total' "$test_log" |
+  awk '{ sum += $6 } END { print sum + 0 }')
+if [[ "$executed" -lt 100 ]]; then
+  fail "only $executed tests executed — the suite is not actually running"
+fi
+echo "  $executed tests executed"
 
 # ---------------------------------------------------------------------------
 announce "Architecture boundary check"
