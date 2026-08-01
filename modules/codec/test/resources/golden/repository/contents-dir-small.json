@@ -1,0 +1,46 @@
+[
+    {
+        "name": ".forgejo",
+        "path": ".forgejo",
+        "sha": "99c5da8e4c82a1febe3b2f64def3609f4f7a740d",
+        "last_commit_sha": "7d55578694c587995e8ac43b7e7e236ecda4e00a",
+        "last_commit_when": "2024-11-13T22:20:42Z",
+        "type": "dir",
+        "size": 0,
+        "encoding": null,
+        "content": null,
+        "target": null,
+        "url": "https://codeberg.org/api/v1/repos/Codeberg/Community/contents/.forgejo?ref=main",
+        "html_url": "https://codeberg.org/Codeberg/Community/src/branch/main/.forgejo",
+        "git_url": "https://codeberg.org/api/v1/repos/Codeberg/Community/git/blobs/99c5da8e4c82a1febe3b2f64def3609f4f7a740d",
+        "download_url": null,
+        "submodule_git_url": null,
+        "_links": {
+            "self": "https://codeberg.org/api/v1/repos/Codeberg/Community/contents/.forgejo?ref=main",
+            "git": "https://codeberg.org/api/v1/repos/Codeberg/Community/git/blobs/99c5da8e4c82a1febe3b2f64def3609f4f7a740d",
+            "html": "https://codeberg.org/Codeberg/Community/src/branch/main/.forgejo"
+        }
+    },
+    {
+        "name": "README.md",
+        "path": "README.md",
+        "sha": "08ec82aed143bc7f33e9ef617abf211b4ace6174",
+        "last_commit_sha": "02e6c23da912ab955085b80f68dfaf21b52b7ea1",
+        "last_commit_when": "2021-08-03T14:05:10+02:00",
+        "type": "file",
+        "size": 520,
+        "encoding": null,
+        "content": null,
+        "target": null,
+        "url": "https://codeberg.org/api/v1/repos/Codeberg/Community/contents/README.md?ref=main",
+        "html_url": "https://codeberg.org/Codeberg/Community/src/branch/main/README.md",
+        "git_url": "https://codeberg.org/api/v1/repos/Codeberg/Community/git/blobs/08ec82aed143bc7f33e9ef617abf211b4ace6174",
+        "download_url": "https://codeberg.org/Codeberg/Community/raw/branch/main/README.md",
+        "submodule_git_url": null,
+        "_links": {
+            "self": "https://codeberg.org/api/v1/repos/Codeberg/Community/contents/README.md?ref=main",
+            "git": "https://codeberg.org/api/v1/repos/Codeberg/Community/git/blobs/08ec82aed143bc7f33e9ef617abf211b4ace6174",
+            "html": "https://codeberg.org/Codeberg/Community/src/branch/main/README.md"
+        }
+    }
+]

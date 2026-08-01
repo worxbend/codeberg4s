@@ -1,0 +1,29 @@
+[
+    {
+        "id": 223765,
+        "name": "User research - Accessibility",
+        "exclusive": false,
+        "is_archived": false,
+        "color": "fbca04",
+        "description": "Requires input about accessibility features, likely involves user testing.",
+        "url": "https://codeberg.org/api/v1/orgs/forgejo/labels/223765"
+    },
+    {
+        "id": 440466,
+        "name": "User research - Blocked",
+        "exclusive": false,
+        "is_archived": false,
+        "color": "e11d21",
+        "description": "Do not pick as-is! We are happy if you can help, but please coordinate with ongoing redesign in this area.",
+        "url": "https://codeberg.org/api/v1/orgs/forgejo/labels/440466"
+    },
+    {
+        "id": 440496,
+        "name": "User research - Community",
+        "exclusive": false,
+        "is_archived": false,
+        "color": "fbca04",
+        "description": "Community features, such as discovering other people's work or otherwise feeling welcome on a Forgejo instance.",
+        "url": "https://codeberg.org/api/v1/orgs/forgejo/labels/440496"
+    }
+]

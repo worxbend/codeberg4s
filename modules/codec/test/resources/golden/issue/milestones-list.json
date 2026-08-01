@@ -1,0 +1,38 @@
+[
+    {
+        "id": 3109,
+        "title": "Forgejo v1.18.0-0",
+        "description": "Release of Forgejo v1.18.0-0 stable, identical to Gitea v1.18.0 but with our own branding and the promise to be 100% community-controlled Free Software.",
+        "state": "closed",
+        "open_issues": 0,
+        "closed_issues": 15,
+        "created_at": "2022-12-17T08:45:02+01:00",
+        "updated_at": "2025-03-28T12:50:13+01:00",
+        "closed_at": "2023-01-08T01:08:47+01:00",
+        "due_on": "2022-12-07T00:59:59+01:00"
+    },
+    {
+        "id": 2794,
+        "title": "Launch",
+        "description": "Public launch of the Forgejo project as soft fork identical to Gitea but with the additional promise it will be 100% Free Software forever.",
+        "state": "closed",
+        "open_issues": 0,
+        "closed_issues": 9,
+        "created_at": "2022-11-08T12:49:53+01:00",
+        "updated_at": "2022-12-17T08:39:31+01:00",
+        "closed_at": "2022-12-17T08:38:19+01:00",
+        "due_on": "2022-12-16T00:59:59+01:00"
+    },
+    {
+        "id": 3915,
+        "title": "Forgejo v1.19.3-0",
+        "description": "",
+        "state": "closed",
+        "open_issues": 0,
+        "closed_issues": 5,
+        "created_at": "2023-04-28T23:08:16+02:00",
+        "updated_at": "2025-09-29T18:07:15+02:00",
+        "closed_at": "2023-07-01T21:56:09+02:00",
+        "due_on": "2023-01-01T23:59:59+01:00"
+    }
+]

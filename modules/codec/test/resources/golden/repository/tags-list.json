@@ -1,0 +1,50 @@
+[
+    {
+        "name": "v15.0.6",
+        "message": "[v15.0/forgejo] fix: disable hooks during diff patch (#13705)\n\nThanks to NightRang3r for the discovery: https://github.com/go-gitea/gitea/security/advisories/GHSA-rcr6-4jqh-j84m\n\nReviewed-on: https://codeberg.org/forgejo/forgejo/pulls/13705\nReviewed-by: Mathieu Fenniak <mfenniak@noreply.codeberg.org>",
+        "id": "5f7e2e5c003c066a865ea483e42809fa87d85eae",
+        "commit": {
+            "url": "https://codeberg.org/api/v1/repos/forgejo/forgejo/git/commits/5f7e2e5c003c066a865ea483e42809fa87d85eae",
+            "sha": "5f7e2e5c003c066a865ea483e42809fa87d85eae",
+            "created": "2026-07-30T21:14:15+02:00"
+        },
+        "zipball_url": "https://codeberg.org/forgejo/forgejo/archive/v15.0.6.zip",
+        "tarball_url": "https://codeberg.org/forgejo/forgejo/archive/v15.0.6.tar.gz",
+        "archive_download_count": {
+            "zip": 1,
+            "tar_gz": 16
+        }
+    },
+    {
+        "name": "v16.0.2",
+        "message": "[v16.0/forgejo] 2026-07-30 security patches (#13682)\n\n**fix: prevent arbitrary file reads from org-mode rendering**:  When rendering org-mode content, the rendering library has a default configuration that permits inclusion of files from the server host, and Forgejo did not modify this configuration.  As a result, files from the server host could be read through Forgejo.  The rendering library is now being configured to block all filesystem access.\n\n**fix: prevent stored XSS in Actions pre-execution warnings and errors**: When Forgejo detects a condition in Forgejo Actions which will either prevent a workflow from running successfully, or, indicates a condition that the workflow author should be warned about, Forgejo contains error and warning conditions that will be displayed in the UI.  These messages may include unsanitized user content which can be exploited as a stored cross-site scripting vulnerability (XSS).  All content being inserted into these messages is now sanitized.  This patch addresses the stored XSS vulnerability even with existing stored content.\n\nCo-authored-by: Gusted <postmaster@gusted.xyz>\nReviewed-on: https://codeberg.org/forgejo/forgejo/pulls/13682\nReviewed-by: Gusted <gusted@noreply.codeberg.org>",
+        "id": "d7471ea487788c5d6f711a61436a45bf47601948",
+        "commit": {
+            "url": "https://codeberg.org/api/v1/repos/forgejo/forgejo/git/commits/d7471ea487788c5d6f711a61436a45bf47601948",
+            "sha": "d7471ea487788c5d6f711a61436a45bf47601948",
+            "created": "2026-07-30T07:27:30+02:00"
+        },
+        "zipball_url": "https://codeberg.org/forgejo/forgejo/archive/v16.0.2.zip",
+        "tarball_url": "https://codeberg.org/forgejo/forgejo/archive/v16.0.2.tar.gz",
+        "archive_download_count": {
+            "zip": 5,
+            "tar_gz": 119
+        }
+    },
+    {
+        "name": "v16.0.1",
+        "message": "[v16.0/forgejo] fix: Initialize oauth2 only if enabled (#13483) (#13540)\n\nFixes #13478\n\nReviewed-on: https://codeberg.org/forgejo/forgejo/pulls/13483\nReviewed-by: Andreas Ahlenstorf <aahlenst@noreply.codeberg.org>\nReviewed-by: Gusted <gusted@noreply.codeberg.org>\n(cherry picked from commit f538db4755477e28500520f1842ddf6e4bf2f3ed)\n\nCo-authored-by: Nils Goroll <nils.goroll@uplex.de>\nReviewed-on: https://codeberg.org/forgejo/forgejo/pulls/13540\nReviewed-by: Mathieu Fenniak <mfenniak@noreply.codeberg.org>\nReviewed-by: Gusted <gusted@noreply.codeberg.org>",
+        "id": "b3d7e4ac3cbccc220703097a51fa4c16bf302579",
+        "commit": {
+            "url": "https://codeberg.org/api/v1/repos/forgejo/forgejo/git/commits/b3d7e4ac3cbccc220703097a51fa4c16bf302579",
+            "sha": "b3d7e4ac3cbccc220703097a51fa4c16bf302579",
+            "created": "2026-07-20T18:00:33+02:00"
+        },
+        "zipball_url": "https://codeberg.org/forgejo/forgejo/archive/v16.0.1.zip",
+        "tarball_url": "https://codeberg.org/forgejo/forgejo/archive/v16.0.1.tar.gz",
+        "archive_download_count": {
+            "zip": 108,
+            "tar_gz": 285
+        }
+    }
+]

@@ -1,0 +1,25 @@
+{
+    "sha": "7d55578694c587995e8ac43b7e7e236ecda4e00a",
+    "url": "https://codeberg.org/api/v1/repos/Codeberg/Community/git/trees/7d55578694c587995e8ac43b7e7e236ecda4e00a",
+    "tree": [
+        {
+            "path": ".forgejo",
+            "mode": "040000",
+            "type": "tree",
+            "size": 0,
+            "sha": "99c5da8e4c82a1febe3b2f64def3609f4f7a740d",
+            "url": "https://codeberg.org/api/v1/repos/Codeberg/Community/git/trees/99c5da8e4c82a1febe3b2f64def3609f4f7a740d"
+        },
+        {
+            "path": "README.md",
+            "mode": "100644",
+            "type": "blob",
+            "size": 520,
+            "sha": "08ec82aed143bc7f33e9ef617abf211b4ace6174",
+            "url": "https://codeberg.org/api/v1/repos/Codeberg/Community/git/blobs/08ec82aed143bc7f33e9ef617abf211b4ace6174"
+        }
+    ],
+    "truncated": false,
+    "page": 1,
+    "total_count": 2
+}

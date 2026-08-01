@@ -1,0 +1,12 @@
+[
+    {
+        "filename": "modules/git/hook_generate.go",
+        "status": "changed",
+        "additions": 17,
+        "deletions": 17,
+        "changes": 34,
+        "html_url": "https://codeberg.org/forgejo/forgejo/src/commit/48079baa8d387f3ab770cc144c367409ddc2a879/modules/git/hook_generate.go",
+        "contents_url": "https://codeberg.org/api/v1/repos/forgejo/forgejo/contents/modules/git/hook_generate.go?ref=48079baa8d387f3ab770cc144c367409ddc2a879",
+        "raw_url": "https://codeberg.org/forgejo/forgejo/raw/commit/48079baa8d387f3ab770cc144c367409ddc2a879/modules/git/hook_generate.go"
+    }
+]

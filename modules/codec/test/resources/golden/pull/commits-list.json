@@ -1,0 +1,104 @@
+[
+    {
+        "url": "https://codeberg.org/api/v1/repos/forgejo/forgejo/git/commits/48079baa8d387f3ab770cc144c367409ddc2a879",
+        "sha": "48079baa8d387f3ab770cc144c367409ddc2a879",
+        "created": "2026-08-01T16:10:47Z",
+        "html_url": "https://codeberg.org/forgejo/forgejo/commit/48079baa8d387f3ab770cc144c367409ddc2a879",
+        "commit": {
+            "url": "https://codeberg.org/api/v1/repos/forgejo/forgejo/git/commits/48079baa8d387f3ab770cc144c367409ddc2a879",
+            "author": {
+                "name": "erik",
+                "email": "erik_se@posteo.de",
+                "date": "2026-08-01T18:09:56+02:00"
+            },
+            "committer": {
+                "name": "forgejo-backport-action",
+                "email": "forgejo-backport-action@noreply.codeberg.org",
+                "date": "2026-08-01T16:10:47Z"
+            },
+            "message": "fix: bad quoting in hook scripts allow word splitting, leading to hook script errors (#13679)\n\nFixes #13662\n\nReviewed-on: https://codeberg.org/forgejo/forgejo/pulls/13679\nReviewed-by: Mathieu Fenniak <mfenniak@noreply.codeberg.org>\n(cherry picked from commit fb91f8712c316aea35705fb929bc08f2ba1aed68)\n",
+            "tree": {
+                "url": "https://codeberg.org/api/v1/repos/forgejo/forgejo/git/trees/48079baa8d387f3ab770cc144c367409ddc2a879",
+                "sha": "48079baa8d387f3ab770cc144c367409ddc2a879",
+                "created": "2026-08-01T16:10:47Z"
+            },
+            "verification": {
+                "verified": false,
+                "reason": "gpg.error.not_signed_commit",
+                "signature": "",
+                "signer": null,
+                "payload": ""
+            }
+        },
+        "author": {
+            "id": 91002,
+            "login": "patdyn",
+            "login_name": "",
+            "source_id": 0,
+            "full_name": "",
+            "email": "patdyn@noreply.codeberg.org",
+            "avatar_url": "https://codeberg.org/avatars/d562b7736cb9ea2dee358a1e51a2ea58c65863318d725b777247bbd546a386d0",
+            "html_url": "https://codeberg.org/patdyn",
+            "language": "",
+            "is_admin": false,
+            "last_login": "0001-01-01T00:00:00Z",
+            "created": "2023-04-06T13:04:56+02:00",
+            "restricted": false,
+            "active": false,
+            "prohibit_login": false,
+            "location": "",
+            "pronouns": "",
+            "website": "",
+            "description": "",
+            "visibility": "public",
+            "followers_count": 0,
+            "following_count": 0,
+            "starred_repos_count": 0,
+            "username": "patdyn"
+        },
+        "committer": {
+            "id": 165271,
+            "login": "forgejo-backport-action",
+            "login_name": "",
+            "source_id": 0,
+            "full_name": "",
+            "email": "forgejo-backport-action@noreply.codeberg.org",
+            "avatar_url": "https://codeberg.org/avatars/e81deed440bbd430374b346c305a3d791ccc11dcfb89269840bbdcaa13887e88",
+            "html_url": "https://codeberg.org/forgejo-backport-action",
+            "language": "",
+            "is_admin": false,
+            "last_login": "0001-01-01T00:00:00Z",
+            "created": "2024-03-23T11:08:38+01:00",
+            "restricted": false,
+            "active": false,
+            "prohibit_login": false,
+            "location": "",
+            "pronouns": "",
+            "website": "",
+            "description": "",
+            "visibility": "public",
+            "followers_count": 1,
+            "following_count": 0,
+            "starred_repos_count": 0,
+            "username": "forgejo-backport-action"
+        },
+        "parents": [
+            {
+                "url": "https://codeberg.org/api/v1/repos/forgejo/forgejo/git/commits/84a25f76cdce0a06caa28055e3c4702de8f31a81",
+                "sha": "84a25f76cdce0a06caa28055e3c4702de8f31a81",
+                "created": "0001-01-01T00:00:00Z"
+            }
+        ],
+        "files": [
+            {
+                "filename": "modules/git/hook_generate.go",
+                "status": "modified"
+            }
+        ],
+        "stats": {
+            "total": 34,
+            "additions": 17,
+            "deletions": 17
+        }
+    }
+]

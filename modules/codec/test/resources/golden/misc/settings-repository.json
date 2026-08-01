@@ -1,0 +1,9 @@
+{
+    "mirrors_disabled": false,
+    "http_git_disabled": false,
+    "migrations_disabled": false,
+    "stars_disabled": false,
+    "forks_disabled": false,
+    "time_tracking_disabled": false,
+    "lfs_disabled": false
+}

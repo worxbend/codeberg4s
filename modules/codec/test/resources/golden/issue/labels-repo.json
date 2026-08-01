@@ -1,0 +1,47 @@
+[
+    {
+        "id": 171368,
+        "name": "accessibility",
+        "exclusive": false,
+        "is_archived": false,
+        "color": "eb6420",
+        "description": "Reduces accessibility and is thus a \"bug\" for certain user groups on Codeberg.",
+        "url": "https://codeberg.org/api/v1/repos/Codeberg/Community/labels/171368"
+    },
+    {
+        "id": 102,
+        "name": "bug",
+        "exclusive": false,
+        "is_archived": false,
+        "color": "ee0701",
+        "description": "Something is not working the way it should. Does not concern outages.",
+        "url": "https://codeberg.org/api/v1/repos/Codeberg/Community/labels/102"
+    },
+    {
+        "id": 171388,
+        "name": "bug/infrastructure",
+        "exclusive": true,
+        "is_archived": false,
+        "color": "e11d21",
+        "description": "Errors evidently caused by infrastructure malfunctions or outages",
+        "url": "https://codeberg.org/api/v1/repos/Codeberg/Community/labels/171388"
+    },
+    {
+        "id": 18282,
+        "name": "Codeberg",
+        "exclusive": false,
+        "is_archived": false,
+        "color": "2185d0",
+        "description": "This issue involves Codeberg's downstream modifications and settings and/or Codeberg's structures.",
+        "url": "https://codeberg.org/api/v1/repos/Codeberg/Community/labels/18282"
+    },
+    {
+        "id": 105,
+        "name": "contributions welcome",
+        "exclusive": false,
+        "is_archived": false,
+        "color": "128a0c",
+        "description": "Please join the discussion and consider contributing a PR!",
+        "url": "https://codeberg.org/api/v1/repos/Codeberg/Community/labels/105"
+    }
+]

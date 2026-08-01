@@ -1,0 +1,6 @@
+{
+    "enabled": true,
+    "allowed_types": "*/*",
+    "max_size": 100,
+    "max_files": 20
+}
