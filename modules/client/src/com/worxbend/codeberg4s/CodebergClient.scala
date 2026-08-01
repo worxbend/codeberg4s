@@ -6,9 +6,12 @@ import com.worxbend.codeberg4s.codec.ApiErrorBodyCodec
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.Telemetry
+import com.worxbend.codeberg4s.issues.IssueApi
+import com.worxbend.codeberg4s.miscellaneous.MiscellaneousApi
 import com.worxbend.codeberg4s.repositories.RepositoryApi
 import com.worxbend.codeberg4s.syntax.discard
 import com.worxbend.codeberg4s.transport.SttpHttpPort
+import com.worxbend.codeberg4s.users.UserApi
 
 import sttp.client4.Backend
 
@@ -57,6 +60,15 @@ final class CodebergClient private (
   /** Repository endpoints, such as `GET /repos/{owner}/{repo}`. */
   val repos: RepositoryApi = RepositoryApi(pipeline)
 
+  /** User endpoints, such as `GET /user` and `GET /users/{username}`. */
+  val users: UserApi = UserApi(pipeline)
+
+  /** Issue endpoints, including comments, labels and milestones. */
+  val issues: IssueApi = IssueApi(pipeline)
+
+  /** Instance-level endpoints: server settings, the signing key and markdown rendering. */
+  val misc: MiscellaneousApi = MiscellaneousApi(pipeline)
+
   private val closed: AtomicBoolean = AtomicBoolean(false)
 
   /** Releases the resources this client owns.
@@ -93,6 +105,25 @@ object CodebergClient:
   def apply(config: CodebergConfig)(using executionContext: ExecutionContext): CodebergClient =
     owning(config, SttpHttpPort.defaultBackend(config.connectTimeout, executionContext))
 
+  /** Builds a client that reports what it does to `telemetry`.
+    *
+    * This library has no logging dependency and writes nothing anywhere, so this is the only way to see requests. A
+    * [[com.worxbend.codeberg4s.core.Telemetry]] failure never fails the call it was observing — instrumentation that
+    * breaks must not break the application it instruments.
+    *
+    * The callbacks receive a [[CallContext]] whose URI is already redacted, so an implementation cannot leak a token by
+    * logging what it is handed.
+    *
+    * @param config
+    *   the instance to talk to, the credentials, the retry policy and the timeouts
+    * @param telemetry
+    *   the observer; use [[com.worxbend.codeberg4s.core.Telemetry.noOp]] to disable
+    */
+  def apply(config: CodebergConfig, telemetry: Telemetry[Future])(using
+      executionContext: ExecutionContext): CodebergClient =
+    val backend = SttpHttpPort.defaultBackend(config.connectTimeout, executionContext)
+    build(config, backend, Some(backend), Some(telemetry))
+
   /** Builds a client on a backend the caller owns.
     *
     * [[CodebergClient.close]] will '''not''' close `backend`; the caller closes it, after closing every client built on
@@ -109,7 +140,12 @@ object CodebergClient:
     *   the sttp backend to send on, owned and closed by the caller
     */
   def usingBackend(config: CodebergConfig, backend: Backend[Future])(using ExecutionContext): CodebergClient =
-    build(config, backend, None)
+    build(config, backend, None, None)
+
+  /** [[usingBackend]] with an observer. Ownership is unchanged: the caller closes `backend`. */
+  def usingBackend(config: CodebergConfig, backend: Backend[Future], telemetry: Telemetry[Future])(using
+      ExecutionContext): CodebergClient =
+    build(config, backend, None, Some(telemetry))
 
   /** Builds a client that takes ownership of `backend` and closes it in [[CodebergClient.close]].
     *
@@ -119,22 +155,27 @@ object CodebergClient:
     */
   private[codeberg4s] def owning(config: CodebergConfig, backend: Backend[Future])(using
       ExecutionContext): CodebergClient =
-    build(config, backend, Some(backend))
+    build(config, backend, Some(backend), None)
 
   private def build(
       config: CodebergConfig,
       backend: Backend[Future],
       owned: Option[Backend[Future]],
+      telemetry: Option[Telemetry[Future]],
   )(using ExecutionContext): CodebergClient =
     given Exec[Future] = FutureExec()
 
     val timer = FutureTimer()
 
+    // Resolved here rather than at the call site because Telemetry.noOp needs
+    // the Exec[Future] that only exists once this method has built it.
+    val observer = telemetry.getOrElse(Telemetry.noOp[Future])
+
     val pipeline = ApiPipeline[Future](
       SttpHttpPort(backend, config),
       config,
       timer,
-      Telemetry.noOp[Future],
+      observer,
       ApiErrorBodyCodec.parse,
     )
 

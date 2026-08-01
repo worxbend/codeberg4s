@@ -4,10 +4,10 @@ import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.DecodeFailure
 
+import upickle.core.TraceVisitor
+
 import scala.util.Try
 import scala.util.matching.Regex
-
-import upickle.core.TraceVisitor
 
 /** The single door between a response body and a wire DTO.
   *
