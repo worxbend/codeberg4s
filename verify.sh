@@ -94,13 +94,18 @@ boundary_violation() {
   return 0
 }
 
+# scala.concurrent.duration is fine everywhere — FiniteDuration is how timeouts
+# and backoff are typed. It is Future and ExecutionContext that must not appear
+# below the client module.
+readonly FORBIDDEN_BELOW_CLIENT='^import (sttp|upickle|ujson|scala\.concurrent\.(Future|ExecutionContext|Await|Promise|blocking))'
+
 boundaries_ok=true
-boundary_violation modules/domain/src '^import (sttp|upickle|ujson|scala\.concurrent)' \
+boundary_violation modules/domain/src "$FORBIDDEN_BELOW_CLIENT" \
   'domain must depend on nothing but the standard library' || boundaries_ok=false
-boundary_violation modules/core/src '^import (sttp|upickle|ujson|scala\.concurrent)' \
+boundary_violation modules/core/src "$FORBIDDEN_BELOW_CLIENT" \
   'core must not know about sttp, upickle or Future' || boundaries_ok=false
-boundary_violation modules/domain/src '^import sttp' \
-  'domain must not import sttp' || boundaries_ok=false
+boundary_violation modules/codec/src '^import sttp' \
+  'codec must not know about the transport' || boundaries_ok=false
 boundary_violation 'modules/domain/src modules/core/src modules/codec/src modules/transport/src modules/client/src' \
   'Await\.(result|ready)' 'Await is banned in production code' || boundaries_ok=false
 boundary_violation 'modules/domain/src modules/core/src modules/codec/src modules/transport/src modules/client/src' \
