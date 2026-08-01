@@ -61,9 +61,14 @@ object modules extends Module:
     def moduleDeps = Seq(domain)
     object test extends Codeberg4sTests
 
-  /** Wire DTOs and upickle codecs. The only module that knows the JSON shape. */
+  /** Wire DTOs and upickle codecs. The only module that knows the JSON shape.
+    *
+    * Depends on `core` because it is the adapter that implements core's
+    * `Decode` port — an adapter depending on the port it satisfies is the
+    * expected direction. It still must not import sttp.
+    */
   object codec extends Codeberg4sModule:
-    def moduleDeps = Seq(domain)
+    def moduleDeps = Seq(domain, core)
     def mvnDeps    = Seq(mvn"com.lihaoyi::upickle:${Versions.upickle}")
     object test extends Codeberg4sTests
 
