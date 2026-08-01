@@ -113,7 +113,9 @@ object LinkHeader:
 
   private def relsOf(element: String): Option[List[String]] =
     parametersOf(element)
-      .collectFirst { case (name, value) if name == RelParameter => unquote(value) }
+      // equalsIgnoreCase rather than ==, because RFC 5988 parameter names are
+      // case-insensitive and .scalafix.conf bans universal equality.
+      .collectFirst { case (name, value) if name.equalsIgnoreCase(RelParameter) => unquote(value) }
       .map(_.split(Whitespace).toList.map(_.toLowerCase(Locale.ROOT)).filter(_.nonEmpty))
       .filter(_.nonEmpty)
 
