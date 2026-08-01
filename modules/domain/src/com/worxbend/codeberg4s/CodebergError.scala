@@ -1,0 +1,74 @@
+package com.worxbend.codeberg4s
+
+/** Every failure this library reports, as one closed family.
+  *
+  * Recoverable failures are values: no operation throws for a `404`, a timeout, or a malformed payload. Each remote
+  * case carries a [[CallContext]] so a caller can tell *which* call failed without correlating logs.
+  *
+  * Choosing a reaction:
+  *   - [[CodebergError.Transport]] — nothing reached the server; safe to retry a safe method.
+  *   - [[CodebergError.Api]] — the server answered; branch on `status`.
+  *   - [[CodebergError.DecodingFailed]] — the server answered successfully but the payload did not match the model;
+  *     retrying will not help, and `path` plus `snippet` is what a bug report needs.
+  *   - [[CodebergError.Validation]] — the request was rejected before it was built; fix the argument.
+  *   - [[CodebergError.RetriesExhausted]] — the retry engine gave up; `last` is the failure that ended it, never
+  *     discarded.
+  */
+enum CodebergError:
+
+  /** The request never produced a response. */
+  case Transport(ctx: CallContext, cause: TransportCause)
+
+  /** The server answered with a non-2xx status. `body` is the parsed Forgejo payload, or [[ApiErrorBody.Empty]]. */
+  case Api(ctx: CallContext, status: Int, body: ApiErrorBody)
+
+  /** A 2xx payload could not be decoded. `snippet` is a bounded excerpt of the body, `path` says where it broke. */
+  case DecodingFailed(ctx: CallContext, snippet: String, path: JsonPath, cause: String)
+
+  /** A smart constructor rejected an argument before any request was built. */
+  case Validation(error: ValidationError)
+
+  /** The retry engine ran out of attempts. `last` preserves the failure of the final attempt. */
+  case RetriesExhausted(ctx: CallContext, attempts: Int, last: CodebergError)
+
+object CodebergError:
+
+  /** Upper bound, in characters, on any single free-form fragment [[describe]] embeds — body snippets, server messages
+    * and decoder messages. Fragments longer than this are truncated and marked with an ellipsis.
+    */
+  val MaxSnippetLength: Int = 512
+
+  private val Ellipsis: String = "..."
+
+  extension (error: CodebergError)
+
+    /** A bounded, secret-free, human-readable rendering.
+      *
+      * Safe to log and to put in an exception message: it is built only from the redacted [[CallContext]] and from
+      * server-supplied text, and never from [[CodebergConfig]], so no token or password can reach it. Every free-form
+      * fragment is truncated at [[MaxSnippetLength]], which bounds the output of a single level; nested
+      * [[CodebergError.RetriesExhausted]] adds one bounded level per nesting step.
+      */
+    def describe: String =
+      error match
+        case Transport(ctx, cause)                     =>
+          s"${renderContext(ctx)} transport failure: ${cause.describe}"
+        case Api(ctx, status, body)                    =>
+          val message = body.message.fold("no message from the server")(bound)
+          s"${renderContext(ctx)} responded $status: $message${renderDetails(body.errors)}"
+        case DecodingFailed(ctx, snippet, path, cause) =>
+          s"${renderContext(ctx)} could not decode ${path.render}: ${bound(cause)}; body was ${bound(snippet)}"
+        case Validation(problem)                       =>
+          s"invalid ${problem.field}: ${bound(problem.message)}"
+        case RetriesExhausted(ctx, attempts, last)     =>
+          s"${renderContext(ctx)} gave up after $attempts attempts; last failure: ${bound(last.describe)}"
+
+  private def renderContext(ctx: CallContext): String =
+    val requestId = ctx.requestId.fold("")(id => s" [request-id $id]")
+    s"${ctx.operation} ${ctx.method.wireName} ${ctx.uri}$requestId after ${ctx.durationMs}ms"
+
+  private def renderDetails(errors: List[String]): String =
+    if errors.isEmpty then "" else errors.map(bound).mkString(" (", "; ", ")")
+
+  private def bound(value: String): String =
+    if value.length <= MaxSnippetLength then value else s"${value.take(MaxSnippetLength)}$Ellipsis"
