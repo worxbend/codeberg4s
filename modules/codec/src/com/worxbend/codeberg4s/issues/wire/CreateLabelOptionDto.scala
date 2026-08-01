@@ -1,0 +1,30 @@
+package com.worxbend.codeberg4s.issues.wire
+
+import com.worxbend.codeberg4s.issues.CreateLabel
+
+/** Forgejo's `CreateLabelOption` request model — the body of `POST /repos/{owner}/{repo}/labels`.
+  *
+  * An object rather than a case class, for the reason [[CreateIssueOptionDto]] gives.
+  *
+  * `name` and `color` are the model's two required properties and are always emitted. `color` is sent in the `#rrggbb`
+  * form Forgejo documents for input, via [[com.worxbend.codeberg4s.issues.LabelColor.hashed]], even though the same
+  * field comes '''back''' without the `#` on every label in the golden fixtures. Normalising in both directions is what
+  * keeps that asymmetry out of the domain.
+  *
+  * `exclusive` and `is_archived` are emitted only when the caller turned them on, so a plain
+  * [[com.worxbend.codeberg4s.issues.CreateLabel.of]] leaves the instance's defaults alone.
+  */
+private[codeberg4s] object CreateLabelOptionDto:
+
+  /** Renders `command` as the JSON body to `POST`. */
+  def render(command: CreateLabel): String =
+    ujson.write(ujson.Obj.from(fields(command)))
+
+  private def fields(command: CreateLabel): List[(String, ujson.Value)] =
+    List(
+      Some("name"  -> ujson.Str(command.name.value)),
+      Some("color" -> ujson.Str(command.color.hashed)),
+      command.description.map(text => "description" -> ujson.Str(text)),
+      Option.when(command.isExclusive)("exclusive"  -> ujson.Bool(true)),
+      Option.when(command.isArchived)("is_archived" -> ujson.Bool(true)),
+    ).flatten
