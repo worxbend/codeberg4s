@@ -50,8 +50,44 @@ Where the API embeds a reduced form of a model — Forgejo sometimes returns a
 the observed shape in `docs/HAZARDS.md`, so the golden fixture that proves it
 stays discoverable.
 
+## Additions made during implementation
+
+Waves 1–3 and 7 introduced models the original table did not anticipate. They
+follow the same ownership rule.
+
+| Model                                                   | Package                                 | Owner   |
+| ------------------------------------------------------- | --------------------------------------- | ------- |
+| `Username`, `PublicKey`                                  | `…users`                                | wave 1  |
+| `Branch`, `Tag`, `Commit`, `CommitDetails`, `CommitSummary` | `…repositories`                      | wave 2  |
+| `Release`, `ReleaseAsset`, `RepositoryContent`, `ContentEntry` | `…repositories`                   | wave 2  |
+| `BranchName`, `TagName`, `CommitSha`, `ContentPath`, `ReleaseId` | `…repositories`                 | wave 2  |
+| `LifecycleState`, `IssueQuery`, `CreateIssue`, `EditIssue` | `…issues`                             | wave 3  |
+| `ServerApiSettings`, `MarkdownRenderRequest`, `SigningKey` | `…miscellaneous`                      | wave 7  |
+
+`Username` deliberately does **not** reuse `Owner`. The two overlap in practice
+but not in meaning: an `Owner` may be an organisation, a `Username` is always a
+person. Collapsing them would let an organisation name reach an endpoint that
+only accepts a user.
+
+`RepositoryMetaDto` (in `…issues.wire`) is **not** a reduced `Repository` and
+must not be decoded as one — Forgejo's `RepositoryMeta` carries `owner` as a
+bare login string rather than a `User` object, so `RepositoryDto` fails on it.
+Pull requests and notifications meet the same object; they reuse this DTO.
+
+## Helpers awaiting promotion
+
+Several lanes independently needed the same two helpers and, being unable to
+edit a package they did not own, wrote local copies. They are duplication in
+the sense CPD will flag, and they should be promoted and the copies deleted:
+
+| Helper                                | Currently                                        | Belongs in                       |
+| ------------------------------------- | ------------------------------------------------ | -------------------------------- |
+| element-wise `Vector[Dto]` conversion with per-index `JsonPath` | `repositories.wire.Elements`, `issues.wire.WireElements`, `UserApi.each` | `codec.Wire` or `client.WireDecode` |
+| the `page`/`limit` query pair          | duplicated in every `*Api` companion             | `paging.PageParams`              |
+| path-segment validation                | `repositories.PathSegment` is `private[repositories]`, so `Username.from` re-implements it | the domain module root |
+
 ## Pending claims
 
-None. A wave that discovers it needs a model an earlier wave should have owned
-adds the row here, implements it in the earlier wave's package, and notes the
-out-of-order ownership in the commit body.
+None outstanding. A wave that discovers it needs a model an earlier wave should
+have owned adds a row here, implements it in the earlier wave's package, and
+notes the out-of-order ownership in the commit body.

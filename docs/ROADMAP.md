@@ -14,25 +14,30 @@ Gate names match `PLAN.md` §7.
 - [x] Scalafmt + Scalafix configs, `mill modules.__.reformat` green
 - [x] scoverage wired via `mill-contrib-scoverage`
 - [x] ADRs 0001–0006, constitution mapping
-- [ ] `verify.sh` green on the skeleton
-- [ ] CI pipeline
+- [x] Scalafix wired via `mill-scalafix` (Mill 1.x has no built-in `fix`; ADR-0006)
+- [x] `verify.sh` with the ordered gate and an architecture-boundary check
+- [x] CI pipeline (`.forgejo/workflows/ci.yml`), including a spec-drift job
 
 ## Phase 1 — Recon and foundation · **Gate G-R**, **Gate G1**
 
-- [ ] Swagger spec vendored and checksummed (`spec/swagger.v1.json`, `docs/SPEC_PROVENANCE.md`)
-- [ ] `docs/API_INVENTORY.md` — every operation listed, in-scope marked
-- [ ] `docs/HAZARDS.md` — spec hazards verified against live probes
-- [ ] ≥ 30 golden fixtures captured (`modules/codec/test/resources/golden/`)
-- [ ] `domain`: error ADT, `CallContext`, opaque identifiers, `Auth`, config, paging value types
-- [ ] `core`: `Exec[F]`, ports, `RetryEngine`, `Pagination`, `StatusMapping`, `Redaction`
-- [ ] Vertical slice: `GET /version` and `GET /repos/{owner}/{repo}` through every layer, both rails
-- [ ] Full error paths on the slice: 404, decode failure, transport failure, retry-then-succeed
+- [x] Swagger spec vendored and checksummed (`spec/swagger.v1.json`, `docs/SPEC_PROVENANCE.md`)
+- [x] `docs/API_INVENTORY.md` — 506 operations listed, in-scope marked
+- [x] `docs/HAZARDS.md` — all six hazards verified against live probes; two of
+      PLAN.md's assumptions turned out to be wrong
+- [x] 54 golden fixtures captured (`modules/codec/test/resources/golden/`)
+- [x] `domain`: error ADT, `CallContext`, opaque identifiers, `Auth`, config, paging value types
+- [x] `core`: `Exec[F]`, ports, `RetryEngine`, `Pagination`, `LinkHeader`, `Pages`,
+      `ApiPipeline`, `StatusMapping`, `Redaction`
+- [x] Vertical slice: `GET /version` and `GET /repos/{owner}/{repo}` through every layer, both rails
+- [x] Full error paths on the slice: 404, decode failure, transport failure, retry-then-succeed
 
 ## Phase 2 — Cross-cutting hardening · **Gate G2**
 
-- [ ] Track A — retry engine, pagination driver, `Page` / `listAll` / `foldPages`, `Telemetry` port
-- [ ] Track B — error ADT completion, Forgejo error-body parsing against captured samples,
+- [x] Track A — retry engine, pagination driver, `Page` / `foldPages`, `Telemetry` port
+      wired through both `CodebergClient` factories
+- [x] Track B — error ADT, Forgejo error-body parsing against captured samples,
       redaction guarantees, `CodebergException` bridging
+- [ ] `listAll` convenience on the paged resource groups
 - [ ] Property suites (`*Props.scala`, `Property` tag) for codec laws, pagination invariants, retry bounds
 
 ## Phase 3 — Endpoint waves · **Gate G3** per wave
@@ -41,14 +46,18 @@ Priority order is value-weighted, per `PLAN.md` §7. Shared models are owned by
 the first wave that needs them; later waves consume rather than redefine
 (`docs/LEDGER.md`).
 
-- [ ] Wave 1 — **users**: current user, lookup by name, keys, followers
-- [ ] Wave 2 — **repos**: read, search, branches, tags, releases, topics, commits,
-      contents (the union response — see `docs/HAZARDS.md`)
-- [ ] Wave 3 — **issues**: list/read/create/edit, comments, labels, milestones
-- [ ] Wave 4 — **pulls**: list/read/create/edit, merge, reviews, files
+- [x] Wave 1 — **users** (8 operations): current user, lookup by name, search,
+      repositories, followers, following, keys
+- [x] Wave 2 — **repos** (10 operations): read, search, branches, tags, releases,
+      topics, commits, forks, contents (the union response — see `docs/HAZARDS.md`)
+- [x] Wave 3 — **issues** (10 operations): list/read/create/edit, comments, labels, milestones
+- [ ] Wave 4 — **pulls**: list/read/create/edit, merge, reviews, commits, files
 - [ ] Wave 5 — **orgs**: organisation, teams, membership
 - [ ] Wave 6 — **notifications**: list, mark read, per-thread
-- [ ] Wave 7 — **misc**: markdown render, server settings, search
+- [x] Wave 7 — **misc** (6 operations): markdown render, server settings, signing key
+- [ ] `GET /repos/issues/search` — deferred out of wave 7 because it needs wave 3's
+      `IssueDto`, which did not exist when that lane ran. Note it returns a bare
+      array, not the `{ok, data}` envelope the other search endpoints use.
 
 Per-wave definition of done: models from golden fixtures · codec round-trips ·
 both rails · Scaladoc stating the error contract · inventory checkbox flipped ·
