@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  # Keep every cache inside the workspace. The constitution requires that the
+  # build write nothing outside the project, and it also makes the cache key
+  # below actually cover what gets restored.
+  COURSIER_CACHE: ${{ github.workspace }}/.cache/coursier
+  MILL_JVM_OPTS: -Xmx3g
+
+jobs:
+  verify:
+    runs-on: docker
+    container:
+      image: docker.io/eclipse-temurin:21-jdk
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Coursier
+        uses: actions/cache@v4
+        with:
+          path: .cache/coursier
+          key: coursier-${{ hashFiles('build.mill', '.mill-version') }}
+          restore-keys: coursier-
+
+      - name: Verify
+        run: ./verify.sh
+
+  # Mutation testing and the duplication/CRAP analyses are slow enough that
+  # running them per push would make CI useless as a feedback loop. They run
+  # nightly instead, per PLAN.md section 6.6 step 7.
+  nightly:
+    if: github.event_name == 'schedule'
+    runs-on: docker
+    container:
+      image: docker.io/eclipse-temurin:21-jdk
+    steps:
+      - uses: actions/checkout@v4
+      - name: Full analysis
+        run: ./verify.sh --nightly
+
+  # The pinned spec is a snapshot of a moving target. This does not fail the
+  # build when Codeberg deploys a new Forgejo — it reports, so that a spec
+  # change is a decision someone makes rather than a surprise in a user's
+  # application. See docs/adr/0001-curated-models-over-codegen.md.
+  spec-drift:
+    if: github.event_name == 'schedule'
+    runs-on: docker
+    container:
+      image: docker.io/eclipse-temurin:21-jdk
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare the live spec against the pinned copy
+        run: |
+          curl -sL https://codeberg.org/swagger.v1.json -o /tmp/live.json
+          pinned=$(sha256sum spec/swagger.v1.json | cut -d' ' -f1)
+          live=$(sha256sum /tmp/live.json | cut -d' ' -f1)
+          if [ "$pinned" != "$live" ]; then
+            echo "::warning::the upstream spec has changed"
+            echo "pinned $pinned"
+            echo "live   $live"
+            diff <(python3 -m json.tool spec/swagger.v1.json) \
+                 <(python3 -m json.tool /tmp/live.json) | head -200 || true
+          else
+            echo "spec unchanged"
+          fi
