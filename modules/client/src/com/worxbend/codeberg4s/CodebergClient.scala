@@ -8,6 +8,9 @@ import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.Telemetry
 import com.worxbend.codeberg4s.issues.IssueApi
 import com.worxbend.codeberg4s.miscellaneous.MiscellaneousApi
+import com.worxbend.codeberg4s.notifications.NotificationApi
+import com.worxbend.codeberg4s.organizations.OrganizationApi
+import com.worxbend.codeberg4s.pulls.PullRequestApi
 import com.worxbend.codeberg4s.repositories.RepositoryApi
 import com.worxbend.codeberg4s.syntax.discard
 import com.worxbend.codeberg4s.transport.SttpHttpPort
@@ -65,6 +68,15 @@ final class CodebergClient private (
 
   /** Issue endpoints, including comments, labels and milestones. */
   val issues: IssueApi = IssueApi(pipeline)
+
+  /** Pull-request endpoints, including merge, reviews and changed files. */
+  val pulls: PullRequestApi = PullRequestApi(pipeline)
+
+  /** Organisation and team endpoints. */
+  val organizations: OrganizationApi = OrganizationApi(pipeline)
+
+  /** Notification endpoints. All of them require authentication. */
+  val notifications: NotificationApi = NotificationApi(pipeline)
 
   /** Instance-level endpoints: server settings, the signing key and markdown rendering. */
   val misc: MiscellaneousApi = MiscellaneousApi(pipeline)
