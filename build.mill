@@ -1,9 +1,11 @@
 //| mvnDeps:
 //| - com.lihaoyi::mill-contrib-scoverage:1.1.7
+//| - com.goyeau::mill-scalafix::0.6.2
 
 package build
 
 import mill.*
+import com.goyeau.mill.scalafix.ScalafixModule
 import mill.contrib.scoverage.ScoverageModule
 import mill.scalalib.*
 import mill.scalalib.scalafmt.ScalafmtModule
@@ -23,7 +25,7 @@ object Versions:
   *
   * Warnings are errors here on purpose — see CLAUDE.md "Compiler settings".
   */
-trait Codeberg4sModule extends ScalaModule with ScalafmtModule with ScoverageModule:
+trait Codeberg4sModule extends ScalaModule with ScalafmtModule with ScoverageModule with ScalafixModule:
   def scalaVersion     = Versions.scala
   def scoverageVersion = Versions.scoverage
 
