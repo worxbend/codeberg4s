@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.core
 
+import com.worxbend.codeberg4s.paging.PageNumber
+
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 
@@ -55,6 +57,39 @@ final case class CodebergResponse(status: Int, headers: Map[String, List[String]
   def requestId: Option[String] =
     header(CodebergResponse.RequestIdHeader)
 
+  /** Every RFC 5988 link the response carried, keyed by lowercased relation type.
+    *
+    * All values of the `Link` header are considered, not just the first: a proxy is allowed to split one header into
+    * several, and the RFC says the result is the same as if they had been joined with commas. An unreadable header
+    * yields an empty map — see [[LinkHeader]] for why that is never an error.
+    */
+  def links: Map[String, String] =
+    LinkHeader.parse(headers.getOrElse(LinkHeader.Name, Nil).mkString(","))
+
+  /** The page number of `rel="next"`, and nothing else.
+    *
+    * This is the only sound end-of-collection test against Forgejo: the instance clamps `limit` to its own maximum
+    * while still echoing the requested limit in the `Link` header, so a short page does not mean the last page, and a
+    * page past the end comes back as `200` with `[]` rather than `404`. `None` means the collection ends here.
+    */
+  def nextPage: Option[PageNumber] =
+    pageOfRel(LinkHeader.Next)
+
+  /** The page number of `rel="prev"`, accepting `rel="previous"` as a synonym. `None` when the response offered none. */
+  def prevPage: Option[PageNumber] =
+    pageOfRel(LinkHeader.Prev).orElse(pageOfRel(LinkHeader.Previous))
+
+  /** The page number of `rel="last"`, when the instance advertised one.
+    *
+    * Useful for reporting progress, never for deciding when to stop: an instance behind a proxy that drops the header
+    * still paginates correctly, and only [[nextPage]] decides that.
+    */
+  def lastPage: Option[PageNumber] =
+    pageOfRel(LinkHeader.Last)
+
+  private def pageOfRel(rel: String): Option[PageNumber] =
+    links.get(rel).flatMap(CodebergResponse.pageIn)
+
 object CodebergResponse:
 
   /** The header carrying the size of the whole collection. */
@@ -66,5 +101,17 @@ object CodebergResponse:
   /** The header carrying the instance's correlation id. */
   val RequestIdHeader: String = "x-request-id"
 
+  /** The query parameter Forgejo takes the one-based page index from. */
+  val PageParameter: String = "page"
+
   private def nonNegativeInt(value: String): Option[Int] =
     value.toIntOption.filter(_ >= 0)
+
+  /** The `page` parameter of a link target as a validated page number, absent when the target carries none or carries
+    * something that is not a page index.
+    */
+  private def pageIn(target: String): Option[PageNumber] =
+    LinkHeader
+      .queryParameter(target, PageParameter)
+      .flatMap(_.toIntOption)
+      .flatMap(number => PageNumber.from(number).toOption)

@@ -26,7 +26,7 @@ final class RetryEngineSuite extends FunSuite:
 
     val result = engine(RetryPolicy.Default, timer, JitterSource.Deterministic).run("issues.list"): number =>
       attempts.append(number).discard
-      Right("ok")
+      Right(Right("ok"))
 
     assertEquals(result, Right("ok"))
     assertEquals(attempts.toList, List(1))
@@ -38,7 +38,7 @@ final class RetryEngineSuite extends FunSuite:
 
     val result = engine(RetryPolicy.Default, timer, JitterSource.Deterministic).run("issues.list"): number =>
       attempts.append(number).discard
-      if number < 2 then Left(apiFailure(503)) else Right("ok")
+      if number < 2 then Right(Left(apiFailure(503))) else Right(Right("ok"))
 
     assertEquals(result, Right("ok"))
     assertEquals(attempts.toList, List(1, 2))
@@ -215,10 +215,16 @@ final class RetryEngineSuite extends FunSuite:
   private def engine(policy: RetryPolicy, timer: FakeTimer, jitter: JitterSource): RetryEngine[Exec.Result] =
     new RetryEngine[Exec.Result](policy, timer)(using Exec.eitherExec)(using jitter)
 
-  private def failing(attempts: ListBuffer[Int], error: CodebergError): Int => Exec.Result[String] =
+  /** An attempt that always fails, in the shape [[RetryEngine.run]] wants: the failure travels as a `Left` inside a
+    * successful effect.
+    */
+  private def failing(
+      attempts: ListBuffer[Int],
+      error: CodebergError,
+  ): Int => Exec.Result[Exec.Result[String]] =
     number =>
       attempts.append(number).discard
-      Left(error)
+      Right(Left(error))
 
   private def outcomes(
       attempts: ListBuffer[Int],
