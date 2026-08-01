@@ -1,0 +1,96 @@
+//| mvnDeps:
+//| - com.lihaoyi::mill-contrib-scoverage:1.1.7
+
+package build
+
+import mill.*
+import mill.contrib.scoverage.ScoverageModule
+import mill.scalalib.*
+import mill.scalalib.scalafmt.ScalafmtModule
+
+object Versions:
+  val scala          = "3.8.4"
+  val sttp           = "4.0.26"
+  val sttpModel      = "1.7.18"
+  val upickle        = "4.4.3"
+  val munit          = "1.3.4"
+  val munitScalcheck = "1.3.0"
+  val scalacheck     = "1.19.0"
+  val testcontainers = "0.44.1"
+  val scoverage      = "2.3.0"
+
+/** Common settings for every published module.
+  *
+  * Warnings are errors here on purpose — see CLAUDE.md "Compiler settings".
+  */
+trait Codeberg4sModule extends ScalaModule with ScalafmtModule with ScoverageModule:
+  def scalaVersion     = Versions.scala
+  def scoverageVersion = Versions.scoverage
+
+  def scalacOptions = Seq(
+    "-deprecation",
+    "-feature",
+    "-explain",
+    "-Wunused:all",
+    "-Wvalue-discard",
+    "-Wnonunit-statement",
+    "-Werror",
+  )
+
+  /** Unit-test settings. Property suites carry the `Property` munit tag and are excluded from the default run by
+    * `verify.sh`.
+    */
+  trait Codeberg4sTests extends ScoverageTests with TestModule.Munit:
+
+    def mvnDeps = Seq(
+      mvn"org.scalameta::munit:${Versions.munit}",
+      mvn"org.scalameta::munit-scalacheck:${Versions.munitScalcheck}",
+      mvn"org.scalacheck::scalacheck:${Versions.scalacheck}",
+    )
+
+object modules extends Module:
+
+  /** Pure domain: models, identifiers, error ADT, pagination types. No dependency beyond the standard library —
+    * enforced by having no `moduleDeps` and no `mvnDeps`.
+    */
+  object domain extends Codeberg4sModule:
+    object test extends Codeberg4sTests
+
+  /** Ports and use-case logic over the abstract `Exec[F]`. Never imports sttp or upickle. */
+  object core extends Codeberg4sModule:
+    def moduleDeps = Seq(domain)
+    object test extends Codeberg4sTests
+
+  /** Wire DTOs and upickle codecs. The only module that knows the JSON shape. */
+  object codec extends Codeberg4sModule:
+    def moduleDeps = Seq(domain)
+    def mvnDeps    = Seq(mvn"com.lihaoyi::upickle:${Versions.upickle}")
+    object test extends Codeberg4sTests
+
+  /** The only module importing sttp. Implements core's `HttpPort`. */
+  object transport extends Codeberg4sModule:
+    def moduleDeps = Seq(core, codec)
+
+    def mvnDeps = Seq(
+      mvn"com.softwaremill.sttp.client4::core:${Versions.sttp}",
+      mvn"com.softwaremill.sttp.client4::upickle:${Versions.sttp}",
+      mvn"com.softwaremill.sttp.model::core:${Versions.sttpModel}",
+    )
+    object test extends Codeberg4sTests
+
+  /** The published public API: the `Future` façade users see. */
+  object client extends Codeberg4sModule:
+    def moduleDeps = Seq(core, codec, transport)
+    object test extends Codeberg4sTests
+
+  /** Live-network / container integration tests. Environmentally unsuitable — excluded from coverage, mutation and the
+    * default `verify.sh` test step.
+    */
+  object it extends Codeberg4sModule:
+    def moduleDeps = Seq(client)
+
+    object test extends Codeberg4sTests:
+
+      def mvnDeps = super.mvnDeps() ++ Seq(
+        mvn"com.dimafeng::testcontainers-scala-munit:${Versions.testcontainers}"
+      )
