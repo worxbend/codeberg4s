@@ -147,16 +147,39 @@ fi
 
 # ---------------------------------------------------------------------------
 if $with_slow; then
+  # PMD 7.26.0 was confirmed to ship a working Scala tokenizer and to find real
+  # duplication in modules/*/src, so this step is a genuine gate. It separates
+  # "duplication found" (exit 1 — a real failure) from "the tool could not run"
+  # (exit 2 — e.g. offline on a first run), because the second must not be
+  # reported as clean code.
   announce "Duplication (PMD CPD)"
   if [[ -x scripts/cpd.sh ]]; then
-    scripts/cpd.sh || fail "duplicate code above threshold"
+    set +e
+    scripts/cpd.sh
+    cpd_status=$?
+    set -e
+    case "$cpd_status" in
+      0) ;;
+      1) fail "duplicate code above the ${CPD_MIN_TOKENS:-40}-token threshold" ;;
+      *) fail "PMD CPD could not run (see above) — this is not a clean result" ;;
+    esac
   else
     echo "  (scripts/cpd.sh absent — skipped)"
   fi
 
+  # crap.sc reads the same scoverage XML the coverage step produced, so it is
+  # given the same module list rather than its own default.
   announce "CRAP (coverage-weighted complexity)"
   if [[ -f scripts/crap.sc ]]; then
-    scala-cli run scripts/crap.sc || fail "CRAP above 30 for at least one method"
+    set +e
+    scala-cli run scripts/crap.sc -- "${COVERED_MODULES[@]}"
+    crap_status=$?
+    set -e
+    case "$crap_status" in
+      0) ;;
+      1) fail "CRAP above 30 for at least one method" ;;
+      *) fail "CRAP could not run — a scoverage report was missing or unreadable" ;;
+    esac
   else
     echo "  (scripts/crap.sc absent — skipped)"
   fi
@@ -164,9 +187,14 @@ fi
 
 # ---------------------------------------------------------------------------
 if $nightly; then
+  # scripts/mutate.sh deliberately refuses to exit 0 without a mutation score.
+  # If build.mill does not yet declare the Stryker4s Mill plugin it prints the
+  # wiring and fails, rather than reporting a green nightly that mutated
+  # nothing. See the header of that script for what has and has not been
+  # verified about Stryker4s on this build.
   announce "Mutation testing (Stryker4s)"
   if [[ -x scripts/mutate.sh ]]; then
-    scripts/mutate.sh || fail "mutation score below threshold"
+    scripts/mutate.sh || fail "mutation testing did not produce a passing score (see above)"
   else
     echo "  (scripts/mutate.sh absent — skipped)"
   fi
