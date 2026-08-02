@@ -22,6 +22,44 @@ if the spec is re-pinned.
 
 ---
 
+## 0. Implementation status
+
+A box is ticked only when the operation is reachable from `CodebergClient` on
+both rails. The ticked set below was derived from the `*Api` classes under
+`modules/client/src/com/worxbend/codeberg4s/`, not from a hand-kept list — one
+tick per request builder those classes actually construct.
+
+| | |
+| --- | --- |
+| In-scope v1 rows in §3 | **439** (tag-weighted; 438 distinct — `createCurrentUserRepo` is listed under both `repository` and `user`) |
+| Implemented | **61** |
+| Coverage of the in-scope surface | **13.9 %** |
+| Coverage of the whole spec (506 operations) | 12.1 % |
+
+| Tag | Implemented | In scope | Done |
+| --- | ---: | ---: | ---: |
+| `notification` | 7 | 7 | **100 %** |
+| `settings` | 3 | 4 | 75 % |
+| `miscellaneous` | 4 | 14 | 29 % |
+| `issue` | 10 | 67 | 15 % |
+| `organization` | 10 | 69 | 15 % |
+| `user` | 8 | 80 | 10 % |
+| `repository` | 19 | 198 | 10 % |
+| **total** | **61** | **439** | **13.9 %** |
+
+`repository` carries 19 because pull requests live under `/repos/…` in the spec
+and are therefore tagged `repository`: 11 of the 19 are wave 2 (`client.repos`)
+and 8 are wave 4 (`client.pulls`).
+
+The seven groups shipped so far are deliberately the *read-and-common-write*
+core, not a uniform slice: the long tail of `repository` (actions, hooks, keys,
+wikis, packages, attachments, teams-on-repos) and of `user` (settings, blocks,
+stars, GPG keys, quotas) is untouched. `PLAN.md` §10 requires 100 % of the
+in-scope surface for 0.1.0, so the number above is the honest distance to that
+gate, not a shortfall in the waves that ran.
+
+---
+
 ## 1. Tag summary
 
 | Tag | Operations | GET | POST | PATCH | PUT | DELETE | Scope |
@@ -103,7 +141,7 @@ GET 47 · POST 12 · PATCH 3 · PUT 6 · DELETE 12
 
 | ✔ | Method | Path | operationId | Auth | Paged | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| [ ] | GET | `/user` | `userGetCurrent` | token | — |  |
+| [x] | GET | `/user` | `userGetCurrent` | token | — |  |
 | [ ] | GET | `/user/actions/runners` | `getUserRunners` | token | page+limit |  |
 | [ ] | POST | `/user/actions/runners` | `registerUserRunner` | token | — |  |
 | [ ] | GET | `/user/actions/runners/jobs` | `userSearchRunJobs` | token | — | array response, no paging params |
@@ -145,7 +183,7 @@ GET 47 · POST 12 · PATCH 3 · PUT 6 · DELETE 12
 | [ ] | DELETE | `/user/hooks/{id}` | `userDeleteHook` | token | — |  |
 | [ ] | GET | `/user/hooks/{id}` | `userGetHook` | token | — |  |
 | [ ] | PATCH | `/user/hooks/{id}` | `userEditHook` | token | — |  |
-| [ ] | GET | `/user/keys` | `userCurrentListKeys` | token | page+limit |  |
+| [x] | GET | `/user/keys` | `userCurrentListKeys` | token | page+limit |  |
 | [ ] | POST | `/user/keys` | `userCurrentPostKey` | token | — |  |
 | [ ] | DELETE | `/user/keys/{id}` | `userCurrentDeleteKey` | token | — |  |
 | [ ] | GET | `/user/keys/{id}` | `userCurrentGetKey` | token | — |  |
@@ -168,16 +206,16 @@ GET 47 · POST 12 · PATCH 3 · PUT 6 · DELETE 12
 | [ ] | GET | `/user/teams` | `userListTeams` | token | page+limit |  |
 | [ ] | GET | `/user/times` | `userCurrentTrackedTimes` | token | page+limit |  |
 | [ ] | PUT | `/user/unblock/{username}` | `userUnblockUser` | token | — |  |
-| [ ] | GET | `/users/search` | `userSearch` | optional | page+limit |  |
-| [ ] | GET | `/users/{username}` | `userGet` | optional | — |  |
+| [x] | GET | `/users/search` | `userSearch` | optional | page+limit |  |
+| [x] | GET | `/users/{username}` | `userGet` | optional | — |  |
 | [ ] | GET | `/users/{username}/activities/feeds` | `userListActivityFeeds` | optional | page+limit |  |
-| [ ] | GET | `/users/{username}/followers` | `userListFollowers` | optional | page+limit |  |
-| [ ] | GET | `/users/{username}/following` | `userListFollowing` | optional | page+limit |  |
+| [x] | GET | `/users/{username}/followers` | `userListFollowers` | optional | page+limit |  |
+| [x] | GET | `/users/{username}/following` | `userListFollowing` | optional | page+limit |  |
 | [ ] | GET | `/users/{username}/following/{target}` | `userCheckFollowing` | optional | — |  |
 | [ ] | GET | `/users/{username}/gpg_keys` | `userListGPGKeys` | optional | page+limit |  |
 | [ ] | GET | `/users/{username}/heatmap` | `userGetHeatmapData` | optional | — | array response, no paging params |
-| [ ] | GET | `/users/{username}/keys` | `userListKeys` | optional | page+limit |  |
-| [ ] | GET | `/users/{username}/repos` | `userListRepos` | optional | page+limit |  |
+| [x] | GET | `/users/{username}/keys` | `userListKeys` | optional | page+limit |  |
+| [x] | GET | `/users/{username}/repos` | `userListRepos` | optional | page+limit |  |
 | [ ] | GET | `/users/{username}/starred` | `userListStarred` | optional | page+limit |  |
 | [ ] | GET | `/users/{username}/subscriptions` | `userListSubscriptions` | optional | page+limit |  |
 | [ ] | GET | `/users/{username}/tokens` | `userGetTokens` | optional | page+limit |  |
@@ -191,9 +229,9 @@ GET 105 · POST 42 · PATCH 10 · PUT 10 · DELETE 31
 | ✔ | Method | Path | operationId | Auth | Paged | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | [ ] | POST | `/repos/migrate` | `repoMigrate` | token | — |  |
-| [ ] | GET | `/repos/search` | `repoSearch` | optional | page+limit |  |
+| [x] | GET | `/repos/search` | `repoSearch` | optional | page+limit |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}` | `repoDelete` | token | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}` | `repoGet` | optional | — |  |
+| [x] | GET | `/repos/{owner}/{repo}` | `repoGet` | optional | — |  |
 | [ ] | PATCH | `/repos/{owner}/{repo}` | `repoEdit` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/actions/artifacts` | `ListActionArtifacts` | optional | page+limit |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/actions/artifacts/{artifact_id}` | `DeleteActionArtifact` | token | — |  |
@@ -233,17 +271,17 @@ GET 105 · POST 42 · PATCH 10 · PUT 10 · DELETE 31
 | [ ] | DELETE | `/repos/{owner}/{repo}/branch_protections/{name}` | `repoDeleteBranchProtection` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/branch_protections/{name}` | `repoGetBranchProtection` | optional | — |  |
 | [ ] | PATCH | `/repos/{owner}/{repo}/branch_protections/{name}` | `repoEditBranchProtection` | token | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}/branches` | `repoListBranches` | optional | page+limit |  |
+| [x] | GET | `/repos/{owner}/{repo}/branches` | `repoListBranches` | optional | page+limit |  |
 | [ ] | POST | `/repos/{owner}/{repo}/branches` | `repoCreateBranch` | token | — |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/branches/{branch}` | `repoDeleteBranch` | token | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}/branches/{branch}` | `repoGetBranch` | optional | — |  |
+| [x] | GET | `/repos/{owner}/{repo}/branches/{branch}` | `repoGetBranch` | optional | — |  |
 | [ ] | PATCH | `/repos/{owner}/{repo}/branches/{branch}` | `repoUpdateBranch` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/collaborators` | `repoListCollaborators` | optional | page+limit |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/collaborators/{collaborator}` | `repoDeleteCollaborator` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/collaborators/{collaborator}` | `repoCheckCollaborator` | optional | — |  |
 | [ ] | PUT | `/repos/{owner}/{repo}/collaborators/{collaborator}` | `repoAddCollaborator` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/collaborators/{collaborator}/permission` | `repoGetRepoPermissions` | optional | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}/commits` | `repoGetAllCommits` | optional | page+limit |  |
+| [x] | GET | `/repos/{owner}/{repo}/commits` | `repoGetAllCommits` | optional | page+limit |  |
 | [ ] | GET | `/repos/{owner}/{repo}/commits/{ref}/status` | `repoGetCombinedStatusByRef` | optional | page+limit |  |
 | [ ] | GET | `/repos/{owner}/{repo}/commits/{ref}/statuses` | `repoListStatusesByRef` | optional | page+limit |  |
 | [ ] | GET | `/repos/{owner}/{repo}/commits/{sha}/pull` | `repoGetCommitPullRequest` | optional | — |  |
@@ -251,7 +289,7 @@ GET 105 · POST 42 · PATCH 10 · PUT 10 · DELETE 31
 | [ ] | GET | `/repos/{owner}/{repo}/contents` | `repoGetContentsList` | optional | — | array response, no paging params |
 | [ ] | POST | `/repos/{owner}/{repo}/contents` | `repoChangeFiles` | token | — |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/contents/{filepath}` | `repoDeleteFile` | token | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}/contents/{filepath}` | `repoGetContents` | optional | — | **union response** — see HAZARDS.md §3 |
+| [x] | GET | `/repos/{owner}/{repo}/contents/{filepath}` | `repoGetContents` | optional | — | **union response** — see HAZARDS.md §3 |
 | [ ] | POST | `/repos/{owner}/{repo}/contents/{filepath}` | `repoCreateFile` | token | — |  |
 | [ ] | PUT | `/repos/{owner}/{repo}/contents/{filepath}` | `repoUpdateFile` | token | — |  |
 | [ ] | POST | `/repos/{owner}/{repo}/convert` | `repoConvert` | token | — |  |
@@ -263,7 +301,7 @@ GET 105 · POST 42 · PATCH 10 · PUT 10 · DELETE 31
 | [ ] | DELETE | `/repos/{owner}/{repo}/flags/{flag}` | `repoDeleteFlag` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/flags/{flag}` | `repoCheckFlag` | optional | — |  |
 | [ ] | PUT | `/repos/{owner}/{repo}/flags/{flag}` | `repoAddFlag` | token | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}/forks` | `listForks` | optional | page+limit |  |
+| [x] | GET | `/repos/{owner}/{repo}/forks` | `listForks` | optional | page+limit |  |
 | [ ] | POST | `/repos/{owner}/{repo}/forks` | `createFork` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/git/blobs` | `GetBlobs` | optional | — | array response, no paging params |
 | [ ] | GET | `/repos/{owner}/{repo}/git/blobs/{sha}` | `GetBlob` | optional | — |  |
@@ -298,21 +336,21 @@ GET 105 · POST 42 · PATCH 10 · PUT 10 · DELETE 31
 | [ ] | GET | `/repos/{owner}/{repo}/media/{filepath}` | `repoGetRawFileOrLFS` | optional | — |  |
 | [ ] | POST | `/repos/{owner}/{repo}/mirror-sync` | `repoMirrorSync` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/new_pin_allowed` | `repoNewPinAllowed` | optional | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}/pulls` | `repoListPullRequests` | optional | page+limit |  |
-| [ ] | POST | `/repos/{owner}/{repo}/pulls` | `repoCreatePullRequest` | token | — |  |
+| [x] | GET | `/repos/{owner}/{repo}/pulls` | `repoListPullRequests` | optional | page+limit |  |
+| [x] | POST | `/repos/{owner}/{repo}/pulls` | `repoCreatePullRequest` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/pulls/pinned` | `repoListPinnedPullRequests` | optional | — | array response, no paging params |
 | [ ] | GET | `/repos/{owner}/{repo}/pulls/{base}/{head}` | `repoGetPullRequestByBaseHead` | optional | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}/pulls/{index}` | `repoGetPullRequest` | optional | — |  |
-| [ ] | PATCH | `/repos/{owner}/{repo}/pulls/{index}` | `repoEditPullRequest` | token | — |  |
+| [x] | GET | `/repos/{owner}/{repo}/pulls/{index}` | `repoGetPullRequest` | optional | — |  |
+| [x] | PATCH | `/repos/{owner}/{repo}/pulls/{index}` | `repoEditPullRequest` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/pulls/{index}.{diffType}` | `repoDownloadPullDiffOrPatch` | optional | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}/pulls/{index}/commits` | `repoGetPullRequestCommits` | optional | page+limit |  |
-| [ ] | GET | `/repos/{owner}/{repo}/pulls/{index}/files` | `repoGetPullRequestFiles` | optional | page+limit |  |
+| [x] | GET | `/repos/{owner}/{repo}/pulls/{index}/commits` | `repoGetPullRequestCommits` | optional | page+limit |  |
+| [x] | GET | `/repos/{owner}/{repo}/pulls/{index}/files` | `repoGetPullRequestFiles` | optional | page+limit |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/pulls/{index}/merge` | `repoCancelScheduledAutoMerge` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/pulls/{index}/merge` | `repoPullRequestIsMerged` | optional | — |  |
-| [ ] | POST | `/repos/{owner}/{repo}/pulls/{index}/merge` | `repoMergePullRequest` | token | — |  |
+| [x] | POST | `/repos/{owner}/{repo}/pulls/{index}/merge` | `repoMergePullRequest` | token | — |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/pulls/{index}/requested_reviewers` | `repoDeletePullReviewRequests` | token | — |  |
 | [ ] | POST | `/repos/{owner}/{repo}/pulls/{index}/requested_reviewers` | `repoCreatePullReviewRequests` | token | — | array response, no paging params |
-| [ ] | GET | `/repos/{owner}/{repo}/pulls/{index}/reviews` | `repoListPullReviews` | optional | page+limit |  |
+| [x] | GET | `/repos/{owner}/{repo}/pulls/{index}/reviews` | `repoListPullReviews` | optional | page+limit |  |
 | [ ] | POST | `/repos/{owner}/{repo}/pulls/{index}/reviews` | `repoCreatePullReview` | token | — |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/pulls/{index}/reviews/{id}` | `repoDeletePullReview` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/pulls/{index}/reviews/{id}` | `repoGetPullReview` | optional | — |  |
@@ -330,13 +368,13 @@ GET 105 · POST 42 · PATCH 10 · PUT 10 · DELETE 31
 | [ ] | DELETE | `/repos/{owner}/{repo}/push_mirrors/{name}` | `repoDeletePushMirror` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/push_mirrors/{name}` | `repoGetPushMirrorByRemoteName` | optional | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/raw/{filepath}` | `repoGetRawFile` | optional | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}/releases` | `repoListReleases` | optional | page+limit |  |
+| [x] | GET | `/repos/{owner}/{repo}/releases` | `repoListReleases` | optional | page+limit |  |
 | [ ] | POST | `/repos/{owner}/{repo}/releases` | `repoCreateRelease` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/releases/latest` | `repoGetLatestRelease` | optional | — |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/releases/tags/{tag}` | `repoDeleteReleaseByTag` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/releases/tags/{tag}` | `repoGetReleaseByTag` | optional | — |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/releases/{id}` | `repoDeleteRelease` | token | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}/releases/{id}` | `repoGetRelease` | optional | — |  |
+| [x] | GET | `/repos/{owner}/{repo}/releases/{id}` | `repoGetRelease` | optional | — |  |
 | [ ] | PATCH | `/repos/{owner}/{repo}/releases/{id}` | `repoEditRelease` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/releases/{id}/assets` | `repoListReleaseAttachments` | optional | — | array response, no paging params |
 | [ ] | POST | `/repos/{owner}/{repo}/releases/{id}/assets` | `repoCreateReleaseAttachment` | token | — |  |
@@ -361,7 +399,7 @@ GET 105 · POST 42 · PATCH 10 · PUT 10 · DELETE 31
 | [ ] | DELETE | `/repos/{owner}/{repo}/tag_protections/{id}` | `repoDeleteTagProtection` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/tag_protections/{id}` | `repoGetTagProtection` | optional | — |  |
 | [ ] | PATCH | `/repos/{owner}/{repo}/tag_protections/{id}` | `repoEditTagProtection` | token | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}/tags` | `repoListTags` | optional | page+limit |  |
+| [x] | GET | `/repos/{owner}/{repo}/tags` | `repoListTags` | optional | page+limit |  |
 | [ ] | POST | `/repos/{owner}/{repo}/tags` | `repoCreateTag` | token | — |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/tags/{tag}` | `repoDeleteTag` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/tags/{tag}` | `repoGetTag` | optional | — |  |
@@ -371,7 +409,7 @@ GET 105 · POST 42 · PATCH 10 · PUT 10 · DELETE 31
 | [ ] | PUT | `/repos/{owner}/{repo}/teams/{team}` | `repoAddTeam` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/times` | `repoTrackedTimes` | optional | page+limit |  |
 | [ ] | GET | `/repos/{owner}/{repo}/times/{user}` | `userTrackedTimes` | optional | — | array response, no paging params |
-| [ ] | GET | `/repos/{owner}/{repo}/topics` | `repoListTopics` | optional | page+limit |  |
+| [x] | GET | `/repos/{owner}/{repo}/topics` | `repoListTopics` | optional | page+limit |  |
 | [ ] | PUT | `/repos/{owner}/{repo}/topics` | `repoUpdateTopics` | token | — |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/topics/{topic}` | `repoDeleteTopic` | token | — |  |
 | [ ] | PUT | `/repos/{owner}/{repo}/topics/{topic}` | `repoAddTopic` | token | — |  |
@@ -396,8 +434,8 @@ GET 23 · POST 16 · PATCH 8 · PUT 2 · DELETE 18
 | ✔ | Method | Path | operationId | Auth | Paged | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | [ ] | GET | `/repos/issues/search` | `issueSearchIssues` | optional | page+limit |  |
-| [ ] | GET | `/repos/{owner}/{repo}/issues` | `issueListIssues` | optional | page+limit |  |
-| [ ] | POST | `/repos/{owner}/{repo}/issues` | `issueCreateIssue` | token | — |  |
+| [x] | GET | `/repos/{owner}/{repo}/issues` | `issueListIssues` | optional | page+limit |  |
+| [x] | POST | `/repos/{owner}/{repo}/issues` | `issueCreateIssue` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/issues/comments` | `issueGetRepoComments` | optional | page+limit |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/issues/comments/{id}` | `issueDeleteComment` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/issues/comments/{id}` | `issueGetComment` | optional | — |  |
@@ -411,8 +449,8 @@ GET 23 · POST 16 · PATCH 8 · PUT 2 · DELETE 18
 | [ ] | GET | `/repos/{owner}/{repo}/issues/comments/{id}/reactions` | `issueGetCommentReactions` | optional | — | array response, no paging params |
 | [ ] | POST | `/repos/{owner}/{repo}/issues/comments/{id}/reactions` | `issuePostCommentReaction` | token | — |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/issues/{index}` | `issueDelete` | token | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}/issues/{index}` | `issueGetIssue` | optional | — |  |
-| [ ] | PATCH | `/repos/{owner}/{repo}/issues/{index}` | `issueEditIssue` | token | — |  |
+| [x] | GET | `/repos/{owner}/{repo}/issues/{index}` | `issueGetIssue` | optional | — |  |
+| [x] | PATCH | `/repos/{owner}/{repo}/issues/{index}` | `issueEditIssue` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/issues/{index}/assets` | `issueListIssueAttachments` | optional | — | array response, no paging params |
 | [ ] | POST | `/repos/{owner}/{repo}/issues/{index}/assets` | `issueCreateIssueAttachment` | token | — |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/issues/{index}/assets/{attachment_id}` | `issueDeleteIssueAttachment` | token | — |  |
@@ -421,8 +459,8 @@ GET 23 · POST 16 · PATCH 8 · PUT 2 · DELETE 18
 | [ ] | DELETE | `/repos/{owner}/{repo}/issues/{index}/blocks` | `issueRemoveIssueBlocking` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/issues/{index}/blocks` | `issueListBlocks` | optional | page+limit |  |
 | [ ] | POST | `/repos/{owner}/{repo}/issues/{index}/blocks` | `issueCreateIssueBlocking` | token | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}/issues/{index}/comments` | `issueGetComments` | optional | — | array response, no paging params |
-| [ ] | POST | `/repos/{owner}/{repo}/issues/{index}/comments` | `issueCreateComment` | token | — |  |
+| [x] | GET | `/repos/{owner}/{repo}/issues/{index}/comments` | `issueGetComments` | optional | — | array response, no paging params |
+| [x] | POST | `/repos/{owner}/{repo}/issues/{index}/comments` | `issueCreateComment` | token | — |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/issues/{index}/comments/{id}` | `issueDeleteCommentDeprecated` | token | — |  |
 | [ ] | PATCH | `/repos/{owner}/{repo}/issues/{index}/comments/{id}` | `issueEditCommentDeprecated` | token | — |  |
 | [ ] | POST | `/repos/{owner}/{repo}/issues/{index}/deadline` | `issueEditIssueDeadline` | token | — |  |
@@ -452,15 +490,15 @@ GET 23 · POST 16 · PATCH 8 · PUT 2 · DELETE 18
 | [ ] | GET | `/repos/{owner}/{repo}/issues/{index}/times` | `issueTrackedTimes` | optional | page+limit |  |
 | [ ] | POST | `/repos/{owner}/{repo}/issues/{index}/times` | `issueAddTime` | token | — |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/issues/{index}/times/{id}` | `issueDeleteTime` | token | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}/labels` | `issueListLabels` | optional | page+limit |  |
-| [ ] | POST | `/repos/{owner}/{repo}/labels` | `issueCreateLabel` | token | — |  |
+| [x] | GET | `/repos/{owner}/{repo}/labels` | `issueListLabels` | optional | page+limit |  |
+| [x] | POST | `/repos/{owner}/{repo}/labels` | `issueCreateLabel` | token | — |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/labels/{id}` | `issueDeleteLabel` | token | — |  |
 | [ ] | GET | `/repos/{owner}/{repo}/labels/{id}` | `issueGetLabel` | optional | — |  |
 | [ ] | PATCH | `/repos/{owner}/{repo}/labels/{id}` | `issueEditLabel` | token | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}/milestones` | `issueGetMilestonesList` | optional | page+limit |  |
+| [x] | GET | `/repos/{owner}/{repo}/milestones` | `issueGetMilestonesList` | optional | page+limit |  |
 | [ ] | POST | `/repos/{owner}/{repo}/milestones` | `issueCreateMilestone` | token | — |  |
 | [ ] | DELETE | `/repos/{owner}/{repo}/milestones/{id}` | `issueDeleteMilestone` | token | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}/milestones/{id}` | `issueGetMilestone` | optional | — |  |
+| [x] | GET | `/repos/{owner}/{repo}/milestones/{id}` | `issueGetMilestone` | optional | — |  |
 | [ ] | PATCH | `/repos/{owner}/{repo}/milestones/{id}` | `issueEditMilestone` | token | — |  |
 
 ### 3.4 `organization` — 69 operations
@@ -470,10 +508,10 @@ GET 36 · POST 10 · PATCH 4 · PUT 7 · DELETE 12
 | ✔ | Method | Path | operationId | Auth | Paged | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | [ ] | POST | `/org/{org}/repos` | `createOrgRepoDeprecated` | token | — |  |
-| [ ] | GET | `/orgs` | `orgGetAll` | optional | page+limit |  |
+| [x] | GET | `/orgs` | `orgGetAll` | optional | page+limit |  |
 | [ ] | POST | `/orgs` | `orgCreate` | token | — |  |
 | [ ] | DELETE | `/orgs/{org}` | `orgDelete` | token | — |  |
-| [ ] | GET | `/orgs/{org}` | `orgGet` | optional | — |  |
+| [x] | GET | `/orgs/{org}` | `orgGet` | optional | — |  |
 | [ ] | PATCH | `/orgs/{org}` | `orgEdit` | token | — |  |
 | [ ] | GET | `/orgs/{org}/actions/runners` | `getOrgRunners` | optional | page+limit |  |
 | [ ] | POST | `/orgs/{org}/actions/runners` | `registerOrgRunner` | token | — |  |
@@ -504,10 +542,10 @@ GET 36 · POST 10 · PATCH 4 · PUT 7 · DELETE 12
 | [ ] | GET | `/orgs/{org}/labels/{id}` | `orgGetLabel` | optional | — |  |
 | [ ] | PATCH | `/orgs/{org}/labels/{id}` | `orgEditLabel` | token | — |  |
 | [ ] | GET | `/orgs/{org}/list_blocked` | `orgListBlockedUsers` | optional | page+limit |  |
-| [ ] | GET | `/orgs/{org}/members` | `orgListMembers` | optional | page+limit |  |
+| [x] | GET | `/orgs/{org}/members` | `orgListMembers` | optional | page+limit |  |
 | [ ] | DELETE | `/orgs/{org}/members/{username}` | `orgDeleteMember` | token | — |  |
 | [ ] | GET | `/orgs/{org}/members/{username}` | `orgIsMember` | optional | — |  |
-| [ ] | GET | `/orgs/{org}/public_members` | `orgListPublicMembers` | optional | page+limit |  |
+| [x] | GET | `/orgs/{org}/public_members` | `orgListPublicMembers` | optional | page+limit |  |
 | [ ] | DELETE | `/orgs/{org}/public_members/{username}` | `orgConcealMember` | token | — |  |
 | [ ] | GET | `/orgs/{org}/public_members/{username}` | `orgIsPublicMember` | optional | — |  |
 | [ ] | PUT | `/orgs/{org}/public_members/{username}` | `orgPublicizeMember` | token | — |  |
@@ -517,26 +555,26 @@ GET 36 · POST 10 · PATCH 4 · PUT 7 · DELETE 12
 | [ ] | GET | `/orgs/{org}/quota/check` | `orgCheckQuota` | optional | — |  |
 | [ ] | GET | `/orgs/{org}/quota/packages` | `orgListQuotaPackages` | optional | page+limit |  |
 | [ ] | POST | `/orgs/{org}/rename` | `renameOrg` | token | — |  |
-| [ ] | GET | `/orgs/{org}/repos` | `orgListRepos` | optional | page+limit |  |
+| [x] | GET | `/orgs/{org}/repos` | `orgListRepos` | optional | page+limit |  |
 | [ ] | POST | `/orgs/{org}/repos` | `createOrgRepo` | token | — |  |
-| [ ] | GET | `/orgs/{org}/teams` | `orgListTeams` | optional | page+limit |  |
+| [x] | GET | `/orgs/{org}/teams` | `orgListTeams` | optional | page+limit |  |
 | [ ] | POST | `/orgs/{org}/teams` | `orgCreateTeam` | token | — |  |
 | [ ] | GET | `/orgs/{org}/teams/search` | `teamSearch` | optional | page+limit |  |
 | [ ] | PUT | `/orgs/{org}/unblock/{username}` | `orgUnblockUser` | token | — |  |
 | [ ] | DELETE | `/teams/{id}` | `orgDeleteTeam` | token | — |  |
-| [ ] | GET | `/teams/{id}` | `orgGetTeam` | optional | — |  |
+| [x] | GET | `/teams/{id}` | `orgGetTeam` | optional | — |  |
 | [ ] | PATCH | `/teams/{id}` | `orgEditTeam` | token | — |  |
 | [ ] | GET | `/teams/{id}/activities/feeds` | `orgListTeamActivityFeeds` | optional | page+limit |  |
-| [ ] | GET | `/teams/{id}/members` | `orgListTeamMembers` | optional | page+limit |  |
+| [x] | GET | `/teams/{id}/members` | `orgListTeamMembers` | optional | page+limit |  |
 | [ ] | DELETE | `/teams/{id}/members/{username}` | `orgRemoveTeamMember` | token | — |  |
 | [ ] | GET | `/teams/{id}/members/{username}` | `orgListTeamMember` | optional | — |  |
 | [ ] | PUT | `/teams/{id}/members/{username}` | `orgAddTeamMember` | token | — |  |
-| [ ] | GET | `/teams/{id}/repos` | `orgListTeamRepos` | optional | page+limit |  |
+| [x] | GET | `/teams/{id}/repos` | `orgListTeamRepos` | optional | page+limit |  |
 | [ ] | DELETE | `/teams/{id}/repos/{org}/{repo}` | `orgRemoveTeamRepository` | token | — |  |
 | [ ] | GET | `/teams/{id}/repos/{org}/{repo}` | `orgListTeamRepo` | optional | — |  |
 | [ ] | PUT | `/teams/{id}/repos/{org}/{repo}` | `orgAddTeamRepository` | token | — |  |
 | [ ] | GET | `/user/orgs` | `orgListCurrentUserOrgs` | token | page+limit |  |
-| [ ] | GET | `/users/{username}/orgs` | `orgListUserOrgs` | optional | page+limit |  |
+| [x] | GET | `/users/{username}/orgs` | `orgListUserOrgs` | optional | page+limit |  |
 | [ ] | GET | `/users/{username}/orgs/{org}/permissions` | `orgGetUserPermissions` | optional | — |  |
 
 ### 3.5 `notification` — 7 operations
@@ -545,13 +583,13 @@ GET 4 · POST 0 · PATCH 1 · PUT 2 · DELETE 0
 
 | ✔ | Method | Path | operationId | Auth | Paged | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| [ ] | GET | `/notifications` | `notifyGetList` | token | page+limit |  |
-| [ ] | PUT | `/notifications` | `notifyReadList` | token | — |  |
-| [ ] | GET | `/notifications/new` | `notifyNewAvailable` | token | — |  |
-| [ ] | GET | `/notifications/threads/{id}` | `notifyGetThread` | token | — |  |
-| [ ] | PATCH | `/notifications/threads/{id}` | `notifyReadThread` | token | — |  |
-| [ ] | GET | `/repos/{owner}/{repo}/notifications` | `notifyGetRepoList` | token | page+limit |  |
-| [ ] | PUT | `/repos/{owner}/{repo}/notifications` | `notifyReadRepoList` | token | — |  |
+| [x] | GET | `/notifications` | `notifyGetList` | token | page+limit |  |
+| [x] | PUT | `/notifications` | `notifyReadList` | token | — |  |
+| [x] | GET | `/notifications/new` | `notifyNewAvailable` | token | — |  |
+| [x] | GET | `/notifications/threads/{id}` | `notifyGetThread` | token | — |  |
+| [x] | PATCH | `/notifications/threads/{id}` | `notifyReadThread` | token | — |  |
+| [x] | GET | `/repos/{owner}/{repo}/notifications` | `notifyGetRepoList` | token | page+limit |  |
+| [x] | PUT | `/repos/{owner}/{repo}/notifications` | `notifyReadRepoList` | token | — |  |
 
 ### 3.6 `miscellaneous` — 14 operations
 
@@ -566,13 +604,13 @@ GET 11 · POST 3 · PATCH 0 · PUT 0 · DELETE 0
 | [ ] | GET | `/label/templates/{name}` | `getLabelTemplateInfo` | optional | — | array response, no paging params |
 | [ ] | GET | `/licenses` | `listLicenseTemplates` | optional | — | array response, no paging params |
 | [ ] | GET | `/licenses/{name}` | `getLicenseTemplateInfo` | optional | — |  |
-| [ ] | POST | `/markdown` | `renderMarkdown` | token? | — | pure render, no side effect — anonymous access unverified |
-| [ ] | POST | `/markdown/raw` | `renderMarkdownRaw` | token? | — | pure render, no side effect — anonymous access unverified |
+| [x] | POST | `/markdown` | `renderMarkdown` | token? | — | pure render, no side effect — anonymous access unverified |
+| [x] | POST | `/markdown/raw` | `renderMarkdownRaw` | token? | — | pure render, no side effect — anonymous access unverified |
 | [ ] | POST | `/markup` | `renderMarkup` | token? | — | pure render, no side effect — anonymous access unverified |
 | [ ] | GET | `/nodeinfo` | `getNodeInfo` | optional | — |  |
-| [ ] | GET | `/signing-key.gpg` | `getSigningKey` | optional | — |  |
+| [x] | GET | `/signing-key.gpg` | `getSigningKey` | optional | — |  |
 | [ ] | GET | `/signing-key.ssh` | `getSSHSigningKey` | optional | — |  |
-| [ ] | GET | `/version` | `getVersion` | optional | — |  |
+| [x] | GET | `/version` | `getVersion` | optional | — |  |
 
 ### 3.7 `settings` — 4 operations
 
@@ -580,9 +618,9 @@ GET 4 · POST 0 · PATCH 0 · PUT 0 · DELETE 0
 
 | ✔ | Method | Path | operationId | Auth | Paged | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| [ ] | GET | `/settings/api` | `getGeneralAPISettings` | optional | — |  |
-| [ ] | GET | `/settings/attachment` | `getGeneralAttachmentSettings` | optional | — |  |
-| [ ] | GET | `/settings/repository` | `getGeneralRepositorySettings` | optional | — |  |
+| [x] | GET | `/settings/api` | `getGeneralAPISettings` | optional | — |  |
+| [x] | GET | `/settings/attachment` | `getGeneralAttachmentSettings` | optional | — |  |
+| [x] | GET | `/settings/repository` | `getGeneralRepositorySettings` | optional | — |  |
 | [ ] | GET | `/settings/ui` | `getGeneralUISettings` | optional | — |  |
 
 ---

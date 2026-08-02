@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Without this, the two jobs below are gated on an event the workflow never
+  # receives, so they look configured and never run.
+  schedule:
+    - cron: "0 3 * * *"
 
 env:
   # Keep every cache inside the workspace. The constitution requires that the
