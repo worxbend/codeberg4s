@@ -1,0 +1,262 @@
+# API groups
+
+For anyone looking for where an endpoint lives. Nine accessors hang off
+`CodebergClient`; four of them nest further groups, for **38 API classes** in
+total.
+
+Every class listed here has the same two-rail shape: the methods on the class
+itself return `Future[A]` and fail with `CodebergException`, and the identical
+set under `.attempt` returns `Future[Either[CodebergError, A]]` and never fails.
+The counts below are of operations on the convenience rail; each is mirrored on
+the typed one. See [Errors](../guides/03-errors.md).
+
+The "Scaladoc" column names the fully qualified class. Every operation carries
+its own Scaladoc saying what it calls, what it returns, which failures it can
+produce, and **which retry eligibility it uses** — that last one is not
+guessable from the HTTP method, so read it before assuming.
+
+## The nine accessors
+
+| Accessor | Class | Operations | Nested groups |
+| --- | --- | ---: | ---: |
+| `client.version` | `com.worxbend.codeberg4s.VersionApi` | 1 | — |
+| `client.repos` | `com.worxbend.codeberg4s.repositories.RepositoryApi` | 11 | 9 |
+| `client.users` | `com.worxbend.codeberg4s.users.UserApi` | 8 | 8 |
+| `client.issues` | `com.worxbend.codeberg4s.issues.IssueApi` | 23 | 7 |
+| `client.pulls` | `com.worxbend.codeberg4s.pulls.PullRequestApi` | 26 | — |
+| `client.organizations` | `com.worxbend.codeberg4s.organizations.OrganizationApi` | 29 | 5 |
+| `client.notifications` | `com.worxbend.codeberg4s.notifications.NotificationApi` | 7 | — |
+| `client.misc` | `com.worxbend.codeberg4s.miscellaneous.MiscellaneousApi` | 17 | — |
+| `client.downloads` | `com.worxbend.codeberg4s.repositories.actions.ActionDownloadApi` | 2 | — |
+
+---
+
+## `client.version` — 1 operation
+
+`GET /version`, and nothing else. The cheapest liveness probe there is, and the
+one endpoint every Forgejo answers anonymously — so it is how you check that a
+base URI really points at an API root.
+
+`get()`
+
+---
+
+## `client.repos` — repositories
+
+`RepositoryApi` itself holds the everyday reads. Anything that changes a
+repository, or that reaches into a specialised corner of one, is in a nested
+group.
+
+**11 operations:** `get`, `search`, `listBranches`, `getBranch`, `listTags`,
+`listCommits`, `listReleases`, `getRelease`, `listTopics`, `getContents`,
+`listForks`
+
+`getContents` is the one union in the API: the same path answers a file object
+or an array of directory entries, so it decodes to an ADT rather than to a
+record full of nullable fields.
+
+### Nested groups
+
+| Accessor | Class | Operations | Covers |
+| --- | --- | ---: | --- |
+| `client.repos.actions` | `repositories.actions.RepositoryActionApi` | 26 | a repository's Actions surface: runs, jobs, tasks, artifacts, runners, secrets, variables, workflow dispatch |
+| `client.repos.git` | `repositories.gitdata.RepositoryGitApi` | 20 | raw Git data and commit-level reads: blobs, trees, refs, notes, annotated tags, commit statuses, comparison, diffpatch, raw and media files, archives |
+| `client.repos.publishing` | `repositories.publishing.RepositoryPublishingApi` | 19 | releases and their assets, tags, topics, forking, generating from a template |
+| `client.repos.hooks` | `repositories.hooks.RepositoryHookApi` | 10 | webhooks Forgejo delivers elsewhere, and the Git hooks it runs on its own machine |
+| `client.repos.wiki` | `repositories.hooks.RepositoryWikiApi` | 6 | wiki pages, their content and their history |
+| `client.repos.flags` | `repositories.hooks.RepositoryFlagApi` | 6 | a repository's administrative flags |
+| `client.repos.issueConfig` | `repositories.hooks.RepositoryIssueConfigApi` | 3 | what a repository tells a contributor about to open an issue: its issue config and templates |
+| `client.repos.access` | `repositories.access.RepositoryAccessApi` | 23 | who may push and merge: branch and tag protections, collaborators, deploy keys, team access |
+| `client.repos.admin` | `repositories.admin.RepositoryAdminApi` | 44 | administering a repository: creating, editing, transferring, mirroring, watching, branches, **writing files**, avatars, activity, languages, tracked time |
+
+`client.repos.admin` is the largest single group in the library and the one that
+holds the file-write operations — `createFile`, `updateFile`, `deleteFile`,
+`changeFiles`. See [Writing data](../guides/08-writing-data.md).
+
+Note that `repositories.hooks` is the package for four different groups (hooks,
+wiki, flags, issue config); the package name is a historical grouping and not a
+claim that a wiki is a hook.
+
+---
+
+## `client.users` — accounts
+
+`UserApi` holds the reads that name an account, or that mean "whoever the
+credentials are".
+
+**8 operations:** `current`, `get`, `search`, `repositories`, `followers`,
+`following`, `currentKeys`, `keys`
+
+`/user/…` means "the configured credentials" and needs a token; `/users/{username}/…`
+names an account. Do not assume the second family is anonymous — see
+[Authentication](../guides/02-authentication.md).
+
+### Nested groups
+
+| Accessor | Class | Operations | Covers |
+| --- | --- | ---: | --- |
+| `client.users.account` | `users.account.UserAccountApi` | 10 | the authenticated account itself: settings, avatar, email addresses, its repositories and teams |
+| `client.users.actions` | `users.account.UserActionApi` | 13 | the authenticated account's own Actions configuration: runners, secrets, variables |
+| `client.users.applications` | `users.account.UserApplicationApi` | 5 | the OAuth2 applications the account has registered |
+| `client.users.hooks` | `users.account.UserHookApi` | 5 | the webhooks the account owns |
+| `client.users.quota` | `users.account.UserQuotaApi` | 5 | what the account may store, and what is taking up the room |
+| `client.users.social` | `users.social.UserSocialApi` | 21 | the social graph: follows, stars, watches, blocks, stopwatches, tracked time, activity feeds, the contribution heatmap |
+| `client.users.keys` | `users.social.UserKeyApi` | 10 | SSH keys, GPG keys, and the handshake that proves a GPG key |
+| `client.users.tokens` | `users.social.UserTokenApi` | 3 | personal access tokens: listing, minting, revoking |
+
+`client.users.tokens.create` is the only operation in the library whose success
+carries a working credential. It is returned once, as an `ApiToken`, which
+renders as `***` everywhere. See
+[Authentication](../guides/02-authentication.md).
+
+---
+
+## `client.issues` — issues
+
+**23 operations:** `list`, `get`, `create`, `edit`, `listComments`,
+`createComment`, `listLabels`, `createLabel`, `listMilestones`, `getMilestone`,
+`search`, `delete`, `setDeadline`, `pin`, `unpin`, `movePin`, `listBlocks`,
+`addBlock`, `removeBlock`, `listDependencies`, `addDependency`,
+`removeDependency`, `timeline`
+
+Filters are one `IssueQuery` value rather than eight optional parameters, and an
+issue's `state` is a `LifecycleState` ADT whose `Closed` case carries the closing
+timestamp — so "closed" and "when" cannot get out of step.
+
+### Nested groups
+
+| Accessor | Class | Operations | Covers |
+| --- | --- | ---: | --- |
+| `client.issues.comments` | `issues.IssueCommentApi` | 6 | reading, editing and deleting a comment once it exists; listing every comment in a repository |
+| `client.issues.attachments` | `issues.IssueAttachmentApi` | 10 | files attached to an issue and files attached to a comment |
+| `client.issues.reactions` | `issues.IssueReactionApi` | 6 | emoji reactions on an issue and on a comment |
+| `client.issues.labels` | `issues.IssueLabelApi` | 8 | a repository's labels once they exist, and which of them are on an issue |
+| `client.issues.milestones` | `issues.IssueMilestoneApi` | 3 | creating, editing and deleting milestones |
+| `client.issues.times` | `issues.IssueTimeApi` | 7 | the stopwatch that measures work as it happens, and the log of what was worked |
+| `client.issues.subscriptions` | `issues.IssueSubscriptionApi` | 4 | who is following an issue, and whether the authenticated account is one of them |
+
+Creating a label and listing labels are on `IssueApi`; getting, editing and
+deleting one are on `IssueLabelApi`. That split follows Forgejo's own paths
+rather than a tidier scheme.
+
+---
+
+## `client.pulls` — pull requests
+
+**26 operations:** `list`, `get`, `create`, `edit`, `merge`, `listReviews`,
+`listCommits`, `listFiles`, `listPinned`, `getByBaseHead`, `download`,
+`isMerged`, `cancelScheduledMerge`, `updateBranch`, `requestReviews`,
+`removeReviewRequests`, `createReview`, `getReview`, `submitReview`,
+`deleteReview`, `dismissReview`, `undismissReview`, `listReviewComments`,
+`createReviewComment`, `getReviewComment`, `deleteReviewComment`
+
+No nested groups: reviews, commits and changed files all live here.
+
+`PullRequestState` is `Open | Closed | Merged`, folded from Forgejo's `state`
+string *and* its separate `merged` boolean — reading a merged pull request as
+merely closed is the bug that shape prevents. `merge` returns `Future[Unit]`
+because Forgejo answers `200` with no body.
+
+---
+
+## `client.organizations` — organisations and teams
+
+**29 operations:** `get`, `list`, `create`, `edit`, `delete`, `rename`,
+`updateAvatar`, `deleteAvatar`, `repositories`, `createRepository`,
+`createRepositoryDeprecated`, `members`, `publicMembers`, `isMember`,
+`isPublicMember`, `removeMember`, `publicizeMember`, `concealMember`,
+`blockedUsers`, `blockUser`, `unblockUser`, `teams`, `getTeam`, `teamMembers`,
+`teamRepositories`, `activities`, `userOrganizations`,
+`currentUserOrganizations`, `userPermissions`
+
+Teams are rooted at `/teams/{id}` rather than under the organisation, which is
+why `getTeam` takes only an id.
+
+### Nested groups
+
+| Accessor | Class | Operations | Covers |
+| --- | --- | ---: | --- |
+| `client.organizations.hooks` | `organizations.OrganizationHookApi` | 5 | the organisation's webhooks |
+| `client.organizations.labels` | `organizations.OrganizationLabelApi` | 5 | the shared label set its repositories may draw from |
+| `client.organizations.teamAdmin` | `organizations.OrganizationTeamApi` | 11 | creating and changing teams, and deciding who and what they reach |
+| `client.organizations.quota` | `organizations.OrganizationQuotaApi` | 5 | the organisation's storage limits, usage, and what is using it |
+| `client.organizations.actions` | `organizations.actions.OrganizationActionApi` | 14 | the runners the organisation owns, and the secrets and variables its repositories inherit |
+
+`teamAdmin` is named that way because `client.organizations.teams` is already an
+operation — the listing — on `OrganizationApi`.
+
+---
+
+## `client.notifications` — the inbox
+
+**7 operations:** `list`, `markAllRead`, `unreadCount`, `getThread`,
+`markThreadRead`, `listRepository`, `markRepositoryRead`
+
+All of them require a token; there is no anonymous inbox.
+`NotificationQuery.Empty` is unread-only, matching the endpoint's own default. A
+subject type this library has not seen decodes to
+`NotificationSubjectType.Other(raw)` rather than failing the page, because
+Forgejo adds subject types between releases.
+
+---
+
+## `client.misc` — the instance itself
+
+**17 operations:** `apiSettings`, `repositorySettings`, `attachmentSettings`,
+`signingKey`, `renderMarkdown`, `renderMarkdownRaw`, `uiSettings`,
+`sshSigningKey`, `gitignoreTemplates`, `gitignoreTemplate`, `labelTemplates`,
+`labelTemplate`, `licenseTemplates`, `licenseTemplate`, `renderMarkup`,
+`nodeInfo`, `actionsRun`
+
+`apiSettings()` is the endpoint that explains the pagination hazard the rest of
+this library is built around: `maxResponseItems` is the ceiling Forgejo silently
+clamps `limit` to. Read it once on a self-hosted instance. See
+[Self-hosted instances](../guides/09-self-hosted.md).
+
+`signingKey()` and `sshSigningKey()` return `Option`, because an instance that
+does not sign commits is a legitimate answer and not a `404`.
+
+---
+
+## `client.downloads` — the two ZIP endpoints
+
+**2 operations:** `artifact`, `runLogs`
+
+These live at the top level rather than under `client.repos.actions` because they
+are the only operations in the API that need a byte-carrying transport; every
+other group is built on the textual one.
+
+Both hold the whole archive in memory. **This library does not stream.** For a
+large artifact, that is a fact to plan around rather than a setting to change.
+
+---
+
+## What is not here
+
+Three tag groups are out of scope for v1 and have no accessor at all:
+`admin` (instance administration), `activitypub` (federation) and `package` (the
+package registry).
+[`docs/API_INVENTORY.md`](../project/API_INVENTORY.md) has the endpoint-level
+checklist and the honest percentage.
+
+No group carries its own `listAll`. Walking every page of any listing is
+`com.worxbend.codeberg4s.paging.PageWalk`, which takes the listing operation as
+an argument — see [Pagination](../guides/04-pagination.md) for why the rule lives
+in one place rather than thirty-eight.
+
+## Reading the Scaladoc
+
+Every class above documents, per operation:
+
+- the HTTP method and path it calls;
+- what it returns, and why that shape rather than another;
+- every `CodebergError` case it can produce, including which statuses to expect;
+- its `RetryEligibility`, with the argument for it — this is the one thing you
+  cannot infer from the signature;
+- whether the model was built from a captured response or read off the
+  specification. That distinction is stated openly, because a model derived from
+  the specification alone is less trustworthy: the specification declares no
+  `required` fields on any response and no `nullable` anywhere.
+
+Class-level Scaladoc additionally covers what the group's paths have in common,
+what authentication they need, and any Forgejo behaviour worth warning about.

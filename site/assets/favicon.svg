@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="codeberg4s">
+  <title>codeberg4s</title>
+  <rect width="64" height="64" rx="12" fill="#1d4f6e"/>
+  <!-- A page-cursor mark: two angle brackets around a slash, the conventional
+       "this is an API client" glyph, drawn rather than typed so the icon needs
+       no font. -->
+  <g fill="none" stroke="#edf3f7" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="22,22 12,32 22,42"/>
+    <polyline points="42,22 52,32 42,42"/>
+    <line x1="36" y1="16" x2="28" y2="48"/>
+  </g>
+</svg>
