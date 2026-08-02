@@ -9,11 +9,11 @@ import com.worxbend.codeberg4s.retry.Jitter
 import com.worxbend.codeberg4s.retry.RetryPolicy
 import com.worxbend.codeberg4s.syntax.discard
 
+import munit.FunSuite
+
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
-
-import munit.FunSuite
 
 final class RetryEngineSuite extends FunSuite:
 

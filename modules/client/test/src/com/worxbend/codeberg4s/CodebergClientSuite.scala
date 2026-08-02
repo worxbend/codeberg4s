@@ -15,11 +15,11 @@ import sttp.client4.testing.RecordingBackend
 import sttp.client4.testing.ResponseStub
 import sttp.model.StatusCode
 
+import munit.FunSuite
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-
-import munit.FunSuite
 
 /** The published façade, end to end, over a `BackendStub`: nothing in this suite opens a socket.
   *

@@ -1,8 +1,8 @@
 package com.worxbend.codeberg4s.core
 
-import scala.concurrent.duration.DurationInt
-
 import munit.FunSuite
+
+import scala.concurrent.duration.DurationInt
 
 final class CodebergResponseSuite extends FunSuite:
 

@@ -4,9 +4,9 @@ import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.syntax.discard
 
-import scala.collection.mutable.ListBuffer
-
 import munit.FunSuite
+
+import scala.collection.mutable.ListBuffer
 
 final class ExecSuite extends FunSuite:
 

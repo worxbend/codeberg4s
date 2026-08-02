@@ -7,9 +7,9 @@ import com.worxbend.codeberg4s.paging.PageNumber
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.syntax.discard
 
-import scala.collection.mutable.ListBuffer
-
 import munit.FunSuite
+
+import scala.collection.mutable.ListBuffer
 
 final class PaginationSuite extends FunSuite:
 
@@ -74,7 +74,7 @@ final class PaginationSuite extends FunSuite:
   private def threePages: Vector[Page[Int]] = Vector(
     pageOf(1, Vector(1, 2), lastIndex = 3),
     pageOf(2, Vector(3, 4), lastIndex = 3),
-    pageOf(3, Vector(5), lastIndex = 3),
+    pageOf(3, Vector(5), lastIndex    = 3),
   )
 
   /** Serves the prepared pages and records every request, so an eager walk shows up as an extra `fetch-` entry. */

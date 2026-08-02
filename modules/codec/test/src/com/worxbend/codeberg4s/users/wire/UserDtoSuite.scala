@@ -7,9 +7,9 @@ import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.UserVisibility
 import com.worxbend.codeberg4s.wire.SearchEnvelopeDto
 
-import java.time.Instant
-
 import munit.FunSuite
+
+import java.time.Instant
 
 /** Decodes every golden fixture whose payload is a `User`, and asserts on named fields rather than on a round trip.
   *

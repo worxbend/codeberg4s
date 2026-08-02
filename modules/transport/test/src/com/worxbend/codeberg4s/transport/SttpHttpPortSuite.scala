@@ -23,6 +23,8 @@ import sttp.model.Header
 import sttp.model.Method
 import sttp.model.StatusCode
 
+import munit.FunSuite
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -31,8 +33,6 @@ import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.net.http.HttpTimeoutException
-
-import munit.FunSuite
 
 /** Request-shape and failure-classification tests for [[SttpHttpPort]].
   *

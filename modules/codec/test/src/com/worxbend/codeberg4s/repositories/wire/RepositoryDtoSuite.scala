@@ -7,9 +7,9 @@ import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.RepositoryPermissions
 import com.worxbend.codeberg4s.wire.SearchEnvelopeDto
 
-import java.time.Instant
-
 import munit.FunSuite
+
+import java.time.Instant
 
 /** Decodes every golden fixture whose payload is a `Repository` — the two single-repository captures, the three list
   * captures, the fork list and the search envelope. Thirteen repository objects in total, which is what makes the

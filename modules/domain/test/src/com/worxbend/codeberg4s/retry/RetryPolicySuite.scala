@@ -1,9 +1,9 @@
 package com.worxbend.codeberg4s.retry
 
+import munit.FunSuite
+
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.DurationInt
-
-import munit.FunSuite
 
 final class RetryPolicySuite extends FunSuite:
 

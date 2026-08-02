@@ -4,8 +4,8 @@
 
 package build
 
-import mill.*
 import com.goyeau.mill.scalafix.ScalafixModule
+import mill.*
 import mill.contrib.scoverage.ScoverageModule
 import mill.scalalib.*
 import mill.scalalib.publish.*
@@ -121,9 +121,8 @@ object modules extends Module:
 
   /** Wire DTOs and upickle codecs. The only module that knows the JSON shape.
     *
-    * Depends on `core` because it is the adapter that implements core's
-    * `Decode` port — an adapter depending on the port it satisfies is the
-    * expected direction. It still must not import sttp.
+    * Depends on `core` because it is the adapter that implements core's `Decode` port — an adapter depending on the
+    * port it satisfies is the expected direction. It still must not import sttp.
     */
   object codec extends Codeberg4sPublishModule:
     def artifactName = "codeberg4s-codec"

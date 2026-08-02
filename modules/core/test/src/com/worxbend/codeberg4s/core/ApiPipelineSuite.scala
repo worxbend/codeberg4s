@@ -15,12 +15,12 @@ import com.worxbend.codeberg4s.retry.Jitter
 import com.worxbend.codeberg4s.retry.RetryPolicy
 import com.worxbend.codeberg4s.syntax.discard
 
+import munit.FunSuite
+
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 
 import java.util.concurrent.atomic.AtomicLong
-
-import munit.FunSuite
 
 final class ApiPipelineSuite extends FunSuite:
 

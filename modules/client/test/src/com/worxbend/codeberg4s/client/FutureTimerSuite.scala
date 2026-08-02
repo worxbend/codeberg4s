@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.client
 
+import munit.FunSuite
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.DurationInt
@@ -7,8 +9,6 @@ import scala.concurrent.duration.FiniteDuration
 import scala.util.Success
 
 import java.util.concurrent.RejectedExecutionException
-
-import munit.FunSuite
 
 /** The `Future` instance of [[com.worxbend.codeberg4s.core.Timer]].
   *

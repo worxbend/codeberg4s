@@ -1,8 +1,8 @@
 package com.worxbend.codeberg4s.codec
 
-import java.time.Instant
-
 import munit.FunSuite
+
+import java.time.Instant
 
 final class TimestampsSuite extends FunSuite:
 

@@ -5,14 +5,14 @@ import com.worxbend.codeberg4s.CodebergException
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.core.Exec
 
+import munit.FunSuite
+
 import scala.concurrent.Future
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
 import java.util.concurrent.atomic.AtomicInteger
-
-import munit.FunSuite
 
 /** The `Future` instance of [[com.worxbend.codeberg4s.core.Exec]].
   *

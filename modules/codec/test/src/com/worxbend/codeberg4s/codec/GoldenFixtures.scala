@@ -1,8 +1,8 @@
 package com.worxbend.codeberg4s.codec
 
-import java.nio.charset.StandardCharsets
-
 import munit.Assertions
+
+import java.nio.charset.StandardCharsets
 
 /** Reads a captured response body from `modules/codec/test/resources/golden`.
   *
