@@ -148,6 +148,20 @@ object modules extends Module:
     def moduleDeps   = Seq(core, codec, transport)
     object test extends Codeberg4sTests
 
+  /** Runnable example programs, compiled by the build and published nowhere.
+    *
+    * Deliberately not a `Codeberg4sPublishModule`: an example is documentation, and shipping it to Maven Central would
+    * put a `main` method on a consumer's classpath. It still compiles under the same `scalacOptions` as the library —
+    * `-Werror` included — which is the whole reason the examples live here rather than in Markdown. A snippet in a
+    * README rots silently; a snippet in this module breaks `./mill modules.__.compile`, and therefore `verify.sh`, on
+    * the commit that invalidates it.
+    *
+    * Run one with `./mill modules.examples.runMain com.worxbend.codeberg4s.examples.HelloCodeberg`; every program names
+    * its own command and its environment variables in its Scaladoc.
+    */
+  object examples extends Codeberg4sModule:
+    def moduleDeps = Seq(client)
+
   /** Live-network / container integration tests. Environmentally unsuitable — excluded from coverage, mutation and the
     * default `verify.sh` test step.
     */
