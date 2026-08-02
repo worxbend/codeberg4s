@@ -8,6 +8,9 @@ import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.repositories.actions.RepositoryActionApi
+import com.worxbend.codeberg4s.repositories.gitdata.RepositoryGitApi
+import com.worxbend.codeberg4s.repositories.publishing.RepositoryPublishingApi
 
 import scala.concurrent.Future
 
@@ -33,6 +36,15 @@ final class RepositoryApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
 
   /** The same operations, with failures as values instead of as a failed `Future`. */
   val attempt: RepositoryApi.Attempt = RepositoryApi.Attempt(this)
+
+  /** Forgejo Actions: runners, secrets, variables, workflow runs, jobs and artifacts. */
+  val actions: RepositoryActionApi = RepositoryActionApi(pipeline)
+
+  /** Raw git data: blobs, trees, refs, annotated tags, notes, statuses, diffs and archives. */
+  val git: RepositoryGitApi = RepositoryGitApi(pipeline)
+
+  /** Releases, release assets, tags, topics, forks and template generation. */
+  val publishing: RepositoryPublishingApi = RepositoryPublishingApi(pipeline)
 
   /** Reads one repository — `GET /repos/{owner}/{repo}`.
     *

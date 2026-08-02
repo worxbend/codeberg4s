@@ -1,7 +1,9 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.pulls.DiffRequest
 import com.worxbend.codeberg4s.pulls.PullRequestQuery
+import com.worxbend.codeberg4s.pulls.UpdateStyle
 
 /** The query strings this group's listing endpoints send.
   *
@@ -52,3 +54,22 @@ private[codeberg4s] object PullRequestQueries:
       query.base.map(branch   => "base" -> branch.value),
       query.head.map(branch   => "head" -> branch.value),
     ).flatten ++ query.labels.map(id => "labels" -> id.value.toString)
+
+  /** The query of `GET /repos/{owner}/{repo}/pulls/{index}.{diffType}`.
+    *
+    * The format is a '''path''' segment, not a parameter, so the only thing that reaches the query string is `binary` —
+    * and only when the caller asked for it. Forgejo reads an absent `binary` as `false`, so sending `binary=false`
+    * would be an assertion the caller never made and would also cost the response its cacheability under a proxy that
+    * keys on the full URI.
+    */
+  def diff(request: DiffRequest): List[(String, String)] =
+    if request.includeBinary then List("binary" -> "true") else Nil
+
+  /** The query of `POST /repos/{owner}/{repo}/pulls/{index}/update`.
+    *
+    * Always emitted. Forgejo's handler compares the parameter against the literal `rebase` and treats everything else —
+    * including its absence — as a merge, so naming the style explicitly is exactly as expressive as omitting it and
+    * makes the recorded request say which of the two was meant. See [[com.worxbend.codeberg4s.pulls.UpdateStyle]].
+    */
+  def update(style: UpdateStyle): List[(String, String)] =
+    List("style" -> style.wireValue)
