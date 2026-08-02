@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -72,7 +73,7 @@ object CommentDto:
   /** Reads a `Comment` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[CommentDto] =
+  given JsonDecoder[CommentDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, reusing [[com.worxbend.codeberg4s.users.wire.UserDto.fromFields]] for the

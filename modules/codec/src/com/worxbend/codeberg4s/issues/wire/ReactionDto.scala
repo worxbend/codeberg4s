@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -46,7 +47,7 @@ object ReactionDto:
   /** Reads a `Reaction` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[ReactionDto] =
+  given JsonDecoder[ReactionDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

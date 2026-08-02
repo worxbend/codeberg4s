@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.Commit
@@ -38,7 +39,7 @@ final case class NoteDto(message: Option[String], commit: Option[CommitDto]):
 object NoteDto:
 
   /** Reads a `Note` object. */
-  given upickle.default.Reader[NoteDto] =
+  given JsonDecoder[NoteDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

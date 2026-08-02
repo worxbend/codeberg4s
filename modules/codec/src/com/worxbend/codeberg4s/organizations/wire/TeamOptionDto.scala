@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.organizations.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.organizations.CreateTeam
 import com.worxbend.codeberg4s.organizations.EditTeam
 import com.worxbend.codeberg4s.organizations.TeamPermission
@@ -54,38 +56,38 @@ private[codeberg4s] object TeamOptionDto:
   /** Renders `command` as the JSON body to `POST /orgs/{org}/teams`. See the object note for what is unconditional. */
   def renderCreate(command: CreateTeam): String =
     val fields = List(
-      Some(NameKey                    -> ujson.Str(command.name.value)),
-      Some(CanCreateOrgRepoKey        -> ujson.Bool(command.canCreateOrgRepo)),
-      Some(IncludesAllRepositoriesKey -> ujson.Bool(command.includesAllRepositories)),
-      command.description.map(text => "description" -> ujson.Str(text)),
-      command.permission.map(level => PermissionKey -> ujson.Str(level.wireName)),
+      Some(NameKey                    -> JsonValue.Str(command.name.value)),
+      Some(CanCreateOrgRepoKey        -> JsonValue.Bool(command.canCreateOrgRepo)),
+      Some(IncludesAllRepositoriesKey -> JsonValue.Bool(command.includesAllRepositories)),
+      command.description.map(text => "description" -> JsonValue.Str(text)),
+      command.permission.map(level => PermissionKey -> JsonValue.Str(level.wireName)),
       units(command.units),
       unitPermissions(command.unitPermissions),
     ).flatten
 
-    ujson.write(ujson.Obj.from(fields))
+    Json.render(JsonValue.Obj.from(fields))
 
   /** Renders `command` as the JSON body to `PATCH /teams/{id}`. `name` always travels; see the object note. */
   def renderEdit(command: EditTeam): String =
     val fields = List(
-      Some(NameKey -> ujson.Str(command.name.value)),
-      command.description.map(text             => "description" -> ujson.Str(text)),
-      command.permission.map(level             => PermissionKey -> ujson.Str(level.wireName)),
+      Some(NameKey -> JsonValue.Str(command.name.value)),
+      command.description.map(text             => "description" -> JsonValue.Str(text)),
+      command.permission.map(level             => PermissionKey -> JsonValue.Str(level.wireName)),
       units(command.units),
       unitPermissions(command.unitPermissions),
-      command.canCreateOrgRepo.map(flag        => CanCreateOrgRepoKey -> ujson.Bool(flag)),
-      command.includesAllRepositories.map(flag => IncludesAllRepositoriesKey -> ujson.Bool(flag)),
+      command.canCreateOrgRepo.map(flag        => CanCreateOrgRepoKey -> JsonValue.Bool(flag)),
+      command.includesAllRepositories.map(flag => IncludesAllRepositoriesKey -> JsonValue.Bool(flag)),
     ).flatten
 
-    ujson.write(ujson.Obj.from(fields))
+    Json.render(JsonValue.Obj.from(fields))
 
   /** The `units` array, in the order the caller wrote it; absent when there is nothing to say. */
-  private def units(names: Vector[String]): Option[(String, ujson.Value)] =
-    Option.when(names.nonEmpty)(UnitsKey -> ujson.Arr.from(names.map(ujson.Str.apply)))
+  private def units(names: Vector[String]): Option[(String, JsonValue)] =
+    Option.when(names.nonEmpty)(UnitsKey -> JsonValue.Arr.from(names.map(JsonValue.Str.apply)))
 
   /** The `units_map` object, in key order so the body is reproducible; absent when there is nothing to say. */
-  private def unitPermissions(levels: Map[String, TeamPermission]): Option[(String, ujson.Value)] =
+  private def unitPermissions(levels: Map[String, TeamPermission]): Option[(String, JsonValue)] =
     Option.when(levels.nonEmpty):
-      UnitsMapKey -> ujson.Obj.from(
-        levels.toVector.sortBy((unit, _) => unit).map((unit, level) => unit -> ujson.Str(level.wireName))
+      UnitsMapKey -> JsonValue.Obj.from(
+        levels.toVector.sortBy((unit, _) => unit).map((unit, level) => unit -> JsonValue.Str(level.wireName))
       )

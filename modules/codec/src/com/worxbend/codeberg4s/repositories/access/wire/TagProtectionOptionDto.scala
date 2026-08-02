@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.access.CreateTagProtection
 import com.worxbend.codeberg4s.repositories.access.EditTagProtection
 import com.worxbend.codeberg4s.users.Username
@@ -23,9 +25,9 @@ private[codeberg4s] object TagProtectionOptionDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def renderCreate(command: CreateTagProtection): String =
-    ujson.write(
-      ujson.Obj(
-        TagProtectionWire.NamePattern        -> ujson.Str(command.namePattern.value),
+    Json.render(
+      JsonValue.Obj(
+        TagProtectionWire.NamePattern        -> JsonValue.Str(command.namePattern.value),
         TagProtectionWire.WhitelistUsernames -> logins(command.whitelistUsernames),
         TagProtectionWire.WhitelistTeams     -> texts(command.whitelistTeams),
       )
@@ -33,17 +35,17 @@ private[codeberg4s] object TagProtectionOptionDto:
 
   /** Renders `command` as the JSON body to `PATCH`. A command that states nothing renders to `{}`. */
   def renderEdit(command: EditTagProtection): String =
-    ujson.write(ujson.Obj.from(editFields(command)))
+    Json.render(JsonValue.Obj.from(editFields(command)))
 
-  private def editFields(command: EditTagProtection): List[(String, ujson.Value)] =
+  private def editFields(command: EditTagProtection): List[(String, JsonValue)] =
     List(
-      command.namePattern.map(pattern       => TagProtectionWire.NamePattern -> ujson.Str(pattern.value)),
+      command.namePattern.map(pattern       => TagProtectionWire.NamePattern -> JsonValue.Str(pattern.value)),
       command.whitelistUsernames.map(values => TagProtectionWire.WhitelistUsernames -> logins(values)),
       command.whitelistTeams.map(values     => TagProtectionWire.WhitelistTeams -> texts(values)),
     ).flatten
 
-  private def logins(values: Vector[Username]): ujson.Value =
-    ujson.Arr.from(values.map(name => ujson.Str(name.value)))
+  private def logins(values: Vector[Username]): JsonValue =
+    JsonValue.Arr.from(values.map(name => JsonValue.Str(name.value)))
 
-  private def texts(values: Vector[String]): ujson.Value =
-    ujson.Arr.from(values.map(ujson.Str.apply))
+  private def texts(values: Vector[String]): JsonValue =
+    JsonValue.Arr.from(values.map(JsonValue.Str.apply))

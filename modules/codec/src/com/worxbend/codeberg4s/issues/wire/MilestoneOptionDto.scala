@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.issues.CreateMilestone
 import com.worxbend.codeberg4s.issues.EditMilestone
 
@@ -25,21 +27,21 @@ private[codeberg4s] object MilestoneOptionDto:
   /** Renders `command` as the JSON body to `POST`. */
   def renderCreate(command: CreateMilestone): String =
     val fields = List(
-      Some("title" -> ujson.Str(command.title)),
-      command.description.map(text => "description" -> ujson.Str(text)),
-      command.dueOn.map(moment     => "due_on" -> ujson.Str(WireInstant.render(moment))),
-      command.state.map(transition => "state" -> ujson.Str(transition.wireValue)),
+      Some("title" -> JsonValue.Str(command.title)),
+      command.description.map(text => "description" -> JsonValue.Str(text)),
+      command.dueOn.map(moment     => "due_on" -> JsonValue.Str(WireInstant.render(moment))),
+      command.state.map(transition => "state" -> JsonValue.Str(transition.wireValue)),
     ).flatten
 
-    ujson.write(ujson.Obj.from(fields))
+    Json.render(JsonValue.Obj.from(fields))
 
   /** Renders `command` as the JSON body to `PATCH`; `{}` when it changes nothing. */
   def renderEdit(command: EditMilestone): String =
     val fields = List(
-      command.title.map(text       => "title" -> ujson.Str(text)),
-      command.description.map(text => "description" -> ujson.Str(text)),
-      command.dueOn.map(moment     => "due_on" -> ujson.Str(WireInstant.render(moment))),
-      command.state.map(transition => "state" -> ujson.Str(transition.wireValue)),
+      command.title.map(text       => "title" -> JsonValue.Str(text)),
+      command.description.map(text => "description" -> JsonValue.Str(text)),
+      command.dueOn.map(moment     => "due_on" -> JsonValue.Str(WireInstant.render(moment))),
+      command.state.map(transition => "state" -> JsonValue.Str(transition.wireValue)),
     ).flatten
 
-    ujson.write(ujson.Obj.from(fields))
+    Json.render(JsonValue.Obj.from(fields))

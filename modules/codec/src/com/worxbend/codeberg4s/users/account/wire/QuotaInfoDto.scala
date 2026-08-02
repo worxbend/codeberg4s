@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.users.account.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.account.QuotaGroup
@@ -49,7 +50,7 @@ object QuotaInfoDto:
   /** Reads a `QuotaInfo` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[QuotaInfoDto] =
+  given JsonDecoder[QuotaInfoDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, flattening the `used` tree; see the class note. */
@@ -98,7 +99,7 @@ final case class QuotaGroupDto(
 object QuotaGroupDto:
 
   /** Reads a `QuotaGroup` object. */
-  given upickle.default.Reader[QuotaGroupDto] =
+  given JsonDecoder[QuotaGroupDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */
@@ -135,7 +136,7 @@ final case class QuotaRuleDto(
 object QuotaRuleDto:
 
   /** Reads a `QuotaRuleInfo` object. */
-  given upickle.default.Reader[QuotaRuleDto] =
+  given JsonDecoder[QuotaRuleDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

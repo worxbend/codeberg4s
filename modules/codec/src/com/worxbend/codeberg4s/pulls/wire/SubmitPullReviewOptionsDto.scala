@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.pulls.SubmitReview
 
 /** Forgejo's `SubmitPullReviewOptions` request model — the body of
@@ -13,10 +15,10 @@ private[codeberg4s] object SubmitPullReviewOptionsDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: SubmitReview): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: SubmitReview): List[(String, ujson.Value)] =
+  private def fields(command: SubmitReview): List[(String, JsonValue)] =
     List(
-      Some("event" -> ujson.Str(command.event.wireValue)),
-      command.body.map(text => "body" -> ujson.Str(text)),
+      Some("event" -> JsonValue.Str(command.event.wireValue)),
+      command.body.map(text => "body" -> JsonValue.Str(text)),
     ).flatten

@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.users.account.wire
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.account.AttachmentContainer
 import com.worxbend.codeberg4s.users.account.QuotaInfo
@@ -173,10 +174,10 @@ final class QuotaDtoSuite extends FunSuite:
   private def report(body: String): QuotaInfo =
     convert(decodeReport(body).toDomain)
 
-  private def one[D: upickle.default.Reader, A](body: String)(toDomain: D => Either[DecodeFailure, A]): A =
+  private def one[D: JsonDecoder, A](body: String)(toDomain: D => Either[DecodeFailure, A]): A =
     convert(toDomain(decodeOne[D](body)))
 
-  private def decodeOne[A: upickle.default.Reader](body: String): A =
+  private def decodeOne[A: JsonDecoder](body: String): A =
     Json.decode[A](body) match
       case Right(decoded) => decoded
       case Left(failure)  => fail(s"the payload did not decode: ${failure.message}")

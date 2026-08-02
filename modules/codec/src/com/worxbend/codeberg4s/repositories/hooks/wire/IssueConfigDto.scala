@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -38,7 +39,7 @@ final case class IssueContactLinkDto(
 object IssueContactLinkDto:
 
   /** Reads an `IssueConfigContactLink` object. Absent and `null` are the same thing; see [[JsonFields]]. */
-  given upickle.default.Reader[IssueContactLinkDto] =
+  given JsonDecoder[IssueContactLinkDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, for the config that embeds these. */
@@ -79,7 +80,7 @@ object IssueConfigDto:
   val ContactLinksKey: String = "contact_links"
 
   /** Reads an `IssueConfig` object. A missing or `null` `contact_links` key is an empty list, not a failure. */
-  given upickle.default.Reader[IssueConfigDto] =
+  given JsonDecoder[IssueConfigDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */
@@ -116,7 +117,7 @@ final case class IssueConfigValidationDto(
 object IssueConfigValidationDto:
 
   /** Reads an `IssueConfigValidation` object. Absent and `null` are the same thing; see [[JsonFields]]. */
-  given upickle.default.Reader[IssueConfigValidationDto] =
+  given JsonDecoder[IssueConfigValidationDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

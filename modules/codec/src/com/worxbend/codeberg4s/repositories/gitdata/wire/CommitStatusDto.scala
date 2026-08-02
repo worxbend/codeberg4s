@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -80,7 +81,7 @@ final case class CommitStatusDto(
 object CommitStatusDto:
 
   /** Reads a `CommitStatus` object. */
-  given upickle.default.Reader[CommitStatusDto] =
+  given JsonDecoder[CommitStatusDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, for the combined-status envelope that embeds these. */

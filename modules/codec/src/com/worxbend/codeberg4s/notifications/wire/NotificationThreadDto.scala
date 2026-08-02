@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.notifications.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -87,7 +88,7 @@ object NotificationThreadDto:
   /** Reads a `NotificationThread` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[NotificationThreadDto] =
+  given JsonDecoder[NotificationThreadDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, reusing the `fromFields` of every model it embeds so that no field spelling is

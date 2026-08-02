@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 
 /** Forgejo's `TopicNames` — the body of `GET /repos/{owner}/{repo}/topics`.
@@ -24,7 +25,7 @@ final case class TopicNamesDto(topics: Vector[String]):
 object TopicNamesDto:
 
   /** Reads a `TopicNames` object. */
-  given upickle.default.Reader[TopicNamesDto] =
+  given JsonDecoder[TopicNamesDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

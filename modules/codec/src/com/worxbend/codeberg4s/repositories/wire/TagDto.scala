@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -68,7 +69,7 @@ final case class TagDto(
 object TagDto:
 
   /** Reads a `Tag` object. */
-  given upickle.default.Reader[TagDto] =
+  given JsonDecoder[TagDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

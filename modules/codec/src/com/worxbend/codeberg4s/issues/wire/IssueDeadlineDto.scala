@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.issues.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -32,7 +33,7 @@ object IssueDeadlineDto:
   /** Reads an `IssueDeadline` object. Absent and `null` are the same thing; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[IssueDeadlineDto] =
+  given JsonDecoder[IssueDeadlineDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

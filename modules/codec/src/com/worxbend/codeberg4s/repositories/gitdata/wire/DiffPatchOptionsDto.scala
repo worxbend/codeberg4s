@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.issues.wire.WireInstant
 import com.worxbend.codeberg4s.repositories.gitdata.ApplyDiffPatch
 import com.worxbend.codeberg4s.repositories.gitdata.GitAuthor
@@ -26,31 +28,31 @@ private[codeberg4s] object DiffPatchOptionsDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: ApplyDiffPatch): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: ApplyDiffPatch): List[(String, ujson.Value)] =
+  private def fields(command: ApplyDiffPatch): List[(String, JsonValue)] =
     List(
-      Some("content" -> ujson.Str(command.content)),
-      command.sha.map(value      => "sha" -> ujson.Str(value)),
-      command.branch.map(target  => "branch" -> ujson.Str(target.value)),
-      command.newBranch.map(name => "new_branch" -> ujson.Str(name.value)),
-      command.message.map(text   => "message" -> ujson.Str(text)),
+      Some("content" -> JsonValue.Str(command.content)),
+      command.sha.map(value      => "sha" -> JsonValue.Str(value)),
+      command.branch.map(target  => "branch" -> JsonValue.Str(target.value)),
+      command.newBranch.map(name => "new_branch" -> JsonValue.Str(name.value)),
+      command.message.map(text   => "message" -> JsonValue.Str(text)),
       command.author.map(who     => "author" -> person(who)),
       command.committer.map(who  => "committer" -> person(who)),
       dates(command.authorDate, command.committerDate),
-      Option.when(command.signoff)("signoff"                                    -> ujson.Bool(true)),
-      Option.when(command.forceOverwriteNewBranch)("force_overwrite_new_branch" -> ujson.Bool(true)),
+      Option.when(command.signoff)("signoff"                                    -> JsonValue.Bool(true)),
+      Option.when(command.forceOverwriteNewBranch)("force_overwrite_new_branch" -> JsonValue.Bool(true)),
     ).flatten
 
-  private def person(who: GitAuthor): ujson.Value =
-    ujson.Obj("name" -> ujson.Str(who.name), "email" -> ujson.Str(who.email))
+  private def person(who: GitAuthor): JsonValue =
+    JsonValue.Obj("name" -> JsonValue.Str(who.name), "email" -> JsonValue.Str(who.email))
 
   /** The `dates` object, present only when both halves are, because
     * [[com.worxbend.codeberg4s.repositories.gitdata.ApplyDiffPatch.dated]] is the only way to set either.
     */
-  private def dates(authored: Option[Instant], committed: Option[Instant]): Option[(String, ujson.Value)] =
+  private def dates(authored: Option[Instant], committed: Option[Instant]): Option[(String, JsonValue)] =
     authored.zip(committed).map: (author, committer) =>
-      "dates" -> ujson.Obj(
-        "author"    -> ujson.Str(WireInstant.render(author)),
-        "committer" -> ujson.Str(WireInstant.render(committer)),
+      "dates" -> JsonValue.Obj(
+        "author"    -> JsonValue.Str(WireInstant.render(author)),
+        "committer" -> JsonValue.Str(WireInstant.render(committer)),
       )

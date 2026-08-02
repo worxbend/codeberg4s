@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -45,7 +46,7 @@ final case class GitHookDto(
 object GitHookDto:
 
   /** Reads a `GitHook` object. Absent and `null` are the same thing for every field; see [[JsonFields]]. */
-  given upickle.default.Reader[GitHookDto] =
+  given JsonDecoder[GitHookDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

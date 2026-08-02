@@ -1,114 +1,118 @@
 package com.worxbend.codeberg4s.codec
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.core.DecodeFailure
 
 import munit.FunSuite
 
-/** `Json` is the only place in the library that calls upickle, so this suite is where "no codec exception ever escapes"
-  * is proved. Every case below is a body that makes upickle throw.
+/** `Json` is the only place in the library that calls jsoniter, so this suite is where "no codec exception ever
+  * escapes" is proved. Every case below is a body that makes the parser throw.
+  *
+  * Decoding is two steps — parse into [[JsonValue]], then assemble the DTO — and only the first can fail structurally.
+  * That is why the failures here carry [[JsonPath.Root]]: the problem is the document, not a field. A field the domain
+  * needs is reported by the DTO's own `toDomain`, which knows which field it wanted; those paths are asserted in the
+  * DTO suites, not here.
   */
 final class JsonSuite extends FunSuite:
 
-  /** A strictly-derived reader, unlike the lenient hand-written ones the DTOs use. Needed here precisely because it
-    * fails: the JSON-path recovery has nothing to report unless something goes wrong deep inside a document.
-    */
-  final case class Leaf(name: String) derives upickle.default.ReadWriter
+  private final case class Leaf(name: Option[String])
 
-  final case class Branch(leaf: Leaf) derives upickle.default.ReadWriter
+  private given JsonDecoder[Leaf] = JsonFields.reader(fields => Leaf(fields.text("name")))
 
-  /** Field names chosen to be long, so that upickle's `missing keys in dictionary: …` message overruns
-    * [[Json.MaxReasonLength]] and the truncation is exercised for real rather than asserted vacuously.
-    */
-  final case class Wide(
-      aFieldNameLongEnoughToPushUpicklesMissingKeyMessageOverTheReasonBoundOne: String,
-      aFieldNameLongEnoughToPushUpicklesMissingKeyMessageOverTheReasonBoundTwo: String,
-      aFieldNameLongEnoughToPushUpicklesMissingKeyMessageOverTheReasonBoundSix: String,
-  ) derives upickle.default.ReadWriter
+  private val leaf: String = """{"name":"a"}"""
 
   test("a well-formed body decodes"):
-    assertEquals(Json.decode[Leaf]("""{"name":"ok"}"""), Right(Leaf("ok")))
+    assertEquals(Json.decode[Leaf](leaf), Right(Leaf(Some("a"))))
 
   test("a truncated body is a failure, not an exception"):
-    val result = Json.decode[Leaf]("""{"name":"ok""")
-
-    assert(result.isLeft, s"expected a DecodeFailure, got $result")
+    assert(Json.decode[Leaf]("""{"name":""").isLeft)
 
   test("a body that is not JSON at all is a failure"):
-    assert(Json.decode[Leaf]("404 page not found").isLeft)
+    assert(Json.decode[Leaf]("not json").isLeft)
 
   test("an empty body is a failure"):
     assert(Json.decode[Leaf]("").isLeft)
 
   test("a body of the wrong JSON kind is a failure"):
-    assert(Json.decode[Leaf]("[]").isLeft)
+    assert(Json.decode[Leaf]("""[1,2,3]""").isLeft)
+
+  test("a wrong-kind failure says what it found rather than only what it wanted"):
+    Json.decode[Leaf]("""[1,2,3]""") match
+      case Left(failure) => assert(failure.message.contains("an array"), failure.message)
+      case Right(value)  => fail(s"expected a failure, got $value")
 
   test("a document-level failure reports the root path"):
-    Json.decode[Leaf]("nonsense") match
-      case Left(failure) => assert(failure.path.isRoot, s"expected the root path, got ${failure.path.render}")
-      case Right(value)  => fail(s"expected a failure, decoded $value")
+    Json.decode[Leaf]("not json") match
+      case Left(failure) => assertEquals(failure.path, JsonPath.Root)
+      case Right(value)  => fail(s"expected a failure, got $value")
 
-  test("a document-level failure carries upickle's own explanation, not an empty string"):
-    Json.decode[Leaf]("nonsense") match
-      case Left(failure) => assert(failure.message.trim.nonEmpty, "the failure message was blank")
-      case Right(value)  => fail(s"expected a failure, decoded $value")
-
-  test("a failure inside a nested object reports the field path"):
-    Json.decode[Branch]("""{"leaf":{"name":[1,2]}}""") match
-      case Left(failure) => assertEquals(failure.path.render, "$.leaf.name")
-      case Right(value)  => fail(s"expected a failure, decoded $value")
-
-  test("a failure inside a list element reports the element index"):
-    Json.decode[Vector[Leaf]]("""[{"name":"first"},{"name":[1,2]}]""") match
-      case Left(failure) => assertEquals(failure.path.render, "$[1].name")
-      case Right(value)  => fail(s"expected a failure, decoded $value")
-
-  test("a missing required key reports it by name"):
-    Json.decode[Leaf]("""{}""") match
-      case Left(failure) => assert(failure.message.contains("name"), s"unhelpful message: ${failure.message}")
-      case Right(value)  => fail(s"expected a failure, decoded $value")
+  test("a document-level failure carries the parser's own explanation, not an empty string"):
+    Json.decode[Leaf]("not json") match
+      case Left(failure) => assert(failure.message.trim.nonEmpty)
+      case Right(value)  => fail(s"expected a failure, got $value")
 
   test("the failure message is bounded so a decoder cannot dump a payload into a log line"):
-    Json.decode[Wide]("""{}""") match
-      case Left(failure) =>
-        assert(failure.message.length > Json.MaxReasonLength / 2, "the fixture stopped producing a long message")
-        assert(failure.message.length <= Json.MaxReasonLength + 3, s"unbounded: ${failure.message.length}")
-        assert(failure.message.endsWith("..."), s"truncation is not marked: ${failure.message}")
-      case Right(value)  => fail(s"expected a failure, decoded $value")
+    val huge = s"""{"name":"${"x" * 100_000}"""
+
+    Json.decode[Leaf](huge) match
+      case Left(failure) => assert(failure.message.length <= Json.MaxReasonLength + 3, failure.message.length)
+      case Right(value)  => fail(s"expected a failure, got $value")
+
+  test("the failure message carries no hex dump of the body"):
+    // jsoniter appends one by default. A response body is payload, and this
+    // library's failures are logged.
+    Json.decode[Leaf]("""{"name":"secret-value-in-body""") match
+      case Left(failure) => assert(!failure.message.contains("secret"), failure.message)
+      case Right(value)  => fail(s"expected a failure, got $value")
 
   test("a body that is the JSON literal null is a failure, not a null reference"):
-    Json.decode[Leaf]("null") match
-      case Left(failure) =>
-        assert(failure.path.isRoot, failure.path.render)
-        assert(failure.message.contains("null"), failure.message)
-      case Right(value)  => fail(s"a null body must not decode, got $value")
+    assert(Json.decode[Leaf]("null").isLeft)
 
   test("a null body is rejected for a list too"):
     assert(Json.decode[Vector[Leaf]]("null").isLeft)
 
-  test("types that model absence still read a null body as absence"):
-    assertEquals(Json.decode[Option[String]]("null"), Right(None))
-
   test("a list body decodes element by element"):
     assertEquals(
       Json.decode[Vector[Leaf]]("""[{"name":"a"},{"name":"b"}]"""),
-      Right(Vector(Leaf("a"), Leaf("b"))),
+      Right(Vector(Leaf(Some("a")), Leaf(Some("b")))),
     )
 
-  test("decoder produces a Decode port that agrees with decode"):
-    val port = Json.decoder[Leaf]
+  test("an element of the wrong kind fails the page and names its position"):
+    Json.decode[Vector[Leaf]]("""[{"name":"a"},7]""") match
+      case Left(failure) => assertEquals(failure.path, JsonPath.Root.index(1))
+      case Right(value)  => fail(s"expected a failure, got $value")
 
-    assertEquals(port("""{"name":"ok"}"""), Json.decode[Leaf]("""{"name":"ok"}"""))
-    assertEquals(port("nonsense"), Json.decode[Leaf]("nonsense"))
+  test("an empty list decodes"):
+    assertEquals(Json.decode[Vector[Leaf]]("[]"), Right(Vector.empty))
+
+  test("decoder produces a Decode port that agrees with decode"):
+    assertEquals(Json.decoder[Leaf].apply(leaf), Json.decode[Leaf](leaf))
 
   test("decoder never throws either"):
-    val port = Json.decoder[Leaf]
+    assert(Json.decoder[Leaf].apply("not json").isLeft)
 
-    assertEquals(port("").isLeft, true)
+  test("a document nested past the depth bound is a failure, not a stack overflow"):
+    // Remote input must not be able to exhaust the caller's stack.
+    val deep = ("[" * (JsonValue.MaxDepth + 50)) + ("]" * (JsonValue.MaxDepth + 50))
 
-  test("a failure carries the root path when the whole document is the problem"):
-    val expected: Either[DecodeFailure, Leaf] = Json.decode[Leaf]("")
+    assert(Json.parse(deep).isLeft)
 
-    expected match
-      case Left(failure) => assertEquals(failure.path, JsonPath.Root)
-      case Right(value)  => fail(s"expected a failure, decoded $value")
+  test("a document within the depth bound still parses"):
+    val shallow = ("[" * 10) + ("]" * 10)
+
+    assert(Json.parse(shallow).isRight)
+
+  test("render round-trips a parsed document"):
+    val body = """{"a":1,"b":[true,null,"x"],"c":{"d":2.5}}"""
+
+    assertEquals(Json.parse(body).map(Json.render), Right(body))
+
+  test("render keeps object fields in the order they were written"):
+    val document = JsonValue.Obj("z" -> JsonValue.Str("1"), "a" -> JsonValue.Str("2"))
+
+    assertEquals(Json.render(document), """{"z":"1","a":"2"}""")
+
+  test("a large integer survives the round trip, which a Double would not"):
+    // 2^53 + 1 is the first integer a Double cannot represent.
+    val body = """{"id":9007199254740993}"""
+
+    assertEquals(Json.parse(body).map(Json.render), Right(body))

@@ -126,7 +126,7 @@ Two of those need a note:
 
 | Rule | Where |
 | --- | --- |
-| `domain` imports nothing but the standard library | no sttp, no upickle, no `Future`, `ExecutionContext`, `Await`, `Promise` or `blocking` |
+| `domain` imports nothing but the standard library | no sttp, no jsoniter-scala, no `Future`, `ExecutionContext`, `Await`, `Promise` or `blocking` |
 | `core` knows nothing of the transport or of `Future` | same list; `core` is written against the abstract `Exec[F]` |
 | `codec` knows nothing of the transport | no `import sttp` |
 | no `Await` anywhere in production code | all five modules |

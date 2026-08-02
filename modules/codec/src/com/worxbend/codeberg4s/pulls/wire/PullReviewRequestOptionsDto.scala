@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.issues.wire.WireNumbers
 import com.worxbend.codeberg4s.pulls.ReviewRequest
 
@@ -19,9 +21,9 @@ private[codeberg4s] object PullReviewRequestOptionsDto:
 
   /** Renders `request` as the JSON body to send. */
   def render(request: ReviewRequest): String =
-    ujson.write(ujson.Obj.from(fields(request)))
+    Json.render(JsonValue.Obj.from(fields(request)))
 
-  private def fields(request: ReviewRequest): List[(String, ujson.Value)] =
+  private def fields(request: ReviewRequest): List[(String, JsonValue)] =
     List(
       Option.when(request.reviewers.nonEmpty)("reviewers"  -> WireNumbers.strings(request.reviewers.map(_.value))),
       Option.when(request.teams.nonEmpty)("team_reviewers" -> WireNumbers.strings(request.teams)),

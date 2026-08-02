@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.CommitDetails
@@ -56,7 +57,7 @@ final case class RepoCommitDto(
 object RepoCommitDto:
 
   /** Reads a `RepoCommit` object. */
-  given upickle.default.Reader[RepoCommitDto] =
+  given JsonDecoder[RepoCommitDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, for the commit DTO that embeds this one. */

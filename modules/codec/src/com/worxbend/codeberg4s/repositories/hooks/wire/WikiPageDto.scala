@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -61,7 +62,7 @@ object WikiCommitDto:
   val CommitterKey: String = "commiter"
 
   /** Reads a `WikiCommit` object. Absent and `null` are the same thing for every field; see [[JsonFields]]. */
-  given upickle.default.Reader[WikiCommitDto] =
+  given JsonDecoder[WikiCommitDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, for the DTOs that embed this one. */
@@ -133,7 +134,7 @@ object WikiPageDto:
   val LastCommitKey: String = "last_commit"
 
   /** Reads a `WikiPage` object. Absent and `null` are the same thing for every field; see [[JsonFields]]. */
-  given upickle.default.Reader[WikiPageDto] =
+  given JsonDecoder[WikiPageDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */
@@ -187,7 +188,7 @@ final case class WikiPageMetaDto(
 object WikiPageMetaDto:
 
   /** Reads a `WikiPageMetaData` object. Absent and `null` are the same thing for every field; see [[JsonFields]]. */
-  given upickle.default.Reader[WikiPageMetaDto] =
+  given JsonDecoder[WikiPageMetaDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */
@@ -223,7 +224,7 @@ object WikiCommitListDto:
   val EntriesKey: String = "commits"
 
   /** Reads a `WikiCommitList` envelope. A missing or `null` `commits` key is an empty listing, not a failure. */
-  given upickle.default.Reader[WikiCommitListDto] =
+  given JsonDecoder[WikiCommitListDto] =
     JsonFields.reader: fields =>
       WikiCommitListDto(
         entries = fields.nestedAll(EntriesKey).map(WikiCommitDto.fromFields),

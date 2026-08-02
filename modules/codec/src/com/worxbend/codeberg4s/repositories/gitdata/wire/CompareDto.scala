@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.gitdata.CommitComparison
@@ -45,7 +46,7 @@ final case class CompareDto(
 object CompareDto:
 
   /** Reads a `Compare` object. */
-  given upickle.default.Reader[CompareDto] =
+  given JsonDecoder[CompareDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

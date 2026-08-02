@@ -23,8 +23,8 @@ package com.worxbend.codeberg4s.codec
   *
   * ==3. Readers are hand-written over [[JsonFields]], not derived==
   *
-  * ADR-0003 chose upickle and anticipated explicit `ReadWriter`s. Rule 2 forces them, for a reason worth recording
-  * because it is not obvious and was measured against upickle 4.4.3 rather than assumed:
+  * ADR-0003 chose the JSON parser and anticipated explicit `ReadWriter`s. Rule 2 forces them, for a reason worth
+  * recording because it is not obvious and was measured against a derived codec rather than assumed:
   *
   *   - JSON `null` into an `Option` field '''does''' decode as `None`. That part is free.
   *   - JSON `null` into a `Seq`/`Vector` field aborts. Not free.
@@ -32,15 +32,15 @@ package com.worxbend.codeberg4s.codec
   *     default value. Also not free, and it is the common case: `Repository` omits `external_tracker`, `external_wiki`,
   *     `internal_tracker` and `wiki_branch` entirely when they are unconfigured.
   *
-  * upickle fills a missing key only from a `case class` parameter default, and `.scalafix.conf` bans default arguments
-  * (`DisableSyntax.noDefaultArgs`), so `@upickle.implicits.key` plus derivation cannot express rule 2 in this codebase.
-  * [[JsonFields.reader]] does, and it delegates the structural question — is the payload an object at all? — back to
-  * upickle so that this module raises no exception of its own.
+  * the JSON parser fills a missing key only from a `case class` parameter default, and `.scalafix.conf` bans default
+  * arguments (`DisableSyntax.noDefaultArgs`), so `a codec key annotation` plus derivation cannot express rule 2 in this
+  * codebase. [[JsonFields.reader]] does, and it delegates the structural question — is the payload an object at all? —
+  * back to the JSON parser so that this module raises no exception of its own.
   *
   * ==4. Wire names are snake_case, spelled once==
   *
   * The snake_case name appears exactly once per field, as the string literal passed to the [[JsonFields]] accessor in
-  * the DTO's reader. This is the place `@upickle.implicits.key` would otherwise occupy; rule 3 explains why it cannot.
+  * the DTO's reader. This is the place `a codec key annotation` would otherwise occupy; rule 3 explains why it cannot.
   *
   * ==5. `toDomain` returns `Either`, and never throws==
   *

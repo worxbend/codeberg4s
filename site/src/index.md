@@ -12,7 +12,7 @@ to any Forgejo or Gitea-compatible instance.
 
 **A `Future` API, and nothing else.** The public API is
 `scala.concurrent.Future`. No effect system leaks into your code, and none is
-added to your classpath — the dependency list is sttp client4 and upickle, and
+added to your classpath — the dependency list is sttp client4 and jsoniter-scala, and
 that is the whole list. If your application uses cats-effect or ZIO, you wrap a
 `Future` at your own boundary; if it uses neither, you pay for neither.
 

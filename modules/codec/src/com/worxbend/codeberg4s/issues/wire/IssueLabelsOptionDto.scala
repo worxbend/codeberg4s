@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.issues.LabelRef
 import com.worxbend.codeberg4s.issues.LabelRemoval
 import com.worxbend.codeberg4s.issues.LabelUpdate
@@ -30,21 +32,21 @@ private[codeberg4s] object IssueLabelsOptionDto:
 
   /** Renders `command` as the JSON body of the label add or replace. */
   def renderUpdate(command: LabelUpdate): String =
-    val labels = ujson.Arr.from(command.labels.map(reference))
+    val labels = JsonValue.Arr.from(command.labels.map(reference))
     val fields = List(
-      Some("labels" -> (labels: ujson.Value)),
-      command.updatedAt.map(moment => "updated_at" -> ujson.Str(WireInstant.render(moment))),
+      Some("labels" -> (labels: JsonValue)),
+      command.updatedAt.map(moment => "updated_at" -> JsonValue.Str(WireInstant.render(moment))),
     ).flatten
 
-    ujson.write(ujson.Obj.from(fields))
+    Json.render(JsonValue.Obj.from(fields))
 
   /** Renders `command` as the JSON body of the label clear or single removal; `{}` when it says nothing. */
   def renderRemoval(command: LabelRemoval): String =
-    val fields = command.updatedAt.map(moment => "updated_at" -> ujson.Str(WireInstant.render(moment))).toList
+    val fields = command.updatedAt.map(moment => "updated_at" -> JsonValue.Str(WireInstant.render(moment))).toList
 
-    ujson.write(ujson.Obj.from(fields))
+    Json.render(JsonValue.Obj.from(fields))
 
-  private def reference(label: LabelRef): ujson.Value =
+  private def reference(label: LabelRef): JsonValue =
     label match
       case LabelRef.ById(id)     => WireNumbers.identifier(id.value)
-      case LabelRef.ByName(name) => ujson.Str(name.value)
+      case LabelRef.ByName(name) => JsonValue.Str(name.value)

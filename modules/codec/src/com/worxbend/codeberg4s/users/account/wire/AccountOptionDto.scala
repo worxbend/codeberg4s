@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.users.account.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.BranchName
 import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.users.account.AvatarImage
@@ -43,11 +45,11 @@ private[codeberg4s] object AccountOptionDto:
     * the Forgejo version answering it — see [[com.worxbend.codeberg4s.users.account.OAuth2ApplicationDefinition]].
     */
   def renderApplication(definition: OAuth2ApplicationDefinition): String =
-    ujson.write(
-      ujson.Obj(
-        "name"                -> ujson.Str(definition.name),
-        "redirect_uris"       -> ujson.Arr.from(definition.redirectUris.map(ujson.Str.apply)),
-        "confidential_client" -> ujson.Bool(definition.isConfidentialClient),
+    Json.render(
+      JsonValue.Obj(
+        "name"                -> JsonValue.Str(definition.name),
+        "redirect_uris"       -> JsonValue.Arr.from(definition.redirectUris.map(JsonValue.Str.apply)),
+        "confidential_client" -> JsonValue.Bool(definition.isConfidentialClient),
       )
     )
 
@@ -58,7 +60,7 @@ private[codeberg4s] object AccountOptionDto:
     * argument and for what happens to a value that is not valid base64.
     */
   def renderAvatar(image: AvatarImage): String =
-    ujson.write(ujson.Obj(ImageKey -> ujson.Str(image.base64)))
+    Json.render(JsonValue.Obj(ImageKey -> JsonValue.Str(image.base64)))
 
   /** Renders the addresses of `POST /user/emails` or of `DELETE /user/emails`.
     *
@@ -69,7 +71,7 @@ private[codeberg4s] object AccountOptionDto:
     * counterpart take one address plus a varargs tail, so an empty request cannot be spelled.
     */
   def renderEmails(addresses: Vector[EmailAddress]): String =
-    ujson.write(ujson.Obj(EmailsKey -> ujson.Arr.from(addresses.map(address => ujson.Str(address.value)))))
+    Json.render(JsonValue.Obj(EmailsKey -> JsonValue.Arr.from(addresses.map(address => JsonValue.Str(address.value)))))
 
   /** Renders a settings change as the JSON body of `PATCH /user/settings`.
     *
@@ -79,21 +81,21 @@ private[codeberg4s] object AccountOptionDto:
     */
   def renderSettings(command: UpdateUserSettings): String =
     val fields = List(
-      command.fullName.map(value           => "full_name" -> ujson.Str(value)),
-      command.website.map(value            => "website" -> ujson.Str(value)),
-      command.location.map(value           => "location" -> ujson.Str(value)),
-      command.description.map(value        => "description" -> ujson.Str(value)),
-      command.pronouns.map(value           => "pronouns" -> ujson.Str(value)),
-      command.language.map(value           => "language" -> ujson.Str(value)),
-      command.theme.map(value              => "theme" -> ujson.Str(value)),
-      command.diffViewStyle.map(value      => "diff_view_style" -> ujson.Str(value)),
-      command.hidesEmail.map(value         => "hide_email" -> ujson.Bool(value)),
-      command.hidesActivity.map(value      => "hide_activity" -> ujson.Bool(value)),
-      command.hidesPronouns.map(value      => "hide_pronouns" -> ujson.Bool(value)),
-      command.showsRepoUnitHints.map(value => "enable_repo_unit_hints" -> ujson.Bool(value)),
+      command.fullName.map(value           => "full_name" -> JsonValue.Str(value)),
+      command.website.map(value            => "website" -> JsonValue.Str(value)),
+      command.location.map(value           => "location" -> JsonValue.Str(value)),
+      command.description.map(value        => "description" -> JsonValue.Str(value)),
+      command.pronouns.map(value           => "pronouns" -> JsonValue.Str(value)),
+      command.language.map(value           => "language" -> JsonValue.Str(value)),
+      command.theme.map(value              => "theme" -> JsonValue.Str(value)),
+      command.diffViewStyle.map(value      => "diff_view_style" -> JsonValue.Str(value)),
+      command.hidesEmail.map(value         => "hide_email" -> JsonValue.Bool(value)),
+      command.hidesActivity.map(value      => "hide_activity" -> JsonValue.Bool(value)),
+      command.hidesPronouns.map(value      => "hide_pronouns" -> JsonValue.Bool(value)),
+      command.showsRepoUnitHints.map(value => "enable_repo_unit_hints" -> JsonValue.Bool(value)),
     ).flatten
 
-    ujson.write(ujson.Obj.from(fields))
+    Json.render(JsonValue.Obj.from(fields))
 
   /** Renders a repository creation as the JSON body of `POST /user/repos`.
     *
@@ -104,18 +106,18 @@ private[codeberg4s] object AccountOptionDto:
     */
   def renderRepository(command: CreateRepository): String =
     val fields = List(
-      Some("name" -> ujson.Str(command.name.value)),
-      command.description.map(value => "description" -> ujson.Str(value)),
-      Some("private"   -> ujson.Bool(command.isPrivate)),
-      Some("template"  -> ujson.Bool(command.isTemplate)),
-      Some("auto_init" -> ujson.Bool(command.autoInit)),
-      command.defaultBranch.map(branch  => "default_branch" -> ujson.Str(branch.value)),
-      command.gitignores.map(value      => "gitignores" -> ujson.Str(value)),
-      command.license.map(value         => "license" -> ujson.Str(value)),
-      command.readme.map(value          => "readme" -> ujson.Str(value)),
-      command.issueLabels.map(value     => "issue_labels" -> ujson.Str(value)),
-      command.objectFormat.map(format   => "object_format_name" -> ujson.Str(format.wireValue)),
-      command.trustModel.map(trustModel => "trust_model" -> ujson.Str(trustModel.wireValue)),
+      Some("name" -> JsonValue.Str(command.name.value)),
+      command.description.map(value => "description" -> JsonValue.Str(value)),
+      Some("private"   -> JsonValue.Bool(command.isPrivate)),
+      Some("template"  -> JsonValue.Bool(command.isTemplate)),
+      Some("auto_init" -> JsonValue.Bool(command.autoInit)),
+      command.defaultBranch.map(branch  => "default_branch" -> JsonValue.Str(branch.value)),
+      command.gitignores.map(value      => "gitignores" -> JsonValue.Str(value)),
+      command.license.map(value         => "license" -> JsonValue.Str(value)),
+      command.readme.map(value          => "readme" -> JsonValue.Str(value)),
+      command.issueLabels.map(value     => "issue_labels" -> JsonValue.Str(value)),
+      command.objectFormat.map(format   => "object_format_name" -> JsonValue.Str(format.wireValue)),
+      command.trustModel.map(trustModel => "trust_model" -> JsonValue.Str(trustModel.wireValue)),
     ).flatten
 
-    ujson.write(ujson.Obj.from(fields))
+    Json.render(JsonValue.Obj.from(fields))

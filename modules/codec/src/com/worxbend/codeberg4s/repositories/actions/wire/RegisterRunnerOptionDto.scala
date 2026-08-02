@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.actions.RegisterRunner
 
 /** Forgejo's `RegisterRunnerOptions` request model — the body of `POST /repos/{owner}/{repo}/actions/runners`.
@@ -15,11 +17,11 @@ private[codeberg4s] object RegisterRunnerOptionDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: RegisterRunner): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: RegisterRunner): List[(String, ujson.Value)] =
+  private def fields(command: RegisterRunner): List[(String, JsonValue)] =
     List(
-      Some("name" -> ujson.Str(command.name)),
-      command.description.map(text => "description" -> ujson.Str(text)),
-      Option.when(command.isEphemeral)("ephemeral" -> ujson.Bool(true)),
+      Some("name" -> JsonValue.Str(command.name)),
+      command.description.map(text => "description" -> JsonValue.Str(text)),
+      Option.when(command.isEphemeral)("ephemeral" -> JsonValue.Bool(true)),
     ).flatten

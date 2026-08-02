@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.repositories.admin.LanguageBreakdown
 
@@ -31,9 +32,10 @@ object LanguageStatisticsDto:
   /** Reads a bare `{"language": bytes}` object.
     *
     * Built on [[com.worxbend.codeberg4s.codec.JsonFields.reader]] like every other DTO here, so a body that is an
-    * array, a number or malformed fails in upickle with a recoverable path rather than raising from this module.
+    * array, a number or malformed fails in the JSON parser with a recoverable path rather than raising from this
+    * module.
     */
-  given upickle.default.Reader[LanguageStatisticsDto] =
+  given JsonDecoder[LanguageStatisticsDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object by reading every key it happens to have. */

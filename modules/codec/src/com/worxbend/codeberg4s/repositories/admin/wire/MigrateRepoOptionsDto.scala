@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.admin.CreatePushMirror
 import com.worxbend.codeberg4s.repositories.admin.MigrateRepository
 import com.worxbend.codeberg4s.repositories.admin.TransferRepository
@@ -12,7 +14,7 @@ import com.worxbend.codeberg4s.repositories.admin.TransferRepository
   * ==This is one of three places a secret is written down==
   *
   * [[com.worxbend.codeberg4s.repositories.admin.RemoteCredential.reveal]] is called here and in
-  * [[PushMirrorOptionDto]], and nowhere else. What comes out is handed straight to `ujson.write`, which escapes it into
+  * [[PushMirrorOptionDto]], and nowhere else. What comes out is handed straight to `Json.render`, which escapes it into
   * the request body — so a credential containing a quote, a backslash or a newline survives intact and cannot break out
   * of the JSON string. The rendered body becomes a [[com.worxbend.codeberg4s.core.RequestBody.Json]], which the
   * pipeline never copies into a [[com.worxbend.codeberg4s.CallContext]] or an error.
@@ -46,29 +48,29 @@ private[codeberg4s] object MigrateRepoOptionsDto:
     * defaults.
     */
   def render(command: MigrateRepository): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: MigrateRepository): List[(String, ujson.Value)] =
+  private def fields(command: MigrateRepository): List[(String, JsonValue)] =
     List(
-      Some(CloneAddressKey -> ujson.Str(command.cloneAddress)),
-      Some("repo_name"     -> ujson.Str(command.repoName.value)),
-      Some("private"       -> ujson.Bool(command.isPrivate)),
-      Some("mirror"        -> ujson.Bool(command.isMirror)),
-      Some("lfs"           -> ujson.Bool(command.lfs)),
-      Some("issues"        -> ujson.Bool(command.includesIssues)),
-      Some("labels"        -> ujson.Bool(command.includesLabels)),
-      Some("milestones"    -> ujson.Bool(command.includesMilestones)),
-      Some("pull_requests" -> ujson.Bool(command.includesPullRequests)),
-      Some("releases"      -> ujson.Bool(command.includesReleases)),
-      Some("wiki"          -> ujson.Bool(command.includesWiki)),
-      command.repoOwner.map(owner         => "repo_owner" -> ujson.Str(owner.value)),
-      command.description.map(text        => "description" -> ujson.Str(text)),
-      command.service.map(service         => "service" -> ujson.Str(service.wireValue)),
-      command.username.map(user           => "auth_username" -> ujson.Str(user)),
-      command.credential.map(secret       => AuthPasswordKey -> ujson.Str(secret.reveal)),
-      command.token.map(secret            => AuthTokenKey -> ujson.Str(secret.reveal)),
-      command.mirrorInterval.map(duration => "mirror_interval" -> ujson.Str(duration)),
-      command.lfsEndpoint.map(endpoint    => "lfs_endpoint" -> ujson.Str(endpoint)),
+      Some(CloneAddressKey -> JsonValue.Str(command.cloneAddress)),
+      Some("repo_name"     -> JsonValue.Str(command.repoName.value)),
+      Some("private"       -> JsonValue.Bool(command.isPrivate)),
+      Some("mirror"        -> JsonValue.Bool(command.isMirror)),
+      Some("lfs"           -> JsonValue.Bool(command.lfs)),
+      Some("issues"        -> JsonValue.Bool(command.includesIssues)),
+      Some("labels"        -> JsonValue.Bool(command.includesLabels)),
+      Some("milestones"    -> JsonValue.Bool(command.includesMilestones)),
+      Some("pull_requests" -> JsonValue.Bool(command.includesPullRequests)),
+      Some("releases"      -> JsonValue.Bool(command.includesReleases)),
+      Some("wiki"          -> JsonValue.Bool(command.includesWiki)),
+      command.repoOwner.map(owner         => "repo_owner" -> JsonValue.Str(owner.value)),
+      command.description.map(text        => "description" -> JsonValue.Str(text)),
+      command.service.map(service         => "service" -> JsonValue.Str(service.wireValue)),
+      command.username.map(user           => "auth_username" -> JsonValue.Str(user)),
+      command.credential.map(secret       => AuthPasswordKey -> JsonValue.Str(secret.reveal)),
+      command.token.map(secret            => AuthTokenKey -> JsonValue.Str(secret.reveal)),
+      command.mirrorInterval.map(duration => "mirror_interval" -> JsonValue.Str(duration)),
+      command.lfsEndpoint.map(endpoint    => "lfs_endpoint" -> JsonValue.Str(endpoint)),
     ).flatten
 
 /** Forgejo's `TransferRepoOption` request model — the body of `POST /repos/{owner}/{repo}/transfer`.
@@ -87,13 +89,13 @@ private[codeberg4s] object TransferRepoOptionDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: TransferRepository): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: TransferRepository): List[(String, ujson.Value)] =
+  private def fields(command: TransferRepository): List[(String, JsonValue)] =
     List(
-      Some(NewOwnerKey -> ujson.Str(command.newOwner.value)),
+      Some(NewOwnerKey -> JsonValue.Str(command.newOwner.value)),
       Option.when(command.teamIds.nonEmpty)(
-        TeamIdsKey     -> ujson.Arr.from(command.teamIds.map(team => ujson.Num(team.value.toDouble)))
+        TeamIdsKey     -> JsonValue.Arr.from(command.teamIds.map(team => JsonValue.Num(team.value.toDouble)))
       ),
     ).flatten
 
@@ -120,15 +122,15 @@ private[codeberg4s] object PushMirrorOptionDto:
     * by the request builder and is never logged, never stored and never put in a failure.
     */
   def render(command: CreatePushMirror): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: CreatePushMirror): List[(String, ujson.Value)] =
+  private def fields(command: CreatePushMirror): List[(String, JsonValue)] =
     List(
-      Some(RemoteAddressKey -> ujson.Str(command.remoteAddress)),
-      Some("sync_on_commit" -> ujson.Bool(command.syncOnCommit)),
-      Some("use_ssh"        -> ujson.Bool(command.useSsh)),
-      command.remoteUsername.map(user     => "remote_username" -> ujson.Str(user)),
-      command.remoteCredential.map(secret => RemotePasswordKey -> ujson.Str(secret.reveal)),
-      command.interval.map(duration       => "interval" -> ujson.Str(duration)),
-      command.branchFilter.map(glob       => "branch_filter" -> ujson.Str(glob)),
+      Some(RemoteAddressKey -> JsonValue.Str(command.remoteAddress)),
+      Some("sync_on_commit" -> JsonValue.Bool(command.syncOnCommit)),
+      Some("use_ssh"        -> JsonValue.Bool(command.useSsh)),
+      command.remoteUsername.map(user     => "remote_username" -> JsonValue.Str(user)),
+      command.remoteCredential.map(secret => RemotePasswordKey -> JsonValue.Str(secret.reveal)),
+      command.interval.map(duration       => "interval" -> JsonValue.Str(duration)),
+      command.branchFilter.map(glob       => "branch_filter" -> JsonValue.Str(glob)),
     ).flatten

@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.publishing.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.publishing.Topic
 
 /** Forgejo's `RepoTopicOptions` request model — the body of `PUT /repos/{owner}/{repo}/topics`.
@@ -17,4 +19,4 @@ private[codeberg4s] object RepoTopicOptionsDto:
 
   /** Renders the complete replacement set as the JSON body to `PUT`. */
   def render(topics: Vector[Topic]): String =
-    ujson.write(ujson.Obj("topics" -> ujson.Arr.from(topics.map(topic => ujson.Str(topic.value)))))
+    Json.render(JsonValue.Obj("topics" -> JsonValue.Arr.from(topics.map(topic => JsonValue.Str(topic.value)))))

@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.hooks.CreateHook
 import com.worxbend.codeberg4s.repositories.hooks.EditGitHook
 import com.worxbend.codeberg4s.repositories.hooks.EditHook
@@ -17,7 +19,7 @@ import com.worxbend.codeberg4s.repositories.hooks.HookSecret
   * ==This is the only place a hook credential is written down==
   *
   * [[com.worxbend.codeberg4s.repositories.hooks.HookSecret.reveal]] is called here and nowhere else in the library.
-  * What comes out is handed straight to `ujson.write`, which escapes it into the request body — so material containing
+  * What comes out is handed straight to `Json.render`, which escapes it into the request body — so material containing
   * a newline, a quote or a backslash survives intact and cannot break out of the JSON string. The rendered body is then
   * a [[com.worxbend.codeberg4s.core.RequestBody.Json]], which the pipeline never copies into a
   * [[com.worxbend.codeberg4s.CallContext]] or an error.
@@ -65,15 +67,15 @@ private[codeberg4s] object HookOptionDto:
     */
   def renderCreate(command: CreateHook): String =
     val fields = List(
-      Some(TypeKey                                   -> ujson.Str(command.hookType.wireValue)),
+      Some(TypeKey                                   -> JsonValue.Str(command.hookType.wireValue)),
       Some(ConfigKey                                 -> config(command.config.sortedEntries, command.secret)),
       Option.when(command.events.nonEmpty)(EventsKey -> events(command)),
-      command.branchFilter.map(glob        => BranchFilterKey -> ujson.Str(glob)),
-      command.authorizationHeader.map(head => HookConfig.AuthorizationHeaderKey -> ujson.Str(head.reveal)),
-      Some(ActiveKey -> ujson.Bool(command.isActive)),
+      command.branchFilter.map(glob        => BranchFilterKey -> JsonValue.Str(glob)),
+      command.authorizationHeader.map(head => HookConfig.AuthorizationHeaderKey -> JsonValue.Str(head.reveal)),
+      Some(ActiveKey -> JsonValue.Bool(command.isActive)),
     ).flatten
 
-    ujson.write(ujson.Obj.from(fields))
+    Json.render(JsonValue.Obj.from(fields))
 
   /** Renders `command` as the JSON body to `PATCH`.
     *
@@ -92,13 +94,15 @@ private[codeberg4s] object HookOptionDto:
 
     val fields = List(
       Option.when(entries.nonEmpty || command.secret.isDefined)(ConfigKey -> config(entries, command.secret)),
-      command.events.map(subscriptions     => EventsKey -> ujson.Arr.from(subscriptions.map(_.wireValue))),
-      command.branchFilter.map(glob        => BranchFilterKey -> ujson.Str(glob)),
-      command.authorizationHeader.map(head => HookConfig.AuthorizationHeaderKey -> ujson.Str(head.reveal)),
-      command.isActive.map(active          => ActiveKey -> ujson.Bool(active)),
+      command.events.map(subscriptions     =>
+        EventsKey -> JsonValue.Arr.from(subscriptions.map(event => JsonValue.Str(event.wireValue)))
+      ),
+      command.branchFilter.map(glob        => BranchFilterKey -> JsonValue.Str(glob)),
+      command.authorizationHeader.map(head => HookConfig.AuthorizationHeaderKey -> JsonValue.Str(head.reveal)),
+      command.isActive.map(active          => ActiveKey -> JsonValue.Bool(active)),
     ).flatten
 
-    ujson.write(ujson.Obj.from(fields))
+    Json.render(JsonValue.Obj.from(fields))
 
   /** Renders `command` as the JSON body to `PATCH` on a Git hook.
     *
@@ -106,14 +110,14 @@ private[codeberg4s] object HookOptionDto:
     * a Git hook is cleared, and omitting the key would leave the existing script in place instead.
     */
   def renderEditGit(command: EditGitHook): String =
-    ujson.write(ujson.Obj(ContentKey -> ujson.Str(command.content)))
+    Json.render(JsonValue.Obj(ContentKey -> JsonValue.Str(command.content)))
 
   /** The `config` object: the caller's entries in key order, with the signing secret merged in last. */
-  private def config(entries: Vector[(String, String)], secret: Option[HookSecret]): ujson.Obj =
-    val stated  = entries.map((key, value) => key -> ujson.Str(value))
-    val signing = secret.map(value => HookConfig.SecretKey -> ujson.Str(value.reveal))
+  private def config(entries: Vector[(String, String)], secret: Option[HookSecret]): JsonValue.Obj =
+    val stated  = entries.map((key, value) => key -> JsonValue.Str(value))
+    val signing = secret.map(value => HookConfig.SecretKey -> JsonValue.Str(value.reveal))
 
-    ujson.Obj.from(stated ++ signing)
+    JsonValue.Obj.from(stated ++ signing)
 
-  private def events(command: CreateHook): ujson.Arr =
-    ujson.Arr.from(command.events.map(_.wireValue))
+  private def events(command: CreateHook): JsonValue.Arr =
+    JsonValue.Arr.from(command.events.map(event => JsonValue.Str(event.wireValue)))

@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.repositories.GitIdentity
@@ -38,7 +39,7 @@ final case class GitIdentityDto(
 object GitIdentityDto:
 
   /** Reads an author, committer or signer object. */
-  given upickle.default.Reader[GitIdentityDto] =
+  given JsonDecoder[GitIdentityDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, for the DTOs that embed this one. */

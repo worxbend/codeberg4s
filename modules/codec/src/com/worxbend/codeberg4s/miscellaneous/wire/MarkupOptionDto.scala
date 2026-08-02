@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.miscellaneous.MarkupRenderRequest
 
 /** Forgejo's `MarkupOption` model — the '''request''' body of `POST /markup`.
@@ -41,20 +43,20 @@ final case class MarkupOptionDto(
 
   /** Renders the body Forgejo expects, with the three optional keys present only when the caller supplied them.
     *
-    * Cannot fail: every field is already a plain JSON value, and upickle escapes the strings — which is why
+    * Cannot fail: every field is already a plain JSON value, and the JSON parser escapes the strings — which is why
     * [[com.worxbend.codeberg4s.miscellaneous.MarkupRenderRequest]] does not validate the two paths.
     */
   def toJson: String =
-    val fields = Vector[(String, ujson.Value)](
-      "Text" -> ujson.Str(text),
-      "Mode" -> ujson.Str(mode),
-      "Wiki" -> ujson.Bool(wiki),
+    val fields = Vector[(String, JsonValue)](
+      "Text" -> JsonValue.Str(text),
+      "Mode" -> JsonValue.Str(mode),
+      "Wiki" -> JsonValue.Bool(wiki),
     ) ++
-      context.map(value => "Context" -> ujson.Str(value)) ++
-      filePath.map(value => "FilePath" -> ujson.Str(value)) ++
-      branchPath.map(value => "BranchPath" -> ujson.Str(value))
+      context.map(value => "Context" -> JsonValue.Str(value)) ++
+      filePath.map(value => "FilePath" -> JsonValue.Str(value)) ++
+      branchPath.map(value => "BranchPath" -> JsonValue.Str(value))
 
-    ujson.write(ujson.Obj.from(fields))
+    Json.render(JsonValue.Obj.from(fields))
 
 object MarkupOptionDto:
 

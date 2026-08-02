@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.organizations.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.organizations.OrganizationPermissions
@@ -50,7 +51,7 @@ object OrganizationPermissionsDto:
   /** Reads an `OrganizationPermissions` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[OrganizationPermissionsDto] =
+  given JsonDecoder[OrganizationPermissionsDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, so the field spellings exist in exactly one place. */

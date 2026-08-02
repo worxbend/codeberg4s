@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -29,7 +30,7 @@ final case class CommitAffectedFileDto(filename: Option[String], status: Option[
 object CommitAffectedFileDto:
 
   /** Reads one element of a `files` array. */
-  given upickle.default.Reader[CommitAffectedFileDto] =
+  given JsonDecoder[CommitAffectedFileDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, for the commit DTO that embeds these. */

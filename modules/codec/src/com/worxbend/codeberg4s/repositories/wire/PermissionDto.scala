@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.repositories.RepositoryPermissions
 
@@ -27,7 +28,7 @@ final case class PermissionDto(admin: Option[Boolean], push: Option[Boolean], pu
 object PermissionDto:
 
   /** Reads a `permissions` object. */
-  given upickle.default.Reader[PermissionDto] =
+  given JsonDecoder[PermissionDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, for the repository DTO that embeds this one. */

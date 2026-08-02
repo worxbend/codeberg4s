@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.organizations.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.organizations.CreateOrganization
 import com.worxbend.codeberg4s.organizations.EditOrganization
 import com.worxbend.codeberg4s.organizations.OrgName
@@ -57,17 +59,17 @@ private[codeberg4s] object OrganizationOptionDto:
     */
   def renderCreate(command: CreateOrganization): String =
     val fields = List(
-      Some(UsernameKey -> ujson.Str(command.name.value)),
-      command.fullName.map(text                  => FullNameKey -> ujson.Str(text)),
-      command.description.map(text               => "description" -> ujson.Str(text)),
-      command.email.map(address                  => "email" -> ujson.Str(address)),
-      command.website.map(url                    => "website" -> ujson.Str(url)),
-      command.location.map(place                 => "location" -> ujson.Str(place)),
-      command.visibility.map(level               => "visibility" -> ujson.Str(level.wireName)),
-      command.repoAdminChangeTeamAccess.map(flag => RepoAdminChangeTeamAccessKey -> ujson.Bool(flag)),
+      Some(UsernameKey -> JsonValue.Str(command.name.value)),
+      command.fullName.map(text                  => FullNameKey -> JsonValue.Str(text)),
+      command.description.map(text               => "description" -> JsonValue.Str(text)),
+      command.email.map(address                  => "email" -> JsonValue.Str(address)),
+      command.website.map(url                    => "website" -> JsonValue.Str(url)),
+      command.location.map(place                 => "location" -> JsonValue.Str(place)),
+      command.visibility.map(level               => "visibility" -> JsonValue.Str(level.wireName)),
+      command.repoAdminChangeTeamAccess.map(flag => RepoAdminChangeTeamAccessKey -> JsonValue.Bool(flag)),
     ).flatten
 
-    ujson.write(ujson.Obj.from(fields))
+    Json.render(JsonValue.Obj.from(fields))
 
   /** Renders `command` as the JSON body to `PATCH /orgs/{org}`.
     *
@@ -76,16 +78,16 @@ private[codeberg4s] object OrganizationOptionDto:
     */
   def renderEdit(command: EditOrganization): String =
     val fields = List(
-      command.fullName.map(text                  => FullNameKey -> ujson.Str(text)),
-      command.description.map(text               => "description" -> ujson.Str(text)),
-      command.email.map(address                  => "email" -> ujson.Str(address)),
-      command.website.map(url                    => "website" -> ujson.Str(url)),
-      command.location.map(place                 => "location" -> ujson.Str(place)),
-      command.visibility.map(level               => "visibility" -> ujson.Str(level.wireName)),
-      command.repoAdminChangeTeamAccess.map(flag => RepoAdminChangeTeamAccessKey -> ujson.Bool(flag)),
+      command.fullName.map(text                  => FullNameKey -> JsonValue.Str(text)),
+      command.description.map(text               => "description" -> JsonValue.Str(text)),
+      command.email.map(address                  => "email" -> JsonValue.Str(address)),
+      command.website.map(url                    => "website" -> JsonValue.Str(url)),
+      command.location.map(place                 => "location" -> JsonValue.Str(place)),
+      command.visibility.map(level               => "visibility" -> JsonValue.Str(level.wireName)),
+      command.repoAdminChangeTeamAccess.map(flag => RepoAdminChangeTeamAccessKey -> JsonValue.Bool(flag)),
     ).flatten
 
-    ujson.write(ujson.Obj.from(fields))
+    Json.render(JsonValue.Obj.from(fields))
 
   /** Renders `RenameOrgOption` — the body of `POST /orgs/{org}/rename`.
     *
@@ -94,7 +96,7 @@ private[codeberg4s] object OrganizationOptionDto:
     * afterwards — which matters, because after this call it '''is''' the path segment every other operation uses.
     */
   def renderRename(newName: OrgName): String =
-    ujson.write(ujson.Obj(NewNameKey -> ujson.Str(newName.value)))
+    Json.render(JsonValue.Obj(NewNameKey -> JsonValue.Str(newName.value)))
 
   /** Renders `UpdateUserAvatarOption` — the body of `POST /orgs/{org}/avatar`.
     *
@@ -103,4 +105,4 @@ private[codeberg4s] object OrganizationOptionDto:
     * [[com.worxbend.codeberg4s.organizations.OrganizationApi.updateAvatar]] for why that type and not a second one.
     */
   def renderAvatar(image: AvatarImage): String =
-    ujson.write(ujson.Obj(ImageKey -> ujson.Str(image.base64)))
+    Json.render(JsonValue.Obj(ImageKey -> JsonValue.Str(image.base64)))

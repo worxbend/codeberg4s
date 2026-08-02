@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.pulls.MergePullRequest
 
 /** Forgejo's `MergePullRequestOption` request model — the body of `POST /repos/{owner}/{repo}/pulls/{index}/merge`.
@@ -23,16 +25,16 @@ private[codeberg4s] object MergePullRequestOptionDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: MergePullRequest): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: MergePullRequest): List[(String, ujson.Value)] =
+  private def fields(command: MergePullRequest): List[(String, JsonValue)] =
     List(
-      Some("Do" -> ujson.Str(command.style.wireValue)),
-      command.title.map(text       => "MergeTitleField" -> ujson.Str(text)),
-      command.message.map(text     => "MergeMessageField" -> ujson.Str(text)),
-      command.mergedCommit.map(sha => "MergeCommitID" -> ujson.Str(sha.value)),
-      command.headCommit.map(sha   => "head_commit_id" -> ujson.Str(sha.value)),
-      Option.when(command.deleteBranchAfterMerge)("delete_branch_after_merge" -> ujson.Bool(true)),
-      Option.when(command.forceMerge)("force_merge"                           -> ujson.Bool(true)),
-      Option.when(command.mergeWhenChecksSucceed)("merge_when_checks_succeed" -> ujson.Bool(true)),
+      Some("Do" -> JsonValue.Str(command.style.wireValue)),
+      command.title.map(text       => "MergeTitleField" -> JsonValue.Str(text)),
+      command.message.map(text     => "MergeMessageField" -> JsonValue.Str(text)),
+      command.mergedCommit.map(sha => "MergeCommitID" -> JsonValue.Str(sha.value)),
+      command.headCommit.map(sha   => "head_commit_id" -> JsonValue.Str(sha.value)),
+      Option.when(command.deleteBranchAfterMerge)("delete_branch_after_merge" -> JsonValue.Bool(true)),
+      Option.when(command.forceMerge)("force_merge"                           -> JsonValue.Bool(true)),
+      Option.when(command.mergeWhenChecksSucceed)("merge_when_checks_succeed" -> JsonValue.Bool(true)),
     ).flatten

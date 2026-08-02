@@ -6,7 +6,7 @@ that.
 
 ## Why there is no logging dependency
 
-codeberg4s has two dependencies: sttp client4 and upickle. That is the whole
+codeberg4s has two dependencies: sttp client4 and jsoniter-scala. That is the whole
 list, and no logging framework will ever join it.
 
 A published library that drags SLF4J, Logback and a configuration file behind it

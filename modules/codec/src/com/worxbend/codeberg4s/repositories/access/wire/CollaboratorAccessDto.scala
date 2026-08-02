@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -78,7 +79,7 @@ object CollaboratorAccessDto:
   /** Reads a `RepoCollaboratorPermission` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[CollaboratorAccessDto] =
+  given JsonDecoder[CollaboratorAccessDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, reusing [[com.worxbend.codeberg4s.users.wire.UserDto.fromFields]] so the user

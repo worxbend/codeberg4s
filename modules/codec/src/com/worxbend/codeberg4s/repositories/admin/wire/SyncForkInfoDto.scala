@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.repositories.admin.ForkSyncInfo
 import com.worxbend.codeberg4s.repositories.admin.IssuePinsAllowed
@@ -47,7 +48,7 @@ final case class SyncForkInfoDto(
 object SyncForkInfoDto:
 
   /** Reads a `SyncForkInfo` object. Absent and `null` are the same thing for every field. */
-  given upickle.default.Reader[SyncForkInfoDto] =
+  given JsonDecoder[SyncForkInfoDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, so the field spellings exist in exactly one place. */
@@ -81,7 +82,7 @@ final case class IssuePinsAllowedDto(issues: Option[Boolean], pullRequests: Opti
 object IssuePinsAllowedDto:
 
   /** Reads a `NewIssuePinsAllowed` object. Absent and `null` are the same thing for both fields. */
-  given upickle.default.Reader[IssuePinsAllowedDto] =
+  given JsonDecoder[IssuePinsAllowedDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, so the field spellings exist in exactly one place. */

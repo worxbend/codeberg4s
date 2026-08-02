@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -29,9 +30,9 @@ import com.worxbend.codeberg4s.users.wire.UserDto
   *
   * Measured on these fixtures rather than assumed. `assignee`, `assignees`, `milestone`, `due_date` and `closed_at` are
   * JSON `null` on the open pull request; `merged_at`, `merge_commit_sha` and `merged_by` are `null` on every pull
-  * request that is not merged; and `assignees` is declared `type: array` while arriving as `null`, which upickle 4.4.3
-  * aborts on. Hence the hand-written reader over [[com.worxbend.codeberg4s.codec.JsonFields]], where a null array is an
-  * empty `Vector`.
+  * request that is not merged; and `assignees` is declared `type: array` while arriving as `null`, which a derived
+  * codec aborts on. Hence the hand-written reader over [[com.worxbend.codeberg4s.codec.JsonFields]], where a null array
+  * is an empty `Vector`.
   *
   * ==The one place the endpoints disagree==
   *
@@ -179,7 +180,7 @@ object PullRequestDto:
   /** Reads a `PullRequest` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[PullRequestDto] =
+  given JsonDecoder[PullRequestDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, reusing the `fromFields` of every model it embeds so that no field spelling is

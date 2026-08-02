@@ -71,20 +71,20 @@ deliberately short (PLAN.md ADR-2, ADR-3).
 | Dependency | Coordinate | Pinned | Latest stable | Status | Module |
 | --- | --- | --- | --- | --- | --- |
 | sttp client4 core | `com.softwaremill.sttp.client4::core` | `4.0.26` | `4.0.26` | current | `transport` |
-| sttp client4 upickle | `com.softwaremill.sttp.client4::upickle` | `4.0.26` | `4.0.26` | current | `transport` |
 | sttp-model core | `com.softwaremill.sttp.model::core` | `1.7.18` | `1.7.18` | current | `transport` |
-| upickle | `com.lihaoyi::upickle` | `4.4.3` | `4.4.3` | current | `codec` |
+| jsoniter-scala core | `com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core` | `2.39.1` | `2.39.1` | current | `codec` |
+| jsoniter-scala macros | `com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros` | `2.39.1` | `2.39.1` | current | `codec` |
 
 `modules/domain` and `modules/core` declare **no** `mvnDeps` at all — the
 hexagonal boundary is enforced by the build graph, not by convention
 (PLAN.md §3.1).
 
-**JSON library deviation:** PLAN.md §3.3 ADR-3 selects **upickle**, and
+**JSON library:** PLAN.md §3.3 originally selected upickle; the project now uses **jsoniter-scala**, and
 `build.mill` pins it. SCALA_CODE_STYLE.md's "JSON Codecs" section shows
 jsoniter-scala examples; those examples do not apply to this repository. The rule
 they illustrate — *derive the codec on the DTO, next to the DTO, and provide a
 codec for the list type as well as the element type* — does apply, translated to
-upickle `ReadWriter`s.
+jsoniter-scala `ReadWriter`s.
 
 ## 4. Test dependencies (not published)
 
@@ -136,7 +136,7 @@ realignment diff. If bumped, it must land as a standalone `style:` commit with
 | --- | --- | --- |
 | Ox | **not a dependency** | Public API is `Future`-based (PLAN.md §3.2). Overrides SCALA_CODE_STYLE.md's Ox chapter for this repo. |
 | cats-effect / ZIO | rejected | PLAN.md ADR-2 — hand-rolled `Exec[F]` keeps the published dependency footprint at four artifacts. |
-| circe / jsoniter-scala | rejected | PLAN.md ADR-3 — upickle, first-class sttp integration, tiny footprint. |
+| circe / jsoniter-scala | rejected | PLAN.md ADR-3 — jsoniter-scala, first-class sttp integration, tiny footprint. |
 | softwaremill/retry | **undecided** | PLAN.md ADR-4 evaluates it at Phase 2; not pinned in `build.mill` yet. If its `odelay` dependency or maintenance status disqualifies it, `RetryPolicy` is implemented in `core` with no new dependency. Decide before Phase 2 Track A, and record the outcome here. |
 | quicklens | not pinned | PLAN.md §0 mentions it as a candidate SoftwareMill utility; no module needs it yet. |
 

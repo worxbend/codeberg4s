@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.users.social.wire
 
 import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.paging.PageNumber
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.paging.PageSize
@@ -75,7 +76,7 @@ final class SocialRequestSuite extends FunSuite:
     val claim   = token.signedWith(orFail(OpenPgpKeyId.from("AB")), orFail(ArmoredSignature.from(armored)))
     val body    = VerifyGpgKeyOptionDto.render(claim)
 
-    assertEquals(ujson.read(body)("armored_signature").str, armored)
+    assertEquals(Json.parse(body).toOption.flatMap(_.field("armored_signature")).flatMap(_.strOpt), Some(armored))
 
   // --- token bodies ---------------------------------------------------------
 

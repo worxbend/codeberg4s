@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
 import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.repositories.BranchName
 import com.worxbend.codeberg4s.repositories.access.ApprovalCount
 import com.worxbend.codeberg4s.repositories.access.BranchProtectionSettings
@@ -88,7 +89,7 @@ final class AccessRequestsSuite extends FunSuite:
     val body = CreateBranchProtectionOptionDto.render(
       CreateBranchProtection.on(rule("main")).withSettings(EverySetting)
     )
-    val keys = ujson.read(body).obj.keys.toVector
+    val keys = sentKeys(body).toVector
 
     assert(keys.contains("approvals_whitelist_username"), s"the singular spelling was not sent: $keys")
     assert(!keys.contains("approvals_whitelist_usernames"), s"the plural spelling was sent instead: $keys")
@@ -108,8 +109,8 @@ final class AccessRequestsSuite extends FunSuite:
         .withSettings(EverySetting)
     )
 
-    assertEquals(ujson.read(body).obj.keys.toSet.diff(CreateProperties), Set.empty[String])
-    assertEquals(CreateProperties.diff(ujson.read(body).obj.keys.toSet), Set.empty[String])
+    assertEquals(sentKeys(body).diff(CreateProperties), Set.empty[String])
+    assertEquals(CreateProperties.diff(sentKeys(body)), Set.empty[String])
 
   // --- edit branch protection -----------------------------------------------
 
@@ -160,7 +161,7 @@ final class AccessRequestsSuite extends FunSuite:
 
   test("an edit body can never carry a rule name, because the spec's edit model has no such property"):
     val body = EditBranchProtectionOptionDto.render(EditBranchProtection.of(EverySetting))
-    val keys = ujson.read(body).obj.keys.toSet
+    val keys = sentKeys(body)
 
     assert(!keys.contains("rule_name"), s"an edit tried to rename the rule: $keys")
     assert(!keys.contains("branch_name"), s"an edit tried to rename the rule: $keys")
@@ -307,8 +308,8 @@ final class AccessRequestsSuite extends FunSuite:
 
   /** The value at `name`, rendered back to JSON so one property can be asserted without re-parsing the whole body. */
   private def rendered(body: String, name: String): String =
-    ujson.read(body).objOpt.flatMap(entries => entries.get(name)) match
-      case Some(value) => ujson.write(value)
+    Json.parse(body).toOption.flatMap(_.field(name)) match
+      case Some(field) => Json.render(field)
       case None        => fail(s"the body carried no '$name': $body")
 
   private def rule(value: String): BranchRuleName =
@@ -324,3 +325,7 @@ final class AccessRequestsSuite extends FunSuite:
     result match
       case Right(value) => value
       case Left(error)  => fail(s"invalid fixture: ${error.field} ${error.message}")
+
+  /** The field names a rendered request body actually carries. Fails the test rather than hiding a parse error. */
+  private def sentKeys(body: String): Set[String] =
+    Json.parse(body).map(_.keys.toSet).getOrElse(fail("the rendered body did not parse"))

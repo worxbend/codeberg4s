@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 
 /** Forgejo's `InternalTracker` model — the `internal_tracker` object embedded in a repository.
@@ -28,7 +29,7 @@ final case class InternalTrackerDto(
 object InternalTrackerDto:
 
   /** Reads an `internal_tracker` object. */
-  given upickle.default.Reader[InternalTrackerDto] =
+  given JsonDecoder[InternalTrackerDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, for the repository DTO that embeds this one. */

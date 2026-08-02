@@ -12,7 +12,7 @@ thing is.
   tag; rail; page against limit; idempotent; opaque type.
 - **[FAQ](./faq.md)** — the questions the design provokes. Why `Future` and not
   an effect system, why opaque types instead of `String`, why two rails, why
-  why the page walk is one helper rather than a `listAll` per group, why upickle, and whether it works against Gitea.
+  why the page walk is one helper rather than a `listAll` per group, why jsoniter, and whether it works against Gitea.
 
 The complete and authoritative description of the API is the Scaladoc, which is
 generated from the sources for all five published artifacts as part of building

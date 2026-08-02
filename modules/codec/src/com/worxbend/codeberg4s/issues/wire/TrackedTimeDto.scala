@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -73,7 +74,7 @@ object TrackedTimeDto:
   /** Reads a `TrackedTime` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[TrackedTimeDto] =
+  given JsonDecoder[TrackedTimeDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, reusing [[IssueDto.fromFields]] for the embedded issue. */

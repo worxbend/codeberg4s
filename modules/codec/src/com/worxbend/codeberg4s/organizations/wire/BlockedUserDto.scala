@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.organizations.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -48,7 +49,7 @@ object BlockedUserDto:
   /** Reads a `BlockedUser` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[BlockedUserDto] =
+  given JsonDecoder[BlockedUserDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, so the field spellings exist in exactly one place. */

@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.repositories.admin.WatchStatus
@@ -58,7 +59,7 @@ final case class WatchInfoDto(
 object WatchInfoDto:
 
   /** Reads a `WatchInfo` object. Absent and `null` are the same thing for every field. */
-  given upickle.default.Reader[WatchInfoDto] =
+  given JsonDecoder[WatchInfoDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, so the field spellings exist in exactly one place. */

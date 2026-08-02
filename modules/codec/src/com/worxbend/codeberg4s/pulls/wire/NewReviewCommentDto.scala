@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.issues.wire.WireNumbers
 import com.worxbend.codeberg4s.pulls.NewReviewComment
 
@@ -21,16 +23,16 @@ private[codeberg4s] object NewReviewCommentDto:
 
   /** Renders `comment` as the JSON body of the create-review-comment endpoint. */
   def render(comment: NewReviewComment): String =
-    ujson.write(obj(comment))
+    Json.render(obj(comment))
 
   /** `comment` as a JSON object, for embedding in `CreatePullReviewOptions.comments`. */
-  def obj(comment: NewReviewComment): ujson.Value =
-    ujson.Obj.from(fields(comment))
+  def obj(comment: NewReviewComment): JsonValue =
+    JsonValue.Obj.from(fields(comment))
 
-  private def fields(comment: NewReviewComment): List[(String, ujson.Value)] =
+  private def fields(comment: NewReviewComment): List[(String, JsonValue)] =
     List(
-      Some("body" -> ujson.Str(comment.body)),
-      Some("path" -> ujson.Str(comment.path)),
+      Some("body" -> JsonValue.Str(comment.body)),
+      Some("path" -> JsonValue.Str(comment.path)),
       comment.newPosition.map(line     => "new_position" -> WireNumbers.identifier(line)),
       comment.oldPosition.map(line     => "old_position" -> WireNumbers.identifier(line)),
       comment.extraLinesCount.map(span => "extra_lines_count" -> WireNumbers.identifier(span)),

@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.users.account.wire
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.account.ClientSecret
 import com.worxbend.codeberg4s.users.account.Email
@@ -168,12 +169,12 @@ final class AccountDtoSuite extends FunSuite:
   private def settings(body: String): UserSettings =
     convert(decodeSettings(body).toDomain)
 
-  private def decodeOne[A: upickle.default.Reader](body: String): A =
+  private def decodeOne[A: JsonDecoder](body: String): A =
     Json.decode[A](body) match
       case Right(decoded) => decoded
       case Left(failure)  => fail(s"the payload did not decode: ${failure.message}")
 
-  private def decodeAll[A: upickle.default.Reader](body: String): Vector[A] =
+  private def decodeAll[A: JsonDecoder](body: String): Vector[A] =
     decodeOne[Vector[A]](body)
 
   private def convert[A](result: Either[DecodeFailure, A]): A =

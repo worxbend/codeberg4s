@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.repositories.ArchiveDownloadCount
 
@@ -23,7 +24,7 @@ final case class ArchiveDownloadCountDto(zip: Option[Long], tarGz: Option[Long])
 object ArchiveDownloadCountDto:
 
   /** Reads an `archive_download_count` object. */
-  given upickle.default.Reader[ArchiveDownloadCountDto] =
+  given JsonDecoder[ArchiveDownloadCountDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, for the tag and release DTOs that embed this one. */

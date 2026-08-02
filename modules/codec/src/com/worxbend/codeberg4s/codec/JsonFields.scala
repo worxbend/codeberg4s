@@ -15,18 +15,18 @@ package com.worxbend.codeberg4s.codec
   * instead of a number must not cost the caller the other sixty fields of the same object. What it must not do is
   * silently invent data: a field the domain genuinely needs is reported by the DTO's `toDomain`, which returns
   * [[com.worxbend.codeberg4s.core.DecodeFailure]] naming the field. Structural failures — a body that is not JSON at
-  * all, or an array where an object was expected — are still failures, and are raised by upickle before this view is
-  * ever built.
+  * all, or an array where an object was expected — are still failures, and are reported by [[JsonDecoder.objectOf]]
+  * before this view is ever built.
   *
   * Instances are immutable and safe to share.
   *
   * @param underlying
   *   the decoded object, keyed by the wire (snake_case) field name
   */
-final case class JsonFields(underlying: Map[String, ujson.Value]):
+final case class JsonFields(underlying: Map[String, JsonValue]):
 
   /** The raw value at `name`, absent when the key is missing or explicitly `null`. */
-  def value(name: String): Option[ujson.Value] =
+  def value(name: String): Option[JsonValue] =
     underlying.get(name).filterNot(_.isNull)
 
   /** The string at `name`, verbatim — the empty string is preserved. Use [[text]] to fold Forgejo's `""`-for-absent
@@ -46,9 +46,8 @@ final case class JsonFields(underlying: Map[String, ujson.Value]):
 
   /** The number at `name`, truncated to a `Long`.
     *
-    * ujson parses every JSON number as a `Double`, so an identifier beyond 2^53 would lose precision. Forgejo
-    * identifiers are database row ids and nowhere near that bound; if that ever changes it will change here, in one
-    * place.
+    * [[JsonValue.Num]] holds a `BigDecimal`, so an identifier beyond 2^53 keeps its precision on the way through. The
+    * previous document model parsed every number as a `Double` and would have lost it silently.
     */
   def number(name: String): Option[Long] =
     value(name).flatMap(_.numOpt).map(_.toLong)
@@ -62,7 +61,7 @@ final case class JsonFields(underlying: Map[String, ujson.Value]):
     value(name).flatMap(_.objOpt).map(entries => JsonFields(entries.toMap))
 
   /** The elements of the array at `name`; empty when the key is absent, `null`, or not an array. */
-  def values(name: String): Vector[ujson.Value] =
+  def values(name: String): Vector[JsonValue] =
     value(name).flatMap(_.arrOpt).fold(Vector.empty)(_.toVector)
 
   /** The elements of the array at `name` that are strings; non-strings are dropped rather than failing. */
@@ -78,20 +77,15 @@ object JsonFields:
   /** An empty view — every accessor answers as though the object had no keys. */
   val Empty: JsonFields = JsonFields(Map.empty)
 
-  /** Builds an upickle `Reader` for a type assembled field by field from one JSON object.
+  /** Builds a decoder for a type assembled field by field from one JSON object.
     *
-    * `build` must be total. The reader delegates the "is this even an object?" question to upickle's own map reader, so
-    * a body that is an array, a number or malformed fails there, with upickle's message and with the JSON path that
-    * [[Json.decode]] recovers — no exception is raised by this module.
-    *
-    * A body that is the bare literal `null` never reaches `build` at all — upickle short-circuits it — and is rejected
-    * by [[Json.decode]] instead. A `null` in a '''field''' position is a different matter and is absence, per the
+    * `build` must be total; every accessor above answers rather than fails, so it can be. The "is this even an object?"
+    * question belongs to [[JsonDecoder.objectOf]], which rejects an array, a number, or the bare literal `null` with a
+    * message naming what was found. A `null` in a field position is a different matter and is absence, per the
     * accessors above.
     *
     * @param build
     *   assembles the value from the object's fields
     */
-  def reader[A](build: JsonFields => A): upickle.default.Reader[A] =
-    upickle.default
-      .reader[Map[String, ujson.Value]]
-      .map(entries => build(JsonFields(entries)))
+  def reader[A](build: JsonFields => A): JsonDecoder[A] =
+    JsonDecoder.objectOf(build)

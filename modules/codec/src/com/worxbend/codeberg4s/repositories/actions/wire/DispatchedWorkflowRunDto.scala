@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.actions.DispatchedWorkflowRun
@@ -46,7 +47,7 @@ object DispatchedWorkflowRunDto:
   /** Reads a `DispatchWorkflowRun` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[DispatchedWorkflowRunDto] =
+  given JsonDecoder[DispatchedWorkflowRunDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

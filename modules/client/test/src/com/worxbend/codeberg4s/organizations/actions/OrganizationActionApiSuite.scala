@@ -9,6 +9,7 @@ import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.client.FutureExec
 import com.worxbend.codeberg4s.client.FutureTimer
 import com.worxbend.codeberg4s.codec.ApiErrorBodyCodec
+import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.JitterSource
@@ -114,8 +115,8 @@ final class OrganizationActionApiSuite extends FunSuite:
       api.attempt.registerRunner(Org, orFail(RegisterRunner.named("build-box-3")).ephemeral).map: outcome =>
         assertEquals(methodOf(backend), "POST")
         assertEquals(pathOf(backend), s"$Root/runners")
-        assertEquals(ujson.read(bodyOf(backend))("name").str, "build-box-3")
-        assertEquals(ujson.read(bodyOf(backend))("ephemeral").bool, true)
+        assertEquals(Json.parse(bodyOf(backend)).toOption.flatMap(_.field("name")).flatMap(_.strOpt), Some("build-box-3"))
+        assertEquals(Json.parse(bodyOf(backend)).toOption.flatMap(_.field("ephemeral")).flatMap(_.boolOpt), Some(true))
         assertEquals(backend.allInteractions.size, 1, "a POST was repeated")
         assert(outcome.isLeft, "the 503 should have reached the caller")
 
@@ -178,7 +179,7 @@ final class OrganizationActionApiSuite extends FunSuite:
       api.setSecret(Org, Secret, orFail(SecretValue.from("s3cr3t"))).map: _ =>
         assertEquals(methodOf(backend), "PUT")
         assertEquals(pathOf(backend), s"$Root/secrets/DEPLOY_KEY")
-        assertEquals(ujson.read(bodyOf(backend))("data").str, "s3cr3t")
+        assertEquals(Json.parse(bodyOf(backend)).toOption.flatMap(_.field("data")).flatMap(_.strOpt), Some("s3cr3t"))
         assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
 
   test("orgs.actions.secrets.delete is NOT repeated, unlike the repository call of the same name"):
@@ -217,7 +218,7 @@ final class OrganizationActionApiSuite extends FunSuite:
       api.attempt.createVariable(Org, Variable, CreateVariable.of("staging")).map: outcome =>
         assertEquals(methodOf(backend), "POST")
         assertEquals(pathOf(backend), s"$Root/variables/ENVIRONMENT")
-        assertEquals(ujson.read(bodyOf(backend)).obj.keys.toList, List("value"))
+        assertEquals(Json.parse(bodyOf(backend)).toOption.map(_.keys.toList), Some(List("value")))
         assertEquals(backend.allInteractions.size, 1, "a POST was repeated")
         assert(outcome.isLeft, "the 503 should have reached the caller")
 
@@ -227,7 +228,7 @@ final class OrganizationActionApiSuite extends FunSuite:
     onBackend(backend): api =>
       api.updateVariable(Org, Variable, UpdateVariable.of("production")).map: _ =>
         assertEquals(methodOf(backend), "PUT")
-        assertEquals(ujson.read(bodyOf(backend))("value").str, "production")
+        assertEquals(Json.parse(bodyOf(backend)).toOption.flatMap(_.field("value")).flatMap(_.strOpt), Some("production"))
         assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
 
   test("orgs.actions.variables.update carrying a rename is not repeated, because the old name stops existing"):
@@ -237,7 +238,7 @@ final class OrganizationActionApiSuite extends FunSuite:
       val command = UpdateVariable.of("production").movedTo(orFail(VariableName.from("STAGE")))
 
       api.attempt.updateVariable(Org, Variable, command).map: outcome =>
-        assertEquals(ujson.read(bodyOf(backend))("name").str, "STAGE")
+        assertEquals(Json.parse(bodyOf(backend)).toOption.flatMap(_.field("name")).flatMap(_.strOpt), Some("STAGE"))
         assertEquals(backend.allInteractions.size, 1, "a renaming PUT was repeated")
         assert(outcome.isLeft, "the 503 should have reached the caller")
 

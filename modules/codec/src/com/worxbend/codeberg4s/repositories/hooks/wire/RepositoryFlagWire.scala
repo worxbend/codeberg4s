@@ -1,6 +1,8 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.hooks.RepositoryFlag
 import com.worxbend.codeberg4s.repositories.wire.Elements
@@ -38,4 +40,4 @@ private[codeberg4s] object RepositoryFlagWire:
     * [[com.worxbend.codeberg4s.repositories.hooks.RepositoryFlagApi.deleteAll]] reaches, spelled as a replacement.
     */
   def renderReplace(flags: Vector[RepositoryFlag]): String =
-    ujson.write(ujson.Obj(FlagsKey -> ujson.Arr.from(flags.map(_.value))))
+    Json.render(JsonValue.Obj(FlagsKey -> JsonValue.Arr.from(flags.map(flag => JsonValue.Str(flag.value)))))

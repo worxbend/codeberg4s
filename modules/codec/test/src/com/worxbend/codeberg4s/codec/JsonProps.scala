@@ -10,11 +10,10 @@ import org.scalacheck.Prop.forAllNoShrink
 
 /** The one promise `Json` makes: decoding is total.
   *
-  * `Json.decode` is the single door between a response body and a wire DTO, and ADR-0003 turns on it never letting an
-  * `upickle.core.Abort`, an `AbortException` or a `ujson.ParsingFailedException` escape into a caller's `Future`. That
-  * is a claim about '''every''' body a Forgejo instance or a proxy in front of one could send — a truncated payload, a
-  * `text/plain` gateway error, a `null`, an empty string — and it is therefore exactly the claim an example test cannot
-  * establish and a property test can.
+  * `Json.decode` is the single door between a response body and a wire DTO, and ADR-0003 turns on it never letting an a
+  * `JsonReaderException` escape into a caller's `Future`. That is a claim about '''every''' body a Forgejo instance or
+  * a proxy in front of one could send — a truncated payload, a `text/plain` gateway error, a `null`, an empty string —
+  * and it is therefore exactly the claim an example test cannot establish and a property test can.
   *
   * The generator feeds it random JSON punctuation, bodies observed in the wild, and truncations of well-formed
   * documents at every cut point, and the properties assert two things at once: that nothing escapes, and that the
@@ -34,36 +33,36 @@ final class JsonProps extends PropertyBase:
       .propBoolean(failure.path.render.startsWith("$"))
       .label(s"the path must be a JSONPath, was '${failure.path.render}'")
 
-  private def decodesOrFailsCleanly[A: upickle.default.Reader](raw: String): Prop =
+  private def decodesOrFailsCleanly[A: JsonDecoder](raw: String): Prop =
     Json.decode[A](raw) match
       case Right(_)      => Prop.passed
       case Left(failure) => isUsableFailure(failure)
 
   property("decoding an arbitrary body yields a usable failure value, never an exception".tag(Property)):
     forAll(PropertyBase.body) { raw =>
-      decodesOrFailsCleanly[ujson.Value](raw).label(s"as a JSON value: '$raw'") &&
-      decodesOrFailsCleanly[Map[String, ujson.Value]](raw).label(s"as an object: '$raw'") &&
-      decodesOrFailsCleanly[Int](raw).label(s"as a number: '$raw'") &&
-      decodesOrFailsCleanly[List[String]](raw).label(s"as an array of strings: '$raw'")
+      decodesOrFailsCleanly[JsonValue](raw).label(s"as a JSON value: '$raw'") &&
+      decodesOrFailsCleanly[Map[String, JsonValue]](raw).label(s"as an object: '$raw'") &&
+      decodesOrFailsCleanly[Long](raw).label(s"as a number: '$raw'") &&
+      decodesOrFailsCleanly[Vector[String]](raw).label(s"as an array of strings: '$raw'")
     }
 
-  property("a document ujson wrote decodes back to the value it was written from".tag(Property)):
-    forAll(PropertyBase.value)(document => Json.decode[ujson.Value](ujson.write(document)) ?= Right(document))
+  property("a document Json.render wrote decodes back to the value it was written from".tag(Property)):
+    forAll(PropertyBase.value)(document => Json.decode[JsonValue](Json.render(document)) ?= Right(document))
 
   property("surrounding whitespace does not change what a document decodes to".tag(Property)):
     forAll(PropertyBase.value, PropertyBase.whitespace, PropertyBase.whitespace) { (document, before, after) =>
-      val written = ujson.write(document)
+      val written = Json.render(document)
 
-      Json.decode[ujson.Value](s"$before$written$after") ?= Json.decode[ujson.Value](written)
+      Json.decode[JsonValue](s"$before$written$after") ?= Json.decode[JsonValue](written)
     }
 
   property("no proper prefix of an object or array document decodes".tag(Property)):
     forAll(PropertyBase.container, Gen.choose(0, 1000)) { (document, offset) =>
-      val written = ujson.write(document)
+      val written = Json.render(document)
       val prefix  = written.take(offset % written.length)
 
       Prop
-        .propBoolean(Json.decode[ujson.Value](prefix).isLeft)
+        .propBoolean(Json.decode[JsonValue](prefix).isLeft)
         .label(s"'$prefix' is an incomplete '$written' and must not decode")
     }
 
@@ -72,15 +71,15 @@ final class JsonProps extends PropertyBase:
       val raw = s"${before}null$after"
 
       Prop
-        .propBoolean(Json.decode[Map[String, ujson.Value]](raw).isLeft)
+        .propBoolean(Json.decode[Map[String, JsonValue]](raw).isLeft)
         .label(s"'$raw' decoded into something for a type that cannot represent absence") &&
-      (Json.decode[ujson.Value](raw) ?= Right(ujson.Null))
+      (Json.decode[JsonValue](raw) ?= Right(JsonValue.Null))
         .label("a type that models absence itself is unaffected")
     }
 
   property("a decoder's explanation never becomes a payload dump".tag(Property)):
     forAllNoShrink(PropertyBase.longStringBody) { raw =>
-      Json.decode[Int](raw) match
+      Json.decode[Long](raw) match
         case Right(number) => Prop.falsified.label(s"a ${raw.length}-character string decoded into $number")
         case Left(failure) =>
           Prop
@@ -91,7 +90,7 @@ final class JsonProps extends PropertyBase:
 
   property("a document of the wrong shape fails rather than decoding into nonsense".tag(Property)):
     forAll(PropertyBase.container) { document =>
-      Json.decode[Int](ujson.write(document)) match
+      Json.decode[Long](Json.render(document)) match
         case Left(failure) => isUsableFailure(failure)
-        case Right(number) => Prop.falsified.label(s"'${ujson.write(document)}' decoded into the number $number")
+        case Right(number) => Prop.falsified.label(s"'${Json.render(document)}' decoded into the number $number")
     }

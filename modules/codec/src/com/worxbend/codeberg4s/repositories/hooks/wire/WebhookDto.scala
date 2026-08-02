@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -86,7 +87,7 @@ final case class WebhookDto(
 object WebhookDto:
 
   /** Reads a `Hook` object. Absent and `null` are the same thing for every field; see [[JsonFields]]. */
-  given upickle.default.Reader[WebhookDto] =
+  given JsonDecoder[WebhookDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

@@ -24,8 +24,8 @@ import java.util.Base64
 /** The exact bytes and query strings this group sends.
   *
   * Rendering is asserted here rather than through a stub backend, because a request body is a value and comparing
-  * strings is the clearest way to pin a wire spelling. `ujson.Obj` preserves insertion order, so the expected strings
-  * below are stable.
+  * strings is the clearest way to pin a wire spelling. `JsonValue.Obj` preserves insertion order, so the expected
+  * strings below are stable.
   */
 final class AccountRequestSuite extends FunSuite:
 

@@ -50,12 +50,12 @@ this entry is the release note that tag will carry.
   logging dependency and writes nothing to stdout.
 - **Hexagonal module layout,** published as five artifacts under
   `com.worxbend`: `codeberg4s-domain` (no dependencies at all),
-  `codeberg4s-core`, `codeberg4s-codec` (upickle), `codeberg4s-transport`
+  `codeberg4s-core`, `codeberg4s-codec` (jsoniter-scala), `codeberg4s-transport`
   (sttp client4) and `codeberg4s-client`. Naming `codeberg4s-client` pulls in
   the other four transitively.
 - **Verification.** 1,072 unit tests, 54 golden fixtures captured from the live
   API, scoverage thresholds, and a `verify.sh` gate that also enforces the
-  architecture boundaries (no sttp, upickle or `Future` below `client`; no
+  architecture boundaries (no sttp, jsoniter-scala or `Future` below `client`; no
   `Await`; no bare exceptions).
 
 ### Known limitations

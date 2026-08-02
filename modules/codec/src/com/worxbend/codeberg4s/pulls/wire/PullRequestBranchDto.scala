@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.pulls.PullRequestBranch
@@ -75,7 +76,7 @@ object PullRequestBranchDto:
   /** Reads a `PRBranchInfo` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[PullRequestBranchDto] =
+  given JsonDecoder[PullRequestBranchDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, reusing [[com.worxbend.codeberg4s.repositories.wire.RepositoryDto.fromFields]]

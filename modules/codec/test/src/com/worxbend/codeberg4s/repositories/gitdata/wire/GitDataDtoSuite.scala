@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.ArchiveDownloadCount
 import com.worxbend.codeberg4s.repositories.ContentKind
@@ -262,7 +263,7 @@ final class GitDataDtoSuite extends FunSuite:
     assertEquals(definitions.valueOf("indent_size"), Some("4"))
     assertEquals(definitions.valueOf("insert_final_newline"), Some("true"))
 
-  test("a whole number renders without the fractional part ujson parses it into"):
+  test("a whole number renders without the fractional part the document model parses it into"):
     assertEquals(
       decode[EditorConfigDto]("""{"max_line_length":120}""").toDomain.valueOf("max_line_length"),
       Some("120"),
@@ -281,7 +282,7 @@ final class GitDataDtoSuite extends FunSuite:
 
   // --- helpers --------------------------------------------------------------
 
-  private def decode[A: upickle.default.Reader](body: String): A =
+  private def decode[A: JsonDecoder](body: String): A =
     Json.decode[A](body) match
       case Right(value)  => value
       case Left(failure) => fail(s"expected a decodable body, got ${failure.path.render}: ${failure.message}")

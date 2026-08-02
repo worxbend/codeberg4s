@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.miscellaneous.ServerAttachmentSettings
@@ -56,7 +57,7 @@ object ServerAttachmentSettingsDto:
   /** Reads a `/settings/attachment` body. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[ServerAttachmentSettingsDto] =
+  given JsonDecoder[ServerAttachmentSettingsDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.users.social.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.users.social.CreateGpgKey
 import com.worxbend.codeberg4s.users.social.CreateSshKey
 import com.worxbend.codeberg4s.users.social.VerifyGpgKey
@@ -29,11 +31,11 @@ private[codeberg4s] object CreateKeyOptionDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: CreateSshKey): String =
-    ujson.write(
-      ujson.Obj(
-        TitleKey    -> ujson.Str(command.title),
-        KeyKey      -> ujson.Str(command.key),
-        ReadOnlyKey -> ujson.Bool(command.isReadOnly),
+    Json.render(
+      JsonValue.Obj(
+        TitleKey    -> JsonValue.Str(command.title),
+        KeyKey      -> JsonValue.Str(command.key),
+        ReadOnlyKey -> JsonValue.Bool(command.isReadOnly),
       )
     )
 
@@ -56,12 +58,12 @@ private[codeberg4s] object CreateGpgKeyOptionDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: CreateGpgKey): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: CreateGpgKey): List[(String, ujson.Value)] =
+  private def fields(command: CreateGpgKey): List[(String, JsonValue)] =
     List(
-      Some(ArmoredPublicKeyKey -> ujson.Str(command.armoredPublicKey)),
-      command.armoredSignature.map(signature => ArmoredSignatureKey -> ujson.Str(signature.value)),
+      Some(ArmoredPublicKeyKey -> JsonValue.Str(command.armoredPublicKey)),
+      command.armoredSignature.map(signature => ArmoredSignatureKey -> JsonValue.Str(signature.value)),
     ).flatten
 
 /** Forgejo's `VerifyGPGKeyOption` request model — the body of `POST /user/gpg_key_verify`.
@@ -70,7 +72,7 @@ private[codeberg4s] object CreateGpgKeyOptionDto:
   * [[com.worxbend.codeberg4s.users.social.VerifyGpgKey]] itself: a verification request without one asks the instance
   * to verify nothing.
   *
-  * The signature travels through `ujson.write`, which escapes it into a JSON string — so an armored block's newlines
+  * The signature travels through `Json.render`, which escapes it into a JSON string — so an armored block's newlines
   * survive intact and cannot break out of the body. That matters more here than it looks: an armored signature is
   * multi-line by construction, and hand-assembling this body is exactly how a client corrupts one.
   *
@@ -86,9 +88,9 @@ private[codeberg4s] object VerifyGpgKeyOptionDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: VerifyGpgKey): String =
-    ujson.write(
-      ujson.Obj(
-        KeyIdKey            -> ujson.Str(command.keyId.value),
-        ArmoredSignatureKey -> ujson.Str(command.armoredSignature.value),
+    Json.render(
+      JsonValue.Obj(
+        KeyIdKey            -> JsonValue.Str(command.keyId.value),
+        ArmoredSignatureKey -> JsonValue.Str(command.armoredSignature.value),
       )
     )

@@ -1,5 +1,8 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
+
 /** Forgejo's `NoteOptions` request model — the body of `POST /repos/{owner}/{repo}/git/notes/{sha}`.
   *
   * An object rather than a case class with a `Writer`, for the reason
@@ -14,4 +17,4 @@ private[codeberg4s] object NoteOptionsDto:
 
   /** Renders `message` as the JSON body to `POST`. */
   def render(message: String): String =
-    ujson.write(ujson.Obj("message" -> ujson.Str(message)))
+    Json.render(JsonValue.Obj("message" -> JsonValue.Str(message)))

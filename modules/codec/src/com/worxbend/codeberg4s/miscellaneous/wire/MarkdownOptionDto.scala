@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.miscellaneous.MarkdownRenderRequest
 
 /** Forgejo's `MarkdownOption` model — the '''request''' body of `POST /markdown`.
@@ -33,16 +35,16 @@ final case class MarkdownOptionDto(
 
   /** Renders the body Forgejo expects, with `Context` present only when there is one.
     *
-    * Cannot fail: every field is already a plain JSON value, and upickle escapes the strings.
+    * Cannot fail: every field is already a plain JSON value, and the JSON parser escapes the strings.
     */
   def toJson: String =
-    val fields = Vector[(String, ujson.Value)](
-      "Text" -> ujson.Str(text),
-      "Mode" -> ujson.Str(mode),
-      "Wiki" -> ujson.Bool(wiki),
-    ) ++ context.map(value => "Context" -> ujson.Str(value))
+    val fields = Vector[(String, JsonValue)](
+      "Text" -> JsonValue.Str(text),
+      "Mode" -> JsonValue.Str(mode),
+      "Wiki" -> JsonValue.Bool(wiki),
+    ) ++ context.map(value => "Context" -> JsonValue.Str(value))
 
-    ujson.write(ujson.Obj.from(fields))
+    Json.render(JsonValue.Obj.from(fields))
 
 object MarkdownOptionDto:
 

@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.issues.CreateComment
 
 /** Forgejo's `CreateIssueCommentOption` request model — the body of
@@ -16,4 +18,4 @@ private[codeberg4s] object CreateIssueCommentOptionDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: CreateComment): String =
-    ujson.write(ujson.Obj("body" -> ujson.Str(command.body)))
+    Json.render(JsonValue.Obj("body" -> JsonValue.Str(command.body)))

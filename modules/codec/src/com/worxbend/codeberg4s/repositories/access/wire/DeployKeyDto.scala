@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -109,7 +110,7 @@ object DeployKeyDto:
   /** Reads a `DeployKey` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[DeployKeyDto] =
+  given JsonDecoder[DeployKeyDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, reusing [[com.worxbend.codeberg4s.repositories.wire.RepositoryDto.fromFields]]

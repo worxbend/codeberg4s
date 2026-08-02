@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.issues.EditLabel
 
 /** Forgejo's `EditLabelOption` request model — the body of `PATCH /repos/{owner}/{repo}/labels/{id}`.
@@ -19,13 +21,13 @@ private[codeberg4s] object EditLabelOptionDto:
 
   /** Renders `command` as the JSON body to `PATCH`; `{}` when it changes nothing. */
   def render(command: EditLabel): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: EditLabel): List[(String, ujson.Value)] =
+  private def fields(command: EditLabel): List[(String, JsonValue)] =
     List(
-      command.name.map(text        => "name" -> ujson.Str(text.value)),
-      command.color.map(shade      => "color" -> ujson.Str(shade.hashed)),
-      command.description.map(text => "description" -> ujson.Str(text)),
-      command.isExclusive.map(flag => "exclusive" -> ujson.Bool(flag)),
-      command.isArchived.map(flag  => "is_archived" -> ujson.Bool(flag)),
+      command.name.map(text        => "name" -> JsonValue.Str(text.value)),
+      command.color.map(shade      => "color" -> JsonValue.Str(shade.hashed)),
+      command.description.map(text => "description" -> JsonValue.Str(text)),
+      command.isExclusive.map(flag => "exclusive" -> JsonValue.Bool(flag)),
+      command.isArchived.map(flag  => "is_archived" -> JsonValue.Bool(flag)),
     ).flatten

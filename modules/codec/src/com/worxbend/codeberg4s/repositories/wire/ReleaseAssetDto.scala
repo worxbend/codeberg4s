@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -60,7 +61,7 @@ final case class ReleaseAssetDto(
 object ReleaseAssetDto:
 
   /** Reads one element of an `assets` array. */
-  given upickle.default.Reader[ReleaseAssetDto] =
+  given JsonDecoder[ReleaseAssetDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, for the release DTO that embeds these. */

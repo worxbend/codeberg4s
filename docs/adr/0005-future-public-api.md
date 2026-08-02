@@ -28,7 +28,8 @@ written.
 Concretely:
 
 - The public API is `Future`-based. There is **no Ox dependency**.
-- JSON is upickle (ADR-0003).
+- JSON is jsoniter-scala (ADR-0003). PLAN.md asked for upickle; that was tried
+  first and later reversed, for the reasons ADR-0003 records.
 - Pagination is `Page[A]` plus `listAll` / `foldPages` (`PLAN.md` §3.2), not
   `Flow`.
 - The package prefix is `com.worxbend.codeberg4s` — the style guide wins here,

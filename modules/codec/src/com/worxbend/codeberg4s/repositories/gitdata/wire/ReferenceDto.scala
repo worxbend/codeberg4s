@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -44,7 +45,7 @@ final case class ReferenceDto(ref: Option[String], url: Option[String], obj: Opt
 object ReferenceDto:
 
   /** Reads a `Reference` object. */
-  given upickle.default.Reader[ReferenceDto] =
+  given JsonDecoder[ReferenceDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

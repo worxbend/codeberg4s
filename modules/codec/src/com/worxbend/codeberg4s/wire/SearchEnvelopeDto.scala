@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.wire
 
-import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.JsonDecoder
 
 /** The wrapper Forgejo's search endpoints put around their results.
   *
@@ -25,13 +25,10 @@ object SearchEnvelopeDto:
     *
     * Elements are decoded one at a time, so an element that fails fails the whole envelope — the same contract as a
     * bare list body. Each element is handed straight to the element reader rather than re-parsed, which keeps the
-    * failure a plain upickle abort; the trade-off is that [[com.worxbend.codeberg4s.codec.Json.decode]] reports it at
-    * the envelope's own path rather than at `$.data[n]`, because the outer parse has already finished by the time an
-    * element is built.
+    * failure a plain the JSON parser abort; the trade-off is that [[com.worxbend.codeberg4s.codec.Json.decode]] reports
+    * it at the envelope's own path rather than at `$.data[n]`, because the outer parse has already finished by the time
+    * an element is built.
     */
-  given [A](using upickle.default.Reader[A]): upickle.default.Reader[SearchEnvelopeDto[A]] =
-    JsonFields.reader: fields =>
-      SearchEnvelopeDto(
-        ok   = fields.boolean("ok"),
-        data = fields.values("data").map(element => element.transform(upickle.default.reader[A])),
-      )
+  given [A](using JsonDecoder[A]): JsonDecoder[SearchEnvelopeDto[A]] =
+    JsonDecoder.objectOfEither: fields =>
+      JsonDecoder.all(fields.values("data")).map(decoded => SearchEnvelopeDto(ok = fields.boolean("ok"), data = decoded))

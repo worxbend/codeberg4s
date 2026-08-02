@@ -15,7 +15,7 @@ object Versions:
   val scala          = "3.8.4"
   val sttp           = "4.0.26"
   val sttpModel      = "1.7.18"
-  val upickle        = "4.4.3"
+  val jsoniter       = "2.39.1"
   val munit          = "1.3.4"
   val munitScalcheck = "1.3.0"
   val scalacheck     = "1.19.0"
@@ -113,13 +113,13 @@ object modules extends Module:
     def artifactName = "codeberg4s-domain"
     object test extends Codeberg4sTests
 
-  /** Ports and use-case logic over the abstract `Exec[F]`. Never imports sttp or upickle. */
+  /** Ports and use-case logic over the abstract `Exec[F]`. Never imports sttp or a JSON library. */
   object core extends Codeberg4sPublishModule:
     def artifactName = "codeberg4s-core"
     def moduleDeps   = Seq(domain)
     object test extends Codeberg4sTests
 
-  /** Wire DTOs and upickle codecs. The only module that knows the JSON shape.
+  /** Wire DTOs and jsoniter codecs. The only module that knows the JSON shape.
     *
     * Depends on `core` because it is the adapter that implements core's `Decode` port — an adapter depending on the
     * port it satisfies is the expected direction. It still must not import sttp.
@@ -127,7 +127,11 @@ object modules extends Module:
   object codec extends Codeberg4sPublishModule:
     def artifactName = "codeberg4s-codec"
     def moduleDeps   = Seq(domain, core)
-    def mvnDeps      = Seq(mvn"com.lihaoyi::upickle:${Versions.upickle}")
+
+    def mvnDeps = Seq(
+      mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core:${Versions.jsoniter}",
+      mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:${Versions.jsoniter}",
+    )
     object test extends Codeberg4sTests
 
   /** The only module importing sttp. Implements core's `HttpPort`. */
@@ -137,7 +141,6 @@ object modules extends Module:
 
     def mvnDeps = Seq(
       mvn"com.softwaremill.sttp.client4::core:${Versions.sttp}",
-      mvn"com.softwaremill.sttp.client4::upickle:${Versions.sttp}",
       mvn"com.softwaremill.sttp.model::core:${Versions.sttpModel}",
     )
     object test extends Codeberg4sTests

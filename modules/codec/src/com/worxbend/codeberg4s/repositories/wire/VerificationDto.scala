@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.repositories.CommitVerification
 
@@ -42,7 +43,7 @@ final case class VerificationDto(
 object VerificationDto:
 
   /** Reads a `verification` object. */
-  given upickle.default.Reader[VerificationDto] =
+  given JsonDecoder[VerificationDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, for the commit DTOs that embed this one. */

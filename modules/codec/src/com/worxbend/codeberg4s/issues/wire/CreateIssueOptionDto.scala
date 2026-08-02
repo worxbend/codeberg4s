@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.issues.CreateIssue
 
 /** Forgejo's `CreateIssueOption` request model — the body of `POST /repos/{owner}/{repo}/issues`.
@@ -19,16 +21,16 @@ private[codeberg4s] object CreateIssueOptionDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: CreateIssue): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: CreateIssue): List[(String, ujson.Value)] =
+  private def fields(command: CreateIssue): List[(String, JsonValue)] =
     List(
-      Some("title" -> ujson.Str(command.title)),
-      command.body.map(text => "body" -> ujson.Str(text)),
+      Some("title" -> JsonValue.Str(command.title)),
+      command.body.map(text => "body" -> JsonValue.Str(text)),
       Option.when(command.assignees.nonEmpty)("assignees" -> WireNumbers.strings(command.assignees)),
       Option.when(command.labels.nonEmpty)("labels"       -> WireNumbers.identifiers(command.labels.map(_.value))),
       command.milestone.map(id   => "milestone" -> WireNumbers.identifier(id.value)),
-      command.dueDate.map(moment => "due_date" -> ujson.Str(WireInstant.render(moment))),
-      command.ref.map(reference  => "ref" -> ujson.Str(reference)),
-      Option.when(command.closed)("closed" -> ujson.Bool(true)),
+      command.dueDate.map(moment => "due_date" -> JsonValue.Str(WireInstant.render(moment))),
+      command.ref.map(reference  => "ref" -> JsonValue.Str(reference)),
+      Option.when(command.closed)("closed" -> JsonValue.Bool(true)),
     ).flatten

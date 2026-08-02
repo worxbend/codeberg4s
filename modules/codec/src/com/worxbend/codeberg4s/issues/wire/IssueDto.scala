@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -32,7 +33,7 @@ import com.worxbend.codeberg4s.users.wire.UserDto
   *
   * `docs/HAZARDS.md` §1 was measured against this exact model: `assignee`, `assignees`, `closed_at`, `due_date` and
   * `milestone` arrive as JSON `null` on the first issue of the first page. `assignees` is declared `type: array` and
-  * still arrives as `null`, which upickle 4.4.3 aborts on — hence the hand-written reader over `JsonFields`, where a
+  * still arrives as `null`, which a derived codec aborts on — hence the hand-written reader over `JsonFields`, where a
   * null array is an empty `Vector`.
   *
   * `assignee`, the singular field, is kept here and dropped in conversion: it duplicates the first element of
@@ -136,7 +137,7 @@ object IssueDto:
   /** Reads an `Issue` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[IssueDto] =
+  given JsonDecoder[IssueDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, reusing the `fromFields` of every model it embeds so that no field spelling is

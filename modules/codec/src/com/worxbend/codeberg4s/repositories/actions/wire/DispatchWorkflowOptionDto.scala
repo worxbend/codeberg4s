@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.actions.DispatchWorkflow
 
 /** Forgejo's `DispatchWorkflowOption` request model — the body of
@@ -22,14 +24,14 @@ private[codeberg4s] object DispatchWorkflowOptionDto:
     * see [[com.worxbend.codeberg4s.repositories.actions.DispatchWorkflow]].
     */
   def render(command: DispatchWorkflow): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: DispatchWorkflow): List[(String, ujson.Value)] =
+  private def fields(command: DispatchWorkflow): List[(String, JsonValue)] =
     List(
-      Some("ref"                                           -> ujson.Str(command.ref)),
+      Some("ref"                                           -> JsonValue.Str(command.ref)),
       Option.when(command.inputs.nonEmpty)("inputs"        -> inputs(command)),
-      Option.when(command.returnRunInfo)("return_run_info" -> ujson.Bool(true)),
+      Option.when(command.returnRunInfo)("return_run_info" -> JsonValue.Bool(true)),
     ).flatten
 
-  private def inputs(command: DispatchWorkflow): ujson.Value =
-    ujson.Obj.from(command.inputs.map((name, value) => name -> ujson.Str(value)))
+  private def inputs(command: DispatchWorkflow): JsonValue =
+    JsonValue.Obj.from(command.inputs.map((name, value) => name -> JsonValue.Str(value)))

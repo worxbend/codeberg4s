@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.miscellaneous.ServerUiSettings
@@ -26,7 +27,7 @@ final case class ServerUiSettingsDto(
     *
     * '''Cannot fail on a JSON object''', exactly as [[ServerRepositorySettingsDto]] cannot: no field is required, the
     * two arrays default to empty and the theme to absent, so only a body that is not an object at all fails — and that
-    * failure is upickle's, raised before this method is reached.
+    * failure is the parser's, raised before this method is reached.
     *
     * There is no `toDomainAt` here, for the reason [[ServerRepositorySettingsDto.toDomain]] gives: this model appears
     * only as a whole response body, never nested inside another one. The `Either` stays because
@@ -46,7 +47,7 @@ object ServerUiSettingsDto:
   /** Reads a `/settings/ui` body. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[ServerUiSettingsDto] =
+  given JsonDecoder[ServerUiSettingsDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

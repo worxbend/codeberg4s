@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.repositories.CommitStats
 
@@ -25,7 +26,7 @@ final case class CommitStatsDto(total: Option[Long], additions: Option[Long], de
 object CommitStatsDto:
 
   /** Reads a `stats` object. */
-  given upickle.default.Reader[CommitStatsDto] =
+  given JsonDecoder[CommitStatsDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, for the commit DTO that embeds this one. */

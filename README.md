@@ -16,7 +16,7 @@ REST API v1.
 - **Pagination you cannot get wrong by accident.** No operation returns an
   unbounded `List`; every listing hands back a `Page[A]` that says whether
   another page exists.
-- **Small dependency footprint** — sttp client4 and upickle. That is the list.
+- **Small dependency footprint** — sttp client4 and jsoniter-scala. That is the list.
 
 > Status: pre-release, `0.1.0` in progress. **All 439 in-scope operations are
 > implemented** on both rails — the whole Forgejo v1 API except `admin`,

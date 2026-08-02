@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -42,7 +43,7 @@ final case class IssueFormFieldDto(
 object IssueFormFieldDto:
 
   /** Reads an `IssueFormField` object. Absent and `null` are the same thing for every field; see [[JsonFields]]. */
-  given upickle.default.Reader[IssueFormFieldDto] =
+  given JsonDecoder[IssueFormFieldDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, for the template that embeds these. */
@@ -107,7 +108,7 @@ object IssueTemplateDto:
   val FieldsKey: String = "body"
 
   /** Reads an `IssueTemplate` object. Absent and `null` are the same thing for every field; see [[JsonFields]]. */
-  given upickle.default.Reader[IssueTemplateDto] =
+  given JsonDecoder[IssueTemplateDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

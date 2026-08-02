@@ -17,9 +17,10 @@ import munit.FunSuite
   * release. `POST /tags`, `GET /tags/{tag}` and the three single-asset endpoints send one of them as the whole body, so
   * the failure paths move from `$[2].name` to `$.name` and that is worth an assertion of its own.
   *
-  * The payloads are not hand-written: each is lifted verbatim out of a golden capture with `ujson`, so what is decoded
-  * here is exactly what Codeberg sent, only unwrapped. The pinned spec declares the same `Tag` and `Attachment`
-  * definitions for these endpoints as for the ones that were captured, which is what makes the lift legitimate.
+  * The payloads are not hand-written: each is lifted verbatim out of a golden capture with the document model, so what
+  * is decoded here is exactly what Codeberg sent, only unwrapped. The pinned spec declares the same `Tag` and
+  * `Attachment` definitions for these endpoints as for the ones that were captured, which is what makes the lift
+  * legitimate.
   */
 final class PublishingResponsesSuite extends FunSuite with GoldenFixtures:
 
@@ -79,14 +80,14 @@ final class PublishingResponsesSuite extends FunSuite with GoldenFixtures:
 
   /** The first element of a golden array capture, re-serialised as a body of its own. */
   private def firstOf(fixture: String): String =
-    ujson.read(golden(fixture)).arrOpt.flatMap(_.headOption) match
-      case Some(element) => ujson.write(element)
+    Json.parse(golden(fixture)).toOption.flatMap(_.arrOpt).flatMap(_.headOption) match
+      case Some(element) => Json.render(element)
       case None          => fail(s"$fixture is not a non-empty JSON array")
 
   /** The first element of a golden release capture's `assets`, re-serialised as a body of its own. */
   private def firstAssetOf(fixture: String): String =
-    ujson.read(golden(fixture)).objOpt.flatMap(_.get("assets")).flatMap(_.arrOpt).flatMap(_.headOption) match
-      case Some(element) => ujson.write(element)
+    Json.parse(golden(fixture)).toOption.flatMap(_.field("assets")).flatMap(_.arrOpt).flatMap(_.headOption) match
+      case Some(element) => Json.render(element)
       case None          => fail(s"$fixture carries no assets array")
 
   private def tag(body: String): Tag =

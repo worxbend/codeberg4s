@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.ContentEntry
@@ -53,7 +54,7 @@ final case class FileResponseDto(
 object FileResponseDto:
 
   /** Reads a `FileResponse` object. */
-  given upickle.default.Reader[FileResponseDto] =
+  given JsonDecoder[FileResponseDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

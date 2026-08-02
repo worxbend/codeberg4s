@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.issues.wire.WireInstant
 import com.worxbend.codeberg4s.issues.wire.WireNumbers
 import com.worxbend.codeberg4s.pulls.CreatePullRequest
@@ -27,16 +29,16 @@ private[codeberg4s] object CreatePullRequestOptionDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: CreatePullRequest): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: CreatePullRequest): List[(String, ujson.Value)] =
+  private def fields(command: CreatePullRequest): List[(String, JsonValue)] =
     List(
-      Some("title" -> ujson.Str(command.title)),
-      Some("head"  -> ujson.Str(command.head.value)),
-      Some("base"  -> ujson.Str(command.base.value)),
-      command.body.map(text => "body" -> ujson.Str(text)),
+      Some("title" -> JsonValue.Str(command.title)),
+      Some("head"  -> JsonValue.Str(command.head.value)),
+      Some("base"  -> JsonValue.Str(command.base.value)),
+      command.body.map(text => "body" -> JsonValue.Str(text)),
       Option.when(command.assignees.nonEmpty)("assignees" -> WireNumbers.strings(command.assignees)),
       Option.when(command.labels.nonEmpty)("labels"       -> WireNumbers.identifiers(command.labels.map(_.value))),
       command.milestone.map(id   => "milestone" -> WireNumbers.identifier(id.value)),
-      command.dueDate.map(moment => "due_date" -> ujson.Str(WireInstant.render(moment))),
+      command.dueDate.map(moment => "due_date" -> JsonValue.Str(WireInstant.render(moment))),
     ).flatten

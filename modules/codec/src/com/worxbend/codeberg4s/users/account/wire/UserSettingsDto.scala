@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.users.account.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.account.UserSettings
@@ -68,7 +69,7 @@ object UserSettingsDto:
   /** Reads a `UserSettings` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[UserSettingsDto] =
+  given JsonDecoder[UserSettingsDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -77,7 +78,7 @@ final case class FileCommitDto(
 object FileCommitDto:
 
   /** Reads a `FileCommitResponse` object. */
-  given upickle.default.Reader[FileCommitDto] =
+  given JsonDecoder[FileCommitDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, for the file-response DTO that embeds this one. */

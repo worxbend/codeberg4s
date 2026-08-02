@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -73,7 +74,7 @@ final case class CombinedStatusDto(
 object CombinedStatusDto:
 
   /** Reads a `CombinedStatus` object. */
-  given upickle.default.Reader[CombinedStatusDto] =
+  given JsonDecoder[CombinedStatusDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

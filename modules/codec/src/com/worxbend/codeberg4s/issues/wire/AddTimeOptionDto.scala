@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.issues.AddTrackedTime
 
 /** Forgejo's `AddTimeOption` request model — the body of `POST /repos/{owner}/{repo}/issues/{index}/times`.
@@ -16,11 +18,11 @@ private[codeberg4s] object AddTimeOptionDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: AddTrackedTime): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: AddTrackedTime): List[(String, ujson.Value)] =
+  private def fields(command: AddTrackedTime): List[(String, JsonValue)] =
     List(
       Some("time" -> WireNumbers.whole(command.spent.toSeconds)),
-      command.userName.map(login   => "user_name" -> ujson.Str(login)),
-      command.createdAt.map(moment => "created" -> ujson.Str(WireInstant.render(moment))),
+      command.userName.map(login   => "user_name" -> JsonValue.Str(login)),
+      command.createdAt.map(moment => "created" -> JsonValue.Str(WireInstant.render(moment))),
     ).flatten

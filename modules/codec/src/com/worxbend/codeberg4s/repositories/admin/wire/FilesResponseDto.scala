@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.admin.FileChangeSet
@@ -54,7 +55,7 @@ final case class FilesResponseDto(
 object FilesResponseDto:
 
   /** Reads a `FilesResponse` object. */
-  given upickle.default.Reader[FilesResponseDto] =
+  given JsonDecoder[FilesResponseDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, so the field spellings exist in exactly one place. */

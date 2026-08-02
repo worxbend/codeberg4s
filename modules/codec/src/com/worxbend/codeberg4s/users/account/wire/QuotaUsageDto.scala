@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.users.account.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.wire.Elements
@@ -40,7 +41,7 @@ object QuotaUsedArtifactDto:
   /** Reads a `QuotaUsedArtifact` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[QuotaUsedArtifactDto] =
+  given JsonDecoder[QuotaUsedArtifactDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */
@@ -99,7 +100,7 @@ object QuotaUsedAttachmentDto:
   val ContainedInKey: String = "contained_in"
 
   /** Reads a `QuotaUsedAttachment` object. */
-  given upickle.default.Reader[QuotaUsedAttachmentDto] =
+  given JsonDecoder[QuotaUsedAttachmentDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, lifting the two `contained_in` links to the top level. */
@@ -149,7 +150,7 @@ final case class QuotaUsedPackageDto(
 object QuotaUsedPackageDto:
 
   /** Reads a `QuotaUsedPackage` object. */
-  given upickle.default.Reader[QuotaUsedPackageDto] =
+  given JsonDecoder[QuotaUsedPackageDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

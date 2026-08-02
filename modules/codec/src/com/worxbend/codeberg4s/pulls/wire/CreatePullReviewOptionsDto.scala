@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.pulls.CreateReview
 
 /** Forgejo's `CreatePullReviewOptions` request model — the body of `POST /repos/{owner}/{repo}/pulls/{index}/reviews`.
@@ -19,14 +21,14 @@ private[codeberg4s] object CreatePullReviewOptionsDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: CreateReview): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: CreateReview): List[(String, ujson.Value)] =
+  private def fields(command: CreateReview): List[(String, JsonValue)] =
     List(
-      command.body.map(text   => "body" -> ujson.Str(text)),
-      command.event.map(state => "event" -> ujson.Str(state.wireValue)),
-      command.commit.map(sha  => "commit_id" -> ujson.Str(sha.value)),
+      command.body.map(text   => "body" -> JsonValue.Str(text)),
+      command.event.map(state => "event" -> JsonValue.Str(state.wireValue)),
+      command.commit.map(sha  => "commit_id" -> JsonValue.Str(sha.value)),
       Option.when(command.comments.nonEmpty)(
-        "comments" -> ujson.Arr.from(command.comments.map(NewReviewCommentDto.obj))
+        "comments" -> JsonValue.Arr.from(command.comments.map(NewReviewCommentDto.obj))
       ),
     ).flatten

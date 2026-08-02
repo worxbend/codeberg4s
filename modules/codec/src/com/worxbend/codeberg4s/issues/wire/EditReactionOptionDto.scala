@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.issues.ReactionContent
 
 /** Forgejo's `EditReactionOption` request model — the body of every reaction call, whether it adds or removes.
@@ -21,4 +23,4 @@ private[codeberg4s] object EditReactionOptionDto:
 
   /** Renders `content` as the JSON body to send. */
   def render(content: ReactionContent): String =
-    ujson.write(ujson.Obj("content" -> ujson.Str(content.value)))
+    Json.render(JsonValue.Obj("content" -> JsonValue.Str(content.value)))

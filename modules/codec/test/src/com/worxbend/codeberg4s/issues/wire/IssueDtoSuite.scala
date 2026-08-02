@@ -15,7 +15,7 @@ import java.time.Instant
   *
   * These fixtures are the reason the DTO exists in the shape it does: `docs/HAZARDS.md` §1 measured `assignee`,
   * `assignees`, `closed_at`, `due_date` and `milestone` arriving as JSON `null` on the first issue of the first page,
-  * and `assignees` is declared `type: array`, which upickle aborts on.
+  * and `assignees` is declared `type: array`, which a derived codec aborts on.
   */
 final class IssueDtoSuite extends FunSuite with GoldenFixtures:
 

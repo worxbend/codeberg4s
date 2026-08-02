@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.issues.CreateLabel
 
 /** Forgejo's `CreateLabelOption` request model — the body of `POST /repos/{owner}/{repo}/labels`.
@@ -18,13 +20,13 @@ private[codeberg4s] object CreateLabelOptionDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: CreateLabel): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: CreateLabel): List[(String, ujson.Value)] =
+  private def fields(command: CreateLabel): List[(String, JsonValue)] =
     List(
-      Some("name"  -> ujson.Str(command.name.value)),
-      Some("color" -> ujson.Str(command.color.hashed)),
-      command.description.map(text => "description" -> ujson.Str(text)),
-      Option.when(command.isExclusive)("exclusive"  -> ujson.Bool(true)),
-      Option.when(command.isArchived)("is_archived" -> ujson.Bool(true)),
+      Some("name"  -> JsonValue.Str(command.name.value)),
+      Some("color" -> JsonValue.Str(command.color.hashed)),
+      command.description.map(text => "description" -> JsonValue.Str(text)),
+      Option.when(command.isExclusive)("exclusive"  -> JsonValue.Bool(true)),
+      Option.when(command.isArchived)("is_archived" -> JsonValue.Bool(true)),
     ).flatten

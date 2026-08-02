@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.notifications.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -83,7 +84,7 @@ object NotificationSubjectDto:
     * `""` for both comment URLs on the thread that has no comments, which is the convention Forgejo uses everywhere
     * else for unset text.
     */
-  given upickle.default.Reader[NotificationSubjectDto] =
+  given JsonDecoder[NotificationSubjectDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, so that the enclosing thread's reader can reuse it without re-spelling a

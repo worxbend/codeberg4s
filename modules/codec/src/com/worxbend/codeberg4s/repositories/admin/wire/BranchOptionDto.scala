@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.admin.AvatarImage
 import com.worxbend.codeberg4s.repositories.admin.CreateBranch
 import com.worxbend.codeberg4s.repositories.admin.RenameBranch
@@ -32,18 +34,18 @@ private[codeberg4s] object BranchOptionDto:
     * repository's default branch, and sending `""` would be a request to branch from a ref called nothing.
     */
   def renderCreate(command: CreateBranch): String =
-    ujson.write(
-      ujson.Obj.from(
+    Json.render(
+      JsonValue.Obj.from(
         List(
-          Some(NewBranchNameKey -> ujson.Str(command.newBranchName.value)),
-          command.fromRef.map(ref => OldRefNameKey -> ujson.Str(ref)),
+          Some(NewBranchNameKey -> JsonValue.Str(command.newBranchName.value)),
+          command.fromRef.map(ref => OldRefNameKey -> JsonValue.Str(ref)),
         ).flatten
       )
     )
 
   /** Renders `command` as the JSON body to `PATCH`. `name` is the model's only property and is always emitted. */
   def renderRename(command: RenameBranch): String =
-    ujson.write(ujson.Obj(NameKey -> ujson.Str(command.newName.value)))
+    Json.render(JsonValue.Obj(NameKey -> JsonValue.Str(command.newName.value)))
 
 /** Forgejo's `UpdateRepoAvatarOption` request model — the body of `POST /repos/{owner}/{repo}/avatar`.
   *
@@ -63,4 +65,4 @@ private[codeberg4s] object AvatarOptionDto:
 
   /** Renders `image` as the JSON body to `POST`. */
   def render(image: AvatarImage): String =
-    ujson.write(ujson.Obj(ImageKey -> ujson.Str(image.base64)))
+    Json.render(JsonValue.Obj(ImageKey -> JsonValue.Str(image.base64)))

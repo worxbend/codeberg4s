@@ -12,11 +12,13 @@ final class JsonFieldsSuite extends FunSuite:
   /** A minimal DTO-shaped type, so the reader can be exercised without dragging a real model into this suite. */
   final case class Probe(a: Option[String])
 
-  private given upickle.default.Reader[Probe] =
+  private given JsonDecoder[Probe] =
     JsonFields.reader(fields => Probe(fields.text("a")))
 
   private def fieldsOf(body: String): JsonFields =
-    JsonFields(ujson.read(body).obj.toMap)
+    Json.parse(body) match
+      case Right(JsonValue.Obj(fields)) => JsonFields(fields.toMap)
+      case other                        => fail(s"the fixture body is not a JSON object: $other")
 
   private val absent: JsonFields = fieldsOf("""{}""")
 
@@ -45,7 +47,7 @@ final class JsonFieldsSuite extends FunSuite:
   test("an absent array and a null array are both empty, never a crash"):
     assertEquals(absent.texts("list"), explicitNull.texts("list"))
     assertEquals(absent.texts("list"), Vector.empty[String])
-    assertEquals(explicitNull.values("list"), Vector.empty[ujson.Value])
+    assertEquals(explicitNull.values("list"), Vector.empty[JsonValue])
 
   test("present values are read"):
     assertEquals(populated.text("a"), Some("text"))
@@ -90,7 +92,7 @@ final class JsonFieldsSuite extends FunSuite:
     assertEquals(JsonFields.Empty.number("anything"), None)
     assertEquals(JsonFields.Empty.texts("anything"), Vector.empty[String])
 
-  test("reader delegates the is-this-an-object question to upickle"):
+  test("reader delegates the is-this-an-object question to the JSON parser"):
     assertEquals(Json.decode[Probe]("""{"a":"x"}"""), Right(Probe(Some("x"))))
     assertEquals(Json.decode[Probe]("""{}"""), Right(Probe(None)))
     assert(Json.decode[Probe]("""["a"]""").isLeft, "an array must not decode as an object")

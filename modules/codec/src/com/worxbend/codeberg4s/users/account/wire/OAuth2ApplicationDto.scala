@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.users.account.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -74,7 +75,7 @@ object OAuth2ApplicationDto:
   /** Reads an `OAuth2Application` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[OAuth2ApplicationDto] =
+  given JsonDecoder[OAuth2ApplicationDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.users.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -76,7 +77,7 @@ object PublicKeyDto:
   /** Reads a `PublicKey` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[PublicKeyDto] =
+  given JsonDecoder[PublicKeyDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. Reuses [[UserDto.fromFields]] for `user`, so the user field spellings are not

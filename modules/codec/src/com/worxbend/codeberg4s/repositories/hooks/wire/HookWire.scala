@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
+import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.repositories.hooks.HookEvent
 
@@ -45,4 +46,4 @@ private[hooks] object HookWire:
     fields
       .nested(name)
       .fold(Map.empty): nested =>
-        nested.underlying.map((key, value) => key -> value.strOpt.getOrElse(ujson.write(value)))
+        nested.underlying.map((key, value) => key -> value.strOpt.getOrElse(Json.render(value)))

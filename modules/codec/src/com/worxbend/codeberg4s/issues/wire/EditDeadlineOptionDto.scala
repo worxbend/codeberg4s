@@ -1,5 +1,8 @@
 package com.worxbend.codeberg4s.issues.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
+
 import java.time.Instant
 
 /** Forgejo's `EditDeadlineOption` request model — the body of `POST /repos/{owner}/{repo}/issues/{index}/deadline`.
@@ -19,4 +22,4 @@ private[codeberg4s] object EditDeadlineOptionDto:
 
   /** Renders `dueDate` as the JSON body to `POST`. */
   def render(dueDate: Instant): String =
-    ujson.write(ujson.Obj("due_date" -> ujson.Str(WireInstant.render(dueDate))))
+    Json.render(JsonValue.Obj("due_date" -> JsonValue.Str(WireInstant.render(dueDate))))

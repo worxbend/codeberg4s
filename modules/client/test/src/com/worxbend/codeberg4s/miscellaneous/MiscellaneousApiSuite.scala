@@ -9,6 +9,7 @@ import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.client.FutureExec
 import com.worxbend.codeberg4s.client.FutureTimer
 import com.worxbend.codeberg4s.codec.ApiErrorBodyCodec
+import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.JitterSource
@@ -97,7 +98,7 @@ final class MiscellaneousApiSuite extends FunSuite:
       api.renderMarkdown(MarkdownRenderRequest.of("# Title")).map: _ =>
         assertEquals(dialled(backend), s"$Root/markdown")
         assertEquals(method(backend), "POST")
-        assertEquals(ujson.read(sentBody(backend))("Text").str, "# Title")
+        assertEquals(Json.parse(sentBody(backend)).toOption.flatMap(_.field("Text")).flatMap(_.strOpt), Some("# Title"))
         assertEquals(contentType(backend), Some("application/json"))
 
   test("renderMarkdown returns the HTML fragment verbatim, unparsed"):
@@ -274,9 +275,12 @@ final class MiscellaneousApiSuite extends FunSuite:
       api.renderMarkup(MarkupRenderRequest.ofFile("* Title", "README.org")).map: html =>
         assertEquals(dialled(backend), s"$Root/markup")
         assertEquals(method(backend), "POST")
-        assertEquals(ujson.read(sentBody(backend))("Text").str, "* Title")
-        assertEquals(ujson.read(sentBody(backend))("Mode").str, "file")
-        assertEquals(ujson.read(sentBody(backend))("FilePath").str, "README.org")
+        assertEquals(Json.parse(sentBody(backend)).toOption.flatMap(_.field("Text")).flatMap(_.strOpt), Some("* Title"))
+        assertEquals(Json.parse(sentBody(backend)).toOption.flatMap(_.field("Mode")).flatMap(_.strOpt), Some("file"))
+        assertEquals(
+          Json.parse(sentBody(backend)).toOption.flatMap(_.field("FilePath")).flatMap(_.strOpt),
+          Some("README.org"),
+        )
         assertEquals(contentType(backend), Some("application/json"))
         assertEquals(html, RenderedMarkdown(MiscellaneousApiSuite.RenderedHtml))
 
@@ -285,7 +289,7 @@ final class MiscellaneousApiSuite extends FunSuite:
 
     onBackend(backend): api =>
       api.renderMarkup(MarkupRenderRequest.of("# Title", MarkupMode.Gfm)).map: _ =>
-        assertEquals(ujson.read(sentBody(backend)).obj.keys.toList.sorted, List("Mode", "Text", "Wiki"))
+        assertEquals(Json.parse(sentBody(backend)).toOption.map(_.keys.toList.sorted), Some(List("Mode", "Text", "Wiki")))
 
   test("rendering markup is retried after a 503 too, because it is as free of consequence as markdown is"):
     val backend = RecordingBackend(

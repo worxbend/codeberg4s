@@ -160,7 +160,24 @@ for target in "${UNIT_MODULES[@]}"; do
 done
 
 test_log="$work_dir/tests.log"
-"$MILL" "${test_targets[@]}" --exclude-tags=Property 2>&1 | tee "$test_log" || fail "unit tests"
+# Two things here are load-bearing and were both got wrong once.
+#
+# PIPESTATUS, not $?: with `cmd | tee`, $? is tee's status, which is always 0.
+# The pipeline would have reported success for a failing suite.
+#
+# The ANSI strip: Mill colours its output even when piped, so a failing suite
+# prints "finished: \e[91m3 failed\e[39m". A count that matched a bare digit
+# skipped exactly the suites that failed — undercounting the total AND reading
+# zero failures. Strip first, then count.
+set -o pipefail
+"$MILL" "${test_targets[@]}" --exclude-tags=Property 2>&1 |
+  sed 's/\x1b\[[0-9;]*m//g' | tee "$test_log"
+test_status=${PIPESTATUS[0]}
+set +o pipefail
+[[ "$test_status" -eq 0 ]] || fail "unit tests"
+
+failed=$(grep -oE 'finished: [0-9]+ failed' "$test_log" | awk '{ sum += $2 } END { print sum + 0 }')
+[[ "$failed" -eq 0 ]] || fail "$failed unit tests failed"
 
 executed=$(grep -oE 'finished: [0-9]+ failed, [0-9]+ ignored, [0-9]+ total' "$test_log" |
   awk '{ sum += $6 } END { print sum + 0 }')

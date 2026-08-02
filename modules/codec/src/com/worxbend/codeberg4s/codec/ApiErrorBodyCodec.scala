@@ -47,7 +47,7 @@ object ApiErrorBodyCodec:
   /** The reader behind [[parse]]. Exposed so a caller decoding an error body inside a larger document — a batch
     * endpoint, a test — reuses exactly the same leniency.
     */
-  given upickle.default.Reader[ApiErrorBody] =
+  given JsonDecoder[ApiErrorBody] =
     JsonFields.reader: fields =>
       ApiErrorBody(
         message = fields.text("message"),

@@ -279,4 +279,4 @@ forgotten a case.
 A trait the library defines and something else implements, so that the library
 does not depend on the something else. `Telemetry` is the one you are expected to
 implement; `HttpPort` and `Decode` are internal ones, satisfied by the sttp and
-upickle adapters.
+jsoniter-scala adapters.

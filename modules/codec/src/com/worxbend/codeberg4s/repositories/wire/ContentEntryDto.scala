@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -139,7 +140,7 @@ final case class ContentEntryDto(
 object ContentEntryDto:
 
   /** Reads a `ContentsResponse` object. */
-  given upickle.default.Reader[ContentEntryDto] =
+  given JsonDecoder[ContentEntryDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, for the union DTO that reads both arms. */

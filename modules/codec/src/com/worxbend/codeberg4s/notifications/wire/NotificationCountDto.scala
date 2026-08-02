@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.notifications.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -34,7 +35,7 @@ final case class NotificationCountDto(unread: Option[Long]):
 object NotificationCountDto:
 
   /** Reads a `/notifications/new` body. Absent, `null` and non-numeric all decode to `None`; the document must still be
-    * a JSON object, which upickle enforces.
+    * a JSON object, which the JSON parser enforces.
     */
-  given upickle.default.Reader[NotificationCountDto] =
+  given JsonDecoder[NotificationCountDto] =
     JsonFields.reader(fields => NotificationCountDto(unread = fields.number("new")))

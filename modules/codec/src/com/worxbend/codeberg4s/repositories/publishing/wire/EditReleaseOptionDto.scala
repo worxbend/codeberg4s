@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.publishing.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.publishing.EditRelease
 
 /** Forgejo's `EditReleaseOption` request model — the body of `PATCH /repos/{owner}/{repo}/releases/{id}`.
@@ -20,15 +22,15 @@ private[codeberg4s] object EditReleaseOptionDto:
 
   /** Renders `command` as the JSON body to `PATCH`. */
   def render(command: EditRelease): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: EditRelease): List[(String, ujson.Value)] =
+  private def fields(command: EditRelease): List[(String, JsonValue)] =
     List(
-      command.tagName.map(tag            => "tag_name" -> ujson.Str(tag.value)),
-      command.target.map(commitish       => "target_commitish" -> ujson.Str(commitish)),
-      command.name.map(title             => "name" -> ujson.Str(title)),
-      command.body.map(notes             => "body" -> ujson.Str(notes)),
-      command.isDraft.map(flag           => "draft" -> ujson.Bool(flag)),
-      command.isPrerelease.map(flag      => "prerelease" -> ujson.Bool(flag)),
-      command.hidesArchiveLinks.map(flag => "hide_archive_links" -> ujson.Bool(flag)),
+      command.tagName.map(tag            => "tag_name" -> JsonValue.Str(tag.value)),
+      command.target.map(commitish       => "target_commitish" -> JsonValue.Str(commitish)),
+      command.name.map(title             => "name" -> JsonValue.Str(title)),
+      command.body.map(notes             => "body" -> JsonValue.Str(notes)),
+      command.isDraft.map(flag           => "draft" -> JsonValue.Bool(flag)),
+      command.isPrerelease.map(flag      => "prerelease" -> JsonValue.Bool(flag)),
+      command.hidesArchiveLinks.map(flag => "hide_archive_links" -> JsonValue.Bool(flag)),
     ).flatten

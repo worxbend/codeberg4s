@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.repositories.Owner
 import com.worxbend.codeberg4s.repositories.RepoName
@@ -61,7 +62,7 @@ object ActionRepoRefDto:
   /** Reads the embedded repository object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[ActionRepoRefDto] =
+  given JsonDecoder[ActionRepoRefDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

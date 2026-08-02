@@ -91,15 +91,15 @@ object PropertyBase:
   val key: Gen[String] = Gen.nonEmptyListOf(Gen.oneOf(('a' to 'z') ++ ('0' to '9'))).map(_.mkString)
 
   /** A JSON value that is not a container. */
-  val scalar: Gen[ujson.Value] =
+  val scalar: Gen[JsonValue] =
     Gen.oneOf(
-      Gen.const[ujson.Value](ujson.Null),
-      Gen.oneOf(true, false).map(flag        => ujson.Bool(flag)),
-      Gen.choose(-100000, 100000).map(number => ujson.Num(number.toDouble)),
-      text.map(value                         => ujson.Str(value)),
+      Gen.const[JsonValue](JsonValue.Null),
+      Gen.oneOf(true, false).map(flag        => JsonValue.Bool(flag)),
+      Gen.choose(-100000, 100000).map(number => JsonValue.Num(number.toDouble)),
+      text.map(value                         => JsonValue.Str(value)),
     )
 
-  private def valueOfDepth(depth: Int): Gen[ujson.Value] =
+  private def valueOfDepth(depth: Int): Gen[JsonValue] =
     if depth <= 0 then scalar
     else
       Gen.frequency(
@@ -108,23 +108,23 @@ object PropertyBase:
         1 -> objectOfDepth(depth),
       )
 
-  private def arrayOfDepth(depth: Int): Gen[ujson.Value] =
+  private def arrayOfDepth(depth: Int): Gen[JsonValue] =
     Gen
       .choose(0, 3)
       .flatMap(count => Gen.listOfN(count, valueOfDepth(depth - 1)))
-      .map(items => ujson.Arr.from(items))
+      .map(items => JsonValue.Arr.from(items))
 
-  private def objectOfDepth(depth: Int): Gen[ujson.Value] =
+  private def objectOfDepth(depth: Int): Gen[JsonValue] =
     Gen
       .choose(0, 3)
       .flatMap(count => Gen.listOfN(count, key.flatMap(name => valueOfDepth(depth - 1).map(value => (name, value)))))
-      .map(entries => ujson.Obj.from(entries.distinctBy((name, _) => name)))
+      .map(entries => JsonValue.Obj.from(entries.distinctBy((name, _) => name)))
 
   /** Any JSON document, containers included. */
-  val value: Gen[ujson.Value] = valueOfDepth(MaxDepth)
+  val value: Gen[JsonValue] = valueOfDepth(MaxDepth)
 
   /** A JSON document that is an object or an array, so every proper prefix of it is necessarily incomplete. */
-  val container: Gen[ujson.Value] =
+  val container: Gen[JsonValue] =
     Gen.oneOf(arrayOfDepth(MaxDepth), objectOfDepth(MaxDepth))
 
   /** Arbitrary response bodies: random JSON punctuation, bodies seen in the wild, and truncations of well-formed
@@ -135,13 +135,13 @@ object PropertyBase:
       3 -> Gen.listOf(Gen.oneOf(JsonPunctuation)).map(_.mkString),
       2 -> truncated,
       1 -> Gen.oneOf(KnownBodies),
-      1 -> value.map(document => ujson.write(document)),
+      1 -> value.map(document => Json.render(document)),
     )
 
   private def truncated: Gen[String] =
     for
       document <- value
-      written   = ujson.write(document)
+      written   = Json.render(document)
       cut      <- Gen.choose(0, written.length)
     yield written.take(cut)
 
@@ -150,7 +150,7 @@ object PropertyBase:
 
   /** A JSON string document far longer than `Json.MaxReasonLength`.
     *
-    * Measured against upickle 4.4.3: decoding a JSON string into a type that is not a string reports the string's
+    * Measured against a derived codec: decoding a JSON string into a type that is not a string reports the string's
     * '''content''' as the reason, so the failure message is the payload. That is what `Json.MaxReasonLength` is for,
     * and it is only observable with a body longer than the bound — a body [[body]] never reaches, since ScalaCheck's
     * size parameter keeps generated collections short.
@@ -159,4 +159,4 @@ object PropertyBase:
     Gen
       .choose(Json.MaxReasonLength * 2, Json.MaxReasonLength * 6)
       .flatMap(length => Gen.listOfN(length, Gen.oneOf('a' to 'z')))
-      .map(characters => ujson.write(ujson.Str(characters.mkString)))
+      .map(characters => Json.render(JsonValue.Str(characters.mkString)))

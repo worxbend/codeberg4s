@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.admin.ActivityOperation
 import com.worxbend.codeberg4s.repositories.admin.ForkSyncInfo
@@ -282,7 +283,7 @@ final class AdminResponsesSuite extends FunSuite:
       case Right(activity) => activity
       case Left(failure)   => fail(s"expected an activity, got ${failure.path.render}: ${failure.message}")
 
-  private def decoded[A: upickle.default.Reader](body: String): A =
+  private def decoded[A: JsonDecoder](body: String): A =
     Json.decode[A](body) match
       case Right(value)  => value
       case Left(failure) => fail(s"expected a value, got ${failure.path.render}: ${failure.message}")

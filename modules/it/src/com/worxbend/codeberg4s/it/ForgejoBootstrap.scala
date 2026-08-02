@@ -2,6 +2,8 @@ package com.worxbend.codeberg4s.it
 
 import com.worxbend.codeberg4s.BaseUri
 import com.worxbend.codeberg4s.auth.ApiToken
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 
 import sttp.client4.DefaultSyncBackend
 import sttp.client4.Request
@@ -69,9 +71,9 @@ object ForgejoBootstrap:
     *   the token's name, which Forgejo requires to be unique per user
     */
   def issueToken(baseUri: BaseUri, admin: AdminAccount, tokenName: String): Either[String, ApiToken] =
-    val payload = ujson.Obj(
-      "name"   -> ujson.Str(tokenName),
-      "scopes" -> ujson.Arr(ujson.Str("all")),
+    val payload = JsonValue.Obj(
+      "name"   -> JsonValue.Str(tokenName),
+      "scopes" -> JsonValue.Arr(JsonValue.Str("all")),
     )
     for
       target   <- endpoint(baseUri, List("users", admin.username, "tokens"))
@@ -80,7 +82,7 @@ object ForgejoBootstrap:
                     .auth
                     .basic(admin.username, admin.password)
                     .contentType(MediaType.ApplicationJson)
-                    .body(ujson.write(payload))
+                    .body(Json.render(payload))
                     .response(asStringAlways)
       response <- send(request)
       _        <- expectSuccess(response, "issuing an access token")
@@ -112,11 +114,11 @@ object ForgejoBootstrap:
       name: String,
       defaultBranch: String,
   ): Either[String, Unit] =
-    val payload = ujson.Obj(
-      "name"           -> ujson.Str(name),
-      "auto_init"      -> ujson.Bool(true),
-      "default_branch" -> ujson.Str(defaultBranch),
-      "private"        -> ujson.Bool(false),
+    val payload = JsonValue.Obj(
+      "name"           -> JsonValue.Str(name),
+      "auto_init"      -> JsonValue.Bool(true),
+      "default_branch" -> JsonValue.Str(defaultBranch),
+      "private"        -> JsonValue.Bool(false),
     )
     for
       target   <- endpoint(baseUri, List("user", "repos"))
@@ -124,7 +126,7 @@ object ForgejoBootstrap:
                     .post(target)
                     .header(HeaderNames.Authorization, s"token ${token.reveal}")
                     .contentType(MediaType.ApplicationJson)
-                    .body(ujson.write(payload))
+                    .body(Json.render(payload))
                     .response(asStringAlways)
       response <- send(request)
       _        <- expectSuccess(response, s"creating the repository `$name`")
@@ -160,7 +162,7 @@ object ForgejoBootstrap:
   /** Reads one string field out of a JSON object body, failing rather than guessing when it is absent. */
   private def stringField(body: String, name: String): Either[String, String] =
     for
-      json   <- Reasons.attempting("parsing the response body as JSON")(ujson.read(body))
-      fields <- json.objOpt.toRight("the response body was not a JSON object")
+      json   <- Reasons.attempting("parsing the response body as JSON")(Json.parse(body))
+      fields <- json.toOption.flatMap(_.objOpt).map(_.toMap).toRight("the response body was not a JSON object")
       value  <- fields.get(name).flatMap(entry => entry.strOpt).toRight(s"the response body carried no string `$name`")
     yield value

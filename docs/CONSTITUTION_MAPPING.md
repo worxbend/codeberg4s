@@ -153,7 +153,7 @@ wrap); and manifests are tool-managed — never hand-edited.
 | -------------------------------- | -------------------------------------------------------------------- | ----------- |
 | Models generated or curated?     | Curated, fixtures over spec                                          | ADR-0001    |
 | `Exec[F]` vs cats-effect/ZIO     | Hand-rolled `Exec[F]`                                                | ADR-0002    |
-| upickle vs circe/jsoniter        | upickle                                                              | ADR-0003    |
+| jsoniter-scala vs circe/jsoniter        | jsoniter-scala                                                              | ADR-0003    |
 | `softwaremill/retry` first       | Disqualified at resolution; retry implemented in `core`              | ADR-0004    |
 | `Future` API vs style guide's Ox | `Future`, per the owner's decision                                   | ADR-0005    |
 | Mill 0.12.x                      | Mill 1.1.7                                                           | ADR-0006    |

@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -65,7 +66,7 @@ object AttachmentDto:
   /** Reads an `Attachment` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[AttachmentDto] =
+  given JsonDecoder[AttachmentDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. Separate from the reader so that a DTO embedding an attachment array reuses

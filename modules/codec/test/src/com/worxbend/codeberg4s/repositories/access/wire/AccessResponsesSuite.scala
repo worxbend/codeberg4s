@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.repositories.access.wire
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.organizations.TeamPermission
 import com.worxbend.codeberg4s.repositories.access.BranchProtection
@@ -268,12 +269,12 @@ final class AccessResponsesSuite extends FunSuite:
   private def accessFailure(body: String): Option[String] =
     decodeAccess(body).toDomain.swap.toOption.map(_.path.render)
 
-  private def decodeOne[A: upickle.default.Reader](body: String): A =
+  private def decodeOne[A: JsonDecoder](body: String): A =
     Json.decode[A](body) match
       case Right(decoded) => decoded
       case Left(failure)  => fail(s"the body did not decode at ${failure.path.render}: ${failure.message}")
 
-  private def decodeAll[A: upickle.default.Reader](body: String): Vector[A] =
+  private def decodeAll[A: JsonDecoder](body: String): Vector[A] =
     decodeOne[Vector[A]](body)
 
   private def converted[A](result: Either[DecodeFailure, A]): A =

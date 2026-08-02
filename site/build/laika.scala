@@ -85,7 +85,7 @@ object Teasers:
     Teaser(
       "A Future API, and nothing else",
       "The public API is scala.concurrent.Future. No effect system leaks into your code and none is added to your "
-        + "classpath — the dependency list is sttp client4 and upickle.",
+        + "classpath — the dependency list is sttp client4 and jsoniter-scala.",
     ),
     Teaser(
       "Two error rails",

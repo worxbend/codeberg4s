@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
-import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.JsonDecoder
 
 /** The wrapper the run and task listings put around their results.
   *
@@ -41,9 +41,8 @@ object WorkflowRunsEnvelopeDto:
     * list body has. The path-reporting trade-off is [[com.worxbend.codeberg4s.wire.SearchEnvelopeDto]]'s and is
     * described there.
     */
-  given [A](using upickle.default.Reader[A]): upickle.default.Reader[WorkflowRunsEnvelopeDto[A]] =
-    JsonFields.reader: fields =>
-      WorkflowRunsEnvelopeDto(
-        totalCount = fields.number("total_count"),
-        entries    = fields.values(EntriesKey).map(element => element.transform(upickle.default.reader[A])),
+  given [A](using JsonDecoder[A]): JsonDecoder[WorkflowRunsEnvelopeDto[A]] =
+    JsonDecoder.objectOfEither: fields =>
+      JsonDecoder.all(fields.values(EntriesKey)).map(decoded =>
+        WorkflowRunsEnvelopeDto(totalCount = fields.number("total_count"), entries = decoded)
       )

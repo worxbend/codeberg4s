@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.publishing.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.publishing.GenerateRepository
 
 /** Forgejo's `GenerateRepoOption` request model — the body of `POST /repos/{template_owner}/{template_repo}/generate`.
@@ -15,20 +17,20 @@ private[codeberg4s] object GenerateRepoOptionDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: GenerateRepository): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: GenerateRepository): List[(String, ujson.Value)] =
+  private def fields(command: GenerateRepository): List[(String, JsonValue)] =
     List(
-      Some("owner" -> ujson.Str(command.owner.value)),
-      Some("name"  -> ujson.Str(command.name.value)),
-      command.description.map(text     => "description" -> ujson.Str(text)),
-      command.defaultBranch.map(branch => "default_branch" -> ujson.Str(branch.value)),
-      Option.when(command.isPrivate)("private"                          -> ujson.Bool(true)),
-      Option.when(command.includesAvatar)("avatar"                      -> ujson.Bool(true)),
-      Option.when(command.includesGitContent)("git_content"             -> ujson.Bool(true)),
-      Option.when(command.includesGitHooks)("git_hooks"                 -> ujson.Bool(true)),
-      Option.when(command.includesLabels)("labels"                      -> ujson.Bool(true)),
-      Option.when(command.includesProtectedBranches)("protected_branch" -> ujson.Bool(true)),
-      Option.when(command.includesTopics)("topics"                      -> ujson.Bool(true)),
-      Option.when(command.includesWebhooks)("webhooks"                  -> ujson.Bool(true)),
+      Some("owner" -> JsonValue.Str(command.owner.value)),
+      Some("name"  -> JsonValue.Str(command.name.value)),
+      command.description.map(text     => "description" -> JsonValue.Str(text)),
+      command.defaultBranch.map(branch => "default_branch" -> JsonValue.Str(branch.value)),
+      Option.when(command.isPrivate)("private"                          -> JsonValue.Bool(true)),
+      Option.when(command.includesAvatar)("avatar"                      -> JsonValue.Bool(true)),
+      Option.when(command.includesGitContent)("git_content"             -> JsonValue.Bool(true)),
+      Option.when(command.includesGitHooks)("git_hooks"                 -> JsonValue.Bool(true)),
+      Option.when(command.includesLabels)("labels"                      -> JsonValue.Bool(true)),
+      Option.when(command.includesProtectedBranches)("protected_branch" -> JsonValue.Bool(true)),
+      Option.when(command.includesTopics)("topics"                      -> JsonValue.Bool(true)),
+      Option.when(command.includesWebhooks)("webhooks"                  -> JsonValue.Bool(true)),
     ).flatten

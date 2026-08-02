@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.organizations.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.organizations.QuotaArtifact
@@ -41,7 +42,7 @@ final case class QuotaArtifactDto(name: Option[String], size: Option[Long], html
 object QuotaArtifactDto:
 
   /** Reads a `QuotaUsedArtifact` object. Absent and `null` are the same thing for every field. */
-  given upickle.default.Reader[QuotaArtifactDto] =
+  given JsonDecoder[QuotaArtifactDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */
@@ -87,7 +88,7 @@ final case class QuotaAttachmentDto(
 object QuotaAttachmentDto:
 
   /** Reads a `QuotaUsedAttachment` object. */
-  given upickle.default.Reader[QuotaAttachmentDto] =
+  given JsonDecoder[QuotaAttachmentDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */
@@ -127,7 +128,7 @@ final case class QuotaPackageDto(
 object QuotaPackageDto:
 
   /** Reads a `QuotaUsedPackage` object. */
-  given upickle.default.Reader[QuotaPackageDto] =
+  given JsonDecoder[QuotaPackageDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. The wire spelling `type` is written here and nowhere else. */

@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -39,7 +40,7 @@ final case class GitObjectDto(sha: Option[String], objectType: Option[String], u
 object GitObjectDto:
 
   /** Reads a `GitObject` or an `AnnotatedTagObject`. */
-  given upickle.default.Reader[GitObjectDto] =
+  given JsonDecoder[GitObjectDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, for the DTOs that embed this one. */

@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.users.social.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.RepoSlug
 import com.worxbend.codeberg4s.users.social.CreateAccessToken
 import com.worxbend.codeberg4s.users.social.RemoteFollowTarget
@@ -46,25 +48,25 @@ private[codeberg4s] object CreateAccessTokenOptionDto:
     * granted them, so a rendered body is reproducible and a test can assert on it.
     */
   def render(command: CreateAccessToken): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: CreateAccessToken): List[(String, ujson.Value)] =
+  private def fields(command: CreateAccessToken): List[(String, JsonValue)] =
     List(
-      Some(NameKey                                               -> ujson.Str(command.name.value)),
+      Some(NameKey                                               -> JsonValue.Str(command.name.value)),
       Option.when(command.scopes.nonEmpty)(ScopesKey             -> scopes(command.scopes)),
       Option.when(command.repositories.nonEmpty)(RepositoriesKey -> targets(command.repositories)),
     ).flatten
 
-  private def scopes(granted: Vector[TokenScope]): ujson.Value =
-    ujson.Arr.from(granted.map(scope => ujson.Str(scope.wireValue)))
+  private def scopes(granted: Vector[TokenScope]): JsonValue =
+    JsonValue.Arr.from(granted.map(scope => JsonValue.Str(scope.wireValue)))
 
   /** Each restriction as Forgejo's `RepoTargetOption` — an `{owner, name}` object, not a `full_name` string. */
-  private def targets(confined: Vector[RepoSlug]): ujson.Value =
-    ujson.Arr.from(
+  private def targets(confined: Vector[RepoSlug]): JsonValue =
+    JsonValue.Arr.from(
       confined.map(slug =>
-        ujson.Obj(
-          OwnerKey    -> ujson.Str(slug.owner.value),
-          RepoNameKey -> ujson.Str(slug.name.value),
+        JsonValue.Obj(
+          OwnerKey    -> JsonValue.Str(slug.owner.value),
+          RepoNameKey -> JsonValue.Str(slug.name.value),
         )
       )
     )
@@ -83,4 +85,4 @@ private[codeberg4s] object RemoteFollowOptionDto:
 
   /** Renders `target` as the JSON body to `POST`. */
   def render(target: RemoteFollowTarget): String =
-    ujson.write(ujson.Obj(TargetKey -> ujson.Str(target.value)))
+    Json.render(JsonValue.Obj(TargetKey -> JsonValue.Str(target.value)))

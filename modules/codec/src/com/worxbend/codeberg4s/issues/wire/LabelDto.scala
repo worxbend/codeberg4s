@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -62,7 +63,7 @@ object LabelDto:
   /** Reads a `Label` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[LabelDto] =
+  given JsonDecoder[LabelDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. Used by the reader above and by every DTO that embeds a label, so the field

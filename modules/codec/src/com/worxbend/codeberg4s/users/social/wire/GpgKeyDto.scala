@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.users.social.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -43,7 +44,7 @@ object GpgKeyEmailDto:
   /** Reads a `GPGKeyEmail` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[GpgKeyEmailDto] =
+  given JsonDecoder[GpgKeyEmailDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, so the field spellings exist in exactly one place. */
@@ -65,9 +66,9 @@ object GpgKeyEmailDto:
   * ==The model is recursive, and so is this==
   *
   * `subkeys` is an array of `GPGKey`, so a key's subkeys are read by this same DTO. That is the wire's own shape; a
-  * reduced "subkey" type would be a shape the API never sends. Nothing here bounds the nesting depth, because upickle
-  * has already parsed the document by the time [[fromFields]] runs — the depth a hostile payload could reach is bounded
-  * by the parser, not by this projection.
+  * reduced "subkey" type would be a shape the API never sends. Nothing here bounds the nesting depth, because the
+  * parser has already parsed the document by the time [[fromFields]] runs — the depth a hostile payload could reach is
+  * bounded by the parser, not by this projection.
   *
   * Timestamps stay as raw strings; [[com.worxbend.codeberg4s.codec.Timestamps]] normalises them, sentinels included,
   * during conversion. That is what turns the Go zero time Forgejo sends for a non-expiring key into an absent
@@ -164,7 +165,7 @@ object GpgKeyDto:
   /** Reads a `GPGKey` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[GpgKeyDto] =
+  given JsonDecoder[GpgKeyDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, so the field spellings exist in exactly one place.

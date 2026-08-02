@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.issues.wire
 
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -45,7 +46,7 @@ object IssueSubscriptionDto:
   /** Reads a `WatchInfo` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[IssueSubscriptionDto] =
+  given JsonDecoder[IssueSubscriptionDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

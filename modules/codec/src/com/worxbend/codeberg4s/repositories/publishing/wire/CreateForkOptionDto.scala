@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.publishing.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.publishing.CreateFork
 
 /** Forgejo's `CreateForkOption` request model — the body of `POST /repos/{owner}/{repo}/forks`.
@@ -14,10 +16,10 @@ private[codeberg4s] object CreateForkOptionDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: CreateFork): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: CreateFork): List[(String, ujson.Value)] =
+  private def fields(command: CreateFork): List[(String, JsonValue)] =
     List(
-      command.name.map(target      => "name" -> ujson.Str(target.value)),
-      command.organization.map(org => "organization" -> ujson.Str(org.value)),
+      command.name.map(target      => "name" -> JsonValue.Str(target.value)),
+      command.organization.map(org => "organization" -> JsonValue.Str(org.value)),
     ).flatten

@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -92,7 +93,7 @@ final case class CommitDto(
 object CommitDto:
 
   /** Reads a `Commit` object. */
-  given upickle.default.Reader[CommitDto] =
+  given JsonDecoder[CommitDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

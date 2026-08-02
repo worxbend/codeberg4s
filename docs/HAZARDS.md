@@ -68,7 +68,7 @@ are `null`.
    across several samples; the `Option` is collapsed in the `wire → domain`
    conversion, which returns `Either[CodebergError, A]` and produces
    `DecodingFailed` when a field the domain genuinely needs is absent.
-2. `null` and *absent* must decode identically. upickle distinguishes them by
+2. `null` and *absent* must decode identically. jsoniter-scala distinguishes them by
    default; the codec module needs a shared reader that folds `null` into `None`.
    This is not optional polish — `assignees: null` vs missing `assignees` occurs
    in the same endpoint.

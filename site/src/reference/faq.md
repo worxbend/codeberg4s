@@ -118,11 +118,11 @@ every page and a loop written that way silently returns a truncated result.
 `Page` makes the correct signal — the presence of `rel="next"` — the thing you
 reach for. See [Pagination](../guides/04-pagination.md).
 
-## Why upickle rather than circe or jsoniter?
+## Why jsoniter-scala rather than circe or jsoniter?
 
 Three reasons, in the order they mattered.
 
-sttp client4 ships a first-party upickle integration module, so the response path
+sttp client4 ships a first-party jsoniter-scala integration module, so the response path
 is one dependency rather than two plus glue. The transitive footprint is small,
 which matters for a published library for the same reason as the effect-system
 decision. And this project writes explicit codecs anyway — every field is
@@ -134,7 +134,7 @@ and a top-level JSON array needs a codec for the collection as well as for the
 element — a mistake that compiles and fails at run time, which is why every list
 endpoint has a decode test against a captured fixture.
 
-[ADR-0003](../project/adr/0003-upickle-over-circe-and-jsoniter.md).
+[ADR-0003](../project/adr/0003-jsoniter-for-json.md).
 
 ## Why hand-written models instead of generating them from the OpenAPI document?
 
@@ -260,7 +260,7 @@ lives. See [Self-hosted instances](../guides/09-self-hosted.md).
 
 Because the module graph is what enforces the architecture, and publishing it is
 what keeps it honest: `domain` has no dependencies at all, `core` never imports
-sttp or upickle, `codec` never imports sttp.
+sttp or jsoniter-scala, `codec` never imports sttp.
 
 You almost certainly want `codeberg4s-client`, which pulls in the other four
 transitively. The exception is a module that needs to *handle* a `CodebergError`

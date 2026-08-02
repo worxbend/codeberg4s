@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -60,7 +61,7 @@ object ChangedFileDto:
   /** Reads a `ChangedFile` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[ChangedFileDto] =
+  given JsonDecoder[ChangedFileDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

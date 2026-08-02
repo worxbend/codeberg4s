@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.issues.IssueRef
 
 /** Forgejo's `IssueMeta` request model — the body of all six blocking and dependency calls.
@@ -20,10 +22,10 @@ private[codeberg4s] object IssueMetaDto:
 
   /** Renders `reference` as the JSON body to send. */
   def render(reference: IssueRef): String =
-    ujson.write(
-      ujson.Obj(
-        "owner" -> ujson.Str(reference.owner.value),
-        "repo"  -> ujson.Str(reference.repo.value),
+    Json.render(
+      JsonValue.Obj(
+        "owner" -> JsonValue.Str(reference.owner.value),
+        "repo"  -> JsonValue.Str(reference.repo.value),
         "index" -> WireNumbers.identifier(reference.number.value),
       )
     )

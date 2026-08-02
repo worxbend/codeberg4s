@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.pulls.DismissReview
 
 /** Forgejo's `DismissPullReviewOptions` request model — the body of
@@ -14,10 +16,10 @@ private[codeberg4s] object DismissPullReviewOptionsDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: DismissReview): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: DismissReview): List[(String, ujson.Value)] =
+  private def fields(command: DismissReview): List[(String, JsonValue)] =
     List(
-      command.message.map(text => "message" -> ujson.Str(text)),
-      Option.when(command.priors)("priors" -> ujson.Bool(true)),
+      command.message.map(text => "message" -> JsonValue.Str(text)),
+      Option.when(command.priors)("priors" -> JsonValue.Bool(true)),
     ).flatten

@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -78,7 +79,7 @@ object NodeInfoDto:
   /** Reads a `NodeInfo` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[NodeInfoDto] =
+  given JsonDecoder[NodeInfoDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */
@@ -130,7 +131,7 @@ final case class NodeInfoSoftwareDto(
 object NodeInfoSoftwareDto:
 
   /** Reads a `NodeInfoSoftware` object standing alone; nested use goes through [[fromFields]]. */
-  given upickle.default.Reader[NodeInfoSoftwareDto] =
+  given JsonDecoder[NodeInfoSoftwareDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */
@@ -167,7 +168,7 @@ final case class NodeInfoServicesDto(
 object NodeInfoServicesDto:
 
   /** Reads a `NodeInfoServices` object standing alone; nested use goes through [[fromFields]]. */
-  given upickle.default.Reader[NodeInfoServicesDto] =
+  given JsonDecoder[NodeInfoServicesDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */
@@ -208,7 +209,7 @@ final case class NodeInfoUsageDto(
 object NodeInfoUsageDto:
 
   /** Reads a `NodeInfoUsage` object standing alone; nested use goes through [[fromFields]]. */
-  given upickle.default.Reader[NodeInfoUsageDto] =
+  given JsonDecoder[NodeInfoUsageDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */
@@ -245,7 +246,7 @@ final case class NodeInfoUsersDto(
 object NodeInfoUsersDto:
 
   /** Reads a `NodeInfoUsageUsers` object standing alone; nested use goes through [[fromFields]]. */
-  given upickle.default.Reader[NodeInfoUsersDto] =
+  given JsonDecoder[NodeInfoUsersDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */

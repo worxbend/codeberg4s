@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.access.CollaboratorPermission
 
 /** Forgejo's `AddCollaboratorOption` request model — the body of
@@ -21,4 +23,4 @@ private[codeberg4s] object AddCollaboratorOptionDto:
 
   /** Renders `permission` as the JSON body to `PUT`. */
   def render(permission: CollaboratorPermission): String =
-    ujson.write(ujson.Obj(CollaboratorWire.Permission -> ujson.Str(permission.wireName)))
+    Json.render(JsonValue.Obj(CollaboratorWire.Permission -> JsonValue.Str(permission.wireName)))

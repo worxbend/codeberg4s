@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.publishing.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.publishing.CreateTag
 
 /** Forgejo's `CreateTagOption` request model — the body of `POST /repos/{owner}/{repo}/tags`.
@@ -15,11 +17,11 @@ private[codeberg4s] object CreateTagOptionDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: CreateTag): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: CreateTag): List[(String, ujson.Value)] =
+  private def fields(command: CreateTag): List[(String, JsonValue)] =
     List(
-      Some("tag_name" -> ujson.Str(command.tagName.value)),
-      command.message.map(text     => "message" -> ujson.Str(text)),
-      command.target.map(commitish => "target" -> ujson.Str(commitish)),
+      Some("tag_name" -> JsonValue.Str(command.tagName.value)),
+      command.message.map(text     => "message" -> JsonValue.Str(text)),
+      command.target.map(commitish => "target" -> JsonValue.Str(commitish)),
     ).flatten

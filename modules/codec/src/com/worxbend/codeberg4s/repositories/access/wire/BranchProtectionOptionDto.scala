@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.access.ApprovalCount
 import com.worxbend.codeberg4s.repositories.access.BranchProtectionSettings
 import com.worxbend.codeberg4s.repositories.access.CreateBranchProtection
@@ -35,7 +37,7 @@ private[wire] object BranchProtectionSettingsDto:
     * The order is stable so that a rendered body can be asserted as an exact string — a renderer's product is bytes,
     * and a test that re-parsed them would not notice a key that moved.
     */
-  def fields(settings: BranchProtectionSettings): List[(String, ujson.Value)] =
+  def fields(settings: BranchProtectionSettings): List[(String, JsonValue)] =
     List(
       settings.enablePush.map(flag(BranchProtectionWire.EnablePush)),
       settings.enablePushWhitelist.map(flag(BranchProtectionWire.EnablePushWhitelist)),
@@ -62,20 +64,20 @@ private[wire] object BranchProtectionSettingsDto:
       settings.applyToAdmins.map(flag(BranchProtectionWire.ApplyToAdmins)),
     ).flatten
 
-  private def flag(key: String): Boolean => (String, ujson.Value) =
-    value => key -> ujson.Bool(value)
+  private def flag(key: String): Boolean => (String, JsonValue) =
+    value => key -> JsonValue.Bool(value)
 
-  private def approvals(key: String): ApprovalCount => (String, ujson.Value) =
-    count => key -> ujson.Num(count.value.toDouble)
+  private def approvals(key: String): ApprovalCount => (String, JsonValue) =
+    count => key -> JsonValue.Num(count.value.toDouble)
 
-  private def text(key: String): String => (String, ujson.Value) =
-    value => key -> ujson.Str(value)
+  private def text(key: String): String => (String, JsonValue) =
+    value => key -> JsonValue.Str(value)
 
-  private def texts(key: String): Vector[String] => (String, ujson.Value) =
-    values => key -> ujson.Arr.from(values.map(ujson.Str.apply))
+  private def texts(key: String): Vector[String] => (String, JsonValue) =
+    values => key -> JsonValue.Arr.from(values.map(JsonValue.Str.apply))
 
-  private def logins(key: String): Vector[Username] => (String, ujson.Value) =
-    values => key -> ujson.Arr.from(values.map(name => ujson.Str(name.value)))
+  private def logins(key: String): Vector[Username] => (String, JsonValue) =
+    values => key -> JsonValue.Arr.from(values.map(name => JsonValue.Str(name.value)))
 
 /** Forgejo's `CreateBranchProtectionOption` request model — the body of
   * `POST /repos/{owner}/{repo}/branch_protections`.
@@ -93,12 +95,12 @@ private[codeberg4s] object CreateBranchProtectionOptionDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: CreateBranchProtection): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: CreateBranchProtection): List[(String, ujson.Value)] =
+  private def fields(command: CreateBranchProtection): List[(String, JsonValue)] =
     List(
-      Some(BranchProtectionWire.RuleName -> ujson.Str(command.ruleName.value)),
-      command.legacyBranchName.map(branch => BranchProtectionWire.BranchName -> ujson.Str(branch.value)),
+      Some(BranchProtectionWire.RuleName -> JsonValue.Str(command.ruleName.value)),
+      command.legacyBranchName.map(branch => BranchProtectionWire.BranchName -> JsonValue.Str(branch.value)),
     ).flatten ++ BranchProtectionSettingsDto.fields(command.settings)
 
 /** Forgejo's `EditBranchProtectionOption` request model — the body of
@@ -116,4 +118,4 @@ private[codeberg4s] object EditBranchProtectionOptionDto:
 
   /** Renders `command` as the JSON body to `PATCH`. */
   def render(command: EditBranchProtection): String =
-    ujson.write(ujson.Obj.from(BranchProtectionSettingsDto.fields(command.settings)))
+    Json.render(JsonValue.Obj.from(BranchProtectionSettingsDto.fields(command.settings)))

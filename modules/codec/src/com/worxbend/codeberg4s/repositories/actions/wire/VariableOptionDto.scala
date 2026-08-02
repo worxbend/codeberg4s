@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.actions.CreateVariable
 import com.worxbend.codeberg4s.repositories.actions.UpdateVariable
 
@@ -27,7 +29,7 @@ private[codeberg4s] object VariableOptionDto:
     * endpoint, not a field.
     */
   def renderCreate(command: CreateVariable): String =
-    ujson.write(ujson.Obj(ValueKey -> ujson.Str(command.value)))
+    Json.render(JsonValue.Obj(ValueKey -> JsonValue.Str(command.value)))
 
   /** Renders `command` as the JSON body to `PUT`.
     *
@@ -37,10 +39,10 @@ private[codeberg4s] object VariableOptionDto:
     * empty one.
     */
   def renderUpdate(command: UpdateVariable): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: UpdateVariable): List[(String, ujson.Value)] =
+  private def fields(command: UpdateVariable): List[(String, JsonValue)] =
     List(
-      Some(ValueKey -> ujson.Str(command.value)),
-      command.renamedTo.map(name => NameKey -> ujson.Str(name.value)),
+      Some(ValueKey -> JsonValue.Str(command.value)),
+      command.renamedTo.map(name => NameKey -> JsonValue.Str(name.value)),
     ).flatten

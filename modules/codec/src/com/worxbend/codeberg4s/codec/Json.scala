@@ -4,124 +4,90 @@ import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.DecodeFailure
 
-import upickle.core.TraceVisitor
+import com.github.plokhotnyuk.jsoniter_scala.core.ReaderConfig
+import com.github.plokhotnyuk.jsoniter_scala.core.readFromString
+import com.github.plokhotnyuk.jsoniter_scala.core.writeToString
 
-import scala.util.Try
-import scala.util.matching.Regex
+import scala.util.control.NonFatal
 
 /** The single door between a response body and a wire DTO.
   *
-  * Nothing else in this library calls upickle's `read`. Keeping the call in one place is what lets the module promise
-  * that a decoding failure is always a [[com.worxbend.codeberg4s.core.DecodeFailure]] value and never an escaping
-  * `upickle.core.Abort`, `upickle.core.AbortException` or `ujson.ParsingFailedException` — the promise ADR-0003 makes
-  * and `SCALA_CODE_STYLE.md` restates as "malformed and unexpected JSON produces a failure value, never an exception".
+  * Nothing else in this library calls jsoniter's `readFromString`. Keeping the call in one place is what lets the
+  * module promise that a decoding failure is always a [[com.worxbend.codeberg4s.core.DecodeFailure]] value and never an
+  * escaping `JsonReaderException` — the promise ADR-0003 makes and `SCALA_CODE_STYLE.md` restates as "malformed and
+  * unexpected JSON produces a failure value, never an exception".
   *
-  * The failure carries a [[com.worxbend.codeberg4s.JsonPath]] recovered from upickle's tracing visitor, so a bug report
-  * says `$.owner.login` or `$[2]` rather than "decoding failed". It carries no body text: the request pipeline owns the
-  * body and adds the bounded snippet when it lifts the failure into
-  * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]].
+  * '''Where a path comes from.''' Decoding is two steps: jsoniter parses the body into [[JsonValue]], then the DTO
+  * assembles itself from that document. Only the first step can fail structurally, and when it does the problem is the
+  * document as a whole, so the failure carries [[com.worxbend.codeberg4s.JsonPath.Root]]. A field the domain genuinely
+  * needs is reported by the DTO's own `toDomain`, which names it — `$.owner.login`, `$[2].sha` — because the DTO knows
+  * which field it wanted and the parser does not. That is a better division than the previous one, where a path was
+  * reverse-engineered from a tracing visitor's rendered string.
+  *
+  * The failure carries no body text: the request pipeline owns the body and adds the bounded snippet when it lifts the
+  * failure into [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]].
   */
 object Json:
 
-  /** Upper bound, in characters, on the reason text taken from a codec exception.
+  /** Upper bound, in characters, on the reason text taken from a parser exception.
     *
-    * upickle's own messages are short, but `missing keys in dictionary: …` grows with the number of absent fields, and
-    * a decoder message must never become a payload dump.
+    * jsoniter's messages embed a hex dump of the bytes around the failure, which is exactly the sort of thing that must
+    * not become a payload dump in a log line.
     */
   val MaxReasonLength: Int = 200
 
   private val Ellipsis: String = "..."
 
-  /** Upper bound on how far the cause chain is walked when looking for a message. Guards against a self-referential
-    * `getCause`, which the JVM permits.
+  /** Parsing is configured to keep the message short and free of payload.
+    *
+    * `appendHexDumpToParseException` is off because a hex dump of a response body is payload, and this library's
+    * failures are logged. The nesting limit is a second guard alongside [[JsonValue.MaxDepth]] — jsoniter enforces it
+    * while reading rather than after.
     */
-  private val MaxCauseDepth: Int = 8
-
-  /** One `['key']` or `[3]` step of upickle's JSON-path rendering. See `upickle.core.TraceVisitor.HasPath#path`: object
-    * keys are single-quoted with `'` escaped as `\'`, array positions are bare digits.
-    */
-  private val PathComponent: Regex = """\[(?:'((?:\\'|[^'])*)'|(\d+))]""".r
+  private val Config: ReaderConfig =
+    ReaderConfig
+      .withAppendHexDumpToParseException(false)
+      .withMaxBufSize(1 << 22)
+      .withPreferredBufSize(1 << 14)
 
   /** Decodes a body into `A`.
     *
-    * '''Never throws.''' Every failure upickle can raise — a body that is not JSON, a truncated body, a body whose
-    * shape does not match the reader, an empty body — is caught and returned as a
-    * [[com.worxbend.codeberg4s.core.DecodeFailure]]. The failure's `path` is where upickle stopped, or
-    * [[com.worxbend.codeberg4s.JsonPath.Root]] when the problem is the document as a whole; its `message` is upickle's
-    * own explanation, trimmed to [[MaxReasonLength]].
-    *
-    * Tracing is requested explicitly rather than left to upickle's default so that the path stays available if that
-    * default ever changes; it costs roughly 10% of parse time, which is worth it for a library whose failures are
-    * reported by third parties.
+    * '''Never throws.''' Everything jsoniter can raise — a body that is not JSON, a truncated body, an empty body, a
+    * document nested past [[JsonValue.MaxDepth]] — is caught and returned as a
+    * [[com.worxbend.codeberg4s.core.DecodeFailure]] whose `message` is the parser's own explanation trimmed to
+    * [[MaxReasonLength]].
     *
     * @param body
     *   the raw response body, exactly as received
     */
-  def decode[A: upickle.default.Reader](body: String): Either[DecodeFailure, A] =
-    Try(upickle.default.read[A](body, trace = true)).toEither.left
-      .map(asFailure)
-      .flatMap(rejectNull)
+  def decode[A](body: String)(using decoder: JsonDecoder[A]): Either[DecodeFailure, A] =
+    parse(body).flatMap(decoder.decode)
 
   /** The same decoding, as the [[com.worxbend.codeberg4s.core.Decode]] port core consumes.
     *
-    * Use this to hand a DTO to a use case without core learning that upickle exists. Instances are stateless and safe
+    * Use this to hand a DTO to a use case without core learning that jsoniter exists. Instances are stateless and safe
     * to share between threads.
     */
-  def decoder[A: upickle.default.Reader]: Decode[A] =
+  def decoder[A](using JsonDecoder[A]): Decode[A] =
     (body: String) => decode[A](body)
 
-  /** Turns a `null` result into a failure.
+  /** Parses a body into the document model, without interpreting it.
     *
-    * Measured against upickle 4.4.3: a body that is the bare literal `null` does '''not''' reach a reader's mapping
-    * function. Most readers inherit a `visitNull` that answers `null.asInstanceOf[A]`, so `read` returns successfully
-    * with a `null` reference — which would then travel into the domain and surface as a `NullPointerException` far from
-    * the response that caused it. A `null` body is not a decoded value, and it is rejected here.
-    *
-    * Types that genuinely model absence are unaffected, because they handle `visitNull` themselves: `Option` answers
-    * `None` and `ujson.Value` answers `ujson.Null`, neither of which is a `null` reference.
+    * The bare literal `null` is a successful parse producing [[JsonValue.Null]], not a `null` reference — which is the
+    * whole reason this library models JSON rather than mapping it onto Scala types at the parser. Whether `null` is an
+    * acceptable document is the decoder's question, and [[JsonDecoder.objectOf]] answers no.
     */
-  private def rejectNull[A](value: A): Either[DecodeFailure, A] =
-    Option(value).toRight(DecodeFailure(JsonPath.Root, "the body was the JSON literal null"))
+  def parse(body: String): Either[DecodeFailure, JsonValue] =
+    try Right(readFromString[JsonValue](body, Config)(using JsonValue.codec))
+    catch case NonFatal(error) => Left(DecodeFailure(JsonPath.Root, reasonOf(error)))
 
-  private def asFailure(error: Throwable): DecodeFailure =
-    error match
-      case trace: TraceVisitor.TraceException =>
-        DecodeFailure(pathOf(trace.jsonPath), reasonOf(Option(trace.getCause).getOrElse(trace)))
-      case other                              =>
-        DecodeFailure(JsonPath.Root, reasonOf(other))
+  /** Renders a document to its compact wire form. The only place this library serialises JSON. */
+  def render(value: JsonValue): String =
+    writeToString(value)(using JsonValue.codec)
 
-  private def pathOf(rendered: String): JsonPath =
-    PathComponent
-      .findAllMatchIn(rendered)
-      .foldLeft(JsonPath.Root): (path, component) =>
-        Option(component.group(1)) match
-          case Some(key) => path.field(key.replace("\\'", "'"))
-          case None      => component.group(2).toIntOption.fold(path)(path.index)
-
-  /** The first genuine explanation in the cause chain.
-    *
-    * A nested `TraceException` is skipped rather than reported: its message is a JSON path, which belongs in the
-    * failure's `path`, not in its `message`. Nesting happens when a reader decodes an embedded value with its own parse
-    * — see `SearchEnvelopeDto`.
-    */
   private def reasonOf(error: Throwable): String =
-    causes(error)
-      .filterNot(isTrace)
-      .flatMap(cause => Option(cause.getMessage))
-      .find(_.trim.nonEmpty)
-      .map(bound)
-      .getOrElse(error.getClass.getName)
-
-  private def isTrace(error: Throwable): Boolean =
-    error match
-      case _: TraceVisitor.TraceException => true
-      case _                              => false
-
-  private def causes(error: Throwable): LazyList[Throwable] =
-    LazyList
-      .unfold(Option(error))(current => current.map(cause => (cause, Option(cause.getCause))))
-      .take(MaxCauseDepth)
+    Option(error.getMessage).map(bound).getOrElse(error.getClass.getName)
 
   private def bound(message: String): String =
-    val trimmed = message.trim
+    val trimmed = message.trim.linesIterator.next()
     if trimmed.length <= MaxReasonLength then trimmed else s"${trimmed.take(MaxReasonLength)}$Ellipsis"

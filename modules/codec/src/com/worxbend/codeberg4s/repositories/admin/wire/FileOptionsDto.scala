@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.issues.wire.WireInstant
 import com.worxbend.codeberg4s.repositories.admin.ChangeFiles
 import com.worxbend.codeberg4s.repositories.admin.CommitDates
@@ -44,7 +46,7 @@ private[codeberg4s] object FileOptionsDto:
 
   /** Renders `command` as the JSON body to `POST /repos/{owner}/{repo}/contents/{filepath}`. */
   def renderCreate(command: CreateFile): String =
-    ujson.write(ujson.Obj.from((ContentKey -> ujson.Str(command.content.base64)) +: commitFields(command.commit)))
+    Json.render(JsonValue.Obj.from((ContentKey -> JsonValue.Str(command.content.base64)) +: commitFields(command.commit)))
 
   /** Renders `command` as the JSON body to `PUT /repos/{owner}/{repo}/contents/{filepath}`.
     *
@@ -53,16 +55,16 @@ private[codeberg4s] object FileOptionsDto:
     */
   def renderUpdate(command: UpdateFile): String =
     val head = List(
-      Some(ContentKey -> ujson.Str(command.content.base64)),
-      Some(ShaKey     -> ujson.Str(command.expectedSha.value)),
-      command.fromPath.map(source => "from_path" -> ujson.Str(source.value)),
+      Some(ContentKey -> JsonValue.Str(command.content.base64)),
+      Some(ShaKey     -> JsonValue.Str(command.expectedSha.value)),
+      command.fromPath.map(source => "from_path" -> JsonValue.Str(source.value)),
     ).flatten
 
-    ujson.write(ujson.Obj.from(head ++ commitFields(command.commit)))
+    Json.render(JsonValue.Obj.from(head ++ commitFields(command.commit)))
 
   /** Renders `command` as the JSON body to `DELETE /repos/{owner}/{repo}/contents/{filepath}`. */
   def renderDelete(command: DeleteFile): String =
-    ujson.write(ujson.Obj.from((ShaKey -> ujson.Str(command.expectedSha.value)) +: commitFields(command.commit)))
+    Json.render(JsonValue.Obj.from((ShaKey -> JsonValue.Str(command.expectedSha.value)) +: commitFields(command.commit)))
 
   /** Renders `command` as the JSON body to `POST /repos/{owner}/{repo}/contents`.
     *
@@ -70,28 +72,28 @@ private[codeberg4s] object FileOptionsDto:
     * moves a file before editing it depends on it.
     */
   def renderChange(command: ChangeFiles): String =
-    val files = ujson.Arr.from(command.operations.map(operation))
+    val files = JsonValue.Arr.from(command.operations.map(operation))
 
-    ujson.write(ujson.Obj.from((FilesKey -> files) +: commitFields(command.commit)))
+    Json.render(JsonValue.Obj.from((FilesKey -> files) +: commitFields(command.commit)))
 
   /** The eight properties every contents write shares, rendered once. */
-  private def commitFields(options: CommitOptions): List[(String, ujson.Value)] =
+  private def commitFields(options: CommitOptions): List[(String, JsonValue)] =
     List(
-      Some("signoff"                    -> ujson.Bool(options.signoff)),
-      Some("force_overwrite_new_branch" -> ujson.Bool(options.forceOverwriteNewBranch)),
-      options.branch.map(branch         => "branch" -> ujson.Str(branch.value)),
-      options.newBranch.map(branch      => "new_branch" -> ujson.Str(branch.value)),
-      options.message.map(text          => "message" -> ujson.Str(text)),
+      Some("signoff"                    -> JsonValue.Bool(options.signoff)),
+      Some("force_overwrite_new_branch" -> JsonValue.Bool(options.forceOverwriteNewBranch)),
+      options.branch.map(branch         => "branch" -> JsonValue.Str(branch.value)),
+      options.newBranch.map(branch      => "new_branch" -> JsonValue.Str(branch.value)),
+      options.message.map(text          => "message" -> JsonValue.Str(text)),
       options.author.map(who            => "author" -> identityOf(who)),
       options.committer.map(who         => "committer" -> identityOf(who)),
       dates(options.dates).map(rendered => "dates" -> rendered),
     ).flatten
 
-  private def identityOf(who: CommitIdentity): ujson.Value =
-    ujson.Obj.from(
+  private def identityOf(who: CommitIdentity): JsonValue =
+    JsonValue.Obj.from(
       List(
-        who.name.map(value  => "name" -> ujson.Str(value)),
-        who.email.map(value => "email" -> ujson.Str(value)),
+        who.name.map(value  => "name" -> JsonValue.Str(value)),
+        who.email.map(value => "email" -> JsonValue.Str(value)),
       ).flatten
     )
 
@@ -100,27 +102,27 @@ private[codeberg4s] object FileOptionsDto:
     * Emitting `{}` would be a request to date the commit with an empty object, which Forgejo reads as the Go zero time.
     * Omitting the key entirely is what leaves it to date the commit itself.
     */
-  private def dates(when: CommitDates): Option[ujson.Value] =
+  private def dates(when: CommitDates): Option[JsonValue] =
     val fields = List(
-      when.author.map(moment    => "author" -> ujson.Str(WireInstant.render(moment))),
-      when.committer.map(moment => "committer" -> ujson.Str(WireInstant.render(moment))),
+      when.author.map(moment    => "author" -> JsonValue.Str(WireInstant.render(moment))),
+      when.committer.map(moment => "committer" -> JsonValue.Str(WireInstant.render(moment))),
     ).flatten
 
-    Option.when(fields.nonEmpty)(ujson.Obj.from(fields))
+    Option.when(fields.nonEmpty)(JsonValue.Obj.from(fields))
 
-  private def operation(change: FileOperation): ujson.Value =
-    ujson.Obj.from(
-      List("operation" -> ujson.Str(change.wireValue), "path" -> ujson.Str(change.path.value)) ++
+  private def operation(change: FileOperation): JsonValue =
+    JsonValue.Obj.from(
+      List("operation" -> JsonValue.Str(change.wireValue), "path" -> JsonValue.Str(change.path.value)) ++
         operationFields(change)
     )
 
-  private def operationFields(change: FileOperation): List[(String, ujson.Value)] =
+  private def operationFields(change: FileOperation): List[(String, JsonValue)] =
     change match
-      case FileOperation.Create(_, content)                => List(ContentKey -> ujson.Str(content.base64))
+      case FileOperation.Create(_, content)                => List(ContentKey -> JsonValue.Str(content.base64))
       case FileOperation.Update(_, content, sha, fromPath) =>
         List(
-          Some(ContentKey -> ujson.Str(content.base64)),
-          Some(ShaKey     -> ujson.Str(sha.value)),
-          fromPath.map(source => "from_path" -> ujson.Str(source.value)),
+          Some(ContentKey -> JsonValue.Str(content.base64)),
+          Some(ShaKey     -> JsonValue.Str(sha.value)),
+          fromPath.map(source => "from_path" -> JsonValue.Str(source.value)),
         ).flatten
-      case FileOperation.Delete(_, sha)                    => List(ShaKey -> ujson.Str(sha.value))
+      case FileOperation.Delete(_, sha)                    => List(ShaKey -> JsonValue.Str(sha.value))

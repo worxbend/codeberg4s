@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -58,7 +59,7 @@ final case class GitEntryDto(
 object GitEntryDto:
 
   /** Reads one element of a `tree` array. */
-  given upickle.default.Reader[GitEntryDto] =
+  given JsonDecoder[GitEntryDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, for the envelope DTO that embeds these. */

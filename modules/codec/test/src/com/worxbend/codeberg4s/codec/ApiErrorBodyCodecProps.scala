@@ -22,37 +22,37 @@ import org.scalacheck.Prop.forAll
   */
 final class ApiErrorBodyCodecProps extends PropertyBase:
 
-  private val notAString: Gen[ujson.Value] =
+  private val notAString: Gen[JsonValue] =
     Gen.oneOf(
-      Gen.const[ujson.Value](ujson.Null),
-      Gen.oneOf(true, false).map(flag    => ujson.Bool(flag)),
-      Gen.choose(-1000, 1000).map(number => ujson.Num(number.toDouble)),
-      Gen.const[ujson.Value](ujson.Arr.from(List(ujson.Str("nested")))),
-      Gen.const[ujson.Value](ujson.Obj.from(List(("nested", ujson.Str("value"): ujson.Value)))),
+      Gen.const[JsonValue](JsonValue.Null),
+      Gen.oneOf(true, false).map(flag    => JsonValue.Bool(flag)),
+      Gen.choose(-1000, 1000).map(number => JsonValue.Num(number.toDouble)),
+      Gen.const[JsonValue](JsonValue.Arr.from(List(JsonValue.Str("nested")))),
+      Gen.const[JsonValue](JsonValue.Obj.from(List(("nested", JsonValue.Str("value"): JsonValue)))),
     )
 
-  private val notAnArray: Gen[ujson.Value] =
+  private val notAnArray: Gen[JsonValue] =
     Gen.oneOf(
-      Gen.const[ujson.Value](ujson.Null),
-      Gen.oneOf(true, false).map(flag    => ujson.Bool(flag)),
-      Gen.choose(-1000, 1000).map(number => ujson.Num(number.toDouble)),
-      PropertyBase.text.map(value        => ujson.Str(value)),
-      Gen.const[ujson.Value](ujson.Obj.from(List(("nested", ujson.Str("value"): ujson.Value)))),
+      Gen.const[JsonValue](JsonValue.Null),
+      Gen.oneOf(true, false).map(flag    => JsonValue.Bool(flag)),
+      Gen.choose(-1000, 1000).map(number => JsonValue.Num(number.toDouble)),
+      PropertyBase.text.map(value        => JsonValue.Str(value)),
+      Gen.const[JsonValue](JsonValue.Obj.from(List(("nested", JsonValue.Str("value"): JsonValue)))),
     )
 
-  private val extraFields: Gen[List[(String, ujson.Value)]] =
+  private val extraFields: Gen[List[(String, JsonValue)]] =
     Gen
       .choose(0, 3)
       .flatMap(count => Gen.listOfN(count, PropertyBase.key.flatMap(name => PropertyBase.scalar.map(v => (name, v)))))
       .map(entries => entries.filterNot((name, _) => Set("message", "url", "errors").contains(name)))
 
-  private def objectOf(entries: List[(String, ujson.Value)]): String =
-    ujson.write(ujson.Obj.from(entries.distinctBy((name, _) => name)))
+  private def objectOf(entries: List[(String, JsonValue)]): String =
+    Json.render(JsonValue.Obj.from(entries.distinctBy((name, _) => name)))
 
   property("parsing an arbitrary body always answers, and only an object can say anything".tag(Property)):
     forAll(PropertyBase.body) { raw =>
       val parsed   = ApiErrorBodyCodec.parse(raw)
-      val isObject = Json.decode[ujson.Value](raw).exists(document => document.objOpt.isDefined)
+      val isObject = Json.decode[JsonValue](raw).exists(document => document.objOpt.isDefined)
 
       Prop
         .propBoolean(isObject || parsed.equals(ApiErrorBody.Empty))
@@ -69,9 +69,9 @@ final class ApiErrorBodyCodecProps extends PropertyBase:
       extraFields,
     ) { (message, url, errors, extras) =>
       val entries =
-        message.map(value => ("message", ujson.Str(value): ujson.Value)).toList ++
-          url.map(value => ("url", ujson.Str(value): ujson.Value)).toList ++
-          List(("errors", ujson.Arr.from(errors.map(entry => ujson.Str(entry))): ujson.Value)) ++
+        message.map(value => ("message", JsonValue.Str(value): JsonValue)).toList ++
+          url.map(value => ("url", JsonValue.Str(value): JsonValue)).toList ++
+          List(("errors", JsonValue.Arr.from(errors.map(entry => JsonValue.Str(entry))): JsonValue)) ++
           extras
 
       (ApiErrorBodyCodec.parse(objectOf(entries)) ?= ApiErrorBody(message, url, errors))
@@ -87,15 +87,15 @@ final class ApiErrorBodyCodecProps extends PropertyBase:
 
   property("a blank message is folded away, matching Forgejo's empty-string-for-absent convention".tag(Property)):
     forAll(PropertyBase.whitespace) { padding =>
-      val body = objectOf(List(("message", ujson.Str(padding)), ("url", ujson.Str(padding))))
+      val body = objectOf(List(("message", JsonValue.Str(padding)), ("url", JsonValue.Str(padding))))
 
       (ApiErrorBodyCodec.parse(body) ?= ApiErrorBody.Empty).label(s"from $body")
     }
 
   property("elements of errors that are not strings are dropped, and the rest keep their order".tag(Property)):
-    forAll(Gen.listOf(Gen.frequency(2 -> PropertyBase.text.map(t => ujson.Str(t): ujson.Value), 1 -> notAString))) {
+    forAll(Gen.listOf(Gen.frequency(2 -> PropertyBase.text.map(t => JsonValue.Str(t): JsonValue), 1 -> notAString))) {
       elements =>
-        val body     = objectOf(List(("errors", ujson.Arr.from(elements))))
+        val body     = objectOf(List(("errors", JsonValue.Arr.from(elements))))
         val expected = elements.flatMap(element => element.strOpt)
 
         (ApiErrorBodyCodec.parse(body).errors ?= expected).label(s"from $body")

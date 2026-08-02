@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.issues.EditAttachment
 
 /** Forgejo's `EditAttachmentOptions` request model — the body of `PATCH …/issues/{index}/assets/{attachment_id}` and of
@@ -19,10 +21,10 @@ private[codeberg4s] object EditAttachmentOptionDto:
 
   /** Renders `command` as the JSON body to `PATCH`; `{}` when it changes nothing. */
   def render(command: EditAttachment): String =
-    ujson.write(ujson.Obj.from(fields(command)))
+    Json.render(JsonValue.Obj.from(fields(command)))
 
-  private def fields(command: EditAttachment): List[(String, ujson.Value)] =
+  private def fields(command: EditAttachment): List[(String, JsonValue)] =
     List(
-      command.name.map(fileName          => "name" -> ujson.Str(fileName)),
-      command.browserDownloadUrl.map(url => "browser_download_url" -> ujson.Str(url)),
+      command.name.map(fileName          => "name" -> JsonValue.Str(fileName)),
+      command.browserDownloadUrl.map(url => "browser_download_url" -> JsonValue.Str(url)),
     ).flatten

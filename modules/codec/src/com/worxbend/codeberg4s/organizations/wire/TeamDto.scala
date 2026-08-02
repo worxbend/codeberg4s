@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.organizations.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -82,7 +83,7 @@ object TeamDto:
   /** Reads a `Team` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[TeamDto] =
+  given JsonDecoder[TeamDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, reusing [[OrganizationDto.fromFields]] for the embedded organisation so that

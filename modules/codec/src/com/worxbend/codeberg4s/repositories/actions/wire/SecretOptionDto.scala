@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.actions.SecretValue
 
 /** Forgejo's `CreateOrUpdateSecretOption` request model — the body of
@@ -11,7 +13,7 @@ import com.worxbend.codeberg4s.repositories.actions.SecretValue
   * ==This is the only place a secret's material is written down==
   *
   * [[com.worxbend.codeberg4s.repositories.actions.SecretValue.reveal]] is called here and nowhere else in the library.
-  * What comes out is handed straight to `ujson.write`, which escapes it into the request body — so a value containing a
+  * What comes out is handed straight to `Json.render`, which escapes it into the request body — so a value containing a
   * newline, a quote or a backslash survives intact and cannot break out of the JSON string. The rendered body is then a
   * [[com.worxbend.codeberg4s.core.RequestBody.Json]], which the pipeline never copies into a
   * [[com.worxbend.codeberg4s.CallContext]] or an error.
@@ -31,4 +33,4 @@ private[codeberg4s] object SecretOptionDto:
     * consumed immediately by the request builder and is never logged, never stored and never put in a failure.
     */
   def render(value: SecretValue): String =
-    ujson.write(ujson.Obj(DataKey -> ujson.Str(value.reveal)))
+    Json.render(JsonValue.Obj(DataKey -> JsonValue.Str(value.reveal)))

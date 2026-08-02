@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -59,7 +60,7 @@ final case class TopicSummaryDto(
 object TopicSummaryDto:
 
   /** Reads a `TopicResponse` object. Absent and `null` are the same thing for every field. */
-  given upickle.default.Reader[TopicSummaryDto] =
+  given JsonDecoder[TopicSummaryDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object, so the field spellings exist in exactly one place. */
@@ -98,7 +99,7 @@ object TopicSearchEnvelopeDto:
   val EntriesKey: String = "topics"
 
   /** Reads a `TopicSearchResults` object. */
-  given upickle.default.Reader[TopicSearchEnvelopeDto] =
+  given JsonDecoder[TopicSearchEnvelopeDto] =
     JsonFields.reader(fields =>
       TopicSearchEnvelopeDto(fields.nestedAll(EntriesKey).map(TopicSummaryDto.fromFields))
     )

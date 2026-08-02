@@ -2,8 +2,8 @@ package com.worxbend.codeberg4s.core
 
 /** Turns a response body into a value.
   *
-  * Core never imports a JSON library; the `codec` module supplies instances of this trait, so the choice of upickle is
-  * invisible above the boundary and replaceable without touching a single use case.
+  * Core never imports a JSON library; the `codec` module supplies instances of this trait, so the choice of JSON
+  * library is invisible above the boundary and replaceable without touching a single use case.
   *
   * An instance must be total: a malformed, truncated or unexpected payload returns a [[DecodeFailure]], and no
   * implementation lets a codec exception escape.

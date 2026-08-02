@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.wire
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.ServerVersion
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -34,7 +35,7 @@ final case class ServerVersionDto(version: Option[String]):
 object ServerVersionDto:
 
   /** Reads a `/version` body. Absent, `null` and non-string all decode to `None`; the document must still be a JSON
-    * object, which upickle enforces.
+    * object, which the JSON parser enforces.
     */
-  given upickle.default.Reader[ServerVersionDto] =
+  given JsonDecoder[ServerVersionDto] =
     JsonFields.reader(fields => ServerVersionDto(version = fields.text("version")))

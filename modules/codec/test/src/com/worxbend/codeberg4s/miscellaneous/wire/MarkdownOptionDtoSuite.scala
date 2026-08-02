@@ -1,6 +1,8 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
 import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.miscellaneous.MarkdownContext
 import com.worxbend.codeberg4s.miscellaneous.MarkdownMode
 import com.worxbend.codeberg4s.miscellaneous.MarkdownPageKind
@@ -16,14 +18,14 @@ final class MarkdownOptionDtoSuite extends FunSuite:
   test("the field names are Forgejo's capitalised Go field names"):
     val body = rendered(MarkdownRenderRequest.of("# Title"))
 
-    assertEquals(body.obj.keySet.toSet, Set("Text", "Mode", "Wiki"))
+    assertEquals(body.keys.toSet, Set("Text", "Mode", "Wiki"))
 
   test("a standalone request renders as plain markdown, not as a wiki page"):
     val body = rendered(MarkdownRenderRequest.of("# Title"))
 
-    assertEquals(body("Text").str, "# Title")
-    assertEquals(body("Mode").str, "markdown")
-    assertEquals(body("Wiki").bool, false)
+    assertEquals(body.field("Text").flatMap(_.strOpt), Some("# Title"))
+    assertEquals(body.field("Mode").flatMap(_.strOpt), Some("markdown"))
+    assertEquals(body.field("Wiki").flatMap(_.boolOpt), Some(false))
 
   test("a context is sent only when there is one"):
     val request = MarkdownRenderRequest(
@@ -35,17 +37,17 @@ final class MarkdownOptionDtoSuite extends FunSuite:
 
     val body = rendered(request)
 
-    assertEquals(body("Context").str, "codeberg/Community")
-    assertEquals(body("Mode").str, "comment")
-    assertEquals(body("Wiki").bool, true)
+    assertEquals(body.field("Context").flatMap(_.strOpt), Some("codeberg/Community"))
+    assertEquals(body.field("Mode").flatMap(_.strOpt), Some("comment"))
+    assertEquals(body.field("Wiki").flatMap(_.boolOpt), Some(true))
 
   test("markdown that would break a JSON document is escaped, not passed through"):
     val body = rendered(MarkdownRenderRequest.of("a \"quote\" and a \\ and a\nnewline"))
 
-    assertEquals(body("Text").str, "a \"quote\" and a \\ and a\nnewline")
+    assertEquals(body.field("Text").flatMap(_.strOpt), Some("a \"quote\" and a \\ and a\nnewline"))
 
-  private def rendered(request: MarkdownRenderRequest): ujson.Value =
-    ujson.read(MarkdownOptionDto.fromDomain(request).toJson)
+  private def rendered(request: MarkdownRenderRequest): JsonValue =
+    Json.parse(MarkdownOptionDto.fromDomain(request).toJson).getOrElse(fail("the rendered body did not parse"))
 
   private def orFail[A](result: Either[ValidationError, A]): A =
     result match

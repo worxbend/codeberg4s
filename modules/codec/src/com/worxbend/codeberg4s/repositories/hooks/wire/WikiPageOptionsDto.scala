@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.FileContent
 import com.worxbend.codeberg4s.repositories.hooks.CreateWikiPage
 import com.worxbend.codeberg4s.repositories.hooks.EditWikiPage
@@ -32,22 +34,22 @@ private[codeberg4s] object WikiPageOptionsDto:
   /** Renders `command` as the JSON body to `POST`. `title` and `content_base64` are always emitted. */
   def renderCreate(command: CreateWikiPage): String =
     val fields = List(
-      Some(TitleKey   -> ujson.Str(command.title.value)),
-      Some(ContentKey -> ujson.Str(payload(command.content))),
-      command.message.map(text => MessageKey -> ujson.Str(text)),
+      Some(TitleKey   -> JsonValue.Str(command.title.value)),
+      Some(ContentKey -> JsonValue.Str(payload(command.content))),
+      command.message.map(text => MessageKey -> JsonValue.Str(text)),
     ).flatten
 
-    ujson.write(ujson.Obj.from(fields))
+    Json.render(JsonValue.Obj.from(fields))
 
   /** Renders `command` as the JSON body to `PATCH`. `title` is emitted only when the edit renames the page. */
   def renderEdit(command: EditWikiPage): String =
     val fields = List(
-      command.renamedTo.map(title => TitleKey -> ujson.Str(title.value)),
-      Some(ContentKey -> ujson.Str(payload(command.content))),
-      command.message.map(text => MessageKey -> ujson.Str(text)),
+      command.renamedTo.map(title => TitleKey -> JsonValue.Str(title.value)),
+      Some(ContentKey -> JsonValue.Str(payload(command.content))),
+      command.message.map(text => MessageKey -> JsonValue.Str(text)),
     ).flatten
 
-    ujson.write(ujson.Obj.from(fields))
+    Json.render(JsonValue.Obj.from(fields))
 
   /** The base64 payload of `content`.
     *

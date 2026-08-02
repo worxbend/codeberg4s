@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
+import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.access.CreateDeployKey
 
 /** Forgejo's `CreateKeyOption` request model — the body of `POST /repos/{owner}/{repo}/keys`.
@@ -23,10 +25,10 @@ private[codeberg4s] object CreateKeyOptionDto:
 
   /** Renders `command` as the JSON body to `POST`. */
   def render(command: CreateDeployKey): String =
-    ujson.write(
-      ujson.Obj(
-        DeployKeyWire.Title    -> ujson.Str(command.title),
-        DeployKeyWire.Key      -> ujson.Str(command.key),
-        DeployKeyWire.ReadOnly -> ujson.Bool(command.isReadOnly),
+    Json.render(
+      JsonValue.Obj(
+        DeployKeyWire.Title    -> JsonValue.Str(command.title),
+        DeployKeyWire.Key      -> JsonValue.Str(command.key),
+        DeployKeyWire.ReadOnly -> JsonValue.Bool(command.isReadOnly),
       )
     )

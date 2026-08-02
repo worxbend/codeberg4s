@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
@@ -65,7 +66,7 @@ object ActionTaskDto:
   /** Reads an `ActionTask` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
-  given upickle.default.Reader[ActionTaskDto] =
+  given JsonDecoder[ActionTaskDto] =
     JsonFields.reader(fromFields)
 
   /** Projects an already-decoded object. */
