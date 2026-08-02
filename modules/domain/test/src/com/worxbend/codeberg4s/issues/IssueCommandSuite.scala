@@ -45,6 +45,42 @@ final class IssueCommandSuite extends FunSuite:
   test("createdClosed is how an import files an already-closed issue"):
     assertEquals(orFail(CreateIssue.of("t")).createdClosed.closed, true)
 
+  test("every create builder sets its own field and leaves every sibling alone"):
+    val created = populatedCreate
+
+    assertEquals(created.withBody("replaced"), created.copy(body = Some("replaced")))
+    assertEquals(created.assignedTo(Vector("crystal")), created.copy(assignees = Vector("crystal")))
+    assertEquals(created.labelled(Vector.empty), created.copy(labels = Vector.empty))
+    assertEquals(created.inMilestone(Release), created.copy(milestone = Some(Release)))
+    assertEquals(created.dueBy(Friday), created.copy(dueDate = Some(Friday)))
+    assertEquals(created.onRef("refs/heads/main"), created.copy(ref = Some("refs/heads/main")))
+    assertEquals(created.createdClosed, created.copy(closed = true))
+
+  test("assignedTo replaces the whole list on a create, so an empty vector leaves the issue unassigned"):
+    assertEquals(populatedCreate.assignedTo(Vector.empty).assignees, Vector.empty[String])
+
+  test("every edit builder sets its own field and leaves every sibling alone"):
+    val edit = populatedEdit
+
+    assertEquals(edit.withTitle("replaced"), edit.copy(title = Some("replaced")))
+    assertEquals(edit.withBody("replaced"), edit.copy(body = Some("replaced")))
+    assertEquals(edit.assignedTo(Vector("crystal")), edit.copy(assignees = Some(Vector("crystal"))))
+    assertEquals(edit.inMilestone(Release), edit.copy(milestone = Some(Release)))
+    assertEquals(edit.close, edit.copy(state = Some(IssueStateChange.Close)))
+    assertEquals(edit.reopen, edit.copy(state = Some(IssueStateChange.Reopen)))
+    assertEquals(edit.dueBy(Friday), edit.copy(dueDate = Some(Friday)))
+    assertEquals(edit.withoutDueDate, edit.copy(unsetDueDate = true))
+    assertEquals(edit.onRef("refs/heads/main"), edit.copy(ref = Some("refs/heads/main")))
+
+  test("setting a deadline on an edit does not raise the unset flag, which would clear it again"):
+    val deadlined = EditIssue.Empty.dueBy(Friday)
+
+    assertEquals(deadlined.dueDate, Some(Friday))
+    assertEquals(deadlined.unsetDueDate, false)
+
+  test("an untouched assignee list stays absent, which is what leaves the assignees alone"):
+    assertEquals(EditIssue.Empty.withTitle("t").assignees, None)
+
   test("an empty edit changes nothing, and every field says so"):
     assertEquals(EditIssue.Empty.title, None)
     assertEquals(EditIssue.Empty.assignees, None)
@@ -85,6 +121,27 @@ final class IssueCommandSuite extends FunSuite:
     assertEquals(command.exclusive.isExclusive, true)
     assertEquals(command.exclusive.isArchived, false)
     assertEquals(command.archived.describedAs("stale").description, Some("stale"))
+
+  private def populatedCreate: CreateIssue =
+    orFail(CreateIssue.of("original"))
+      .withBody("original body")
+      .assignedTo(Vector("earl-warren"))
+      .labelled(Vector(Bug))
+      .inMilestone(orFail(MilestoneId.from(3110L)))
+      .dueBy(Instant.parse("2026-08-10T09:00:00Z"))
+      .onRef("refs/heads/next")
+
+  private def populatedEdit: EditIssue =
+    EditIssue(
+      title        = Some("original"),
+      body         = Some("original body"),
+      assignees    = Some(Vector("earl-warren")),
+      milestone    = Some(orFail(MilestoneId.from(3110L))),
+      state        = Some(IssueStateChange.Reopen),
+      dueDate      = Some(Instant.parse("2026-08-10T09:00:00Z")),
+      unsetDueDate = false,
+      ref          = Some("refs/heads/next"),
+    )
 
   private def orFail[A](result: Either[ValidationError, A]): A =
     result match
