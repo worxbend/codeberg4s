@@ -52,23 +52,41 @@ object CodebergError:
     def describe: String =
       error match
         case Transport(ctx, cause)                     =>
-          s"${renderContext(ctx)} transport failure: ${cause.describe}"
+          s"${renderContext(ctx)} transport failure: ${bound(cause.describe)}"
         case Api(ctx, status, body)                    =>
           val message = body.message.fold("no message from the server")(bound)
           s"${renderContext(ctx)} responded $status: $message${renderDetails(body.errors)}"
         case DecodingFailed(ctx, snippet, path, cause) =>
-          s"${renderContext(ctx)} could not decode ${path.render}: ${bound(cause)}; body was ${bound(snippet)}"
+          s"${renderContext(ctx)} could not decode ${bound(path.render)}: ${bound(cause)}; body was ${bound(snippet)}"
         case Validation(problem)                       =>
           s"invalid ${problem.field}: ${bound(problem.message)}"
         case RetriesExhausted(ctx, attempts, last)     =>
           s"${renderContext(ctx)} gave up after $attempts attempts; last failure: ${bound(last.describe)}"
 
+  /** The most detail fragments any one rendering embeds, so the whole string stays bounded rather than merely each
+    * piece of it.
+    *
+    * A `422` can carry hundreds of field errors, and rendering all of them turns one failed call into a log line
+    * megabytes long. The count that matters to a reader is small; the rest is noise, and the tail is elided with a
+    * count so nothing looks silently complete.
+    */
+  private val MaxDetails: Int = 8
+
   private def renderContext(ctx: CallContext): String =
-    val requestId = ctx.requestId.fold("")(id => s" [request-id $id]")
-    s"${ctx.operation} ${ctx.method.wireName} ${ctx.uri}$requestId after ${ctx.durationMs}ms"
+    // Every fragment here is bounded because two of the three are chosen by the
+    // server: requestId is the x-request-id header verbatim, and uri carries
+    // path segments and query values. An unbounded fragment lets a remote party
+    // decide how long this library's log lines are.
+    val requestId = ctx.requestId.fold("")(id => s" [request-id ${bound(id)}]")
+    s"${ctx.operation} ${ctx.method.wireName} ${bound(ctx.uri)}$requestId after ${ctx.durationMs}ms"
 
   private def renderDetails(errors: List[String]): String =
-    if errors.isEmpty then "" else errors.map(bound).mkString(" (", "; ", ")")
+    if errors.isEmpty then ""
+    else
+      val shown   = errors.take(MaxDetails).map(bound)
+      val omitted = errors.length - shown.length
+      val tail    = if omitted <= 0 then shown else shown :+ s"and $omitted more"
+      tail.mkString(" (", "; ", ")")
 
   private def bound(value: String): String =
     if value.length <= MaxSnippetLength then value else s"${value.take(MaxSnippetLength)}$Ellipsis"
