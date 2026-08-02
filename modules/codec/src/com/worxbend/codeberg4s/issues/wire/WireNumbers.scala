@@ -16,6 +16,13 @@ private[codeberg4s] object WireNumbers:
   def identifier(value: Long): ujson.Value =
     ujson.Num(value.toDouble)
 
+  /** One whole number as a JSON number, for an `int64` wire field that is not an identifier — a duration in seconds,
+    * say. Kept distinct from [[identifier]] so a reader of a request builder can tell which is which; the `Double`
+    * caveat above applies to both.
+    */
+  def whole(value: Long): ujson.Value =
+    ujson.Num(value.toDouble)
+
   /** A JSON array of identifiers, in the order given. */
   def identifiers(values: Vector[Long]): ujson.Value =
     ujson.Arr.from(values.map(identifier))

@@ -6,6 +6,10 @@ package com.worxbend.codeberg4s.issues
   * editing an issue can only ask for a transition, never for a state: they cannot supply the `closed_at` that
   * [[LifecycleState.Closed]] carries — the instance decides it — and [[StateFilter.All]] means nothing as an
   * instruction. Giving the transition its own two-case type is what stops either of those from being expressible.
+  *
+  * [[CreateMilestone]] and [[EditMilestone]] send this same type. Forgejo's `CreateMilestoneOption.state` declares the
+  * identical `["open", "closed"]` enum and means the identical thing, so the concept is shared rather than duplicated
+  * under a second name; only the model it is attached to differs.
   */
 enum IssueStateChange:
 

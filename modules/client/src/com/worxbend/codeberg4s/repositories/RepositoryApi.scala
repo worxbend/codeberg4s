@@ -8,8 +8,14 @@ import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.repositories.access.RepositoryAccessApi
 import com.worxbend.codeberg4s.repositories.actions.RepositoryActionApi
+import com.worxbend.codeberg4s.repositories.admin.RepositoryAdminApi
 import com.worxbend.codeberg4s.repositories.gitdata.RepositoryGitApi
+import com.worxbend.codeberg4s.repositories.hooks.RepositoryFlagApi
+import com.worxbend.codeberg4s.repositories.hooks.RepositoryHookApi
+import com.worxbend.codeberg4s.repositories.hooks.RepositoryIssueConfigApi
+import com.worxbend.codeberg4s.repositories.hooks.RepositoryWikiApi
 import com.worxbend.codeberg4s.repositories.publishing.RepositoryPublishingApi
 
 import scala.concurrent.Future
@@ -45,6 +51,24 @@ final class RepositoryApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
 
   /** Releases, release assets, tags, topics, forks and template generation. */
   val publishing: RepositoryPublishingApi = RepositoryPublishingApi(pipeline)
+
+  /** Webhooks and git hooks. */
+  val hooks: RepositoryHookApi = RepositoryHookApi(pipeline)
+
+  /** The repository wiki. */
+  val wiki: RepositoryWikiApi = RepositoryWikiApi(pipeline)
+
+  /** Repository flags, where the instance enables them. */
+  val flags: RepositoryFlagApi = RepositoryFlagApi(pipeline)
+
+  /** The issue config and issue templates a repository declares. */
+  val issueConfig: RepositoryIssueConfigApi = RepositoryIssueConfigApi(pipeline)
+
+  /** Branch and tag protection, collaborators, teams and deploy keys. */
+  val access: RepositoryAccessApi = RepositoryAccessApi(pipeline)
+
+  /** Repository lifecycle: create, edit, delete, migrate, transfer, mirrors and file writes. */
+  val admin: RepositoryAdminApi = RepositoryAdminApi(pipeline)
 
   /** Reads one repository — `GET /repos/{owner}/{repo}`.
     *
