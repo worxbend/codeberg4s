@@ -1,0 +1,121 @@
+name: Nightly
+
+# The slow half of the quality gate, plus the spec-drift detector.
+#
+# Duplication (PMD CPD), CRAP and mutation testing are minutes-to-hours of work.
+# Running them per push would make CI useless as a feedback loop, so they run
+# once a night — PLAN.md §6.6 step 7.
+#
+# The spec-drift job used to live in .forgejo/workflows/ci.yml, gated on a
+# `schedule` event that workflow never declared, so it had never run. It lives
+# here now rather than in both places: two copies of a drift detector are two
+# things to keep in step, and the one that matters is the one that actually
+# fires.
+
+on:
+  schedule:
+    # 03:00 UTC. Late enough that the day's pushes have settled, early enough
+    # that a red nightly is waiting when Europe wakes up.
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+jobs:
+  full-analysis:
+    name: verify.sh --nightly
+    # GitHub disables scheduled workflows in forks, but workflow_dispatch is
+    # not disabled, so the guard is not redundant.
+    if: ${{ !github.event.repository.fork }}
+    runs-on: ubuntu-latest
+    # Stryker4s runs the test command once per mutant. If a real score is ever
+    # produced for this repository it will be hours, not minutes.
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/scala-toolchain
+        with:
+          cache-prefix: coursier-nightly
+
+      # EXPECTED TO FAIL TODAY, AND DELIBERATELY NOT MARKED continue-on-error.
+      #
+      # `--nightly` implies `--with-slow`, so it runs the duplication and CRAP
+      # gates (both of which pass) and then mutation testing, which does not:
+      # scripts/mutate.sh refuses to exit 0 without a real mutation score, and
+      # build.mill does not yet declare the Stryker4s Mill plugin. See
+      # docs/ROADMAP.md Phase 4.
+      #
+      # A `continue-on-error: true` here would turn that into a green tick, and
+      # a nightly reporting green while mutation testing has never produced a
+      # score is a lie the rest of this repository's tooling is careful not to
+      # tell. It stays red until the plugin is wired, and then it means
+      # something.
+      - name: Full analysis
+        run: ./verify.sh --nightly
+
+  spec-drift:
+    name: Spec drift
+    if: ${{ !github.event.repository.fork }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      # The pinned spec is a snapshot of a moving target. This does not fail
+      # the build when Codeberg deploys a new Forgejo — it reports, so that a
+      # spec change is a decision someone makes rather than a surprise in a
+      # user's application. See docs/adr/0001-curated-models-over-codegen.md
+      # and docs/SPEC_PROVENANCE.md.
+      #
+      # Two things it is honest about: the models are built from captured
+      # fixtures, not from this spec (docs/HAZARDS.md records where the two
+      # disagree), so a drift here is a prompt to re-probe rather than a defect
+      # report. And the diff is truncated, because the spec is 326 paths long.
+      - name: Compare the live spec against the pinned copy
+        run: |
+          set -euo pipefail
+          curl -sSLf https://codeberg.org/swagger.v1.json -o "$RUNNER_TEMP/live.json"
+          pinned=$(sha256sum spec/swagger.v1.json | cut -d' ' -f1)
+          live=$(sha256sum "$RUNNER_TEMP/live.json" | cut -d' ' -f1)
+          if [ "$pinned" = "$live" ]; then
+            echo "spec unchanged ($pinned)"
+            echo "The pinned spec still matches codeberg.org." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "::warning::the upstream spec has changed"
+          {
+            echo "## The upstream Forgejo spec has changed"
+            echo
+            echo "| | sha256 |"
+            echo "| --- | --- |"
+            echo "| pinned (\`spec/swagger.v1.json\`) | \`$pinned\` |"
+            echo "| live (codeberg.org) | \`$live\` |"
+            echo
+            echo "Re-pinning is a deliberate act: it changes"
+            echo "\`docs/API_INVENTORY.md\`, \`docs/SPEC_PROVENANCE.md\` and possibly the"
+            echo "in-scope operation count. See docs/adr/0001-curated-models-over-codegen.md."
+            echo
+            echo '<details><summary>First 200 diff lines</summary>'
+            echo
+            echo '```diff'
+            diff <(python3 -m json.tool spec/swagger.v1.json) \
+                 <(python3 -m json.tool "$RUNNER_TEMP/live.json") | head -200 || true
+            echo '```'
+            echo
+            echo '</details>'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the live spec for comparison
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: live-swagger-${{ github.run_id }}
+          path: ${{ runner.temp }}/live.json
+          if-no-files-found: ignore
+          retention-days: 30

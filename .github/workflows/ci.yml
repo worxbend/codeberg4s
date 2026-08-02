@@ -1,0 +1,61 @@
+name: CI
+
+# ./verify.sh is the single source of truth for what CI checks.
+#
+# This workflow deliberately contains no `mill` invocation of its own. Every
+# gate — scalafmt, scalafix, the zero-warning compile, the unit suite, the
+# architecture-boundary grep, coverage — lives in verify.sh, so a contributor
+# who runs `./verify.sh` locally runs exactly what CI runs. The moment a check
+# is added here instead of there, the two drift and "green on my machine"
+# stops meaning anything. Add checks to verify.sh; leave this file alone.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A second push to the same branch makes the first run's answer worthless.
+# main is excluded from cancellation because its history is what nightly and
+# release runs are judged against.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  verify:
+    name: verify.sh
+    runs-on: ubuntu-latest
+    # The fast gate compiles five modules and runs ~3500 tests from a cold
+    # Coursier cache on a cache miss. 45 minutes is generous; a run that takes
+    # longer has hung, not slowed down.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # verify.sh's scalafmt step asks Git which Scala sources are tracked
+          # (.scalafmt.conf sets project.git = true). A shallow checkout is
+          # enough for that, but the working tree must be a real repository.
+          fetch-depth: 1
+
+      - uses: ./.github/actions/scala-toolchain
+
+      # One job on purpose. Splitting format, compile and test across jobs
+      # would re-resolve dependencies and recompile from scratch in each of
+      # them, which costs more than it saves and loses verify.sh's ordering —
+      # the cheap checks are first so a formatting mistake fails in seconds.
+      - name: Verify
+        run: ./verify.sh
+
+      # Coverage HTML is the one artifact worth keeping from a pull request:
+      # the gate reports a percentage, and the report says which lines.
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scoverage-${{ github.run_id }}
+          path: out/modules/*/scoverage/
+          if-no-files-found: ignore
+          retention-days: 14

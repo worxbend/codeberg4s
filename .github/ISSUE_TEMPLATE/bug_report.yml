@@ -1,0 +1,163 @@
+name: Bug report
+description: The library did something other than what it documents.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Four fields below do most of the diagnostic work: **which instance**,
+        **which library version**, **which operation** and **which
+        `CodebergError` case**. With those, a maintainer can usually reproduce
+        the problem from a golden fixture without ever touching your account.
+
+        If the bug is that a credential appeared somewhere it should not —
+        an exception message, a `toString`, a log line — **stop and read
+        `SECURITY.md` in the repository root instead.** That is the one class
+        of bug this project does not want discussed in public first.
+
+  - type: input
+    id: library-version
+    attributes:
+      label: codeberg4s version
+      description: >
+        The version of `codeberg4s-client` (or whichever artifact you depend
+        on) that reproduces this. `0.1.0-SNAPSHOT` plus a commit hash is fine
+        while nothing is published.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: instance-kind
+    attributes:
+      label: Which instance
+      description: >
+        Forgejo's behaviour varies between deployments — page-size clamping and
+        which endpoints answer anonymously both differ. This decides whether a
+        maintainer can reproduce it at all.
+      options:
+        - codeberg.org
+        - A self-hosted Forgejo
+        - A Gitea instance
+        - Other or unsure
+    validations:
+      required: true
+
+  - type: input
+    id: instance-version
+    attributes:
+      label: Instance software version
+      description: >
+        The value of `client.version.get()`, or the string at the bottom of the
+        instance's web UI. Leave blank only if you genuinely cannot obtain it.
+      placeholder: "16.0.0-dev-668-1bdb1938+gitea-1.22.0"
+    validations:
+      required: false
+
+  - type: input
+    id: operation
+    attributes:
+      label: Operation
+      description: >
+        The operation id from `docs/API_INVENTORY.md`, or the method you
+        called. Either is fine; both is better.
+      placeholder: "repoGetContents — client.repos.getContents(owner, name, path)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: error-case
+    attributes:
+      label: Which CodebergError case did you observe?
+      description: >
+        The ADT has exactly these five cases. There is no `NotFound` and no
+        `RateLimited`: a 404 arrives as `Api(ctx, 404, body)` and a 429 as
+        `Api(ctx, 429, body)`, or as `RetriesExhausted` wrapping one. Pick the
+        last option if the call succeeded and simply returned the wrong thing.
+      options:
+        - "Transport — nothing reached the server"
+        - "Api — the server answered non-2xx"
+        - "DecodingFailed — a 2xx payload did not match the model"
+        - "Validation — a smart constructor rejected an argument"
+        - "RetriesExhausted — the retry engine gave up"
+        - "None — the call succeeded but the result was wrong"
+        - "The call never completed (hang, deadlock, leak)"
+    validations:
+      required: true
+
+  - type: input
+    id: http-status
+    attributes:
+      label: HTTP status, if the case was Api or RetriesExhausted
+      placeholder: "404"
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected-actual
+    attributes:
+      label: What you expected, and what happened
+      description: >
+        Say what the documentation or the Scaladoc led you to expect. A
+        difference of opinion about intended behaviour is still a bug — either
+        in the code or in the documentation.
+      placeholder: |
+        Expected: getContents on a directory to decode as RepositoryContent.Directory.
+        Actual:   DecodingFailed at $[0].type with snippet "submodule".
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Smallest program that reproduces it
+      description: >
+        Scala, please, and complete enough to compile — including how the
+        client is built. It is rendered as Scala; no backticks needed.
+      render: scala
+      placeholder: |
+        val client = CodebergClient(CodebergConfig(Auth.Anonymous))
+        for
+          owner <- Owner.from("forgejo")
+          name  <- RepoName.from("forgejo")
+        yield client.repos.attempt.get(owner, name)
+    validations:
+      required: true
+
+  - type: textarea
+    id: error-output
+    attributes:
+      label: The error, verbatim
+      description: >
+        Paste `error.describe`, or the exception and its stack trace. Both are
+        redacted by construction — `CallContext` holds a redacted URI and
+        `ApiToken` renders as `***` — so this is safe to paste. Check it
+        anyway before you post; if you find a credential in there, that is a
+        security report, not a bug report.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Scala version, JDK, operating system, and your build tool.
+      placeholder: |
+        Scala 3.8.4, Temurin 21.0.5, Linux, Mill 1.1.7
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before filing
+      options:
+        - label: >
+            I checked docs/HAZARDS.md — several surprising behaviours are
+            measured, documented and deliberate, particularly around page-size
+            clamping and anonymous access.
+          required: true
+        - label: >
+            The pasted output contains no token, password or private URL.
+          required: true

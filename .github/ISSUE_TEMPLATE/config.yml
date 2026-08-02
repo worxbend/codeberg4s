@@ -1,0 +1,26 @@
+# Every link below points at the canonical project URL declared in build.mill
+# (`Publish.projectUrl`). They resolve once the repository is pushed to
+# Codeberg; if the project ever moves, build.mill and this file move together.
+
+blank_issues_enabled: false
+
+contact_links:
+  - name: Security vulnerability — do not open an issue
+    url: https://codeberg.org/worxbend/codeberg4s/src/branch/main/SECURITY.md
+    about: >
+      A leaked credential or a redaction hole must be reported privately.
+      SECURITY.md says how to reach the maintainer and what is in scope.
+
+  - name: How do I ...?
+    url: https://codeberg.org/worxbend/codeberg4s/src/branch/main/README.md
+    about: >
+      The README covers the two error rails, pagination, configuration and
+      telemetry; docs/HAZARDS.md records where Forgejo's behaviour differs
+      from its own specification. If the answer is not there, that is a
+      documentation bug — please file one.
+
+  - name: The project's home tracker
+    url: https://codeberg.org/worxbend/codeberg4s/issues
+    about: >
+      codeberg4s is developed on Codeberg. Issues are read in both places;
+      file wherever you already have an account.

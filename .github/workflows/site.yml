@@ -1,0 +1,93 @@
+name: Site
+
+# Builds the documentation site with scripts/site.sh and publishes
+# out/site/html to GitHub Pages.
+#
+# The build step also runs on pull requests, because the site compiles the
+# documentation snippets against the real sources — a guide that documents a
+# method which no longer exists should fail the pull request that removed the
+# method, not the next deploy. Only the deploy is restricted to main.
+#
+# Repository setting this depends on: Settings → Pages → Source must be
+# "GitHub Actions". This workflow does not call actions/configure-pages, so it
+# never mutates that setting; if Pages is not enabled the deploy job fails with
+# a clear message instead of silently reconfiguring the repository.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Per-ref, cancellable: a superseded pull-request build is wasted work.
+    # Deliberately not the same group as the deploy below, or two open pull
+    # requests would queue behind each other for no reason.
+    concurrency:
+      group: site-build-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/scala-toolchain
+        with:
+          # The site build resolves the documentation toolchain on top of the
+          # library's own dependencies, so it gets its own cache lane rather
+          # than churning the verify job's.
+          cache-prefix: coursier-site
+
+      # scripts/site.sh owns everything about how the site is produced — which
+      # documentation tool, which inputs, where Scaladoc is spliced in. This
+      # workflow only knows the contract: run it, and out/site/html is the
+      # finished site. chmod is defensive; a script committed without the
+      # executable bit should not cost a debugging round-trip.
+      - name: Build the documentation site
+        run: |
+          set -euo pipefail
+          test -x scripts/site.sh || chmod +x scripts/site.sh
+          ./scripts/site.sh
+
+      - name: Check the site was actually produced
+        run: |
+          set -euo pipefail
+          if [ ! -f out/site/html/index.html ]; then
+            echo "scripts/site.sh exited 0 but out/site/html/index.html does not exist." >&2
+            echo "An empty deploy would take the published site down; refusing." >&2
+            exit 1
+          fi
+
+      - name: Package for Pages
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: out/site/html
+
+  deploy:
+    name: Deploy to Pages
+    # A pull request builds the site and stops there. Deploying from a pull
+    # request would let any fork overwrite the published documentation.
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Pages has exactly one live version, so queue deploys rather than
+    # cancelling them: a cancelled deploy can leave the site on an older commit
+    # than the one that just landed.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

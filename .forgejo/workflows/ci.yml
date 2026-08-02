@@ -1,13 +1,22 @@
 name: CI
 
+# The fast gate on the canonical remote (codeberg.org).
+#
+# ./verify.sh is the single source of truth for what CI checks — the same
+# script a contributor runs locally and the same one .github/workflows/ci.yml
+# runs. Nothing is checked here that is not checked there.
+#
+# The `nightly` and `spec-drift` jobs that used to live in this file have moved
+# to .github/workflows/nightly.yml. Both were gated on
+# `github.event_name == 'schedule'` while this workflow declared only `push`
+# and `pull_request`, so neither had ever run. They are defined once, in the
+# workflow that actually has a schedule, rather than maintained in two places
+# and firing in neither.
+
 on:
   push:
     branches: [main]
   pull_request:
-  # Without this, the two jobs below are gated on an event the workflow never
-  # receives, so they look configured and never run.
-  schedule:
-    - cron: "0 3 * * *"
 
 env:
   # Keep every cache inside the workspace. The constitution requires that the
@@ -31,44 +40,22 @@ jobs:
           key: coursier-${{ hashFiles('build.mill', '.mill-version') }}
           restore-keys: coursier-
 
+      # verify.sh runs scripts/coverage-gate.sc through scala-cli, so the image
+      # needs scala-cli as well as a JDK. Pinned by version and checksum for
+      # the same reason scripts/cpd.sh pins PMD.
+      - name: Install scala-cli
+        env:
+          SCALA_CLI_VERSION: "1.15.0"
+          SCALA_CLI_SHA256: "37b33939ff82a8730263b6c72d81e23db4987b4b399c8a403c8ece76604a30f6"
+        run: |
+          set -euo pipefail
+          url="https://github.com/VirtusLab/scala-cli/releases/download/v${SCALA_CLI_VERSION}/scala-cli-x86_64-pc-linux.gz"
+          curl -fsSL -o /tmp/scala-cli.gz "$url"
+          echo "${SCALA_CLI_SHA256}  /tmp/scala-cli.gz" | sha256sum --check --strict
+          gunzip -c /tmp/scala-cli.gz > /usr/local/bin/scala-cli
+          chmod +x /usr/local/bin/scala-cli
+          rm -f /tmp/scala-cli.gz
+          scala-cli version --cli-version
+
       - name: Verify
         run: ./verify.sh
-
-  # Mutation testing and the duplication/CRAP analyses are slow enough that
-  # running them per push would make CI useless as a feedback loop. They run
-  # nightly instead, per PLAN.md section 6.6 step 7.
-  nightly:
-    if: github.event_name == 'schedule'
-    runs-on: docker
-    container:
-      image: docker.io/eclipse-temurin:21-jdk
-    steps:
-      - uses: actions/checkout@v4
-      - name: Full analysis
-        run: ./verify.sh --nightly
-
-  # The pinned spec is a snapshot of a moving target. This does not fail the
-  # build when Codeberg deploys a new Forgejo — it reports, so that a spec
-  # change is a decision someone makes rather than a surprise in a user's
-  # application. See docs/adr/0001-curated-models-over-codegen.md.
-  spec-drift:
-    if: github.event_name == 'schedule'
-    runs-on: docker
-    container:
-      image: docker.io/eclipse-temurin:21-jdk
-    steps:
-      - uses: actions/checkout@v4
-      - name: Compare the live spec against the pinned copy
-        run: |
-          curl -sL https://codeberg.org/swagger.v1.json -o /tmp/live.json
-          pinned=$(sha256sum spec/swagger.v1.json | cut -d' ' -f1)
-          live=$(sha256sum /tmp/live.json | cut -d' ' -f1)
-          if [ "$pinned" != "$live" ]; then
-            echo "::warning::the upstream spec has changed"
-            echo "pinned $pinned"
-            echo "live   $live"
-            diff <(python3 -m json.tool spec/swagger.v1.json) \
-                 <(python3 -m json.tool /tmp/live.json) | head -200 || true
-          else
-            echo "spec unchanged"
-          fi

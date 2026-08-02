@@ -10,6 +10,11 @@
 #   ./verify.sh --with-slow  also runs duplication and CRAP analysis
 #   ./verify.sh --nightly    also runs mutation testing
 #
+# --with-slow gates duplication against a recorded baseline (CPD_BASELINE_GROUPS
+# below) and fails only when duplication rises. --nightly is expected to fail at
+# the mutation step until Stryker4s is declared in build.mill; scripts/mutate.sh
+# refuses to report a score it did not produce.
+#
 # Never included in any mode: modules/it (needs Docker or the live network) and
 # ScalaCheck property suites (the `Property` munit tag). Both are
 # environmentally unsuitable or deliberately separated per the constitution —
@@ -34,19 +39,54 @@ readonly UNIT_MODULES=(
 # stub-reachable paths are exercised without a live server (PLAN.md §6.1).
 readonly COVERED_MODULES=(modules.domain modules.core modules.codec)
 
+# Recorded duplication, not a tolerated threshold.
+#
+# `scripts/cpd.sh` finds real duplication in real code: element-wise DTO
+# conversion, the page/limit query pair, path-segment validation — the helpers
+# docs/LEDGER.md § "Helpers awaiting promotion" already names and owns. The
+# honest options were to leave --with-slow permanently red, which trains
+# everyone to ignore it, or to record what the debt is today and fail on any
+# increase. This is the second.
+#
+# It is NOT a raised threshold. CPD_MIN_TOKENS stays at 40, every group is
+# still reported, and the number below is the exact count that exists — so a
+# change that adds one group fails, and a change that removes ten is told to
+# bank the win by lowering this number.
+#
+# MEASURED, NOT RECALLED: `scripts/cpd.sh --report` on 2026-08-02 against
+# modules/{domain,core,codec,transport,client}/src with PMD 7.26.0 at 40
+# tokens — 323 groups over 1195 locations (599 in codec, 541 in client, 45 in
+# domain, 8 in core, 2 in transport). docs/LEDGER.md still says 62; that figure
+# predates the long tail, which took the surface from 61 operations to 439.
+#
+# The number is specific to PMD 7.26.0 at 40 tokens. Change either and remeasure
+# rather than guessing which way the count moved.
+#
+# Deliberately not overridable from the environment: moving the baseline has to
+# appear in a diff, with a commit message saying why.
+readonly CPD_BASELINE_GROUPS=323
+
 with_slow=false
 nightly=false
 for arg in "$@"; do
   case "$arg" in
     --with-slow) with_slow=true ;;
     --nightly) with_slow=true; nightly=true ;;
-    -h|--help) sed -n '3,20p' "$0"; exit 0 ;;
+    # Print the header block above, whatever length it has grown to — a fixed
+    # line range goes stale the first time someone documents a new flag.
+    -h|--help) awk 'NR > 2 && /^#/ { sub(/^# ?/, ""); print; next } NR > 2 { exit }' "$0"; exit 0 ;;
     *) echo "verify.sh: unknown option '$arg'" >&2; exit 2 ;;
   esac
 done
 
 step=0
 start_time=$(date +%s)
+
+# One scratch directory for every step's log, with the trap installed before
+# any step can run. A per-step `mktemp` plus a per-step `trap` means the last
+# trap wins and the earlier files leak.
+work_dir=$(mktemp -d)
+trap 'rm -rf "$work_dir"' EXIT
 
 announce() {
   step=$((step + 1))
@@ -74,6 +114,35 @@ announce "Lint check (scalafix)"
 "$MILL" modules.__.fix --check || fail "scalafix (run: $MILL modules.__.fix)"
 
 # ---------------------------------------------------------------------------
+announce "Every source tree is inside the gate"
+# `modules.__.compile` is a wildcard, so a module declared under `modules` in
+# build.mill is compiled, formatted and linted without this script being
+# touched. What a wildcard cannot notice is the opposite mistake: a source tree
+# that exists on disk and was never wired into the build. Nothing compiles it,
+# nothing lints it, and every step below still reports green.
+#
+# modules/examples is why this check exists. Its whole purpose is that an
+# example which stops compiling breaks the gate on the commit that invalidated
+# it — a promise worth exactly as much as the guarantee that the build can see
+# the module at all. As of this writing build.mill declares
+# `object examples extends Codeberg4sModule` inside `object modules`, so the
+# wildcard does reach it; this step is what keeps that true.
+gate_targets=$("$MILL" resolve 'modules.__.compile') || fail "could not resolve the module list"
+outside_gate=()
+for dir in modules/*/; do
+  name=$(basename "$dir")
+  [[ -d "$dir/src" ]] || continue
+  grep -qE "(^|[[:space:]])modules\.$name\.compile([[:space:]]|$)" <<<"$gate_targets" ||
+    outside_gate+=("$name")
+done
+if [[ ${#outside_gate[@]} -gt 0 ]]; then
+  printf '\033[31m  source trees that no build.mill module compiles:\033[0m\n'
+  printf '    modules/%s/src\n' "${outside_gate[@]}"
+  fail "a source tree outside the gate — declare it under \`object modules\` in build.mill"
+fi
+echo "  every modules/*/src is reached by modules.__.compile"
+
+# ---------------------------------------------------------------------------
 announce "Compile — warnings are errors"
 "$MILL" modules.__.compile || fail "compilation"
 
@@ -90,8 +159,7 @@ for target in "${UNIT_MODULES[@]}"; do
   test_targets+=("$target")
 done
 
-test_log=$(mktemp)
-trap 'rm -f "$test_log"' EXIT
+test_log="$work_dir/tests.log"
 "$MILL" "${test_targets[@]}" --exclude-tags=Property 2>&1 | tee "$test_log" || fail "unit tests"
 
 executed=$(grep -oE 'finished: [0-9]+ failed, [0-9]+ ignored, [0-9]+ total' "$test_log" |
@@ -148,21 +216,53 @@ fi
 # ---------------------------------------------------------------------------
 if $with_slow; then
   # PMD 7.26.0 was confirmed to ship a working Scala tokenizer and to find real
-  # duplication in modules/*/src, so this step is a genuine gate. It separates
-  # "duplication found" (exit 1 — a real failure) from "the tool could not run"
-  # (exit 2 — e.g. offline on a first run), because the second must not be
-  # reported as clean code.
+  # duplication in modules/*/src, so this step is a genuine gate.
+  #
+  # cpd.sh is invoked in --report mode, which never fails on duplication, and
+  # the baseline comparison below decides instead. Its other exit codes still
+  # matter and are still fatal: 1 means PMD could not tokenise a file (a file it
+  # cannot parse is a file it cannot check), and anything else means the tool
+  # could not run at all — offline on a first run, say. Neither may be reported
+  # as clean code, which is why they are separated from "found duplication".
   announce "Duplication (PMD CPD)"
   if [[ -x scripts/cpd.sh ]]; then
+    cpd_log="$work_dir/cpd.log"
     set +e
-    scripts/cpd.sh
+    scripts/cpd.sh --report >"$cpd_log" 2>&1
     cpd_status=$?
     set -e
     case "$cpd_status" in
-      0) ;;
-      1) fail "duplicate code above the ${CPD_MIN_TOKENS:-40}-token threshold" ;;
-      *) fail "PMD CPD could not run (see above) — this is not a clean result" ;;
+      0) ;; # report mode: duplication does not fail here, the baseline below decides
+      1) cat "$cpd_log"; fail "PMD CPD could not tokenise some sources — a file it cannot parse is a file it cannot check" ;;
+      *) cat "$cpd_log"; fail "PMD CPD could not run (see above) — this is not a clean result" ;;
     esac
+
+    cpd_groups=$(grep -c '^Found a ' "$cpd_log" || true)
+    printf '  %s duplication group(s) at %s+ tokens · baseline %s\n' \
+      "$cpd_groups" "${CPD_MIN_TOKENS:-40}" "$CPD_BASELINE_GROUPS"
+
+    if [[ "$cpd_groups" -gt "$CPD_BASELINE_GROUPS" ]]; then
+      cat "$cpd_log"
+      printf '\n\033[31m  duplication rose from %s group(s) to %s.\033[0m\n' \
+        "$CPD_BASELINE_GROUPS" "$cpd_groups" >&2
+      printf '  Deduplicate what this change added, or — if the increase is genuinely\n' >&2
+      printf '  the cost of something better — raise CPD_BASELINE_GROUPS in this script\n' >&2
+      printf '  in the same commit and say why in the message. Do not raise\n' >&2
+      printf '  CPD_MIN_TOKENS; that hides the finding rather than recording it.\n' >&2
+      fail "duplication above the recorded baseline"
+    fi
+
+    if [[ "$cpd_groups" -lt "$CPD_BASELINE_GROUPS" ]]; then
+      printf '\033[32m  duplication fell below the baseline (%s < %s).\033[0m\n' \
+        "$cpd_groups" "$CPD_BASELINE_GROUPS"
+      printf '  Lower CPD_BASELINE_GROUPS in verify.sh to %s so the ground gained is held.\n' \
+        "$cpd_groups"
+    elif [[ "$cpd_groups" -gt 0 ]]; then
+      printf '\033[33m  %s known duplication group(s) — tracked debt, not a clean result.\033[0m\n' \
+        "$cpd_groups"
+      printf '  docs/LEDGER.md § "Helpers awaiting promotion" names the ones with owners.\n'
+      printf '  Run scripts/cpd.sh --report to see them all.\n'
+    fi
   else
     echo "  (scripts/cpd.sh absent — skipped)"
   fi

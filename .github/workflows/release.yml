@@ -1,0 +1,96 @@
+name: Release
+
+# Publishes the five artifacts to Maven Central when a v* tag is pushed.
+#
+# Nothing here decides what the version is. `Publish.version` in build.mill is
+# the version; the tag only says "publish that". The guard below refuses to run
+# when the two disagree, because a tag that does not match the artifact it
+# produces is unresolvable archaeology six months later.
+#
+# The full procedure — how to set the version, how the key and credentials are
+# produced, how to verify the release landed, what to do about a bad one — is
+# in RELEASING.md. This file is that document made executable.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish to Maven Central
+    # A fork that happens to carry the tags must never publish under this
+    # group id, no matter what secrets its owner configured. The upstream
+    # repository is the only place a release can come from.
+    if: ${{ !github.event.repository.fork }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment:
+      # Protect this environment in repository settings with a required
+      # reviewer. It is the last human checkpoint before an immutable
+      # artifact reaches Central.
+      name: maven-central
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/scala-toolchain
+
+      # The tag is a claim about the build. Check the claim before spending an
+      # hour on it, and long before anything is signed.
+      - name: Tag must match Publish.version in build.mill
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          declared=$(sed -n 's/^[[:space:]]*val version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' build.mill | head -1)
+          echo "tag      $tag"
+          echo "build.mill $declared"
+          if [ -z "$declared" ]; then
+            echo "could not read Publish.version from build.mill" >&2
+            exit 1
+          fi
+          if [ "$tag" != "$declared" ]; then
+            echo "refusing to publish: tag v$tag does not match Publish.version $declared" >&2
+            echo "set Publish.version, commit it, then tag that commit — see RELEASING.md" >&2
+            exit 1
+          fi
+          case "$declared" in
+            *-SNAPSHOT)
+              echo "refusing to publish: $declared is a snapshot version" >&2
+              echo "a v* tag is a release; drop the -SNAPSHOT suffix first" >&2
+              exit 1
+              ;;
+          esac
+
+      # The same gate every push runs. A release is not exempt from it; it is
+      # the one build that most needs it.
+      - name: Verify
+        run: ./verify.sh
+
+      # publishAll resolves __:PublishModule.publishArtifacts — every
+      # PublishModule in the build, which is exactly the five library modules.
+      # modules.it is not a PublishModule, so integration tests cannot leak
+      # into a release. Each module pushes four files plus signatures and
+      # checksums: the pom, the main jar, -sources.jar and -javadoc.jar.
+      #
+      # Mill reads all four credentials from the environment. They are not
+      # passed as command-line arguments, which would put them in the process
+      # table and in Mill's own logs.
+      - name: Publish
+        env:
+          MILL_SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          MILL_SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          MILL_PGP_SECRET_BASE64: ${{ secrets.PGP_SECRET_BASE64 }}
+          MILL_PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          for name in MILL_SONATYPE_USERNAME MILL_SONATYPE_PASSWORD MILL_PGP_SECRET_BASE64; do
+            if [ -z "${!name:-}" ]; then
+              echo "$name is empty — the corresponding repository secret is not set." >&2
+              echo "See RELEASING.md § Credentials." >&2
+              exit 1
+            fi
+          done
+          ./mill mill.javalib.SonatypeCentralPublishModule/publishAll

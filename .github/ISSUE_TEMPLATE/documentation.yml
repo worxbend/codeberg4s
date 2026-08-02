@@ -1,0 +1,90 @@
+name: Documentation issue
+description: Something documented is wrong, missing, or does not compile.
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Documentation that describes a method which does not exist is worse
+        than no documentation, so this is a real bug report and gets treated as
+        one. That includes the Scaladoc, the README, the guides, `docs/HAZARDS.md`
+        and `docs/API_INVENTORY.md`.
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - "README.md"
+        - "Scaladoc on a published type or method"
+        - "A guide on the documentation site"
+        - "docs/HAZARDS.md"
+        - "docs/API_INVENTORY.md"
+        - "docs/ROADMAP.md, LEDGER.md or an ADR"
+        - "CONTRIBUTING.md, RELEASING.md, SECURITY.md"
+        - "modules/examples"
+        - "Somewhere else"
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Exact location
+      description: File and heading, or a URL on the documentation site.
+      placeholder: "README.md § Pagination — the clamp hazard"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is wrong with it?
+      options:
+        - "It describes something that does not exist"
+        - "The example does not compile"
+        - "The example compiles but does not do what it claims"
+        - "It is correct but incomplete, or easy to misread"
+        - "It contradicts another document"
+        - "It is missing entirely"
+    validations:
+      required: true
+
+  - type: input
+    id: operation
+    attributes:
+      label: Operation id, if this concerns one
+      placeholder: "repoListReleases"
+    validations:
+      required: false
+
+  - type: input
+    id: library-version
+    attributes:
+      label: Which version were you reading against?
+      description: >
+        A published version, or a commit hash. Documentation on the site is
+        built from `main`, so a mismatch with a released artifact is itself
+        worth reporting.
+      placeholder: "0.1.0"
+    validations:
+      required: false
+
+  - type: textarea
+    id: detail
+    attributes:
+      label: What it says, and what is true instead
+      description: >
+        Quote the sentence or the snippet. If it does not compile, paste the
+        compiler error — the project builds with `-Werror`, so a warning is an
+        error here too.
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested wording
+      description: Optional, and very welcome. A pull request is even better.
+    validations:
+      required: false

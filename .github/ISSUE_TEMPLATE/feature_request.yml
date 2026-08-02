@@ -1,0 +1,112 @@
+name: Feature request
+description: An operation, a convenience or a capability the library does not have.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Two things worth knowing before you write:
+
+        - **All 439 in-scope operations are implemented.** If an endpoint looks
+          missing, check `docs/API_INVENTORY.md` first — it lists every
+          operation in the pinned specification and marks the 67 that are
+          deliberately out of scope for v1 (`admin`, `activitypub`, `package`).
+        - **Some gaps are known and tracked.** `listAll` and `foldPages` are
+          the standing example: `core.Pagination` implements both, but neither
+          is reachable from the published API. `docs/ROADMAP.md` Phase 2 owns
+          that. A second issue for a tracked gap costs a maintainer more than
+          it costs you.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of gap is this?
+      options:
+        - "A missing operation (an endpoint I cannot call)"
+        - "A missing convenience over operations that exist"
+        - "A missing model field, or a field modelled in the wrong shape"
+        - "Configuration, retries, telemetry or transport"
+        - "Something else"
+    validations:
+      required: true
+
+  - type: input
+    id: operation
+    attributes:
+      label: Operation id, if this is about an endpoint
+      description: >
+        Copy it from `docs/API_INVENTORY.md`, or give the method and path from
+        the Forgejo API. If it appears in the inventory as out of scope, say
+        why v1 should change its mind.
+      placeholder: "issueEditIssueDeadline — PATCH /repos/{owner}/{repo}/issues/{index}/deadline"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: instance-kind
+    attributes:
+      label: Which instance do you need this against?
+      description: >
+        A capability that only exists on a self-hosted deployment is still in
+        scope — the library is not codeberg.org-specific — but it changes how
+        it can be tested.
+      options:
+        - codeberg.org
+        - A self-hosted Forgejo
+        - A Gitea instance
+        - Any or all of them
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: >
+        Describe the task, not the API you imagine. "Close every issue
+        labelled stale, across 200 repositories" tells a maintainer more than
+        "add a bulk close method", and often has an answer today.
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: What are you doing instead today?
+      description: >
+        Hand-rolled request, a second HTTP client, giving up. If the workaround
+        is unpleasant, say how — that is the strongest argument a feature
+        request can carry.
+    validations:
+      required: false
+
+  - type: textarea
+    id: shape
+    attributes:
+      label: The API you would like, if you have one in mind
+      description: >
+        House style, so it lands closer to something usable: explicit result
+        types, `Either`-returning smart constructors for identifiers,
+        `Future[Page[A]]` plus `PageParams` for anything that lists, and both
+        rails — the direct one and `attempt`.
+      render: scala
+      placeholder: |
+        def listAll(owner: Owner, name: RepoName, query: IssueQuery): Future[Vector[Issue]]
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before filing
+      options:
+        - label: >
+            I checked docs/API_INVENTORY.md and docs/ROADMAP.md, and this is
+            neither implemented nor already tracked.
+          required: true
+        - label: >
+            I understand that additions have to hold the project's line —
+            no `null`, no unbounded collections, validated identifiers, both
+            error rails, Scaladoc stating the error contract — and that this
+            may be why the obvious shape is not the one that ships.
+          required: false

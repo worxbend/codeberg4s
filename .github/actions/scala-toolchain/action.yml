@@ -1,0 +1,78 @@
+name: Scala toolchain
+description: >
+  JDK 21 (Temurin), a workspace-local Coursier cache and scala-cli — everything
+  ./verify.sh needs and nothing it does not.
+
+# Every workflow in this repository sets its toolchain up through this one
+# action. Four copies of "install a JDK, warm the cache, fetch scala-cli" is
+# four places for CI to drift away from itself, and the first symptom of that
+# drift is a release built on a different JDK from the one the tests ran on.
+#
+# scala-cli is not optional decoration: verify.sh runs scripts/coverage-gate.sc
+# on every invocation and scripts/crap.sc under --with-slow, and both are
+# scala-cli scripts. A runner without scala-cli fails at the coverage step.
+
+inputs:
+  java-version:
+    description: JDK feature release to install. Change it in one place, here.
+    required: false
+    default: "21"
+  cache-prefix:
+    description: >
+      Cache key prefix. Give a job its own prefix when its Coursier footprint
+      differs from the verify job's, so the two do not evict each other.
+    required: false
+    default: coursier
+
+runs:
+  using: composite
+  steps:
+    # The constitution requires the build to write nothing outside the project.
+    # Pinning COURSIER_CACHE into the workspace also makes the cache key below
+    # cover what actually gets restored — a cache under ~/.cache would be keyed
+    # on build.mill and yet contain artifacts from any other job.
+    - name: Keep every cache inside the workspace
+      shell: bash
+      run: |
+        echo "COURSIER_CACHE=$GITHUB_WORKSPACE/.cache/coursier" >> "$GITHUB_ENV"
+        echo "MILL_JVM_OPTS=-Xmx3g" >> "$GITHUB_ENV"
+
+    - name: Set up JDK ${{ inputs.java-version }} (Temurin)
+      uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: ${{ inputs.java-version }}
+
+    - name: Cache Coursier
+      uses: actions/cache@v6
+      with:
+        path: .cache/coursier
+        # build.mill names every dependency; .mill-version names Mill's own.
+        # Nothing else changes what Coursier downloads, so nothing else belongs
+        # in the key.
+        key: ${{ inputs.cache-prefix }}-${{ runner.os }}-${{ hashFiles('build.mill', '.mill-version') }}
+        restore-keys: |
+          ${{ inputs.cache-prefix }}-${{ runner.os }}-
+
+    # Pinned by version *and* by checksum, for the same reason scripts/cpd.sh
+    # pins PMD: a toolchain fetched from the network without verification is a
+    # supply-chain hole in a workflow that also signs and publishes artifacts.
+    # The digest below is of the v1.15.0 x86_64-linux asset, verified by
+    # downloading it and running `scala-cli version --cli-version`.
+    - name: Install scala-cli
+      shell: bash
+      env:
+        SCALA_CLI_VERSION: "1.15.0"
+        SCALA_CLI_SHA256: "37b33939ff82a8730263b6c72d81e23db4987b4b399c8a403c8ece76604a30f6"
+      run: |
+        set -euo pipefail
+        dir="$RUNNER_TEMP/scala-cli"
+        mkdir -p "$dir"
+        url="https://github.com/VirtusLab/scala-cli/releases/download/v${SCALA_CLI_VERSION}/scala-cli-x86_64-pc-linux.gz"
+        curl -fsSL -o "$dir/scala-cli.gz" "$url"
+        echo "${SCALA_CLI_SHA256}  $dir/scala-cli.gz" | sha256sum --check --strict
+        gunzip -c "$dir/scala-cli.gz" > "$dir/scala-cli"
+        chmod +x "$dir/scala-cli"
+        rm -f "$dir/scala-cli.gz"
+        echo "$dir" >> "$GITHUB_PATH"
+        "$dir/scala-cli" version --cli-version
