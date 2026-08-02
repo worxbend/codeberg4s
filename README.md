@@ -18,8 +18,9 @@ REST API v1.
   another page exists.
 - **Small dependency footprint** — sttp client4 and upickle. That is the list.
 
-> Status: pre-release, `0.1.0` in progress. Seven endpoint groups and 61
-> operations are implemented against a 439-operation in-scope surface.
+> Status: pre-release, `0.1.0` in progress. **All 439 in-scope operations are
+> implemented** on both rails — the whole Forgejo v1 API except `admin`,
+> `activitypub` and `package`, which `PLAN.md` puts out of scope for v1.
 > [`docs/ROADMAP.md`](docs/ROADMAP.md) tracks phases;
 > [`docs/API_INVENTORY.md`](docs/API_INVENTORY.md) has the endpoint-level
 > checklist and the honest percentage. Nothing is published to Maven Central
