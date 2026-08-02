@@ -3,6 +3,8 @@ package com.worxbend.codeberg4s.transport
 import com.worxbend.codeberg4s.CodebergConfig
 import com.worxbend.codeberg4s.TransportCause
 import com.worxbend.codeberg4s.auth.Auth
+import com.worxbend.codeberg4s.core.BinaryHttpPort
+import com.worxbend.codeberg4s.core.BinaryResponse
 import com.worxbend.codeberg4s.core.CodebergRequest
 import com.worxbend.codeberg4s.core.CodebergResponse
 import com.worxbend.codeberg4s.core.HttpPort
@@ -14,6 +16,7 @@ import sttp.client4.BackendOptions
 import sttp.client4.PartialRequest
 import sttp.client4.Request
 import sttp.client4.Response
+import sttp.client4.asByteArrayAlways
 import sttp.client4.asStringAlways
 import sttp.client4.basicRequest
 import sttp.client4.httpclient.HttpClientFutureBackend
@@ -71,7 +74,8 @@ final class SttpHttpPort(
     backend: Backend[Future],
     config: CodebergConfig,
 )(using ExecutionContext)
-    extends HttpPort[Future]:
+    extends HttpPort[Future]
+      with BinaryHttpPort[Future]:
 
   /** The request target root, parsed once.
     *
@@ -95,8 +99,40 @@ final class SttpHttpPort(
       case Left(failure) => Future.successful(Left(failure))
       case Right(uri)    => dispatch(build(request, uri))
 
+  /** Sends `request` and keeps the response body as bytes.
+    *
+    * Reads with `asByteArrayAlways` rather than `asStringAlways`, so an archive survives. Only the few endpoints that
+    * answer a ZIP go through here; everything else keeps the textual path, which is cheaper and is what the JSON and
+    * `text/plain` endpoints want.
+    */
+  override def sendBinary(
+      request: CodebergRequest,
+      redactedUri: String,
+  ): Future[Either[TransportFailure, BinaryResponse]] =
+    root match
+      case Left(failure) => Future.successful(Left(failure))
+      case Right(uri)    => dispatchBinary(buildBinary(request, uri))
+
   /** Deliberately opaque: this object holds the configured credentials, so it renders nothing about its state. */
   override def toString: String = "SttpHttpPort"
+
+  private def dispatchBinary(
+      request: Request[Array[Byte]]
+  ): Future[Either[TransportFailure, BinaryResponse]] =
+    request
+      .send(backend)
+      .map(SttpHttpPort.succeedBinary)
+      .recover:
+        case error: InterruptedException => SttpHttpPort.fail(error)
+        case NonFatal(error)             => SttpHttpPort.fail(error)
+
+  private def buildBinary(request: CodebergRequest, uri: Uri): Request[Array[Byte]] =
+    withAuth(SttpHttpPort.withBody(request.body, basicRequest))
+      .headers(request.headers.map((name, value) => Header(name, value))*)
+      .header(HeaderNames.UserAgent, config.userAgent.value)
+      .readTimeout(config.readTimeout)
+      .method(Method(request.method.wireName), SttpHttpPort.target(uri, request))
+      .response(asByteArrayAlways)
 
   private def dispatch(request: Request[String]): Future[Either[TransportFailure, CodebergResponse]] =
     request
@@ -179,10 +215,14 @@ object SttpHttpPort:
         // boundary does not match the body sttp actually writes.
         request.multipartBody(multipart(fieldName, bytes).fileName(fileName).contentType(mediaType))
 
+  private def succeedBinary(response: Response[Array[Byte]]): Either[TransportFailure, BinaryResponse] =
+    Right(BinaryResponse(response.code.code, lowercased(response.headers), response.body))
+
   private def succeed(response: Response[String]): Either[TransportFailure, CodebergResponse] =
     Right(CodebergResponse(response.code.code, lowercased(response.headers), response.body))
 
-  private def fail(error: Throwable): Either[TransportFailure, CodebergResponse] =
+  /** Generic in the success type so the textual and binary paths share one classification. */
+  private def fail[A](error: Throwable): Either[TransportFailure, A] =
     Left(TransportFailure(classify(error)))
 
   /** Response header names are lowercased because Codeberg sends them lowercase over HTTP/2 and mixed-case elsewhere,

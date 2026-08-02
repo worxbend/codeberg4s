@@ -4,6 +4,7 @@ import com.worxbend.codeberg4s.client.FutureExec
 import com.worxbend.codeberg4s.client.FutureTimer
 import com.worxbend.codeberg4s.codec.ApiErrorBodyCodec
 import com.worxbend.codeberg4s.core.ApiPipeline
+import com.worxbend.codeberg4s.core.BinaryHttpPort
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.Telemetry
 import com.worxbend.codeberg4s.issues.IssueApi
@@ -12,6 +13,7 @@ import com.worxbend.codeberg4s.notifications.NotificationApi
 import com.worxbend.codeberg4s.organizations.OrganizationApi
 import com.worxbend.codeberg4s.pulls.PullRequestApi
 import com.worxbend.codeberg4s.repositories.RepositoryApi
+import com.worxbend.codeberg4s.repositories.actions.ActionDownloadApi
 import com.worxbend.codeberg4s.syntax.discard
 import com.worxbend.codeberg4s.transport.SttpHttpPort
 import com.worxbend.codeberg4s.users.UserApi
@@ -53,6 +55,7 @@ import java.util.concurrent.atomic.AtomicBoolean
   */
 final class CodebergClient private (
     pipeline: ApiPipeline[Future],
+    binary: BinaryHttpPort[Future],
     timer: FutureTimer,
     ownedBackend: Option[Backend[Future]],
 )(using Exec[Future]):
@@ -80,6 +83,14 @@ final class CodebergClient private (
 
   /** Instance-level endpoints: server settings, the signing key and markdown rendering. */
   val misc: MiscellaneousApi = MiscellaneousApi(pipeline)
+
+  /** The two endpoints whose success body is a ZIP rather than text: an Actions artifact and a run's logs.
+    *
+    * They live here rather than under [[repos]] because they are the only operations in the API that need a
+    * byte-carrying transport, and every other group is built on the textual one. Both hold the whole archive in memory;
+    * this library does not stream.
+    */
+  val downloads: ActionDownloadApi = ActionDownloadApi(pipeline, binary)
 
   private val closed: AtomicBoolean = AtomicBoolean(false)
 
@@ -183,12 +194,14 @@ object CodebergClient:
     // the Exec[Future] that only exists once this method has built it.
     val observer = telemetry.getOrElse(Telemetry.noOp[Future])
 
+    val port = SttpHttpPort(backend, config)
+
     val pipeline = ApiPipeline[Future](
-      SttpHttpPort(backend, config),
+      port,
       config,
       timer,
       observer,
       ApiErrorBodyCodec.parse,
     )
 
-    new CodebergClient(pipeline, timer, owned)
+    new CodebergClient(pipeline, port, timer, owned)

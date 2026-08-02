@@ -13,6 +13,8 @@ import com.worxbend.codeberg4s.syntax.discard
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
+import java.nio.charset.StandardCharsets
+
 /** The single path every API call takes: send, retry, classify, decode, observe.
   *
   * Endpoints describe *what* to call by building a [[CodebergRequest]]; this class owns *how* a call is made. Keeping
@@ -99,6 +101,52 @@ final class ApiPipeline[F[_]](
   def callPage[A](request: CodebergRequest, params: PageParams)(using decode: Decode[Vector[A]]): F[Page[A]] =
     perform(request, RetryEligibility.IdempotentOnly): (ctx, response) =>
       decoded[Vector[A]](ctx, response.body).map(items => Pages.from(response, params, items))
+
+  /** Sends `request` and returns its body as bytes, for the endpoints that answer an archive rather than text.
+    *
+    * The transport that serves bytes is passed here rather than held on the pipeline, so that the many operations which
+    * never need one are unaffected and every existing [[HttpPort]] fake keeps compiling.
+    *
+    * Retry, telemetry, status mapping and `CallContext` behave exactly as they do for a textual call. An error body is
+    * still JSON text even on an endpoint whose success body is binary, so a non-2xx response is decoded as UTF-8 and
+    * parsed the usual way; a successful body is never decoded, which is the whole point.
+    *
+    * Always [[RetryEligibility.IdempotentOnly]] — every endpoint that answers bytes in this API is a `GET`.
+    */
+  def callBinary(request: CodebergRequest, binary: BinaryHttpPort[F]): F[BinaryResponse] =
+    val attempts = engine.runWith(request.operation, request.method, RetryEligibility.IdempotentOnly)(_ =>
+      binaryAttempt(request, binary)
+    )
+    exec.attempt(attempts).flatMap:
+      case Right(value) => exec.pure(value)
+      case Left(error)  => reportFinal(request, error).flatMap(_ => exec.raise(error))
+
+  private def binaryAttempt(request: CodebergRequest, binary: BinaryHttpPort[F]): F[AttemptOutcome[BinaryResponse]] =
+    val uri = Redaction.uri(config.baseUri.value, request.path, request.query)
+    timer.nowMillis.flatMap: started =>
+      observe(telemetry.onRequest(contextOf(request, uri, None, 0L))).flatMap: _ =>
+        binary.sendBinary(request, uri).flatMap: sent =>
+          timer.nowMillis.flatMap: finished =>
+            settleBinary(request, uri, finished - started, sent)
+
+  private def settleBinary(
+      request: CodebergRequest,
+      uri: String,
+      elapsedMs: Long,
+      sent: Either[TransportFailure, BinaryResponse],
+  ): F[AttemptOutcome[BinaryResponse]] =
+    sent match
+      case Left(failure)   =>
+        val ctx = contextOf(request, uri, None, elapsedMs)
+        failedWith(ctx, CodebergError.Transport(ctx, failure.cause), None)
+      case Right(response) =>
+        val ctx = contextOf(request, uri, response.requestId, elapsedMs)
+        observe(telemetry.onResponse(ctx, response.status)).flatMap: _ =>
+          if StatusMapping.isSuccess(response.status) then exec.pure(AttemptOutcome.succeeded(response))
+          else
+            val text  = String(response.bytes, StandardCharsets.UTF_8)
+            val error = StatusMapping.toError(ctx, response.status, parsedErrorBody(text))
+            failedWith(ctx, error, response.retryAfter)
 
   private def perform[A](request: CodebergRequest, eligibility: RetryEligibility)(
       onSuccess: (CallContext, CodebergResponse) => Either[CodebergError, A]
