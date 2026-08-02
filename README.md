@@ -94,7 +94,7 @@ val config: Either[ValidationError, CodebergConfig] =
 the default user agent, a page size of 30 and 10 s / 30 s timeouts. Copy the
 result to change one field — see [Configuration](#configuration).
 
-## The eight resource groups
+## The nine resource groups
 
 Everything is grouped the way the API's own tags are.
 
@@ -501,11 +501,17 @@ Two more traps worth naming:
   ignore it and return the entire collection — 862 forks, 5233 stargazers in
   the captured fixtures.
 
-> **Not yet available:** `listAll` and `foldPages` exist in
-> `com.worxbend.codeberg4s.core.Pagination` but are not reachable from the
-> published API — no `*Api` class exposes them yet. Until they are, the loop
-> above is the supported way to walk a collection.
-> ([`docs/ROADMAP.md`](docs/ROADMAP.md), Phase 2.)
+Or let `PageWalk` drive the loop, on any listing in the library:
+
+```scala
+import com.worxbend.codeberg4s.paging.PageWalk
+
+PageWalk.all(PageParams.First): params =>
+  client.issues.list(owner, name, IssueQuery.Empty, params)
+```
+
+`PageWalk.fold` and `PageWalk.foreach` are the bounded-memory forms — reach for
+those on a repository with tens of thousands of issues.
 
 ## Configuration
 

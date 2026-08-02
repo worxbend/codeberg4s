@@ -39,12 +39,11 @@ Gate names match `PLAN.md` §7.
       wired through both `CodebergClient` factories
 - [x] Track B — error ADT, Forgejo error-body parsing against captured samples,
       redaction guarantees, `CodebergException` bridging
-- [ ] `listAll` / `foldPages` reachable from the public API. `core.Pagination`
-      implements both and `PaginationSuite` covers them, but **no `*Api` class
-      exposes either**, and `Pagination` is not constructible from outside
-      `modules/core`. A user today can only drive pages by hand off
-      `Page.nextPage`. Every group with a listing operation needs the two
-      methods, on both rails.
+- [x] Walking every page is reachable from the public API as
+      `com.worxbend.codeberg4s.paging.PageWalk` (`all` / `fold` / `foreach`).
+      One helper taking the listing operation as an argument, rather than a
+      `listAll` on each of the thirty-eight API classes — the termination rule
+      is the subtle part of pagination and belongs in one place.
 - [ ] Property suites (`*Props.scala`, `Property` tag) for codec laws, pagination
       invariants, retry bounds. **Partially done:** `modules/domain` now has
       `PropertyBase` (pinned ScalaCheck seed, `Property` tag), `IdentifierProps`
@@ -102,7 +101,7 @@ on paper only until those tools are proven — `docs/CONSTITUTION_MAPPING.md`.)
 - [ ] PMD CPD wired, fails above 40 duplicated tokens in production sources —
       **wired and verified; the gate is red.** PMD 7.26.0's scalameta Scala
       module tokenises Scala 3 here without a lexical error, and
-      `scripts/cpd.sh --report` currently finds **62 duplication groups** (128
+      `scripts/cpd.sh --report` currently finds **323 duplication groups** (128
       locations in `codec`, 40 in `client`, 15 in `domain`, 2 in `core`), so
       `./verify.sh --with-slow` fails at that step. Unticked because the
       codebase does not pass, not because the tool does not work. The fix is
@@ -148,7 +147,7 @@ on paper only until those tools are proven — `docs/CONSTITUTION_MAPPING.md`.)
 | Coverage per §6.1 (≥ 90 % line / ≥ 85 % branch on `domain`+`core`+`codec`) | Report is produced and `scripts/coverage-gate.sc` now enforces the floors; the assertion has not yet been run against a fresh report |
 | Mutation ≥ 80 % | Runner proven, **no score produced** — see Phase 4 |
 | Zero CRAP > 30 | Gate implemented; not yet run against a fresh coverage report, and its complexity input is a proxy |
-| CPD clean | **No — 62 duplication groups at 40 tokens.** The tool works; the codebase does not pass it yet |
+| CPD clean | **No — 323 duplication groups at 40 tokens.** The tool works; the codebase does not pass it yet |
 | Acceptance features + Gherkin mutation clean | Dormant by decision — `docs/CONSTITUTION_MAPPING.md` |
 | Published to Maven Central | Configured but not published; no MIMA baseline |
 | README quickstart works against live codeberg.org | Samples are checked against the source signatures by hand. `CodebergLiveSmokeSuite` exercises the same calls against codeberg.org under `CODEBERG_IT=1`, but nobody has run the README itself |
@@ -156,7 +155,7 @@ on paper only until those tools are proven — `docs/CONSTITUTION_MAPPING.md`.)
 
 The single largest remaining item is the endpoint surface. The most urgent one
 is the CPD result: the duplication gate now works, and it says the codebase has
-62 duplication groups. That is a real finding about the code, not a tooling
+323 duplication groups. That is a real finding about the code, not a tooling
 problem, and `docs/LEDGER.md` already names most of them.
 
 ## Out of scope for 0.1.0

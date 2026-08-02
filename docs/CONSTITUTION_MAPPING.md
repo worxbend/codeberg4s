@@ -49,7 +49,7 @@ repository it tokenises Scala 3 indentation syntax, `given`/`using`, `enum`,
 `extension` and end markers without a single lexical error, and the duplications
 it reports are genuine. It is a real gate, not a stub.
 
-It is also **red**. `scripts/cpd.sh --report` finds **62 duplication groups at
+It is also **red**. `scripts/cpd.sh --report` finds **323 duplication groups at
 the 40-token threshold** — 128 source locations in `codec`, 40 in `client`, 15
 in `domain`, 2 in `core` — so `scripts/cpd.sh` in gate mode exits 1 today and
 `./verify.sh --with-slow` fails at that step. The findings corroborate

@@ -22,7 +22,7 @@ repo rather than against intentions.
 | **No binary-compatibility policy.** Five artifacts, no MIMA, no stated versioning scheme. Consumers pin versions; they need to know what a minor bump may break. |
 | **No contribution path.** No `CONTRIBUTING.md`, no issue or pull-request templates, no code of conduct, no security policy. A drive-by bug report has nowhere to go, and a vulnerability has no private channel. |
 | **No task-oriented documentation.** `README.md` is a tour and the ADRs are rationale. Neither answers "how do I paginate every issue in a repository without running out of memory" — which is what a working developer actually asks. |
-| **`--with-slow` is red.** PMD CPD reports 62 duplication groups, mostly the helper duplication `docs/LEDGER.md` already tracks. Honest, but a contributor running the documented gate hits a failure that is not theirs. |
+| **`--with-slow` is red.** PMD CPD reports 323 duplication groups, mostly the helper duplication `docs/LEDGER.md` already tracks. Honest, but a contributor running the documented gate hits a failure that is not theirs. |
 
 ## Nice to have — not blocking 0.1.0
 
