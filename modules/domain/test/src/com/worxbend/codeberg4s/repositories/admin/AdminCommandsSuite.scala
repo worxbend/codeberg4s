@@ -153,6 +153,15 @@ final class AdminCommandsSuite extends FunSuite:
   test("a blank avatar string is rejected"):
     assert(AvatarImage.ofBase64("  ").isLeft, "a blank avatar is not an image")
 
+  test("base64 a caller already encoded is taken verbatim and only trimmed, never re-encoded"):
+    val encoded = JavaBase64.getEncoder.encodeToString(Array[Byte](0, 1, 2))
+
+    assertEquals(orFail(AvatarImage.ofBase64(encoded)).base64, encoded)
+    assertEquals(orFail(AvatarImage.ofBase64(s"  $encoded\n")).base64, encoded)
+
+  test("an avatar accepts text that is not valid base64, because Forgejo is the authority on the image"):
+    assertEquals(orFail(AvatarImage.ofBase64("not base64 at all")).base64, "not base64 at all")
+
   // --- read models ----------------------------------------------------------
 
   test("a language breakdown totals every counted byte"):

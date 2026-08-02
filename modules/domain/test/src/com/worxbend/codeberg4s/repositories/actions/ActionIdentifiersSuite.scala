@@ -30,6 +30,14 @@ final class ActionIdentifiersSuite extends FunSuite:
   test("a task id rejects zero, and says so on its own field"):
     assertEquals(field(TaskId.from(0L)), Some("taskId"))
 
+  test("each accepted identifier renders the number it was built from, which is what reaches the path"):
+    assertEquals(JobId.from(1L).toOption.map(_.value), Some(1L))
+    assertEquals(JobId.from(90210L).toOption.map(_.value), Some(90210L))
+    assertEquals(ArtifactId.from(1L).toOption.map(_.value), Some(1L))
+    assertEquals(ArtifactId.from(4815162342L).toOption.map(_.value), Some(4815162342L))
+    assertEquals(TaskId.from(1L).toOption.map(_.value), Some(1L))
+    assertEquals(TaskId.from(31337L).toOption.map(_.value), Some(31337L))
+
   test("an attempt is one-based, so zero is rejected rather than read as 'the latest'"):
     assertEquals(field(JobAttempt.from(0L)), Some("jobAttempt"))
 

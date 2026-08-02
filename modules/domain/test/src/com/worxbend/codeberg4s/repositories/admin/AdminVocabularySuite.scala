@@ -45,5 +45,19 @@ final class AdminVocabularySuite extends FunSuite:
     assertEquals(MergeStyle.parse("cherry-pick"), None)
     assertEquals(ObjectFormat.parse("sha512"), None)
 
+  test("a trust model spelled the way a reader would guess is refused, since Forgejo spells it as one word"):
+    assertEquals(TrustModel.parse("collaborator-committer"), None)
+    assertEquals(TrustModel.parse("collaborator_committer"), None)
+    assertEquals(TrustModel.parse(""), None)
+
+  test("an update style is a narrower set than a merge style, so a merge spelling is not an update style"):
+    assertEquals(UpdateStyle.parse("rebase-merge"), None)
+    assertEquals(UpdateStyle.parse("squash"), None)
+    assertEquals(UpdateStyle.values.length, 2)
+
+  test("a forge Forgejo cannot migrate from is absent rather than a near miss of one it can"):
+    assertEquals(MigrationService.parse("bitbucket"), None)
+    assertEquals(MigrationService.parse("gitbucket"), Some(MigrationService.GitBucket))
+
   test("a push spells itself commit_repo, which is the one name a reader would not guess"):
     assertEquals(ActivityOperation.CommitRepo.wireValue, "commit_repo")

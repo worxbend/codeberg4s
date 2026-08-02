@@ -91,12 +91,20 @@ final class HookEnumSuite extends FunSuite:
   test("an unknown content type survives as Other"):
     assertEquals(HookContentType.parse("protobuf"), HookContentType.Other("protobuf"))
 
+  test("an unknown content type renders back the spelling it arrived with, so an edit cannot rewrite it"):
+    assertEquals(HookContentType.parse("protobuf").wireValue, "protobuf")
+    assertEquals(HookContentType.Other("application/cbor").wireValue, "application/cbor")
+
   test("every documented issue form field type parses and renders back unchanged"):
     Vector("markdown", "textarea", "input", "dropdown", "checkboxes").foreach: spelling =>
       assertEquals(IssueFormFieldType.parse(spelling).wireValue, spelling)
 
   test("an unknown issue form field type survives as Other"):
     assertEquals(IssueFormFieldType.parse("slider"), IssueFormFieldType.Other("slider"))
+
+  test("an unknown issue form field type renders back the spelling it arrived with"):
+    assertEquals(IssueFormFieldType.parse("slider").wireValue, "slider")
+    assertEquals(IssueFormFieldType.Other("matrix").wireValue, "matrix")
 
   private def isOtherEvent(event: HookEvent): Boolean =
     event match

@@ -25,6 +25,15 @@ final class AccessCommandsSuite extends FunSuite:
     assertEquals(command.legacyBranchName, None)
     assertEquals(command.settings, BranchProtectionSettings.Unchanged)
 
+  test("replacing the settings of a create leaves the rule name and the deprecated branch name alone"):
+    val branch   = orFail(BranchName.from("release/16.0"))
+    val settings = BranchProtectionSettings.Unchanged.requiringSignedCommits(true)
+    val command  = CreateBranchProtection.on(rule("main")).alsoNamingBranch(branch).withSettings(settings)
+
+    assertEquals(command.settings, settings)
+    assertEquals(command.ruleName.value, "main")
+    assertEquals(command.legacyBranchName.map(_.value), Some("release/16.0"))
+
   test("the deprecated branch name is only ever sent when the caller asked for it"):
     val branch  = orFail(BranchName.from("release/16.0"))
     val command = CreateBranchProtection.on(rule("main")).alsoNamingBranch(branch)
@@ -108,6 +117,15 @@ final class AccessCommandsSuite extends FunSuite:
     val cleared = EditTagProtection.Nothing.exempting(Vector.empty)
 
     assertEquals(cleared.whitelistUsernames, Some(Vector.empty[Username]))
+
+  test("a tag protection edit states its two whitelists separately, and one does not clear the other"):
+    val command = EditTagProtection.Nothing.exempting(Vector(user("alice"))).exemptingTeams(Vector("release"))
+
+    assertEquals(command.whitelistUsernames.map(_.map(_.value)), Some(Vector("alice")))
+    assertEquals(command.whitelistTeams, Some(Vector("release")))
+    assertEquals(command.namePattern, None)
+    assertEquals(EditTagProtection.Nothing.exemptingTeams(Vector.empty).whitelistTeams, Some(Vector.empty[String]))
+    assertEquals(EditTagProtection.Nothing.exemptingTeams(Vector("release")).whitelistUsernames, None)
 
   test("editing only the pattern leaves both whitelists unstated"):
     val command = EditTagProtection.Nothing.matching(pattern("v1.*"))

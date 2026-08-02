@@ -74,6 +74,13 @@ final class AccessVocabularySuite extends FunSuite:
     assertEquals(CollaboratorPermission.Admin.wireName, "admin")
     assertEquals(CollaboratorPermission.values.length, 3)
 
+  test("each collaborator permission parses from the one spelling that grants it, and from no other"):
+    assertEquals(CollaboratorPermission.parse("read"), Some(CollaboratorPermission.Read))
+    assertEquals(CollaboratorPermission.parse("write"), Some(CollaboratorPermission.Write))
+    assertEquals(CollaboratorPermission.parse("admin"), Some(CollaboratorPermission.Admin))
+    assertEquals(CollaboratorPermission.parse("readwrite"), None)
+    assertEquals(CollaboratorPermission.parse("read-write"), None)
+
   test("a collaborator permission parses case-insensitively and refuses what its enum does not declare"):
     assertEquals(CollaboratorPermission.parse("WRITE"), Some(CollaboratorPermission.Write))
     assertEquals(CollaboratorPermission.parse(" admin "), Some(CollaboratorPermission.Admin))

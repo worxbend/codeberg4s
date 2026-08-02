@@ -52,6 +52,10 @@ final class HookSecrecySuite extends FunSuite:
   test("hook secrets with different material are not equal"):
     assertNotEquals(secret(Material), secret("something else"))
 
+  test("a hook secret is not equal to the bare string it wraps, so comparing one cannot unwrap it"):
+    assert(!secret(Material).equals(Material), "a hook secret compared equal to its own material")
+    assert(!secret(Material).equals(HookSecret.Redacted), "a hook secret compared equal to its mask")
+
   test("a create command holding a secret cannot print it through its generated toString"):
     val command = CreateHook.to(HookType.Forgejo, "https://ci.example/hook", HookContentType.Json).signedWith(
       secret(Material)

@@ -58,6 +58,10 @@ final class AccountSecrecySuite extends FunSuite:
   test("client secrets with different material are not equal"):
     assertNotEquals(secret(Material), secret("something else"))
 
+  test("a client secret is never equal to a bare String, so no String can stand in for one in a comparison"):
+    assert(!secret(Material).equals(Material), "a client secret compared equal to its own material as a String")
+    assert(!secret(Material).equals(ClientSecret.Redacted), "a client secret compared equal to its own mask")
+
   test("the generated toString of the application holding a client secret cannot print it"):
     val rendered = application(Some(secret(Material))).toString
 

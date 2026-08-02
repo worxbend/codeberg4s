@@ -6,6 +6,7 @@ import com.worxbend.codeberg4s.organizations.Team
 import com.worxbend.codeberg4s.organizations.TeamId
 import com.worxbend.codeberg4s.organizations.TeamPermission
 import com.worxbend.codeberg4s.repositories.CommitSha
+import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.Username
 
 import munit.FunSuite
@@ -94,6 +95,30 @@ final class ReviewCommandSuite extends FunSuite:
   test("a review can be pinned to the commit the reviewer actually read"):
     assertEquals(CreateReview.Empty.against(Sha).commit.map(_.value), Some(Sha.value))
 
+  test("every review builder sets its own field and leaves every sibling alone"):
+    val review = populatedReview
+
+    assertEquals(review.withBody("replaced"), review.copy(body = Some("replaced")))
+    assertEquals(review.saying(ReviewState.Approved), review.copy(event = Some(ReviewState.Approved)))
+    assertEquals(review.against(Moved), review.copy(commit = Some(Moved)))
+    assertEquals(review.commentingAll(Vector.empty), review.copy(comments = Vector.empty))
+
+  test("a summary and a verdict are separate statements, because Forgejo answers 422 to a comment review with none"):
+    assertEquals(CreateReview.Empty.saying(ReviewState.Comment).body, None)
+    assertEquals(CreateReview.Empty.withBody("looks good").event, None)
+
+  test("the last verdict asked for is the one submitted, so a draft can be upgraded before it is sent"):
+    assertEquals(
+      CreateReview.Empty.saying(ReviewState.Pending).saying(ReviewState.Approved).event,
+      Some(ReviewState.Approved),
+    )
+
+  // --- inline remarks that came back ----------------------------------------
+
+  test("a conversation is resolved exactly when a resolver came back, since Forgejo publishes no resolved flag"):
+    assertEquals(reviewComment(None).isResolved, false)
+    assertEquals(reviewComment(Some(account)).isResolved, true)
+
   test("submitting requires an event, and the body stays optional"):
     val command = SubmitReview.saying(ReviewState.Approved)
 
@@ -157,6 +182,61 @@ final class ReviewCommandSuite extends FunSuite:
     assertEquals(DiffRequest.of(DiffFormat.Diff).includingBinary.includeBinary, true)
 
   // --- harness --------------------------------------------------------------
+
+  private val Moved: CommitSha = orFail(CommitSha.from("f00dcafe4242beadf00dcafe4242beadf00dcafe"))
+
+  /** A review that already says everything, so a builder cannot drop one of the four unnoticed. */
+  private def populatedReview: CreateReview =
+    CreateReview.Empty
+      .withBody("original")
+      .saying(ReviewState.Pending)
+      .against(Sha)
+      .commenting(orFail(NewReviewComment.onNewLine("modules/git/hook.go", 42L, "still wrong")))
+
+  private def account: User =
+    User(
+      id                       = 1L,
+      login                    = "mfenniak",
+      fullName                 = None,
+      email                    = None,
+      avatarUrl                = None,
+      htmlUrl                  = None,
+      language                 = None,
+      location                 = None,
+      pronouns                 = None,
+      website                  = None,
+      description              = None,
+      visibility               = None,
+      isAdmin                  = false,
+      isActive                 = true,
+      isRestricted             = false,
+      isProhibitedFromLogin    = false,
+      followersCount           = 0L,
+      followingCount           = 0L,
+      starredRepositoriesCount = 0L,
+      createdAt                = None,
+      lastLoginAt              = None,
+    )
+
+  private def reviewComment(resolvedBy: Option[User]): ReviewComment =
+    ReviewComment(
+      id               = orFail(ReviewCommentId.from(9L)),
+      reviewId         = None,
+      body             = Some("still wrong"),
+      path             = Some("modules/git/hook.go"),
+      position         = 42L,
+      originalPosition = 0L,
+      extraLinesCount  = 0L,
+      diffHunk         = None,
+      commit           = Some(Sha),
+      originalCommit   = None,
+      author           = Some(account),
+      resolver         = resolvedBy,
+      htmlUrl          = None,
+      pullRequestUrl   = None,
+      createdAt        = None,
+      updatedAt        = None,
+    )
 
   private def team(name: String): Team =
     Team(

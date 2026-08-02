@@ -1,5 +1,9 @@
 package com.worxbend.codeberg4s.repositories.admin
 
+import com.worxbend.codeberg4s.CallContext
+import com.worxbend.codeberg4s.CodebergError
+import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.repositories.RepoName
 
@@ -55,6 +59,37 @@ final class RemoteCredentialSuite extends FunSuite:
 
   test("credentials with different material are not equal"):
     assertNotEquals(credential(Material), credential("something else"))
+
+  test("a credential is not equal to the bare string it wraps, so comparing one cannot unwrap it"):
+    assert(!credential(Material).equals(Material), "a credential compared equal to its own material")
+    assert(!credential(Material).equals(RemoteCredential.Redacted), "a credential compared equal to its mask")
+    assert(!credential(Material).equals(Option(Material)), "a credential compared equal to a foreign value")
+
+  test("a failure describing a call that carried a credential cannot print it, whatever built the failure"):
+    val command = MigrateRepository
+      .from("https://github.com/a/b.git", repo("b"))
+      .authenticatedAs("octocat", credential(Material))
+    val context = CallContext(
+      operation  = "repositories.migrate",
+      method     = HttpMethod.Post,
+      uri        = "https://codeberg.org/api/v1/repos/migrate",
+      requestId  = None,
+      durationMs = 12L,
+    )
+    val failure = CodebergError.DecodingFailed(
+      ctx     = context,
+      snippet = s"$command",
+      path    = JsonPath.of("clone_addr"),
+      cause   = s"expected an object, and the request was $command",
+    )
+
+    assert(!failure.describe.contains("SECRET"), s"describe leaked the credential: ${failure.describe}")
+    assert(failure.describe.contains(RemoteCredential.Redacted), "the mask should appear where the credential was")
+
+  test("a rejected credential is described by its field alone, and the failure never carries material"):
+    val failure = RemoteCredential.from("").swap.toOption.map(error => CodebergError.Validation(error).describe)
+
+    assertEquals(failure, Some("invalid remoteCredential: must not be empty"))
 
   test("a migrate command holding a credential cannot print it"):
     val command = MigrateRepository

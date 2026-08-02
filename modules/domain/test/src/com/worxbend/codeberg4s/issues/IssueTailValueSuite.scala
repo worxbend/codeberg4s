@@ -59,6 +59,18 @@ final class IssueTailValueSuite extends FunSuite:
     assertEquals(AttachmentKind.External.wireValue, "external")
     assertEquals(AttachmentKind.Other("lfs").wireValue, "lfs")
 
+  test("an attachment kind is lower-cased on the way in, because the spec fixes its vocabulary"):
+    assertEquals(AttachmentKind.from("LFS"), AttachmentKind.Other("lfs"))
+    assertEquals(AttachmentKind.from("Attachment"), AttachmentKind.Uploaded)
+
+  test("a reaction keeps its case, because its vocabulary is the instance's and a shortcode is case-sensitive"):
+    assertEquals(ReactionContent.from("ROCKET").map(_.value), Right("ROCKET"))
+    assertEquals(ReactionContent.from("Party_Parrot").map(_.value), Right("Party_Parrot"))
+
+  test("the two escape hatches differ deliberately: an unknown kind is kept as a case, an unknown reaction as itself"):
+    assertEquals(AttachmentKind.from("torrent"), AttachmentKind.Other("torrent"))
+    assertEquals(ReactionContent.from("torrent").map(_.value), Right("torrent"))
+
   // --- uploads --------------------------------------------------------------
 
   test("an upload trims the file name and defaults its media type"):

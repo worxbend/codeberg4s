@@ -23,8 +23,16 @@ final class AdminIdentifiersSuite extends FunSuite:
   test("a topic id reports its own field name, so a caller knows which argument was wrong"):
     assertEquals(TopicId.from(0L).swap.toOption.map(_.field), Some("topicId"))
 
+  test("a topic id renders the number it was built from, which is what keys a cache on it"):
+    assertEquals(TopicId.from(1L).map(_.value), Right(1L))
+    assertEquals(TopicId.from(4815162342L).map(_.value), Right(4815162342L))
+
   test("an activity id reports its own field name too"):
     assertEquals(ActivityId.from(0L).swap.toOption.map(_.field), Some("activityId"))
+
+  test("an activity id renders the number it was built from"):
+    assertEquals(ActivityId.from(1L).map(_.value), Right(1L))
+    assertEquals(ActivityId.from(90210L).map(_.value), Right(90210L))
 
   test("a mirror name accepts the generated handle Forgejo hands out"):
     assertEquals(MirrorName.from("remote_a1b2c3").map(_.value), Right("remote_a1b2c3"))

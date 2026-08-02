@@ -46,3 +46,37 @@ final class TeamPermissionSuite extends FunSuite:
   test("a lower level does not allow what a higher one allows"):
     assertEquals(TeamPermission.Read.allows(TeamPermission.Write), false)
     assertEquals(TeamPermission.NoAccess.allows(TeamPermission.Read), false)
+
+  test("the levels are declared in Forgejo's own order, so a new one cannot be slipped into the middle unnoticed"):
+    assertEquals(TeamPermission.values.toVector, Levels)
+
+  test("allows is that ordering at all twenty-five pairs, not just at the two a sample would check"):
+    val granted =
+      for
+        holder <- Levels.indices
+        wanted <- Levels.indices
+      yield describe(holder, wanted, Levels(holder).allows(Levels(wanted)))
+
+    val expected =
+      for
+        holder <- Levels.indices
+        wanted <- Levels.indices
+      yield describe(holder, wanted, holder >= wanted)
+
+    assertEquals(granted.toVector, expected.toVector)
+
+  /** The five levels written out in the order this suite asserts, independently of [[TeamPermission.rank]] — comparing
+    * `allows` against `rank` would only prove the implementation agrees with itself.
+    */
+  private val Levels: Vector[TeamPermission] =
+    Vector(
+      TeamPermission.NoAccess,
+      TeamPermission.Read,
+      TeamPermission.Write,
+      TeamPermission.Admin,
+      TeamPermission.Owner,
+    )
+
+  /** One cell of the `allows` table, spelled so that a failure names the pair rather than an index. */
+  private def describe(holder: Int, wanted: Int, allowed: Boolean): String =
+    s"${Levels(holder).wireName} allows ${Levels(wanted).wireName}: ${allowed.toString}"

@@ -58,6 +58,10 @@ final class ActionSecrecySuite extends FunSuite:
   test("secret values with different material are not equal"):
     assertNotEquals(secret(Material), secret("something else"))
 
+  test("a secret value is not equal to the bare string it wraps, so comparing one cannot unwrap it"):
+    assert(!secret(Material).equals(Material), "a secret value compared equal to its own material")
+    assert(!secret(Material).equals(SecretValue.Redacted), "a secret value compared equal to its mask")
+
   test("a registration token is trimmed, because it is copied into a shell command"):
     assertEquals(token("  QWERTY123  ").reveal, "QWERTY123")
 
@@ -83,6 +87,16 @@ final class ActionSecrecySuite extends FunSuite:
 
   test("registration tokens with different material are not equal"):
     assertNotEquals(token("QWERTY123"), token("ASDFGH456"))
+
+  test("a registration token is not equal to the bare string it wraps"):
+    assert(!token("QWERTY123").equals("QWERTY123"), "a registration token compared equal to its own material")
+    assert(
+      !token("QWERTY123").equals(RunnerRegistrationToken.Redacted),
+      "a registration token compared equal to its mask",
+    )
+
+  test("a registration token is not equal to a secret value carrying the same material, since neither unwraps"):
+    assert(!token("QWERTY123").equals(secret("QWERTY123")), "two different credential types compared equal")
 
   test("the read model of a secret has a name and a timestamp, and nowhere to put a value"):
     val name   = orFail(SecretName.from("DEPLOY_KEY"))
