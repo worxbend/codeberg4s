@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.miscellaneous
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.ApiPipeline
@@ -10,14 +11,25 @@ import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.RetryEligibility
+import com.worxbend.codeberg4s.miscellaneous.wire.GitignoreTemplateDto
+import com.worxbend.codeberg4s.miscellaneous.wire.LicenseTemplateDto
+import com.worxbend.codeberg4s.miscellaneous.wire.LicenseTemplateSummaryDto
 import com.worxbend.codeberg4s.miscellaneous.wire.MarkdownOptionDto
+import com.worxbend.codeberg4s.miscellaneous.wire.MarkupOptionDto
+import com.worxbend.codeberg4s.miscellaneous.wire.NodeInfoDto
 import com.worxbend.codeberg4s.miscellaneous.wire.ServerApiSettingsDto
 import com.worxbend.codeberg4s.miscellaneous.wire.ServerAttachmentSettingsDto
 import com.worxbend.codeberg4s.miscellaneous.wire.ServerRepositorySettingsDto
+import com.worxbend.codeberg4s.miscellaneous.wire.ServerUiSettingsDto
+import com.worxbend.codeberg4s.miscellaneous.wire.TemplateLabelDto
+import com.worxbend.codeberg4s.miscellaneous.wire.TemplateNamesDto
+import com.worxbend.codeberg4s.repositories.actions.ActionRun
+import com.worxbend.codeberg4s.repositories.actions.wire.ActionRunDto
 
 import scala.concurrent.Future
 
-/** The instance-level endpoints: what this deployment is configured to do, and its markdown renderer.
+/** The instance-level endpoints: what this deployment is configured to do, what it renders, what templates it ships,
+  * and how it identifies itself to the rest of the fediverse.
   *
   * Reached as `client.misc`. Both error rails are here (ADR-0005): the methods on this class fail the `Future` with
   * [[com.worxbend.codeberg4s.CodebergException]], and the same operations on [[MiscellaneousApi.attempt]] never fail
@@ -29,9 +41,22 @@ import scala.concurrent.Future
   * `GET /version` is the fourth member of this family and lives on [[com.worxbend.codeberg4s.VersionApi]], which
   * predates this class.
   *
-  * '''Two of these do not answer JSON.''' [[signingKey]] returns an armored OpenPGP block and the two markdown
-  * renderers return an HTML fragment, all with `Content-Type: text/plain` or `text/html`. They are decoded through
-  * [[PlainText]], which parses nothing.
+  * '''Five of these do not answer JSON.''' [[signingKey]] returns an armored OpenPGP block, [[sshSigningKey]] returns
+  * an OpenSSH authorized-key line, and the three renderers — [[renderMarkdown]], [[renderMarkdownRaw]] and
+  * [[renderMarkup]] — return an HTML fragment, all with `Content-Type: text/plain` or `text/html`. They are decoded
+  * through [[PlainText]], which parses nothing.
+  *
+  * ==The template catalogues==
+  *
+  * [[gitignoreTemplates]], [[labelTemplates]] and [[licenseTemplates]] list what the '''distribution''' ships, and the
+  * three by-name reads fetch one entry each. They are the same shape three times over, so they take one
+  * [[TemplateName]] rather than three near-identical types; see that type for what it accepts and why it is wider than
+  * every other path type in the library.
+  *
+  * '''None of the six is paged.''' `spec/swagger.v1.json` declares neither `page` nor `limit` for any of them, so the
+  * whole catalogue arrives at once and each returns a `Vector` rather than a [[com.worxbend.codeberg4s.paging.Page]] —
+  * a page describing a window nobody asked for would be a lie about what was requested. `golden/MANIFEST.md` records
+  * the cost of that for `GET /licenses`: roughly 80 KB, in one response, with no way to ask for less.
   */
 final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using exec: Exec[Future]):
 
@@ -147,6 +172,205 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     pipeline.call(MiscellaneousApi.markdownRawRequest(markdown), RetryEligibility.AlwaysRetry)(using
       MiscellaneousApi.MarkdownDecoder)
 
+  /** Reads the instance's web-interface settings — `GET /settings/ui`.
+    *
+    * The one member of the `/settings` family that changes nothing about what the API will accept. Its use is agreeing
+    * with the web UI: [[ServerUiSettings.allowedReactions]] is what the reaction endpoints will take, and offering an
+    * emoji that is not on that list earns a `422` from them.
+    *
+    * '''Failures.''' As [[repositorySettings]]: no field is required, so a JSON object always decodes and this
+    * operation cannot produce [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] on one. `GET` is safe, so the
+    * call is retried under [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]].
+    */
+  def uiSettings(): Future[ServerUiSettings] =
+    pipeline.call(MiscellaneousApi.UiSettingsRequest, RetryEligibility.IdempotentOnly)(using
+      MiscellaneousApi.UiSettingsDecoder)
+
+  /** Reads the instance's default SSH signing key — `GET /signing-key.ssh`.
+    *
+    * The SSH counterpart of [[signingKey]]: an OpenSSH authorized-key line as `text/plain`, handed back verbatim
+    * through [[PlainText]] for an SSH library to parse. A deployment signs with one scheme or the other, so a caller
+    * who does not know which asks both and takes whichever answers.
+    *
+    * '''`None` is a success, not a failure''', exactly as for [[signingKey]] — an instance that signs nothing answers
+    * `200` with an empty body. See [[SshSigningKey.from]].
+    *
+    * '''Unlike [[signingKey]], this endpoint declares a `404`''', which arrives as
+    * [[com.worxbend.codeberg4s.CodebergError.Api]] and not as `None`. So "there is no SSH signing key" reaches a caller
+    * in two different shapes depending on how the instance chose to say it, and only the `200` one is a success.
+    *
+    * '''Failures.''' As [[signingKey]], plus the `404` above. It never produces
+    * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]], because nothing is parsed. `GET` is safe, so the call is
+    * retried under [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]].
+    */
+  def sshSigningKey(): Future[Option[SshSigningKey]] =
+    pipeline.call(MiscellaneousApi.SshSigningKeyRequest, RetryEligibility.IdempotentOnly)(using
+      MiscellaneousApi.SshSigningKeyDecoder)
+
+  /** Lists the `.gitignore` templates the instance ships — `GET /gitignore/templates`.
+    *
+    * The body is a bare array of names — 297 of them on `golden/misc/gitignore-templates.json` — and each is returned
+    * as a [[TemplateName]] so it can be handed straight to [[gitignoreTemplate]]. Not paged; see the class note.
+    *
+    * '''Failures.''' The returned `Future` fails with [[com.worxbend.codeberg4s.CodebergException]] carrying
+    * [[com.worxbend.codeberg4s.CodebergError.Transport]] when nothing reached the instance,
+    * [[com.worxbend.codeberg4s.CodebergError.Api]] for a non-2xx status — this endpoint takes no argument to get wrong
+    * and needs no credentials, so in practice only a deployment that does not serve it produces one —
+    * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] when the body is not an array of usable names, at `$[n]`
+    * for the offending element, and [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] when a retryable failure
+    * outlived the policy. `GET` is safe, so the call is retried under
+    * [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]].
+    */
+  def gitignoreTemplates(): Future[Vector[TemplateName]] =
+    pipeline.call(MiscellaneousApi.GitignoreTemplatesRequest, RetryEligibility.IdempotentOnly)(using
+      MiscellaneousApi.TemplateNamesDecoder)
+
+  /** Reads one `.gitignore` template, contents and all — `GET /gitignore/templates/{name}`.
+    *
+    * '''Failures.''' As [[gitignoreTemplates]], with [[com.worxbend.codeberg4s.CodebergError.Api]] status `404` for a
+    * template the instance does not ship — the one failure this call can produce that the listing cannot — and
+    * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] at `$.source` when the payload carries no contents. `GET`
+    * is safe, so the call is retried under [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]].
+    *
+    * @param name
+    *   a name from [[gitignoreTemplates]]
+    */
+  def gitignoreTemplate(name: TemplateName): Future[GitignoreTemplate] =
+    pipeline.call(MiscellaneousApi.gitignoreTemplateRequest(name), RetryEligibility.IdempotentOnly)(using
+      MiscellaneousApi.GitignoreTemplateDecoder)
+
+  /** Lists the label templates the instance ships — `GET /label/templates`.
+    *
+    * The names of the '''sets''' — `Default`, `Advanced` — not the labels in them; [[labelTemplate]] reads one set.
+    * Same bare-array shape as [[gitignoreTemplates]] and not paged, for the same reason.
+    *
+    * '''Failures.''' As [[gitignoreTemplates]].
+    */
+  def labelTemplates(): Future[Vector[TemplateName]] =
+    pipeline.call(MiscellaneousApi.LabelTemplatesRequest, RetryEligibility.IdempotentOnly)(using
+      MiscellaneousApi.TemplateNamesDecoder)
+
+  /** Reads every label in one template — `GET /label/templates/{name}`.
+    *
+    * '''The body is an array, not an object.''' A label template is a set of labels, so this returns all of them; the
+    * elements are [[TemplateLabel]] and not [[com.worxbend.codeberg4s.issues.Label]], because a template label has
+    * never been created anywhere and therefore has no identifier — see [[TemplateLabel]].
+    *
+    * '''Failures.''' As [[gitignoreTemplate]], with [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] reported
+    * at `$[n].name` for an element that names no label. A colour the instance spelled unrecognisably is '''not''' a
+    * failure; it arrives as `None`.
+    *
+    * @param name
+    *   a name from [[labelTemplates]]
+    */
+  def labelTemplate(name: TemplateName): Future[Vector[TemplateLabel]] =
+    pipeline.call(MiscellaneousApi.labelTemplateRequest(name), RetryEligibility.IdempotentOnly)(using
+      MiscellaneousApi.TemplateLabelsDecoder)
+
+  /** Lists the license templates the instance ships — `GET /licenses`.
+    *
+    * '''Names and URLs only, and it is still large.''' `golden/MANIFEST.md` measured roughly 80 KB for this response
+    * with no `limit` support, which is why the entries carry no license text: [[licenseTemplate]] fetches one body at a
+    * time. Not paged; see the class note.
+    *
+    * '''Failures.''' As [[gitignoreTemplates]], with [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] reported
+    * at `$[n].name` for an entry that names nothing.
+    */
+  def licenseTemplates(): Future[Vector[LicenseTemplateSummary]] =
+    pipeline.call(MiscellaneousApi.LicenseTemplatesRequest, RetryEligibility.IdempotentOnly)(using
+      MiscellaneousApi.LicenseTemplatesDecoder)
+
+  /** Reads one license template, text and all — `GET /licenses/{name}`.
+    *
+    * '''Placeholders are left alone.''' [[LicenseTemplate.body]] is the file Forgejo would copy into a repository, with
+    * `[year]` and `[fullname]` exactly as they are; substituting them is the caller's job.
+    *
+    * '''Failures.''' As [[gitignoreTemplate]], with [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] at
+    * `$.body` when the payload carries no license text.
+    *
+    * @param name
+    *   a [[LicenseTemplateSummary.name]] from [[licenseTemplates]]
+    */
+  def licenseTemplate(name: TemplateName): Future[LicenseTemplate] =
+    pipeline.call(MiscellaneousApi.licenseTemplateRequest(name), RetryEligibility.IdempotentOnly)(using
+      MiscellaneousApi.LicenseTemplateDecoder)
+
+  /** Renders a markup document of any supported language as HTML — `POST /markup`.
+    *
+    * The generalisation of [[renderMarkdown]]: the same rendering pipeline, but the language is chosen by
+    * [[MarkupRenderRequest.mode]] rather than assumed. [[MarkupMode.File]] makes the instance pick the renderer from
+    * [[MarkupRenderRequest.filePath]], which is how an Org-mode or AsciiDoc document is rendered the way the web UI
+    * would render it. Prefer [[renderMarkdown]] when the document is markdown; it is the narrower request.
+    *
+    * '''Retried, and for exactly the reason [[renderMarkdown]] is.''' Rendering has no effect on the instance — nothing
+    * is created, nothing is stored, and the same input always produces the same output — so repeating it after a `503`
+    * or a dropped connection costs a little CPU and cannot duplicate anything. It therefore runs under
+    * [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]] rather than the
+    * [[com.worxbend.codeberg4s.core.RetryEligibility.Never]] every other mutating method uses. These three renderers
+    * are the only `POST`s in the library that are retried.
+    *
+    * '''The result is a [[RenderedMarkdown]]''', which is the type the markdown renderers return, because the two are
+    * the same thing: an HTML fragment the instance produced and sanitised, carrying the trust boundary that type
+    * documents. A second one-field type spelled `RenderedMarkup` would differ from it in the name only.
+    *
+    * '''Failures.''' As [[renderMarkdown]]. A `422` is what a [[MarkupMode.File]] request with no
+    * [[MarkupRenderRequest.filePath]] earns, and what an extension the instance has no renderer for earns.
+    *
+    * @param request
+    *   the document and how to render it; [[MarkupRenderRequest.of]] and [[MarkupRenderRequest.ofFile]] build the two
+    *   common cases
+    */
+  def renderMarkup(request: MarkupRenderRequest): Future[RenderedMarkdown] =
+    pipeline.call(MiscellaneousApi.markupRequest(request), RetryEligibility.AlwaysRetry)(using
+      MiscellaneousApi.MarkdownDecoder)
+
+  /** Reads the instance's NodeInfo 2.1 document — `GET /nodeinfo`.
+    *
+    * The federation metadata every fediverse server publishes: which software, which protocols, how many accounts. A
+    * caller deciding whether an instance can be federated with reads this, not [[com.worxbend.codeberg4s.VersionApi]] —
+    * the version endpoint says which Forgejo, this says whether it federates at all.
+    *
+    * '''Expect this to be missing.''' `golden/MANIFEST.md` records `GET /nodeinfo` answering `404` on codeberg.org,
+    * with a '''plain-text''' body rather than the usual JSON error shape. That `404` arrives as
+    * [[com.worxbend.codeberg4s.CodebergError.Api]] with an [[com.worxbend.codeberg4s.ApiErrorBody.Empty]] payload,
+    * because the body could not be parsed as one — the status is never masked by an unreadable body.
+    *
+    * '''Failures.''' As [[gitignoreTemplates]], with [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] at
+    * `$.version`, `$.software` or `$.software.name` when the document identifies neither its schema nor the software it
+    * describes.
+    */
+  def nodeInfo(): Future[NodeInfo] =
+    pipeline.call(MiscellaneousApi.NodeInfoRequest, RetryEligibility.IdempotentOnly)(using
+      MiscellaneousApi.NodeInfoDecoder)
+
+  /** Reads the workflow run the calling token belongs to — `GET /actions/run`.
+    *
+    * The one endpoint in the library meant to be called '''from inside a running workflow''': it takes no argument
+    * because the credential is the argument. Forgejo resolves the automatic Actions token to the job that holds it and
+    * answers with that job's run, which is how a step finds out what started it without being told.
+    *
+    * ==The authentication scheme is a known risk, and this library cannot remove it==
+    *
+    * The spec's own description says the automatic Actions token "must be used as the authentication mechanism
+    * (`Authorization: Bearer ${{ forgejo.token }}`); other types of tokens cannot be used", and that the job must still
+    * be running for the request to succeed. This library sends [[com.worxbend.codeberg4s.auth.Auth.Token]] as
+    * `Authorization: token <value>`, which is the one scheme it produces — [[com.worxbend.codeberg4s.auth.Auth]] has no
+    * `Bearer` case. So a deployment that accepts only the `Bearer` spelling answers `401` here and there is nothing a
+    * caller can do about it from this API. Adding a `Bearer` scheme is a change to `Auth` and to the transport adapter,
+    * neither of which this group owns.
+    *
+    * '''The result is the same [[com.worxbend.codeberg4s.repositories.actions.ActionRun]]''' the repository Actions
+    * group returns, decoded by the same model. One run object, one type.
+    *
+    * '''Failures.''' As [[gitignoreTemplates]], with [[com.worxbend.codeberg4s.CodebergError.Api]] status `401` for the
+    * scheme mismatch above or a token that is not an Actions token, `404` for a job that has already finished, and
+    * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] at `$.id` when the payload carries no run identifier.
+    * `GET` is safe, so the call is retried under [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]].
+    */
+  def actionsRun(): Future[ActionRun] =
+    pipeline.call(MiscellaneousApi.ActionsRunRequest, RetryEligibility.IdempotentOnly)(using
+      MiscellaneousApi.ActionsRunDecoder)
+
 /** The requests this group issues, its operation ids, and its typed rail. */
 object MiscellaneousApi:
 
@@ -169,6 +393,39 @@ object MiscellaneousApi:
 
   /** The stable operation id of [[MiscellaneousApi.renderMarkdownRaw]]. */
   val RenderMarkdownRawOperation: String = "misc.renderMarkdownRaw"
+
+  /** The stable operation id of [[MiscellaneousApi.uiSettings]]. */
+  val UiSettingsOperation: String = "settings.ui"
+
+  /** The stable operation id of [[MiscellaneousApi.sshSigningKey]]. */
+  val SshSigningKeyOperation: String = "misc.sshSigningKey"
+
+  /** The stable operation id of [[MiscellaneousApi.gitignoreTemplates]]. */
+  val GitignoreTemplatesOperation: String = "misc.gitignoreTemplates.list"
+
+  /** The stable operation id of the single-template read on [[MiscellaneousApi.gitignoreTemplate]]. */
+  val GitignoreTemplateOperation: String = "misc.gitignoreTemplates.get"
+
+  /** The stable operation id of [[MiscellaneousApi.labelTemplates]]. */
+  val LabelTemplatesOperation: String = "misc.labelTemplates.list"
+
+  /** The stable operation id of the single-template read on [[MiscellaneousApi.labelTemplate]]. */
+  val LabelTemplateOperation: String = "misc.labelTemplates.get"
+
+  /** The stable operation id of [[MiscellaneousApi.licenseTemplates]]. */
+  val LicenseTemplatesOperation: String = "misc.licenses.list"
+
+  /** The stable operation id of the single-template read on [[MiscellaneousApi.licenseTemplate]]. */
+  val LicenseTemplateOperation: String = "misc.licenses.get"
+
+  /** The stable operation id of [[MiscellaneousApi.renderMarkup]]. */
+  val RenderMarkupOperation: String = "misc.renderMarkup"
+
+  /** The stable operation id of [[MiscellaneousApi.nodeInfo]]. */
+  val NodeInfoOperation: String = "misc.nodeInfo"
+
+  /** The stable operation id of [[MiscellaneousApi.actionsRun]]. */
+  val ActionsRunOperation: String = "misc.actionsRun"
 
   /** The typed rail of [[MiscellaneousApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a
     * value.
@@ -206,6 +463,52 @@ object MiscellaneousApi:
     def renderMarkdownRaw(markdown: String): Future[Either[CodebergError, RenderedMarkdown]] =
       exec.attempt(rail.renderMarkdownRaw(markdown))
 
+    /** [[MiscellaneousApi.uiSettings]] with its failure as a value. */
+    def uiSettings(): Future[Either[CodebergError, ServerUiSettings]] =
+      exec.attempt(rail.uiSettings())
+
+    /** [[MiscellaneousApi.sshSigningKey]] with its failure as a value. `Right(None)` still means the instance signs
+      * nothing with SSH.
+      */
+    def sshSigningKey(): Future[Either[CodebergError, Option[SshSigningKey]]] =
+      exec.attempt(rail.sshSigningKey())
+
+    /** [[MiscellaneousApi.gitignoreTemplates]] with its failure as a value. */
+    def gitignoreTemplates(): Future[Either[CodebergError, Vector[TemplateName]]] =
+      exec.attempt(rail.gitignoreTemplates())
+
+    /** The single-template read on [[MiscellaneousApi.gitignoreTemplate]], with its failure as a value. */
+    def gitignoreTemplate(name: TemplateName): Future[Either[CodebergError, GitignoreTemplate]] =
+      exec.attempt(rail.gitignoreTemplate(name))
+
+    /** [[MiscellaneousApi.labelTemplates]] with its failure as a value. */
+    def labelTemplates(): Future[Either[CodebergError, Vector[TemplateName]]] =
+      exec.attempt(rail.labelTemplates())
+
+    /** The single-template read on [[MiscellaneousApi.labelTemplate]], with its failure as a value. */
+    def labelTemplate(name: TemplateName): Future[Either[CodebergError, Vector[TemplateLabel]]] =
+      exec.attempt(rail.labelTemplate(name))
+
+    /** [[MiscellaneousApi.licenseTemplates]] with its failure as a value. */
+    def licenseTemplates(): Future[Either[CodebergError, Vector[LicenseTemplateSummary]]] =
+      exec.attempt(rail.licenseTemplates())
+
+    /** The single-template read on [[MiscellaneousApi.licenseTemplate]], with its failure as a value. */
+    def licenseTemplate(name: TemplateName): Future[Either[CodebergError, LicenseTemplate]] =
+      exec.attempt(rail.licenseTemplate(name))
+
+    /** [[MiscellaneousApi.renderMarkup]] with its failure as a value. */
+    def renderMarkup(request: MarkupRenderRequest): Future[Either[CodebergError, RenderedMarkdown]] =
+      exec.attempt(rail.renderMarkup(request))
+
+    /** [[MiscellaneousApi.nodeInfo]] with its failure as a value. */
+    def nodeInfo(): Future[Either[CodebergError, NodeInfo]] =
+      exec.attempt(rail.nodeInfo())
+
+    /** [[MiscellaneousApi.actionsRun]] with its failure as a value. */
+    def actionsRun(): Future[Either[CodebergError, ActionRun]] =
+      exec.attempt(rail.actionsRun())
+
   /** The `Content-Type` `POST /markdown/raw` consumes.
     *
     * Sent as an explicit header because [[com.worxbend.codeberg4s.core.RequestBody]] models only a JSON payload and an
@@ -227,15 +530,40 @@ object MiscellaneousApi:
   private val AttachmentSettingsRequest: CodebergRequest =
     settingsRequest(AttachmentSettingsOperation, "attachment")
 
+  /** The path of the gitignore catalogue, written once because both its operations start from it. */
+  private val GitignoreTemplatesPath: List[String] = List("gitignore", "templates")
+
+  /** The path of the label-template catalogue; note that the first segment is singular, `label`, and that the by-name
+    * form hangs off the same two segments.
+    */
+  private val LabelTemplatesPath: List[String] = List("label", "templates")
+
+  /** The path of the license catalogue. One segment, unlike the other two catalogues. */
+  private val LicensesPath: List[String] = List("licenses")
+
+  private val UiSettingsRequest: CodebergRequest =
+    settingsRequest(UiSettingsOperation, "ui")
+
   private val SigningKeyRequest: CodebergRequest =
-    CodebergRequest(
-      operation = SigningKeyOperation,
-      method    = HttpMethod.Get,
-      path      = List("signing-key.gpg"),
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
-    )
+    read(SigningKeyOperation, List("signing-key.gpg"))
+
+  private val SshSigningKeyRequest: CodebergRequest =
+    read(SshSigningKeyOperation, List("signing-key.ssh"))
+
+  private val GitignoreTemplatesRequest: CodebergRequest =
+    read(GitignoreTemplatesOperation, GitignoreTemplatesPath)
+
+  private val LabelTemplatesRequest: CodebergRequest =
+    read(LabelTemplatesOperation, LabelTemplatesPath)
+
+  private val LicenseTemplatesRequest: CodebergRequest =
+    read(LicenseTemplatesOperation, LicensesPath)
+
+  private val NodeInfoRequest: CodebergRequest =
+    read(NodeInfoOperation, List("nodeinfo"))
+
+  private val ActionsRunRequest: CodebergRequest =
+    read(ActionsRunOperation, List("actions", "run"))
 
   private val ApiSettingsDecoder: Decode[ServerApiSettings] =
     WireDecode.of(Json.decoder[ServerApiSettingsDto])(_.toDomain)
@@ -252,11 +580,68 @@ object MiscellaneousApi:
   private val MarkdownDecoder: Decode[RenderedMarkdown] =
     PlainText.decodedAs(RenderedMarkdown.apply)
 
+  private val UiSettingsDecoder: Decode[ServerUiSettings] =
+    WireDecode.of(Json.decoder[ServerUiSettingsDto])(_.toDomain)
+
+  private val SshSigningKeyDecoder: Decode[Option[SshSigningKey]] =
+    PlainText.decodedAs(SshSigningKey.from)
+
+  /** Shared by both catalogues whose body is a bare array of strings; see
+    * [[com.worxbend.codeberg4s.miscellaneous.wire.TemplateNamesDto]].
+    */
+  private val TemplateNamesDecoder: Decode[Vector[TemplateName]] =
+    WireDecode.of(Json.decoder[Vector[String]])(names => TemplateNamesDto.toDomainAll(JsonPath.Root, names))
+
+  private val GitignoreTemplateDecoder: Decode[GitignoreTemplate] =
+    WireDecode.of(Json.decoder[GitignoreTemplateDto])(_.toDomain)
+
+  private val TemplateLabelsDecoder: Decode[Vector[TemplateLabel]] =
+    WireDecode.of(Json.decoder[Vector[TemplateLabelDto]])(dtos => TemplateLabelDto.toDomainAll(JsonPath.Root, dtos))
+
+  private val LicenseTemplatesDecoder: Decode[Vector[LicenseTemplateSummary]] =
+    WireDecode.of(Json.decoder[Vector[LicenseTemplateSummaryDto]]): dtos =>
+      LicenseTemplateSummaryDto.toDomainAll(JsonPath.Root, dtos)
+
+  private val LicenseTemplateDecoder: Decode[LicenseTemplate] =
+    WireDecode.of(Json.decoder[LicenseTemplateDto])(_.toDomain)
+
+  private val NodeInfoDecoder: Decode[NodeInfo] =
+    WireDecode.of(Json.decoder[NodeInfoDto])(_.toDomain)
+
+  /** The run model the repository Actions group owns, reused verbatim: `GET /actions/run` answers the same `ActionRun`
+    * object, so it is read by the same DTO rather than by a second copy of it.
+    */
+  private val ActionsRunDecoder: Decode[ActionRun] =
+    WireDecode.of(Json.decoder[ActionRunDto])(_.toDomain)
+
   private def settingsRequest(operation: String, area: String): CodebergRequest =
+    read(operation, List("settings", area))
+
+  private def gitignoreTemplateRequest(name: TemplateName): CodebergRequest =
+    read(GitignoreTemplateOperation, GitignoreTemplatesPath :+ name.value)
+
+  private def labelTemplateRequest(name: TemplateName): CodebergRequest =
+    read(LabelTemplateOperation, LabelTemplatesPath :+ name.value)
+
+  private def licenseTemplateRequest(name: TemplateName): CodebergRequest =
+    read(LicenseTemplateOperation, LicensesPath :+ name.value)
+
+  private def markupRequest(request: MarkupRenderRequest): CodebergRequest =
+    CodebergRequest(
+      operation = RenderMarkupOperation,
+      method    = HttpMethod.Post,
+      path      = List("markup"),
+      query     = Nil,
+      headers   = Nil,
+      body      = Some(RequestBody.Json(MarkupOptionDto.fromDomain(request).toJson)),
+    )
+
+  /** A `GET` with no query, no headers and no body — which is every read in this group. */
+  private def read(operation: String, path: List[String]): CodebergRequest =
     CodebergRequest(
       operation = operation,
       method    = HttpMethod.Get,
-      path      = List("settings", area),
+      path      = path,
       query     = Nil,
       headers   = Nil,
       body      = None,
@@ -272,12 +657,16 @@ object MiscellaneousApi:
       body      = Some(RequestBody.Json(MarkdownOptionDto.fromDomain(request).toJson)),
     )
 
-  /** The one request in the library whose body is not JSON.
+  /** The one request in this group whose body is not JSON.
     *
-    * [[com.worxbend.codeberg4s.core.RequestBody.Json]] is used as the carrier because core models no other non-empty
-    * body, and the `Content-Type` header above corrects what that would otherwise put on the wire. A `RequestBody.Text`
-    * case in core would remove the workaround; adding one means changing the transport's match as well, which is not
-    * this group's to change.
+    * [[com.worxbend.codeberg4s.core.RequestBody.Json]] is used as the carrier and the `Content-Type` header above
+    * corrects what that would otherwise put on the wire. That was the only option when this endpoint was written; '''it
+    * no longer is''' — core has since grown [[com.worxbend.codeberg4s.core.RequestBody.Text]], which the transport
+    * already handles, and switching to it would delete both the header override and `PlainTextUtf8`. The bytes on the
+    * wire are identical either way, so this is a tidy-up and not a fix, and it is left for whoever next touches the
+    * markdown renderers rather than folded into a wave that is adding endpoints. The `MiscellaneousApiSuite` case
+    * "renderMarkdownRaw sends the markdown itself as a plain-text body" pins the observable behaviour, so the migration
+    * cannot change it silently.
     */
   private def markdownRawRequest(markdown: String): CodebergRequest =
     CodebergRequest(

@@ -160,6 +160,195 @@ final class MiscellaneousApiSuite extends FunSuite:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$.max_response_items")
         case other                                             => fail(s"expected a decoding failure, got $other")
 
+  // --- the settings tail ----------------------------------------------------
+
+  test("uiSettings targets /settings/ui and reports what the reaction endpoints will accept"):
+    val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.UiSettingsBody))
+
+    onBackend(backend): api =>
+      api.uiSettings().map: settings =>
+        assertEquals(dialled(backend), s"$Root/settings/ui")
+        assertEquals(settings.allowedReactions, Vector("+1", "heart"))
+        assertEquals(settings.customEmojis, Vector("codeberg"))
+        assertEquals(settings.defaultTheme, Some("forgejo-auto"))
+        assertEquals(settings.allows("heart"), true)
+        assertEquals(settings.allows("rocket"), false)
+
+  test("an instance that reports no UI settings at all still decodes, because none of them is required"):
+    onBackend(responding(200, "{}")): api =>
+      api.uiSettings().map: settings =>
+        assertEquals(settings.allowedReactions, Vector.empty[String])
+        assertEquals(settings.defaultTheme, None)
+        assertEquals(settings.allows("+1"), false, "silence must not be read as permission")
+
+  // --- the SSH signing key --------------------------------------------------
+
+  test("sshSigningKey hands back an authorized-key line that no JSON parser would have accepted"):
+    val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.OpenSshKey))
+
+    onBackend(backend): api =>
+      api.sshSigningKey().map: key =>
+        assertEquals(dialled(backend), s"$Root/signing-key.ssh")
+        assertEquals(key, Some(SshSigningKey(MiscellaneousApiSuite.OpenSshKey)))
+
+  test("an instance that does not sign with SSH answers 200 with an empty body, which is None and not a failure"):
+    onBackend(responding(200, "")): api =>
+      api.sshSigningKey().map(key => assertEquals(key, None))
+
+  test("the 404 this endpoint declares is a failure, unlike the empty body"):
+    onBackend(responding(404, MiscellaneousApiSuite.NotFoundBody)): api =>
+      api.attempt.sshSigningKey().map:
+        case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 404)
+        case other                                 => fail(s"expected an Api failure, got $other")
+
+  // --- the template catalogues ----------------------------------------------
+
+  test("gitignoreTemplates targets /gitignore/templates and returns names that address the by-name endpoint"):
+    val backend = RecordingBackend(responding(200, """["AL","Actionscript","Ada"]"""))
+
+    onBackend(backend): api =>
+      api.gitignoreTemplates().map: names =>
+        assertEquals(dialled(backend), s"$Root/gitignore/templates")
+        assertEquals(names.map(_.value), Vector("AL", "Actionscript", "Ada"))
+
+  test("a listing carrying a name nothing could be addressed with fails at that element's own index"):
+    onBackend(responding(200, """["AL","..","Ada"]""")): api =>
+      api.attempt.gitignoreTemplates().map:
+        case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$[1]")
+        case other                                             => fail(s"expected a decoding failure, got $other")
+
+  test("gitignoreTemplate percent-encodes a template name that carries a space"):
+    val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.GitignoreTemplateBody))
+
+    onBackend(backend): api =>
+      api.gitignoreTemplate(orFail(TemplateName.from("Visual Studio"))).map: template =>
+        assertEquals(dialled(backend), s"$Root/gitignore/templates/Visual%20Studio")
+        assertEquals(template.name, Some("Visual Studio"))
+        assert(template.source.startsWith("## Ignore"), "the template body was not handed back verbatim")
+
+  test("labelTemplates targets the singular /label/templates"):
+    val backend = RecordingBackend(responding(200, """["Default","Advanced"]"""))
+
+    onBackend(backend): api =>
+      api.labelTemplates().map: names =>
+        assertEquals(dialled(backend), s"$Root/label/templates")
+        assertEquals(names.map(_.value), Vector("Default", "Advanced"))
+
+  test("labelTemplate answers every label in the set, and a colour it cannot read is None rather than a failure"):
+    val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.LabelTemplateBody))
+
+    onBackend(backend): api =>
+      api.labelTemplate(orFail(TemplateName.from("Default"))).map: labels =>
+        assertEquals(dialled(backend), s"$Root/label/templates/Default")
+        assertEquals(labels.map(_.name), Vector("bug", "duplicate"))
+        assertEquals(labels.head.color.map(_.value), Some("ee0701"))
+        assertEquals(labels.head.isExclusive, true)
+        assertEquals(labels(1).color, None, "an unreadable colour must not cost the caller the label")
+
+  test("licenseTemplates targets /licenses and carries no license text"):
+    val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.LicenseListBody))
+
+    onBackend(backend): api =>
+      api.licenseTemplates().map: entries =>
+        assertEquals(dialled(backend), s"$Root/licenses")
+        assertEquals(entries.map(_.name.value), Vector("MIT", "GNU Affero General Public License v3.0"))
+        assertEquals(entries.head.key, Some("MIT"))
+
+  test("licenseTemplate fetches one body, percent-encoding the spaces a license name genuinely has"):
+    val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.LicenseBody))
+
+    onBackend(backend): api =>
+      api.licenseTemplate(orFail(TemplateName.from("GNU Affero General Public License v3.0"))).map: template =>
+        assertEquals(
+          dialled(backend),
+          s"$Root/licenses/GNU%20Affero%20General%20Public%20License%20v3.0",
+        )
+        assert(template.body.contains("[year]"), "the placeholders must reach the caller unsubstituted")
+
+  // --- markup ---------------------------------------------------------------
+
+  test("renderMarkup POSTs the capitalised option body to /markup, file path included"):
+    val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.RenderedHtml))
+
+    onBackend(backend): api =>
+      api.renderMarkup(MarkupRenderRequest.ofFile("* Title", "README.org")).map: html =>
+        assertEquals(dialled(backend), s"$Root/markup")
+        assertEquals(method(backend), "POST")
+        assertEquals(ujson.read(sentBody(backend))("Text").str, "* Title")
+        assertEquals(ujson.read(sentBody(backend))("Mode").str, "file")
+        assertEquals(ujson.read(sentBody(backend))("FilePath").str, "README.org")
+        assertEquals(contentType(backend), Some("application/json"))
+        assertEquals(html, RenderedMarkdown(MiscellaneousApiSuite.RenderedHtml))
+
+  test("renderMarkup omits the three optional keys the caller did not set"):
+    val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.RenderedHtml))
+
+    onBackend(backend): api =>
+      api.renderMarkup(MarkupRenderRequest.of("# Title", MarkupMode.Gfm)).map: _ =>
+        assertEquals(ujson.read(sentBody(backend)).obj.keys.toList.sorted, List("Mode", "Text", "Wiki"))
+
+  test("rendering markup is retried after a 503 too, because it is as free of consequence as markdown is"):
+    val backend = RecordingBackend(
+      BackendStub.asynchronousFuture.whenAnyRequest.thenRespondCyclic(
+        ResponseStub.adjust("", StatusCode(503)),
+        ResponseStub.adjust(MiscellaneousApiSuite.RenderedHtml, StatusCode(200)),
+      )
+    )
+
+    onBackend(backend): api =>
+      api.renderMarkup(MarkupRenderRequest.of("# Title", MarkupMode.Markdown)).map: _ =>
+        assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
+
+  // --- nodeinfo and the workflow-run lookup ---------------------------------
+
+  test("nodeInfo targets /nodeinfo and reads the federation document rather than handing back a string"):
+    val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.NodeInfoBody))
+
+    onBackend(backend): api =>
+      api.nodeInfo().map: info =>
+        assertEquals(dialled(backend), s"$Root/nodeinfo")
+        assertEquals(info.version, "2.1")
+        assertEquals(info.software.name, "forgejo")
+        assertEquals(info.protocols, Vector("activitypub"))
+        assertEquals(info.hasOpenRegistrations, true)
+        assertEquals(info.usage.flatMap(_.users).flatMap(_.total), Some(1234L))
+
+  test("a nodeinfo document naming no software fails at $.software, on both rails alike"):
+    onBackend(responding(200, """{"version":"2.1"}""")): api =>
+      for
+        raised <- api.nodeInfo().failed
+        typed  <- api.attempt.nodeInfo()
+      yield (raised, typed) match
+        case (CodebergException(CodebergError.DecodingFailed(_, _, raisedPath, _)), Left(materialised)) =>
+          assertEquals(raisedPath.render, "$.software")
+          materialised match
+            case CodebergError.DecodingFailed(_, _, path, _) => assertEquals(path.render, "$.software")
+            case other                                       => fail(s"the rails disagreed, typed was $other")
+        case (convenience, materialised)                                                                =>
+          fail(s"the rails disagreed: $convenience versus $materialised")
+
+  test("actionsRun targets /actions/run and decodes the run the calling token belongs to"):
+    val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.ActionRunBody))
+
+    onBackend(backend): api =>
+      api.actionsRun().map: run =>
+        assertEquals(dialled(backend), s"$Root/actions/run")
+        assertEquals(run.id.value, 4711L)
+        assertEquals(run.indexInRepo, Some(42L))
+
+  test("a 401 from the workflow-run lookup reaches both rails as the same Api failure"):
+    onBackend(responding(401, MiscellaneousApiSuite.UnauthorizedBody)): api =>
+      for
+        raised <- api.actionsRun().failed
+        typed  <- api.attempt.actionsRun()
+      yield (raised, typed) match
+        case (CodebergException(convenience), Left(materialised)) =>
+          assertEquals(summary(materialised), summary(convenience))
+          assertEquals(summary(materialised)._1, MiscellaneousApi.ActionsRunOperation)
+          assertEquals(summary(materialised)._2, 401)
+        case (convenience, materialised)                          =>
+          fail(s"the rails disagreed: $convenience versus $materialised")
+
   // --- assertions -----------------------------------------------------------
 
   /** Both rails must report the same failure, so the choice between them is a choice of style and nothing else. */
@@ -251,6 +440,49 @@ object MiscellaneousApiSuite:
   /** The shape `docs/HAZARDS.md` §4 captured from a live 422: a raw Go error in `message` and no `errors` array. */
   private val ValidationBody: String =
     """{"message": "Unsupported render mode", "url": "https://codeberg.org/api/swagger"}"""
+
+  /** `golden/error/401-token-required.json`, in one line. */
+  private val UnauthorizedBody: String =
+    """{"message": "token is required", "url": "https://codeberg.org/api/swagger"}"""
+
+  /** Hand-written from the spec's `GeneralUISettings`; `/settings/ui` was not harvested. */
+  private val UiSettingsBody: String =
+    """{"allowed_reactions":["+1","heart"],"custom_emojis":["codeberg"],"default_theme":"forgejo-auto"}"""
+
+  /** The shape of a `signing-key.ssh` body: one line, and not JSON — which is the point. */
+  private val OpenSshKey: String =
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyMaterialForATest forgejo\n"
+
+  /** Hand-written from the spec's `GitignoreTemplateInfo`; only the '''listing''' has a golden capture. */
+  private val GitignoreTemplateBody: String =
+    """{"name":"Visual Studio","source":"## Ignore Visual Studio temporary files\n*.suo\n"}"""
+
+  /** Hand-written from the spec's `LabelTemplate`. The second entry's colour is deliberately unreadable. */
+  private val LabelTemplateBody: String =
+    """[{"name":"bug","color":"ee0701","description":"Something is broken","exclusive":true},
+      |{"name":"duplicate","color":"not a colour","description":null}]""".stripMargin.replace("\n", "")
+
+  /** Hand-written from the spec's `LicensesTemplateListEntry`; `GET /licenses` was probed and dropped as too large. */
+  private val LicenseListBody: String =
+    """[{"key":"MIT","name":"MIT","url":"https://forge.example/api/v1/licenses/MIT"},
+      |{"key":"AGPL-3.0","name":"GNU Affero General Public License v3.0","url":null}]""".stripMargin
+      .replace("\n", "")
+
+  /** Hand-written from the spec's `LicenseTemplateInfo`, placeholders intact. */
+  private val LicenseBody: String =
+    """{"key":"AGPL-3.0","name":"GNU Affero General Public License v3.0","implementation":"Create a text file",
+      |"body":"Copyright (C) [year] [fullname]\n","url":null}""".stripMargin.replace("\n", "")
+
+  /** Hand-written from the spec's `NodeInfo`; `GET /nodeinfo` answered `404` on codeberg.org. */
+  private val NodeInfoBody: String =
+    """{"version":"2.1","software":{"name":"forgejo","version":"12.0.0","repository":"https://codeberg.org/forgejo"},
+      |"protocols":["activitypub"],"services":{"inbound":[],"outbound":null},"openRegistrations":true,
+      |"usage":{"users":{"total":1234,"activeHalfyear":56,"activeMonth":7},"localPosts":89,"localComments":null},
+      |"metadata":{}}""".stripMargin.replace("\n", "")
+
+  /** Hand-written from the spec's `ActionRun`, which is the model the repository Actions group owns. */
+  private val ActionRunBody: String =
+    """{"id":4711,"index_in_repo":42,"status":"running","workflow_id":"build.yml","event":"push"}"""
 
   private val ExpectedNotFound: (String, Int, Option[String]) =
     (MiscellaneousApi.ApiSettingsOperation, 404, Some("The target couldn't be found."))

@@ -15,6 +15,14 @@ import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
+import com.worxbend.codeberg4s.users.account.UserAccountApi
+import com.worxbend.codeberg4s.users.account.UserActionApi
+import com.worxbend.codeberg4s.users.account.UserApplicationApi
+import com.worxbend.codeberg4s.users.account.UserHookApi
+import com.worxbend.codeberg4s.users.account.UserQuotaApi
+import com.worxbend.codeberg4s.users.social.UserKeyApi
+import com.worxbend.codeberg4s.users.social.UserSocialApi
+import com.worxbend.codeberg4s.users.social.UserTokenApi
 import com.worxbend.codeberg4s.users.wire.PublicKeyDto
 import com.worxbend.codeberg4s.users.wire.UserDto
 import com.worxbend.codeberg4s.wire.SearchEnvelopeDto
@@ -49,6 +57,30 @@ final class UserApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using ex
 
   /** The same operations, with failures as values instead of as a failed `Future`. */
   val attempt: UserApi.Attempt = UserApi.Attempt(this)
+
+  /** The authenticated account itself: settings, avatar, email addresses, repositories and teams. */
+  val account: UserAccountApi = UserAccountApi(pipeline)
+
+  /** Forgejo Actions scoped to the authenticated user. */
+  val actions: UserActionApi = UserActionApi(pipeline)
+
+  /** OAuth2 applications the authenticated user owns. */
+  val applications: UserApplicationApi = UserApplicationApi(pipeline)
+
+  /** Webhooks the authenticated user owns. */
+  val hooks: UserHookApi = UserHookApi(pipeline)
+
+  /** Storage quota for the authenticated user. */
+  val quota: UserQuotaApi = UserQuotaApi(pipeline)
+
+  /** Follows, stars, watches, blocks, activity and the contribution heatmap. */
+  val social: UserSocialApi = UserSocialApi(pipeline)
+
+  /** SSH and GPG keys, including the GPG verification handshake. */
+  val keys: UserKeyApi = UserKeyApi(pipeline)
+
+  /** Access tokens. Creating one returns its only readable copy. */
+  val tokens: UserTokenApi = UserTokenApi(pipeline)
 
   /** Reads the account the configured credentials belong to — `GET /user`.
     *
