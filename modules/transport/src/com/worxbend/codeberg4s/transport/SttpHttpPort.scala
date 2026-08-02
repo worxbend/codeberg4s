@@ -17,6 +17,7 @@ import sttp.client4.Response
 import sttp.client4.asStringAlways
 import sttp.client4.basicRequest
 import sttp.client4.httpclient.HttpClientFutureBackend
+import sttp.client4.multipart
 import sttp.model.Header
 import sttp.model.HeaderNames
 import sttp.model.MediaType
@@ -167,9 +168,16 @@ object SttpHttpPort:
       request: PartialRequest[Either[String, String]],
   ): PartialRequest[Either[String, String]] =
     body match
-      case None                          => request
-      case Some(RequestBody.Empty)       => request.body("")
-      case Some(RequestBody.Json(value)) => request.body(value).contentType(MediaType.ApplicationJson)
+      case None                                       => request
+      case Some(RequestBody.Empty)                    => request.body("")
+      case Some(RequestBody.Json(value))              => request.body(value).contentType(MediaType.ApplicationJson)
+      case Some(RequestBody.Text(value, mediaType))   => request.body(value).contentType(mediaType)
+      case Some(RequestBody.Binary(bytes, mediaType)) => request.body(bytes).contentType(mediaType)
+      case Some(RequestBody.Multipart(fieldName, fileName, bytes, mediaType)) =>
+        // multipartBody sets Content-Type: multipart/form-data and picks the
+        // boundary itself; setting it here as well would produce a header whose
+        // boundary does not match the body sttp actually writes.
+        request.multipartBody(multipart(fieldName, bytes).fileName(fileName).contentType(mediaType))
 
   private def succeed(response: Response[String]): Either[TransportFailure, CodebergResponse] =
     Right(CodebergResponse(response.code.code, lowercased(response.headers), response.body))
