@@ -73,16 +73,16 @@ the first wave that needs them; later waves consume rather than redefine
       thread read, thread mark-read, per-repository list and mark-read
 - [x] Wave 7 — **misc** (6 operations): markdown render (both forms), the three
       `settings/*` endpoints, signing key
-- [ ] `GET /repos/issues/search` — deferred out of wave 7 because it needs wave 3's
-      `IssueDto`, which did not exist when that lane ran. Note it returns a bare
-      array, not the `{ok, data}` envelope the other search endpoints use.
+- [x] `GET /repos/issues/search` — returns a bare array, not the `{ok, data}`
+      envelope the other search endpoints use
+- [x] **The long tail — all 378 remaining in-scope operations**, in three rounds:
+      repository Actions, git data and publishing; issues, hooks, access control
+      and administration; user account, user social, organizations and
+      miscellaneous. The in-scope surface is now 439 of 439.
 
-That is **61 of the 439 in-scope operations, 13.9 %** (`docs/API_INVENTORY.md`
-§0). Gate G3-final is 100 %, so the seven waves are the common core, not the
-finish line: the untouched remainder is the long tail of `repository` (actions,
-hooks, deploy keys, wikis, attachments, collaborators, subscriptions) and of
-`user` (settings, stars, blocks, GPG keys, quotas, tokens), plus every write
-operation outside issues, pulls and labels.
+That is **439 of 439 in-scope operations, 100 %** (`docs/API_INVENTORY.md` §0).
+Gate G3-final is met. The 67 operations not implemented are the ones `PLAN.md`
+§0 puts out of scope for v1 — `admin`, `activitypub` and `package`.
 
 Per-wave definition of done: models from golden fixtures · codec round-trips ·
 both rails · Scaladoc stating the error contract · inventory checkbox flipped ·
