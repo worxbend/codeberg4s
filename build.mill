@@ -8,6 +8,7 @@ import mill.*
 import com.goyeau.mill.scalafix.ScalafixModule
 import mill.contrib.scoverage.ScoverageModule
 import mill.scalalib.*
+import mill.scalalib.publish.*
 import mill.scalalib.scalafmt.ScalafmtModule
 
 object Versions:
@@ -21,7 +22,39 @@ object Versions:
   val testcontainers = "0.44.1"
   val scoverage      = "2.3.0"
 
-/** Common settings for every published module.
+/** Everything the published POMs say about this project.
+  *
+  * The five library modules ship as five artifacts under one version — `codeberg4s-domain`, `-core`, `-codec`,
+  * `-transport`, `-client` — because that is exactly the module graph, and the graph is what enforces the architecture.
+  * A consumer names `codeberg4s-client` and Maven resolves the other four transitively; a consumer who only wants the
+  * error ADT can name `codeberg4s-domain` and get no dependencies at all.
+  *
+  * Publish with `./mill mill.javalib.SonatypeCentralPublishModule/publishAll`, which resolves every `PublishModule` in
+  * the build. `modules.it` is not one, so integration tests cannot leak into a release.
+  */
+object Publish:
+  val group      = "com.worxbend"
+  val version    = "0.1.0-SNAPSHOT"
+  val projectUrl = "https://codeberg.org/worxbend/codeberg4s"
+
+  private val repoPath = "worxbend/codeberg4s.git"
+
+  private val scm = VersionControl(
+    browsableRepository = Some(projectUrl),
+    connection          = Some(VersionControlConnection.gitHttps("codeberg.org", repoPath)),
+    developerConnection = Some(VersionControlConnection.gitSsh("codeberg.org", s":$repoPath", Some("git"))),
+  )
+
+  val pom = PomSettings(
+    description    = "A Scala 3 client for the Codeberg / Forgejo REST API v1, with a Future-based public API.",
+    organization   = group,
+    url            = projectUrl,
+    licenses       = Seq(License.MIT),
+    versionControl = scm,
+    developers     = Seq(Developer("w0rxbend", "w0rxbend", "https://codeberg.org/worxbend")),
+  )
+
+/** Common settings for every module in the build, published or not.
   *
   * Warnings are errors here on purpose — see CLAUDE.md "Compiler settings".
   */
@@ -50,17 +83,40 @@ trait Codeberg4sModule extends ScalaModule with ScalafmtModule with ScoverageMod
       mvn"org.scalacheck::scalacheck:${Versions.scalacheck}",
     )
 
+/** A module that ships to Maven Central.
+  *
+  * `modules.it` deliberately does not extend this. Mill requires every `moduleDeps` entry of a `PublishModule` to be a
+  * `PublishModule` too, so this trait is also the mechanism that keeps the integration-test module out of the release:
+  * it depends on `client`, not the other way round.
+  *
+  * Artifact ids are written out per module rather than derived from the module name, because `moduleSegments` would
+  * publish `modules.domain` as `modules-domain` and because an artifact id is a permanent promise that must not move
+  * when a module is renamed.
+  */
+trait Codeberg4sPublishModule extends Codeberg4sModule with PublishModule:
+  def pomSettings    = Publish.pom
+  def publishVersion = Publish.version
+  def versionScheme  = Some(VersionScheme.EarlySemVer)
+
+  /** Mill feeds `scalacOptions` to Scaladoc as well as to the compiler, so `-Werror` would let one unresolved
+    * `[[link]]` fail `docJar` — and Maven Central rejects a bundle that has no Javadoc jar. Doc warnings still print;
+    * they just do not block a release. The compiler's `-Werror` is untouched.
+    */
+  def scalaDocOptions = super.scalaDocOptions().filterNot(_ == "-Werror")
+
 object modules extends Module:
 
   /** Pure domain: models, identifiers, error ADT, pagination types. No dependency beyond the standard library —
     * enforced by having no `moduleDeps` and no `mvnDeps`.
     */
-  object domain extends Codeberg4sModule:
+  object domain extends Codeberg4sPublishModule:
+    def artifactName = "codeberg4s-domain"
     object test extends Codeberg4sTests
 
   /** Ports and use-case logic over the abstract `Exec[F]`. Never imports sttp or upickle. */
-  object core extends Codeberg4sModule:
-    def moduleDeps = Seq(domain)
+  object core extends Codeberg4sPublishModule:
+    def artifactName = "codeberg4s-core"
+    def moduleDeps   = Seq(domain)
     object test extends Codeberg4sTests
 
   /** Wire DTOs and upickle codecs. The only module that knows the JSON shape.
@@ -69,14 +125,16 @@ object modules extends Module:
     * `Decode` port — an adapter depending on the port it satisfies is the
     * expected direction. It still must not import sttp.
     */
-  object codec extends Codeberg4sModule:
-    def moduleDeps = Seq(domain, core)
-    def mvnDeps    = Seq(mvn"com.lihaoyi::upickle:${Versions.upickle}")
+  object codec extends Codeberg4sPublishModule:
+    def artifactName = "codeberg4s-codec"
+    def moduleDeps   = Seq(domain, core)
+    def mvnDeps      = Seq(mvn"com.lihaoyi::upickle:${Versions.upickle}")
     object test extends Codeberg4sTests
 
   /** The only module importing sttp. Implements core's `HttpPort`. */
-  object transport extends Codeberg4sModule:
-    def moduleDeps = Seq(core, codec)
+  object transport extends Codeberg4sPublishModule:
+    def artifactName = "codeberg4s-transport"
+    def moduleDeps   = Seq(core, codec)
 
     def mvnDeps = Seq(
       mvn"com.softwaremill.sttp.client4::core:${Versions.sttp}",
@@ -86,8 +144,9 @@ object modules extends Module:
     object test extends Codeberg4sTests
 
   /** The published public API: the `Future` façade users see. */
-  object client extends Codeberg4sModule:
-    def moduleDeps = Seq(core, codec, transport)
+  object client extends Codeberg4sPublishModule:
+    def artifactName = "codeberg4s-client"
+    def moduleDeps   = Seq(core, codec, transport)
     object test extends Codeberg4sTests
 
   /** Live-network / container integration tests. Environmentally unsuitable — excluded from coverage, mutation and the

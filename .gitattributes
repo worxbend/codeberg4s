@@ -1,0 +1,44 @@
+# Line endings
+#
+# Everything in this repository is LF, in the index and in the worktree. Without
+# `eol=lf` a Windows checkout rewrites the `mill` bootstrap script and
+# `verify.sh` to CRLF, and neither survives it.
+* text=auto eol=lf
+
+# ---------------------------------------------------------------------------
+# Diff drivers
+# ---------------------------------------------------------------------------
+# `diff=java` gives Git a hunk-header pattern that recognises class, trait,
+# object and def declarations, so a Scala diff says which definition it is in.
+*.scala  text diff=java
+*.sc     text diff=java
+*.mill   text diff=java
+
+*.md     text diff=markdown
+*.json   text
+*.conf   text
+*.yml    text
+*.sh     text eol=lf
+mill     text eol=lf
+
+# ---------------------------------------------------------------------------
+# Generated and vendored payloads
+# ---------------------------------------------------------------------------
+# These are machine-produced, not authored: the Swagger spec is vendored from
+# the upstream instance (`docs/SPEC_PROVENANCE.md`) and the golden fixtures are
+# responses captured from the live API. Between them they are far larger than
+# the hand-written sources, so `linguist-generated` collapses them in a forge's
+# diff view and keeps them out of the repository's language statistics.
+#
+# They keep a normal textual diff on purpose. `-diff` would hide them entirely,
+# and the nightly spec-drift job and any fixture re-capture both need a readable
+# diff to review.
+#
+# Only the payloads: `golden/MANIFEST.md` is hand-written provenance and stays a
+# normal file.
+spec/swagger.v1.json                          linguist-generated=true
+modules/codec/test/resources/golden/**/*.json linguist-generated=true
+
+# The Mill bootstrap script is vendored from upstream and edited only when Mill
+# is upgraded (ADR-0006).
+mill                                        linguist-vendored=true

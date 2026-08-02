@@ -1,0 +1,46 @@
+# EditorConfig — https://editorconfig.org
+#
+# Mirrors `.scalafmt.conf` so that an editor typing into a file and
+# `mill mill.scalalib.scalafmt/` reformatting it afterwards agree on the result.
+# `.scalafmt.conf` remains the authority for Scala; this file only stops editors
+# from fighting it, and covers the file types scalafmt never sees.
+
+root = true
+
+[*]
+charset                  = utf-8
+end_of_line              = lf
+indent_style             = space
+indent_size              = 2
+insert_final_newline     = true
+trim_trailing_whitespace = true
+max_line_length          = 120
+
+# indent.main / indent.significant = 2, maxColumn = 120.
+# Note that scalafmt uses indent.defnSite = 4 for wrapped parameter lists, which
+# EditorConfig cannot express — let scalafmt place those.
+[*.{scala,sc,mill}]
+indent_size     = 2
+max_line_length = 120
+
+# Two trailing spaces are a hard line break in Markdown, so trimming them
+# silently changes rendered output. Prose here wraps at 80, not 120.
+[*.md]
+trim_trailing_whitespace = false
+max_line_length          = 80
+
+# Vendored and captured payloads: `spec/swagger.v1.json` comes from Forgejo and
+# the golden fixtures are unmodified live-API responses. Whatever the producer
+# emitted is the correct formatting, and reformatting one invalidates it as
+# evidence — see `.gitattributes` and `docs/SPEC_PROVENANCE.md`.
+[/spec/swagger.v1.json]
+indent_size              = unset
+max_line_length          = unset
+trim_trailing_whitespace = false
+insert_final_newline     = unset
+
+[/modules/codec/test/resources/golden/**.json]
+indent_size              = unset
+max_line_length          = unset
+trim_trailing_whitespace = false
+insert_final_newline     = unset
