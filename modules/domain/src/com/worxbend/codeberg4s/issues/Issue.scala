@@ -52,7 +52,7 @@ import java.time.Instant
   * @param dueDate
   *   the deadline set on the issue, absent when it has none
   */
-final case class Issue(
+final case class Issue private[codeberg4s] (
     id: Long,
     number: IssueNumber,
     title: String,

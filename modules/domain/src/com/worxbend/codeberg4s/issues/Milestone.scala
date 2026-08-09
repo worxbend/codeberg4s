@@ -23,7 +23,7 @@ import java.time.Instant
   * @param dueOn
   *   the deadline the milestone was given, absent when it has none. Forgejo's `due_on`, sent as `null` when unset
   */
-final case class Milestone(
+final case class Milestone private[codeberg4s] (
     id: MilestoneId,
     title: String,
     description: Option[String],

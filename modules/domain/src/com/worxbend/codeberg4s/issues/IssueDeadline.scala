@@ -17,4 +17,4 @@ import java.time.Instant
   * @param dueDate
   *   the deadline the instance now holds, absent when it reported none
   */
-final case class IssueDeadline(dueDate: Option[Instant])
+final case class IssueDeadline private[codeberg4s] (dueDate: Option[Instant])

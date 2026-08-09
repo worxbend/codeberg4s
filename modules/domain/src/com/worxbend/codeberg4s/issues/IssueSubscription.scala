@@ -28,7 +28,7 @@ import java.time.Instant
   * @param createdAt
   *   when the subscription was recorded
   */
-final case class IssueSubscription(
+final case class IssueSubscription private[codeberg4s] (
     isSubscribed: Boolean,
     isIgnored: Boolean,
     url: Option[String],

@@ -28,7 +28,7 @@ import java.time.Instant
   * @param pullRequestUrl
   *   the API URL of the pull request this comment belongs to, absent when the comment is on a plain issue
   */
-final case class Comment(
+final case class Comment private[codeberg4s] (
     id: CommentId,
     body: Option[String],
     author: Option[User],

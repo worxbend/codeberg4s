@@ -39,7 +39,7 @@ import java.time.Instant
   * @param createdAt
   *   when the attachment was uploaded
   */
-final case class IssueAttachment(
+final case class IssueAttachment private[codeberg4s] (
     id: AttachmentId,
     name: String,
     size: Long,
