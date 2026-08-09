@@ -55,8 +55,14 @@ readonly COVERED_MODULES=(modules.domain modules.core modules.codec)
 #
 # MEASURED, NOT RECALLED: `scripts/cpd.sh --report` on 2026-08-09 against
 # modules/{domain,core,codec,transport,client}/src with PMD 7.26.0 at 40
-# tokens — 373 groups over 1350 locations (762 in codec, 541 in client, 39 in
-# domain, 6 in core, 2 in transport).
+# tokens — 363 groups over 1342 locations (762 in codec, 535 in client, 39 in
+# domain, 6 in core, none in transport).
+#
+# The ten groups between 373 and 363 came off with the credential-redaction
+# change: the three copies of the Actions runner registration decoders no
+# longer read as one repeated shape, and UserTokenApi lost the bespoke
+# error-rewriting helper that the pipeline now makes unnecessary. Banked here
+# rather than left as headroom, per the paragraph above.
 #
 # The baseline recorded before that was 323 groups over 1195 locations,
 # measured on 2026-08-02. Everything between the two numbers is codec: the
@@ -78,7 +84,7 @@ readonly COVERED_MODULES=(modules.domain modules.core modules.codec)
 #
 # Deliberately not overridable from the environment: moving the baseline has to
 # appear in a diff, with a commit message saying why.
-readonly CPD_BASELINE_GROUPS=373
+readonly CPD_BASELINE_GROUPS=363
 
 with_slow=false
 nightly=false

@@ -37,7 +37,9 @@ import scala.util.Try
   *     never masks the status;
   *   - a 2xx payload that does not decode becomes [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] with the
   *     failing JSON path and an excerpt of the body bounded at
-  *     [[com.worxbend.codeberg4s.CodebergError.MaxSnippetLength]];
+  *     [[com.worxbend.codeberg4s.CodebergError.MaxSnippetLength]] — or, when the [[Decode]] instance declared itself
+  *     [[Decode.sensitive]] because the endpoint answers with a credential, [[ApiPipeline.redactedSnippet]] in place of
+  *     the excerpt;
   *   - a failure the retry engine gave up on becomes [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]],
   *     preserving the last underlying failure.
   *
@@ -237,7 +239,7 @@ final class ApiPipeline[F[_]](
 
   private def decoded[A](ctx: CallContext, body: ResponseBody)(using decode: Decode[A]): Either[CodebergError, A] =
     decode(body).left.map(failure =>
-      CodebergError.DecodingFailed(ctx, ApiPipeline.snippetOf(body), failure.path, failure.message)
+      CodebergError.DecodingFailed(ctx, ApiPipeline.snippetOf(body, decode.sensitive), failure.path, failure.message)
     )
 
   /** Reads a non-2xx payload, tolerating both an empty body and an injected parser that fails outright.
@@ -252,12 +254,35 @@ final class ApiPipeline[F[_]](
 
 object ApiPipeline:
 
-  /** An excerpt of `body` no longer than [[com.worxbend.codeberg4s.CodebergError.MaxSnippetLength]] '''characters'''.
+  /** What a body is reported as when its [[Decode]] declared itself [[Decode.sensitive]].
     *
+    * A fixed string, so nothing about the payload survives into it, but not an empty one: a reader still has to be able
+    * to tell "the instance answered with a body this library refuses to quote" from "the instance answered with
+    * nothing". The size is what remains — enough to distinguish a truncated response from a complete one that did not
+    * match the model, and not enough to reconstruct a byte of it.
+    *
+    * @param bytes
+    *   how many bytes the withheld body held, [[ResponseBody.size]] of the response
+    */
+  def redactedSnippet(bytes: Int): String =
+    s"${Redaction.Mask} ($bytes bytes withheld)"
+
+  /** What [[com.worxbend.codeberg4s.CodebergError.DecodingFailed.snippet]] carries for `body`.
+    *
+    * Ordinarily an excerpt no longer than [[com.worxbend.codeberg4s.CodebergError.MaxSnippetLength]] '''characters'''.
     * Bounding happens here, once, rather than at each call site: a decoding failure on a 40 MB repository listing must
     * not put 40 MB into an error value that an application is about to log. [[ResponseBody.excerpt]] does the work,
     * because bounding a body that is now bytes at a number of characters is a job with a trap in it — see its own
     * documentation for why slicing the bytes and decoding the slice is not the same thing.
+    *
+    * When `sensitive` is set, the excerpt is replaced by [[redactedSnippet]] and no part of the body is quoted. That is
+    * decided here rather than by the endpoint that made the call, so it holds for the failure a caller receives
+    * '''and''' for the one [[Telemetry.onError]] observes — the hook fires inside the pipeline, so anything an endpoint
+    * scrubbed afterwards would already have been handed to a telemetry sink that logs what it is given.
+    *
+    * @param sensitive
+    *   [[Decode.sensitive]] of the instance that read this body
     */
-  private[core] def snippetOf(body: ResponseBody): String =
-    body.excerpt(CodebergError.MaxSnippetLength)
+  private[core] def snippetOf(body: ResponseBody, sensitive: Boolean): String =
+    if sensitive then redactedSnippet(body.size)
+    else body.excerpt(CodebergError.MaxSnippetLength)

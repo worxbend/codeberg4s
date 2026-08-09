@@ -4,6 +4,7 @@ import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
 import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.auth.ApiToken
+import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.repositories.Owner
 import com.worxbend.codeberg4s.repositories.RepoName
@@ -120,7 +121,7 @@ final class UserTokenApiSuite extends FunSuite with SocialApiHarness:
       api.attempt.create(Handle, orFail(CreateAccessToken.named("ci"))).map:
         case Left(error @ CodebergError.DecodingFailed(_, snippet, path, _)) =>
           assertEquals(path.render, "$.id")
-          assertEquals(snippet, UserTokenApi.RedactedBody)
+          assertEquals(snippet, ApiPipeline.redactedSnippet(UserTokenApiSuite.CreatedWithoutIdBody.length))
           assert(
             !error.describe.contains(UserTokenApiSuite.Material),
             s"the body excerpt leaked the credential into describe: ${error.describe}",
@@ -128,7 +129,7 @@ final class UserTokenApiSuite extends FunSuite with SocialApiHarness:
         case other                                                           =>
           fail(s"expected a decoding failure, got $other")
 
-  test("the excerpt is emptied on the convenience rail too, not only on the typed one"):
+  test("the placeholder reaches the convenience rail too, not only the typed one"):
     onStub(responding(201, UserTokenApiSuite.CreatedWithoutIdBody)): api =>
       api.create(Handle, orFail(CreateAccessToken.named("ci"))).failed.map:
         case CodebergException(error) =>

@@ -47,9 +47,26 @@ import com.worxbend.codeberg4s.users.account.wire.UserSettingsDto
   */
 private[account] object UserAccountDecoders:
 
-  /** One OAuth2 application object, which on a creation response carries the client secret. */
+  /** One OAuth2 application object as a '''read''' returns it — never with a secret in it.
+    *
+    * Forgejo stores the secret hashed, so `GET /user/applications/oauth2/{id}` cannot carry one. That is why this keeps
+    * the ordinary body excerpt on a decoding failure while [[issuedApplication]] does not: the two responses have the
+    * same shape and different consequences, and one decoder for both would have to be as cautious as the more dangerous
+    * of them.
+    */
   val application: Decode[OAuth2Application] =
     WireDecode.of(Json.decoder[OAuth2ApplicationDto])(_.toDomain)
+
+  /** The same object as [[application]], from the responses that '''do''' carry `client_secret`.
+    *
+    * Those are the `201` of a registration and the `200` of an update — the spec does not say whether an update
+    * re-issues the secret, so this treats it as though it does, which is the safe direction to be wrong in. Marked
+    * [[com.worxbend.codeberg4s.core.Decode.sensitive]], so a payload that does not decode reports
+    * [[com.worxbend.codeberg4s.core.ApiPipeline.redactedSnippet]] rather than an excerpt containing the one copy of
+    * that credential.
+    */
+  val issuedApplication: Decode[OAuth2Application] =
+    Decode.sensitive(application)
 
   /** A bare array of OAuth2 application objects, as the listing returns it — never with a secret in it. */
   val applications: Decode[Vector[OAuth2Application]] =
@@ -118,13 +135,20 @@ private[account] object UserAccountDecoders:
   val jobs: Decode[Vector[ActionRunJob]] =
     WireDecode.of(Json.decoder[Vector[ActionRunJobDto]])(dtos => ActionRunJobDto.toDomainAll(JsonPath.Root, dtos))
 
-  /** The `{id, uuid, token}` object a runner registration returns. */
+  /** The `{id, uuid, token}` object a runner registration returns, whose `token` is a live credential.
+    *
+    * Marked [[com.worxbend.codeberg4s.core.Decode.sensitive]]: anyone holding that token can attach a runner that
+    * executes workflow code, so a payload that does not decode must not put an excerpt of this body into
+    * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]].
+    */
   val registeredRunner: Decode[RegisteredRunner] =
-    WireDecode.of(Json.decoder[RegisteredRunnerDto])(_.toDomain)
+    Decode.sensitive(WireDecode.of(Json.decoder[RegisteredRunnerDto])(_.toDomain))
 
-  /** The one-key object the registration-token endpoint returns. */
+  /** The one-key object the registration-token endpoint returns — the same credential with nothing around it, and
+    * [[com.worxbend.codeberg4s.core.Decode.sensitive]] for the same reason as [[registeredRunner]].
+    */
   val registrationToken: Decode[RunnerRegistrationToken] =
-    WireDecode.of(Json.decoder[RegistrationTokenDto])(_.toDomain)
+    Decode.sensitive(WireDecode.of(Json.decoder[RegistrationTokenDto])(_.toDomain))
 
   /** One variable object. */
   val variable: Decode[ActionVariable] =

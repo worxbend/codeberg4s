@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.users.account
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
+import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.paging.PageParams
 
 import sttp.client4.Backend
@@ -165,14 +166,26 @@ final class UserApplicationApiSuite extends AccountApiSuite:
         assert(!s"$application".contains("gto_"), "interpolation leaked the secret")
         assert(!application.clientSecret.toString.contains("gto_"), "the Option's toString leaked the secret")
 
-  test("a body that failed to decode is snippetted verbatim, credential included — the pipeline's contract, pinned"):
+  test("a creation body that failed to decode is withheld, not snippetted, because it carries the secret"):
     onApi(responding(201, UserApplicationApiSuite.SecretWithoutIdBody)): api =>
       api.attempt.create(definition).map: outcome =>
         assertEquals(decodingPathOf(outcome), "$.id")
-        assert(
-          describe(outcome).contains("gto_"),
-          "the snippet no longer carries the body; if that is deliberate, ClientSecret's Scaladoc must be updated",
+        assertEquals(
+          snippetOf(outcome),
+          ApiPipeline.redactedSnippet(UserApplicationApiSuite.SecretWithoutIdBody.length),
         )
+        assert(!describe(outcome).contains("gto_"), s"the snippet leaked the secret: ${describe(outcome)}")
+
+  test("a read that failed to decode keeps its snippet, because no read can carry a secret"):
+    val body = """{"name":"no id"}"""
+
+    onApi(responding(200, body)): api =>
+      api.attempt.get(Application).map(outcome => assertEquals(snippetOf(outcome), body))
+
+  private def snippetOf[A](outcome: Either[CodebergError, A]): String =
+    outcome match
+      case Left(CodebergError.DecodingFailed(_, snippet, _, _)) => snippet
+      case other                                                => fail(s"expected a decoding failure, got $other")
 
   private def describe[A](outcome: Either[CodebergError, A]): String =
     outcome match

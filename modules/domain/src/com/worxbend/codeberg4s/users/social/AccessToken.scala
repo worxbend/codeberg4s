@@ -128,9 +128,11 @@ final case class AccessToken private[codeberg4s] (
   * ==Where the material can and cannot reach==
   *
   * It reaches the caller and nothing else. [[com.worxbend.codeberg4s.CallContext]] carries a redacted URI and never a
-  * response body; [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] snippets a body only on the failure path,
-  * and a body that failed to decode produced no token; and the mask makes every accidental rendering safe even so.
-  * `UserTokenApiSuite` asserts all of that rather than asserting the intention.
+  * response body; the mask makes every accidental rendering safe; and the one channel that would otherwise have carried
+  * the material — the body snippet on [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]], which is the '''raw'''
+  * payload and therefore survives every mask — is replaced by a placeholder, because the decoder this endpoint uses
+  * declares itself sensitive to the pipeline. `UserTokenApiSuite` asserts all of that rather than asserting the
+  * intention.
   *
   * @param token
   *   the credential, available on this response and never again

@@ -73,13 +73,20 @@ private[actions] object RepositoryActionDecoders:
   val runners: Decode[Vector[ActionRunner]] =
     WireDecode.of(Json.decoder[Vector[ActionRunnerDto]])(dtos => ActionRunnerDto.toDomainAll(JsonPath.Root, dtos))
 
-  /** The `{id, uuid, token}` object a runner registration returns. */
+  /** The `{id, uuid, token}` object a runner registration returns, whose `token` is a live credential.
+    *
+    * Marked [[com.worxbend.codeberg4s.core.Decode.sensitive]]: anyone holding that token can attach a runner that
+    * executes workflow code, so a payload that does not decode must not put an excerpt of this body into
+    * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]].
+    */
   val registeredRunner: Decode[RegisteredRunner] =
-    WireDecode.of(Json.decoder[RegisteredRunnerDto])(_.toDomain)
+    Decode.sensitive(WireDecode.of(Json.decoder[RegisteredRunnerDto])(_.toDomain))
 
-  /** The one-key object the registration-token endpoint returns. */
+  /** The one-key object the registration-token endpoint returns — the same credential with nothing around it, and
+    * [[com.worxbend.codeberg4s.core.Decode.sensitive]] for the same reason as [[registeredRunner]].
+    */
   val registrationToken: Decode[RunnerRegistrationToken] =
-    WireDecode.of(Json.decoder[RegistrationTokenDto])(_.toDomain)
+    Decode.sensitive(WireDecode.of(Json.decoder[RegistrationTokenDto])(_.toDomain))
 
   /** A bare array of secret objects — names and timestamps, never values. */
   val secrets: Decode[Vector[ActionSecret]] =

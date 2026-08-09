@@ -10,9 +10,11 @@ import com.worxbend.codeberg4s.ValidationError
   * `toString`, because an opaque alias over `String` cannot stop interpolation from printing it, and
   * [[RunnerRegistrationToken.reveal]] as the single way to observe the material.
   *
-  * Unlike [[SecretValue]] this one travels '''from''' the instance: it is decoded out of a response body, which means a
-  * decoding failure could otherwise have carried it into an error message. It cannot — see the class note on
-  * [[SecretValue]] for why — but the mask is what makes that true rather than merely likely.
+  * Unlike [[SecretValue]] this one travels '''from''' the instance: it is decoded out of a response body, so a decoding
+  * failure on that response would carry the raw payload — and therefore the material — into
+  * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]], where no mask can reach it. The decoders that read the
+  * registration and registration-token responses are marked sensitive for that reason, and the pipeline reports a
+  * placeholder in place of the body excerpt on those two endpoints alone.
   *
   * Instances compare structurally on the underlying material. The comparison is not constant-time.
   */

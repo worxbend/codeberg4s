@@ -41,9 +41,9 @@ import com.worxbend.codeberg4s.users.wire.UserDto
   * `GET /user/gpg_key_token`, so the body '''is''' the token. Running it through a JSON parser would turn a good
   * response into a decoding failure.
   *
-  * [[createdAccessToken]] does parse JSON, and is listed here only to say where it is: it is the one decoder in the
-  * library that yields a usable credential, and it is deliberately not reachable from any listing — see
-  * [[com.worxbend.codeberg4s.users.social.wire.AccessTokenDto]].
+  * [[createdAccessToken]] does parse JSON, and is listed here only to say where it is: it is the one decoder in this
+  * group that yields a usable credential — the others are the Actions runner registration decoders — and it is
+  * deliberately not reachable from any listing; see [[com.worxbend.codeberg4s.users.social.wire.AccessTokenDto]].
   */
 private[social] object SocialDecoders:
 
@@ -104,9 +104,15 @@ private[social] object SocialDecoders:
   val accessTokens: Decode[Vector[AccessToken]] =
     WireDecode.of(Json.decoder[Vector[AccessTokenDto]])(dtos => AccessTokenDto.toDomainAll(JsonPath.Root, dtos))
 
-  /** The `201` of a token creation — the one decoder in this library that yields a usable credential. */
+  /** The `201` of a token creation — the one decoder in this library that yields a usable personal access token.
+    *
+    * Marked [[com.worxbend.codeberg4s.core.Decode.sensitive]], because this body '''is''' the credential: a payload
+    * that carries `sha1` but fails to decode for some other reason would otherwise put a live token into the excerpt on
+    * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]], which is a value applications log. See
+    * [[com.worxbend.codeberg4s.core.ApiPipeline.redactedSnippet]] for what the excerpt becomes instead.
+    */
   val createdAccessToken: Decode[CreatedAccessToken] =
-    WireDecode.of(Json.decoder[AccessTokenDto])(_.toCreated)
+    Decode.sensitive(WireDecode.of(Json.decoder[AccessTokenDto])(_.toCreated))
 
   /** The plain-text challenge `GET /user/gpg_key_token` answers.
     *

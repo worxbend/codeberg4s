@@ -33,6 +33,14 @@ import scala.concurrent.Future
   * of the application holding it, so it cannot leak into a log or into a [[com.worxbend.codeberg4s.CodebergError]] on
   * the way past. Revealing it is an explicit act; see that type.
   *
+  * The mask only covers a secret this library managed to decode. The other way out is the raw body: a `2xx` that does
+  * not match the model puts an excerpt of the payload into
+  * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed.snippet]], and on these two responses that payload is the
+  * secret. So [[create]] and [[update]] read their response through a decoder marked
+  * [[com.worxbend.codeberg4s.core.Decode.sensitive]], which makes the pipeline report
+  * [[com.worxbend.codeberg4s.core.ApiPipeline.redactedSnippet]] instead. [[get]] and [[list]] keep the excerpt, because
+  * the bodies they read carry no secret to lose.
+  *
   * ==Evidence==
   *
   * '''Every model here is derived from `spec/swagger.v1.json`, not from a captured response.''' The harvest behind
@@ -110,7 +118,7 @@ final class UserApplicationApi private[codeberg4s] (pipeline: ApiPipeline[Future
     */
   def create(definition: OAuth2ApplicationDefinition): Future[OAuth2Application] =
     pipeline.call(UserApplicationApi.createRequest(definition), RetryEligibility.Never)(using
-      UserAccountDecoders.application)
+      UserAccountDecoders.issuedApplication)
 
   /** Replaces an application's definition — `PATCH /user/applications/oauth2/{id}`.
     *
@@ -132,7 +140,7 @@ final class UserApplicationApi private[codeberg4s] (pipeline: ApiPipeline[Future
     */
   def update(id: OAuth2ApplicationId, definition: OAuth2ApplicationDefinition): Future[OAuth2Application] =
     pipeline.call(UserApplicationApi.updateRequest(id, definition), RetryEligibility.Never)(using
-      UserAccountDecoders.application)
+      UserAccountDecoders.issuedApplication)
 
   /** Deletes one of the account's applications — `DELETE /user/applications/oauth2/{id}`.
     *

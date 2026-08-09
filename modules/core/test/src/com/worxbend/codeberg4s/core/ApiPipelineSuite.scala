@@ -170,6 +170,55 @@ final class ApiPipelineSuite extends FunSuite:
 
     assertEquals(http.sends, 1)
 
+  test("a sensitive body is replaced by the placeholder, never excerpted"):
+    val credential = "gto_thisisarealtoken"
+    val payload    = s"""{"sha1": "$credential"}"""
+
+    given Decode[String] =
+      Decode.sensitive(_ => Left(DecodeFailure(JsonPath.of("id"), "no such field")))
+
+    val http = FakeHttpPort.always(responseOf(201, payload))
+
+    val result = pipelineOf(http, FakeTimer(0L), silent, stubErrorBody)
+      .call[String](creation, RetryEligibility.Never)
+
+    result match
+      case Left(error @ CodebergError.DecodingFailed(_, snippet, path, cause)) =>
+        assertEquals(snippet, ApiPipeline.redactedSnippet(payload.length))
+        assertEquals(path, JsonPath.of("id"))
+        assertEquals(cause, "no such field")
+        assert(!error.describe.contains(credential), s"the body reached the rendered failure: ${error.describe}")
+      case other                                                               =>
+        fail(s"expected a decoding failure, got $other")
+
+  test("the placeholder is what a telemetry sink observes, not only what the caller receives"):
+    val credential = "gto_thisisarealtoken"
+
+    given Decode[String] = Decode.sensitive(_ => Left(DecodeFailure(JsonPath.Root, "not an object")))
+
+    val http      = FakeHttpPort.always(responseOf(201, s"""{"sha1": "$credential"}"""))
+    val telemetry = RecordingTelemetry(failing = false)
+
+    pipelineOf(http, FakeTimer(0L), telemetry, stubErrorBody)
+      .call[String](creation, RetryEligibility.Never)
+      .discard
+
+    val rendered = telemetry.observed.map(_.describe)
+
+    assert(rendered.nonEmpty, "the sink observed no failure at all")
+    rendered.foreach(line => assert(!line.contains(credential), s"a credential was observed: $line"))
+
+  test("an ordinary decoder keeps its excerpt, because that is what makes a failure diagnosable"):
+    given Decode[String] = _ => Left(DecodeFailure(JsonPath.Root, "not an object"))
+    val http             = FakeHttpPort.always(responseOf(200, """{"unexpected": true}"""))
+
+    val result = pipelineOf(http, FakeTimer(0L), silent, stubErrorBody)
+      .call[String](listing, RetryEligibility.Never)
+
+    result match
+      case Left(CodebergError.DecodingFailed(_, snippet, _, _)) => assertEquals(snippet, """{"unexpected": true}""")
+      case other                                                => fail(s"expected a decoding failure, got $other")
+
   test("a decoding failure is never attempted again"):
     given Decode[String] = _ => Left(DecodeFailure(JsonPath.Root, "not an object"))
     val http             = FakeHttpPort.always(responseOf(200, "{}"))
