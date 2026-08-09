@@ -78,15 +78,47 @@ is actually in the jar.
 - Add a new value to an *open* enum such as `NotificationSubjectType`, which
   already carries an `Other(raw)` case precisely so that upstream additions are
   not breaking.
+- **Add a field to a response model** — a model decoded from a Forgejo payload
+  and never built by a caller, such as `Repository`, `Issue`, `PullRequest`,
+  `User` or `ServerApiSettings`. Their constructors are `private[codeberg4s]`,
+  so no caller outside this library can be calling `apply` or `copy`, and a
+  new field cannot break source compatibility for anyone. See the note below
+  on why this exemption exists and what it does not cover.
 
 ### These are breaking, and are never a patch
 
-- **Adding, removing or reordering a field on a public `final case class`.**
+- **Adding, removing or reordering a field on a *command* `final case class`.**
   The generated `apply`, `copy` and `unapply` change signature, so previously
-  compiled callers fail to link. Every model in this library is a case class,
-  so this is the most likely way to break the world by accident. Adding a
-  field with a default does not help: default arguments are banned here
-  anyway, and they would not make it binary compatible.
+  compiled callers fail to link. A command model — `CreateIssue`,
+  `EditRepository`, `MergePullRequest`, every `*Query` — has a public
+  constructor because a caller has to build one to make a request, so its
+  shape is part of the API. Adding a field with a default does not help:
+  default arguments are banned here anyway, and they would not make it binary
+  compatible.
+
+#### Why response models are exempt
+
+Forgejo adds fields to its response payloads routinely. When every model was a
+public case class, each of those additions changed a generated `<init>`,
+`apply`, `copy` and `copy$default$N` in this library, so tracking upstream
+meant a breaking release — a major version, once `0.1.0` is the baseline. That
+would have been a major version of this library for a field nobody asked for.
+
+The constructors of response models are therefore `private[codeberg4s]`. Every
+source tree in this repository lives under `com.worxbend.codeberg4s`, so each
+DTO's `toDomain` and every test fixture still builds them; only code outside
+the library loses the constructor. Reading fields and pattern matching are
+untouched, so a caller can still destructure a `Repository` in a `match`.
+
+Two things this exemption does **not** cover:
+
+- **Removing, renaming or retyping an existing field is still breaking**, on
+  both source and binary compatibility. The exemption is for growth only.
+- **A qualified-private constructor is still public in the bytecode.** MIMA,
+  once wired, will keep reporting the synthetic members. Those reports are
+  filters to write, not releases to renumber, because no external caller can
+  have compiled against them — but somebody has to write the filter, and the
+  reasoning belongs in the commit that adds it.
 - **Adding a case to a closed `enum`.** `CodebergError` has exactly five
   cases — `Transport`, `Api`, `DecodingFailed`, `Validation`,
   `RetriesExhausted` — and every consumer that matches on it exhaustively
