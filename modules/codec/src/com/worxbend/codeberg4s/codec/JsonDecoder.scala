@@ -40,7 +40,7 @@ object JsonDecoder:
     *   assembles the value from the object's fields
     */
   def objectOf[A](build: JsonFields => A): JsonDecoder[A] =
-    case JsonValue.Obj(fields) => Right(build(JsonFields(fields.toMap)))
+    case JsonValue.Obj(fields) => Right(build(JsonFields(fields)))
     case other                 => Left(DecodeFailure(JsonPath.Root, s"expected an object but found ${other.kind}"))
 
   /** A decoder for a top-level array of objects, which is what most Forgejo list endpoints return.
@@ -56,7 +56,7 @@ object JsonDecoder:
 
   /** As [[objectOf]], for a build step that can itself fail — an envelope whose elements are decoded, say. */
   def objectOfEither[A](build: JsonFields => Either[DecodeFailure, A]): JsonDecoder[A] =
-    case JsonValue.Obj(fields) => build(JsonFields(fields.toMap))
+    case JsonValue.Obj(fields) => build(JsonFields(fields))
     case other                 => Left(DecodeFailure(JsonPath.Root, s"expected an object but found ${other.kind}"))
 
   /** Decodes every element of an already-extracted array, failing on the first element that will not decode.
@@ -77,10 +77,14 @@ object JsonDecoder:
     */
   given vector[A](using element: JsonDecoder[A]): JsonDecoder[Vector[A]] = arrayOf(element)
 
-  /** A JSON object, as its fields. The shape [[JsonFields]] is built from, exposed for a caller decoding a payload
-    * whose keys are data rather than a schema — an EditorConfig, say.
+  /** A JSON object, as a map from field name to value, for a caller decoding a payload whose keys are data rather than
+    * a schema — an EditorConfig, say.
+    *
+    * This is the one place in the library that pays for a map. [[JsonFields]] reads named fields straight out of the
+    * vector the parser built; a caller who does not know the names has to enumerate them, and a map is the shape that
+    * caller wants. Anything with a fixed set of fields should use [[JsonFields.reader]] instead.
     */
-  given fields: JsonDecoder[Map[String, JsonValue]] = objectOf(_.underlying)
+  given fields: JsonDecoder[Map[String, JsonValue]] = objectOf(_.toMap)
 
   /** A JSON string.
     *

@@ -42,7 +42,7 @@ object EditorConfigDto:
 
   /** Projects an already-decoded object, keeping only the properties that have a text form. */
   def fromFields(fields: JsonFields): EditorConfigDto =
-    EditorConfigDto(fields.underlying.flatMap((name, value) => rendered(value).map(text => name -> text)))
+    EditorConfigDto(fields.toMap.flatMap((name, value) => rendered(value).map(text => name -> text)))
 
   /** The text an EditorConfig consumer would have read, or `None` for a value that has none. */
   private def rendered(value: JsonValue): Option[String] =

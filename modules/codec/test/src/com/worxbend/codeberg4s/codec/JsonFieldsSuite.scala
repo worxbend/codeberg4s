@@ -17,7 +17,7 @@ final class JsonFieldsSuite extends FunSuite:
 
   private def fieldsOf(body: String): JsonFields =
     Json.parse(body) match
-      case Right(JsonValue.Obj(fields)) => JsonFields(fields.toMap)
+      case Right(JsonValue.Obj(fields)) => JsonFields(fields)
       case other                        => fail(s"the fixture body is not a JSON object: $other")
 
   private val absent: JsonFields = fieldsOf("""{}""")
@@ -93,12 +93,61 @@ final class JsonFieldsSuite extends FunSuite:
     assertEquals(JsonFields.Empty.texts("anything"), Vector.empty[String])
 
   test("no field can be shadowed, because a document that repeats one never becomes a view"):
-    // This view is a Map, and building a map from a field list keeps the last of
-    // two fields with the same name. That answer is unreachable: the parser
-    // refuses the document first, so the view is only ever built from names that
-    // are already distinct. See JsonValue.Obj for why refusing is the rule.
+    // This view scans the parser's field vector and takes the first match, so a
+    // repeated name would read as the first of the two. That answer is
+    // unreachable: the parser refuses the document first, so the view is only
+    // ever built from names that are already distinct. See JsonValue.Obj for why
+    // refusing is the rule.
     assert(Json.decode[Probe]("""{"a":"first","a":"second"}""").isLeft)
     assertEquals(Json.decode[Probe]("""{"a":"first","b":"second"}"""), Right(Probe(Some("first"))))
+
+  test("a wide object reads the same as a narrow one, on either side of the index threshold"):
+    // Above a threshold the view stops comparing names one by one and probes a
+    // hash index instead. Both strategies have to answer identically, so the
+    // same object is read at eight fields (compared) and at forty (indexed).
+    def objectOf(width: Int): JsonFields =
+      fieldsOf((0 until width).map(at => s""""f$at":$at""").mkString("{", ",", "}"))
+
+    val narrow = objectOf(8)
+    val wide   = objectOf(40)
+
+    assertEquals(narrow.number("f0"), Some(0L))
+    assertEquals(narrow.number("f7"), Some(7L))
+    assertEquals(narrow.number("f8"), None)
+
+    (0 until 40).foreach(at => assertEquals(wide.number(s"f$at"), Some(at.toLong), s"field f$at of a 40-field object"))
+    assertEquals(wide.number("f40"), None)
+    assertEquals(wide.number("absent"), None)
+
+  test("two field names with the same hash are still told apart in a wide object"):
+    // "Aa" and "BB" have the same String hash (2112), so in an indexed object
+    // they want the same slot. A lookup that trusted the hash would answer one
+    // with the other's value; comparing the names in full is what stops it.
+    val colliding =
+      fieldsOf(s"""{"Aa":"first","BB":"second",${(0 until 8).map(at => s""""f$at":$at""").mkString(",")}}""")
+
+    assertEquals("Aa".hashCode, "BB".hashCode, "the fixture is pointless unless these two really do collide")
+    assertEquals(colliding.text("Aa"), Some("first"))
+    assertEquals(colliding.text("BB"), Some("second"))
+    assertEquals(colliding.text("Ab"), None)
+
+  test("a view built by hand from a repeated name answers with the first of them, at either width"):
+    // Json.parse never produces this, but the view's constructor is public and
+    // RepositoryContentDto builds one straight from an already-parsed object.
+    // First-wins is the answer JsonValue.field gives, so it is the answer here.
+    def repeated(padding: Int): JsonFields =
+      JsonFields(
+        Vector("a" -> JsonValue.Str("first"), "a" -> JsonValue.Str("second")) ++
+          (0 until padding).map(at => s"f$at" -> JsonValue.Num(at))
+      )
+
+    assertEquals(repeated(0).text("a"), Some("first"))
+    assertEquals(repeated(20).text("a"), Some("first"))
+
+  test("toMap hands the fields over for a payload whose keys are data rather than a schema"):
+    assertEquals(populated.toMap("a"), JsonValue.Str("text"))
+    assertEquals(populated.toMap.keySet, Set("a", "n", "b", "o", "list"))
+    assertEquals(JsonFields.Empty.toMap, Map.empty[String, JsonValue])
 
   test("reader delegates the is-this-an-object question to the JSON parser"):
     assertEquals(Json.decode[Probe]("""{"a":"x"}"""), Right(Probe(Some("x"))))

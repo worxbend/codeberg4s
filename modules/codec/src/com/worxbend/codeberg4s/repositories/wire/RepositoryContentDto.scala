@@ -66,7 +66,7 @@ object RepositoryContentDto:
   /** Branches on the JSON kind of an already-parsed body. Total by construction — every shape maps to a case. */
   def fromJson(value: JsonValue): RepositoryContentDto =
     value.objOpt match
-      case Some(entry) => Single(entryOf(entry.toMap))
+      case Some(entry) => Single(entryOf(entry))
       case None        =>
         value.arrOpt match
           case Some(elements) => listing(elements.toVector)
@@ -74,11 +74,11 @@ object RepositoryContentDto:
 
   /** An array is a directory only if every element is an object; anything else is a shape this endpoint does not have. */
   private def listing(elements: Vector[JsonValue]): RepositoryContentDto =
-    if elements.forall(_.objOpt.isDefined) then Listing(elements.flatMap(_.objOpt).map(entry => entryOf(entry.toMap)))
+    if elements.forall(_.objOpt.isDefined) then Listing(elements.flatMap(_.objOpt).map(entryOf))
     else Unexpected("an array holding a value that is not an object")
 
-  private def entryOf(entry: scala.collection.Map[String, JsonValue]): ContentEntryDto =
-    ContentEntryDto.fromFields(JsonFields(entry.toMap))
+  private def entryOf(entry: Vector[(String, JsonValue)]): ContentEntryDto =
+    ContentEntryDto.fromFields(JsonFields(entry))
 
   private def describe(value: JsonValue): String =
     if value.isNull then "null"
