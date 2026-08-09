@@ -21,7 +21,7 @@ distinguishes four things:
 | Constitution requirement            | Scala / Mill equivalent                                                        | Status |
 | ----------------------------------- | ------------------------------------------------------------------------------ | ------ |
 | Compile with warnings fatal         | `scalacOptions` with `-Werror -Wunused:all -Wvalue-discard -Wnonunit-statement` | Wired  |
-| Formatter                           | Scalafmt 3.11.4, `mill mill.scalalib.scalafmt/`                                 | Wired  |
+| Formatter                           | Scalafmt 3.11.5, `mill mill.scalalib.scalafmt/`                                 | Wired  |
 | Linter / semantic rules             | Scalafix, `mill modules.__.fix`, rules in `.scalafix.conf`                       | Wired  |
 | Coverage                            | scoverage via `mill-contrib-scoverage`; thresholds in `scripts/coverage-gate.sc`, called by `verify.sh` | Wired (report + gate script); thresholds never yet asserted on a real report |
 | Mutation tool (`mutate4*`)          | **Stryker4s 1.1.1** command runner over `domain` + `core` + `codec`, wrapped by `scripts/mutate.sh` | **Runner proven, result not** |

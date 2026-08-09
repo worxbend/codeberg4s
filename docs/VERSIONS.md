@@ -124,7 +124,7 @@ test sweep.
 | Tool | Pinned | Pinned in | Latest stable | Status |
 | --- | --- | --- | --- | --- |
 | scoverage | `2.5.2` | `build.mill` → `Versions.scoverage` | `2.5.2` | current |
-| Scalafmt | `3.11.4` | `.scalafmt.conf` → `version` | `3.11.5` | **one patch behind — see below** |
+| Scalafmt | `3.11.5` | `.scalafmt.conf` → `version` | `3.11.5` | current |
 | Scalafix | via Mill's `__.fix` | `.scalafix.conf` (rules only, no version) | `scalafix-core` `0.14.7` | resolved transitively by Mill |
 | Stryker4s | not yet wired | — | — | scaffold only when the task calls for it (CLAUDE.md § Quality analysis) |
 
@@ -144,14 +144,25 @@ versions, `2.5.0` is dependency updates, and `2.5.2` adds incremental coverage.
 The measured line and branch percentages in `verify.sh`'s coverage gate were
 identical before and after the bump.
 
-### Scalafmt `3.11.4` vs `3.11.5`
+### Scalafmt `3.11.5`
 
-`.scalafmt.conf` pins `3.11.4`. The newest stable `org.scalameta:scalafmt-core`
-is `3.11.5`. SCALA_CODE_STYLE.md requires the pin to match the installed binary,
-and `align.preset = most` means a version bump can produce a repository-wide
-realignment diff. If bumped, it must land as a standalone `style:` commit with
-`mill mill.scalalib.scalafmt/` run over the whole tree, never mixed with logic.
-**Not changed by this lane.**
+Taken from `3.11.4` on 2026-08-09, in a standalone `style:` commit as the rule
+below requires: `align.preset = most` means a formatter bump *can* realign the
+whole repository, and that churn must never share a commit with a logic or
+dependency change.
+
+In the event it realigned nothing. `mill mill.scalalib.scalafmt/` under `3.11.5`
+rewrote 0 of 850 files, so the only line in that commit's diff outside the
+documentation is the `version` key itself. The 3.11.5 changes are a website
+migration and four fixes — inverted offsets on empty trees, a CLI error that
+could mask a real one, the runner reporting which failure it exited on, and a
+`RemoveScala3OptionalBraces` brace/colon oscillation — none of which this
+configuration triggers.
+
+That zero-file result is also what re-verifies the longest-match claim in
+`.scalafmt.conf`'s `rewrite.imports.groups` comment: if 3.11.5 had changed how
+an import is assigned to a group, `scala.*` imports across the tree would have
+moved and the reformat would not have been a no-op.
 
 ## 6. Not adopted
 
