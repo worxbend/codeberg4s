@@ -53,18 +53,25 @@ readonly COVERED_MODULES=(modules.domain modules.core modules.codec)
 # change that adds one group fails, and a change that removes ten is told to
 # bank the win by lowering this number.
 #
-# MEASURED, NOT RECALLED: `scripts/cpd.sh --report` on 2026-08-02 against
+# MEASURED, NOT RECALLED: `scripts/cpd.sh --report` on 2026-08-09 against
 # modules/{domain,core,codec,transport,client}/src with PMD 7.26.0 at 40
-# tokens — 323 groups over 1195 locations (599 in codec, 541 in client, 45 in
-# domain, 8 in core, 2 in transport). docs/LEDGER.md still says 62; that figure
-# predates the long tail, which took the surface from 61 operations to 439.
+# tokens — 378 groups over 1360 locations (764 in codec, 541 in client, 45 in
+# domain, 8 in core, 2 in transport).
+#
+# The previous baseline recorded here was 323 groups over 1195 locations,
+# measured on 2026-08-02. Everything between the two numbers is codec: the
+# upickle-to-jsoniter rewrite (commit 48f64fe) replaced hand-written readers
+# and writers with per-DTO codec definitions that repeat the same shape once
+# per field, so codec's share of the reported locations went from 599 to 764
+# while every other module stayed where it was. Raising the baseline records
+# that debt; it does not forgive it, and it is not a licence to add more.
 #
 # The number is specific to PMD 7.26.0 at 40 tokens. Change either and remeasure
 # rather than guessing which way the count moved.
 #
 # Deliberately not overridable from the environment: moving the baseline has to
 # appear in a diff, with a commit message saying why.
-readonly CPD_BASELINE_GROUPS=323
+readonly CPD_BASELINE_GROUPS=378
 
 with_slow=false
 nightly=false
