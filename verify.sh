@@ -222,15 +222,41 @@ boundary_violation() {
 # scala.concurrent.duration is fine everywhere — FiniteDuration is how timeouts
 # and backoff are typed. It is Future and ExecutionContext that must not appear
 # below the client module.
-readonly FORBIDDEN_BELOW_CLIENT='^import (sttp|upickle|ujson|scala\.concurrent\.(Future|ExecutionContext|Await|Promise|blocking))'
+#
+# The JSON alternatives are the other half of PLAN.md §3.1: domain and core know
+# neither the transport nor a JSON library. Until this commit the list read
+# `upickle|ujson`, which stopped being a boundary the moment commit 48f64fe
+# removed upickle — the library actually on the classpath,
+# `com.github.plokhotnyuk.jsoniter_scala`, could have been imported straight
+# into domain or core and this step would still have printed "boundaries clean".
+# The vendor prefix is matched rather than the full package so a future
+# `jsoniter_scala.macros` import is caught by the same alternative.
+#
+# upickle, ujson, circe, play-json, zio-json, Jackson, json4s and Gson are named
+# even though none of them is a dependency. A pattern for a library that is not
+# there costs one alternation and catches the day somebody adds it, which is the
+# only day this check has anything to say.
+#
+# Matching imports rather than the build graph is deliberate: the graph already
+# gives domain and core no `mvnDeps` at all, so a violation needs a `mvnDeps`
+# edit as well as an import. This grep is what makes the import half fail
+# loudly, and it is also what covers the case where the offending symbol arrives
+# through a module that is on the graph.
+readonly FORBIDDEN_JSON='com\.github\.plokhotnyuk|upickle|ujson|io\.circe|play\.api\.libs\.json|zio\.json|com\.fasterxml\.jackson|org\.json4s|com\.google\.gson'
+readonly FORBIDDEN_BELOW_CLIENT="^import (sttp|$FORBIDDEN_JSON|scala\\.concurrent\\.(Future|ExecutionContext|Await|Promise|blocking))"
 
 boundaries_ok=true
 boundary_violation modules/domain/src "$FORBIDDEN_BELOW_CLIENT" \
   'domain must depend on nothing but the standard library' || boundaries_ok=false
 boundary_violation modules/core/src "$FORBIDDEN_BELOW_CLIENT" \
-  'core must not know about sttp, upickle or Future' || boundaries_ok=false
+  'core must not know about sttp, a JSON library or Future' || boundaries_ok=false
 boundary_violation modules/codec/src '^import sttp' \
   'codec must not know about the transport' || boundaries_ok=false
+# The mirror image of the line above, and stated in docs/adr/0003 as the reason
+# the unused sttp-upickle integration was dropped: the transport reads every
+# body as a String and hands it to codec, so the JSON library stays out of it.
+boundary_violation modules/transport/src "^import ($FORBIDDEN_JSON)" \
+  'transport must not know about a JSON library — it reads bodies as String' || boundaries_ok=false
 boundary_violation 'modules/domain/src modules/core/src modules/codec/src modules/transport/src modules/client/src' \
   'Await\.(result|ready)' 'Await is banned in production code' || boundaries_ok=false
 boundary_violation 'modules/domain/src modules/core/src modules/codec/src modules/transport/src modules/client/src' \
