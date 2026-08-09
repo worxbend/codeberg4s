@@ -20,7 +20,7 @@ package com.worxbend.codeberg4s.miscellaneous
   * @param defaultTheme
   *   the theme a signed-out visitor sees, absent when the instance did not report one
   */
-final case class ServerUiSettings(
+final case class ServerUiSettings private[codeberg4s] (
     allowedReactions: Vector[String],
     customEmojis: Vector[String],
     defaultTheme: Option[String],

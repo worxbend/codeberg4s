@@ -14,4 +14,4 @@ package com.worxbend.codeberg4s
   * @param raw
   *   the string exactly as the instance reported it, never blank
   */
-final case class ServerVersion(raw: String)
+final case class ServerVersion private[codeberg4s] (raw: String)

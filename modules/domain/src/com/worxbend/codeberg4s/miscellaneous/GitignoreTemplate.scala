@@ -17,7 +17,7 @@ package com.worxbend.codeberg4s.miscellaneous
   *   the file's contents, verbatim, newlines and comments included. This is the answer to the question the call asked,
   *   so a payload without it does not decode
   */
-final case class GitignoreTemplate(
+final case class GitignoreTemplate private[codeberg4s] (
     name: Option[String],
     source: String,
 )

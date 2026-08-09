@@ -16,7 +16,7 @@ package com.worxbend.codeberg4s.miscellaneous
   * @param openSsh
   *   the public key in OpenSSH authorized-key format, exactly as the instance sent it, never blank
   */
-final case class SshSigningKey(openSsh: String)
+final case class SshSigningKey private[codeberg4s] (openSsh: String)
 
 object SshSigningKey:
 

@@ -33,7 +33,7 @@ import com.worxbend.codeberg4s.issues.LabelColor
   * @param isExclusive
   *   whether the seeded label would be exclusive within its `scope/` prefix
   */
-final case class TemplateLabel(
+final case class TemplateLabel private[codeberg4s] (
     name: String,
     color: Option[LabelColor],
     description: Option[String],

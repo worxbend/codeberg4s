@@ -41,7 +41,7 @@ package com.worxbend.codeberg4s.notifications
   * @param latestCommentHtmlUrl
   *   the browser URL of the most recent comment, verbatim, with the same empty-string convention
   */
-final case class NotificationSubject(
+final case class NotificationSubject private[codeberg4s] (
     subjectType: NotificationSubjectType,
     title: Option[String],
     state: Option[String],

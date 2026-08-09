@@ -22,7 +22,7 @@ package com.worxbend.codeberg4s.miscellaneous
   * @param url
   *   the API URL of the template itself
   */
-final case class LicenseTemplate(
+final case class LicenseTemplate private[codeberg4s] (
     body: String,
     name: Option[String],
     key: Option[String],

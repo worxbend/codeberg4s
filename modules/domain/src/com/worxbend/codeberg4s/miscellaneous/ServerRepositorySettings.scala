@@ -26,7 +26,7 @@ package com.worxbend.codeberg4s.miscellaneous
   * @param lfsDisabled
   *   Git LFS is not served
   */
-final case class ServerRepositorySettings(
+final case class ServerRepositorySettings private[codeberg4s] (
     mirrorsDisabled: Boolean,
     httpGitDisabled: Boolean,
     migrationsDisabled: Boolean,

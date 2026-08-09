@@ -22,7 +22,7 @@ package com.worxbend.codeberg4s.miscellaneous
   * @param maxBlobSizeBytes
   *   the largest blob the contents endpoints will inline, in bytes. Absent on an instance that does not report it
   */
-final case class ServerApiSettings(
+final case class ServerApiSettings private[codeberg4s] (
     maxResponseItems: Long,
     defaultPagingNum: Long,
     gitTreesPerPage: Option[Long],

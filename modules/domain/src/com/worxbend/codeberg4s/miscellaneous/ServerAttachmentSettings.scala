@@ -17,7 +17,7 @@ package com.worxbend.codeberg4s.miscellaneous
   * @param maxFiles
   *   how many attachments one upload may carry
   */
-final case class ServerAttachmentSettings(
+final case class ServerAttachmentSettings private[codeberg4s] (
     enabled: Boolean,
     allowedTypes: Vector[String],
     maxSizeMib: Option[Long],

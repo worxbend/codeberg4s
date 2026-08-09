@@ -36,7 +36,7 @@ package com.worxbend.codeberg4s.miscellaneous
   * @param hasOpenRegistrations
   *   whether anyone may create an account without an invitation
   */
-final case class NodeInfo(
+final case class NodeInfo private[codeberg4s] (
     version: String,
     software: NodeInfoSoftware,
     protocols: Vector[String],
@@ -57,7 +57,7 @@ final case class NodeInfo(
   * @param homepage
   *   the project's own site
   */
-final case class NodeInfoSoftware(
+final case class NodeInfoSoftware private[codeberg4s] (
     name: String,
     version: Option[String],
     repository: Option[String],
@@ -75,7 +75,7 @@ final case class NodeInfoSoftware(
   * @param outbound
   *   services the instance can publish content to
   */
-final case class NodeInfoServices(
+final case class NodeInfoServices private[codeberg4s] (
     inbound: Vector[String],
     outbound: Vector[String],
 )
@@ -93,7 +93,7 @@ final case class NodeInfoServices(
   * @param localComments
   *   comments created on this instance
   */
-final case class NodeInfoUsage(
+final case class NodeInfoUsage private[codeberg4s] (
     users: Option[NodeInfoUsers],
     localPosts: Option[Long],
     localComments: Option[Long],
@@ -111,7 +111,7 @@ final case class NodeInfoUsage(
   * @param activeMonth
   *   accounts that signed in within the last month
   */
-final case class NodeInfoUsers(
+final case class NodeInfoUsers private[codeberg4s] (
     total: Option[Long],
     activeHalfyear: Option[Long],
     activeMonth: Option[Long],
