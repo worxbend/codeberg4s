@@ -37,9 +37,9 @@ this entry is the release note that tag will carry.
   against captured samples.
 - **Link-header pagination.** List operations return `Page[A]` with the items,
   the total count and the next page parsed from the RFC 8288 `Link` header
-  rather than guessed from a page counter. `core.Pagination` provides the
-  sequential `listAll` and `foldPages` drivers, so walking every page is opt-in
-  and never materialises the whole collection by accident.
+  rather than guessed from a page counter. `paging.PageWalk` provides the
+  sequential `all`, `fold` and `foreach` drivers, so walking every page is
+  opt-in and never materialises the whole collection by accident.
 - **Retry that honours the server.** `RetryEngine` retries `429` and `5xx` on
   idempotent methods only, with jittered exponential backoff, and prefers the
   server's `Retry-After` over its own schedule when the policy allows it.
@@ -65,8 +65,9 @@ this entry is the release note that tag will carry.
   of `repository` (actions, hooks, deploy keys, wikis, attachments) and `user`
   (settings, stars, blocks, GPG keys, tokens), plus most write operations
   outside issues, pulls and labels. See `docs/API_INVENTORY.md`.
-- `listAll` and `foldPages` live on `core.Pagination`; they are not yet surfaced
-  as convenience methods on the client resource groups.
+- Walking every page goes through `paging.PageWalk`, which takes the listing
+  operation as an argument; there is no `listAll` convenience method on the
+  client resource groups themselves.
 - `GET /repos/issues/search` is deferred — it returns a bare array rather than
   the `{ok, data}` envelope the other search endpoints use.
 - ScalaCheck property suites carry the `Property` tag and are excluded from the

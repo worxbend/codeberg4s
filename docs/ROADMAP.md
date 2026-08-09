@@ -28,14 +28,14 @@ Gate names match `PLAN.md` §7.
       PLAN.md's assumptions turned out to be wrong
 - [x] 54 golden fixtures captured (`modules/codec/test/resources/golden/`)
 - [x] `domain`: error ADT, `CallContext`, opaque identifiers, `Auth`, config, paging value types
-- [x] `core`: `Exec[F]`, ports, `RetryEngine`, `Pagination`, `LinkHeader`, `Pages`,
+- [x] `core`: `Exec[F]`, ports, `RetryEngine`, `LinkHeader`, `Pages`,
       `ApiPipeline`, `StatusMapping`, `Redaction`
 - [x] Vertical slice: `GET /version` and `GET /repos/{owner}/{repo}` through every layer, both rails
 - [x] Full error paths on the slice: 404, decode failure, transport failure, retry-then-succeed
 
 ## Phase 2 — Cross-cutting hardening · **Gate G2**
 
-- [x] Track A — retry engine, pagination driver, `Page` / `foldPages`, `Telemetry` port
+- [x] Track A — retry engine, pagination driver, `Page` / `PageWalk`, `Telemetry` port
       wired through both `CodebergClient` factories
 - [x] Track B — error ADT, Forgejo error-body parsing against captured samples,
       redaction guarantees, `CodebergException` bridging
@@ -45,13 +45,16 @@ Gate names match `PLAN.md` §7.
       `listAll` on each of the thirty-eight API classes — the termination rule
       is the subtle part of pagination and belongs in one place.
 - [ ] Property suites (`*Props.scala`, `Property` tag) for codec laws, pagination
-      invariants, retry bounds. **Partially done:** `modules/domain` now has
+      invariants, retry bounds. **Partially done:** `modules/domain` has
       `PropertyBase` (pinned ScalaCheck seed, `Property` tag), `IdentifierProps`
-      (13 properties over the opaque identifiers and `BaseUri`) and
-      `SecretProps` (9 properties asserting no rendering path emits a
-      credential). The three areas `PLAN.md` §6.3 actually names — codec
-      round-trip laws in `codec`, pagination-driver invariants and retry bounds
-      in `core` — have no property suite yet.
+      (13 properties over the opaque identifiers and `BaseUri`), `SecretProps`
+      (9 properties asserting no rendering path emits a credential),
+      `CodebergErrorProps` and `PageProps`. Of the three areas `PLAN.md` §6.3
+      names, two are covered: codec round-trip and totality laws by `JsonProps`
+      and `ApiErrorBodyCodecProps`, retry bounds by `RetryEngineProps`. The
+      pagination driver is the one still open — `PaginationProps` was deleted
+      along with `core.Pagination`, and the walker that replaced it,
+      `paging.PageWalk`, has example-based tests only.
 
 ## Phase 3 — Endpoint waves · **Gate G3** per wave
 
