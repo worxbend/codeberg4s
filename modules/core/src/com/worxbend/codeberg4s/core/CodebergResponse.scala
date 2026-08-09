@@ -62,8 +62,11 @@ final case class CodebergResponse(status: Int, headers: Map[String, List[String]
     * All values of the `Link` header are considered, not just the first: a proxy is allowed to split one header into
     * several, and the RFC says the result is the same as if they had been joined with commas. An unreadable header
     * yields an empty map — see [[LinkHeader]] for why that is never an error.
+    *
+    * The header is parsed the first time this is read and the result is kept, because [[nextPage]], [[prevPage]] and
+    * [[lastPage]] all go through it and page one alone would otherwise parse the same string three times.
     */
-  def links: Map[String, String] =
+  lazy val links: Map[String, String] =
     LinkHeader.parse(headers.getOrElse(LinkHeader.Name, Nil).mkString(","))
 
   /** The page number of `rel="next"`, and nothing else.

@@ -3,6 +3,7 @@ package com.worxbend.codeberg4s.core
 import scala.annotation.tailrec
 
 import java.util.Locale
+import java.util.regex.Pattern
 
 /** RFC 5988 `Link` header parsing.
   *
@@ -37,7 +38,9 @@ object LinkHeader:
 
   private val RelParameter: String = "rel"
 
-  private val Whitespace: String = "\\s+"
+  // Compiled once, at class-initialisation time. Passing the pattern as a String to String#split would
+  // make java.util.regex recompile it on every element of every header.
+  private val Whitespace: Pattern = Pattern.compile("\\s+")
 
   /** Parses a raw `Link` header value into a map from relation type to target URI.
     *
@@ -86,17 +89,23 @@ object LinkHeader:
 
   /** Splits on the commas that separate elements, ignoring any comma inside an angle-bracketed target URI. */
   private def elementsOf(value: String): List[String] =
-    split(value, 0, 0, false, Nil).map(_.trim).filter(_.nonEmpty)
+    split(value, 0, 0, false, Nil).reverse.map(_.trim).filter(_.nonEmpty)
 
+  /** The elements of `value`, '''in reverse order''' — [[elementsOf]] puts them back.
+    *
+    * Prepending onto a list costs the same however long the list is, whereas appending walks it to the end, so a loop
+    * that appends `k` times does work proportional to `k²`. Collecting in reverse and turning the result around once at
+    * the end keeps the whole split proportional to the length of the header.
+    */
   @tailrec
-  private def split(value: String, from: Int, at: Int, inTarget: Boolean, done: List[String]): List[String] =
-    if at >= value.length then done.appended(value.substring(from))
+  private def split(value: String, from: Int, at: Int, inTarget: Boolean, reversed: List[String]): List[String] =
+    if at >= value.length then value.substring(from) :: reversed
     else
       value.charAt(at) match
-        case '<'              => split(value, from, at + 1, true, done)
-        case '>'              => split(value, from, at + 1, false, done)
-        case ',' if !inTarget => split(value, at + 1, at + 1, false, done.appended(value.substring(from, at)))
-        case _                => split(value, from, at + 1, inTarget, done)
+        case '<'              => split(value, from, at + 1, true, reversed)
+        case '>'              => split(value, from, at + 1, false, reversed)
+        case ',' if !inTarget => split(value, at + 1, at + 1, false, value.substring(from, at) :: reversed)
+        case _                => split(value, from, at + 1, inTarget, reversed)
 
   private def entriesOf(element: String): List[(String, String)] =
     val found =
@@ -116,7 +125,7 @@ object LinkHeader:
       // equalsIgnoreCase rather than ==, because RFC 5988 parameter names are
       // case-insensitive and .scalafix.conf bans universal equality.
       .collectFirst { case (name, value) if name.equalsIgnoreCase(RelParameter) => unquote(value) }
-      .map(_.split(Whitespace).toList.map(_.toLowerCase(Locale.ROOT)).filter(_.nonEmpty))
+      .map(declared => Whitespace.split(declared).toList.map(_.toLowerCase(Locale.ROOT)).filter(_.nonEmpty))
       .filter(_.nonEmpty)
 
   private def parametersOf(element: String): List[(String, String)] =
