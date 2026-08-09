@@ -92,6 +92,14 @@ final class JsonFieldsSuite extends FunSuite:
     assertEquals(JsonFields.Empty.number("anything"), None)
     assertEquals(JsonFields.Empty.texts("anything"), Vector.empty[String])
 
+  test("no field can be shadowed, because a document that repeats one never becomes a view"):
+    // This view is a Map, and building a map from a field list keeps the last of
+    // two fields with the same name. That answer is unreachable: the parser
+    // refuses the document first, so the view is only ever built from names that
+    // are already distinct. See JsonValue.Obj for why refusing is the rule.
+    assert(Json.decode[Probe]("""{"a":"first","a":"second"}""").isLeft)
+    assertEquals(Json.decode[Probe]("""{"a":"first","b":"second"}"""), Right(Probe(Some("first"))))
+
   test("reader delegates the is-this-an-object question to the JSON parser"):
     assertEquals(Json.decode[Probe]("""{"a":"x"}"""), Right(Probe(Some("x"))))
     assertEquals(Json.decode[Probe]("""{}"""), Right(Probe(None)))

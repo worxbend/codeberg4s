@@ -111,6 +111,58 @@ final class JsonSuite extends FunSuite:
 
     assertEquals(Json.render(document), """{"z":"1","a":"2"}""")
 
+  test("a document that names a field twice is rejected rather than quietly resolved"):
+    // JsonValue.Obj argues the decision. In short: the three ways of reading an
+    // object disagreed about {"id":1,"id":2} — first, last, and both — and only
+    // one of the available answers loses no data, which is to refuse it.
+    assert(Json.parse("""{"id":1,"id":2}""").isLeft)
+
+  test("the repeated-field failure names the field that was repeated"):
+    Json.parse("""{"id":1,"id":2}""") match
+      case Left(failure) => assert(failure.message.contains("""duplicated field "id""""), failure.message)
+      case Right(value)  => fail(s"expected a failure, got $value")
+
+  test("a repeated field fails at the root, like every other structural failure"):
+    Json.parse("""{"id":1,"id":2}""") match
+      case Left(failure) => assertEquals(failure.path, JsonPath.Root)
+      case Right(value)  => fail(s"expected a failure, got $value")
+
+  test("a repeated field is rejected whichever door the body is decoded through"):
+    // This is the disagreement that made the decision necessary: JsonValue.field
+    // answered 1, and a DTO assembled from the same object answered 2.
+    assert(Json.decode[Leaf]("""{"name":"a","name":"b"}""").isLeft)
+    assert(Json.decode[Map[String, JsonValue]]("""{"id":1,"id":2}""").isLeft)
+
+  test("a repeated field is rejected wherever in the document it sits"):
+    assert(Json.parse("""{"owner":{"id":1,"id":2}}""").isLeft)
+    assert(Json.parse("""[{"id":1},{"id":2,"id":3}]""").isLeft)
+
+  test("the same field name in two sibling objects is not a repeat"):
+    // The rule is about one object naming a field twice. Every element of a page
+    // carrying an "id" is what a page looks like.
+    assertEquals(Json.parse("""[{"id":1},{"id":2}]""").map(Json.render), Right("""[{"id":1},{"id":2}]"""))
+
+  test("a repeated field is caught in a wide object, where the check hashes instead of comparing"):
+    // Objects this wide are checked by a different branch than the narrow ones
+    // above — a repository response has 64 keys, so both branches carry real
+    // traffic and both need a test. 200 keeps this clear of the width the two
+    // branches split at without the test having to know that width.
+    val distinct = (1 to 200).map(index => s""""k$index":$index""").mkString("{", ",", "}")
+    val repeated = distinct.replace(""""k137":137""", """"k42":137""")
+
+    assert(Json.parse(distinct).isRight)
+    assert(Json.parse(repeated).isLeft)
+
+  test("rendering stays faithful, so a document built with a repeated field is one parse refuses"):
+    // Json.render writes the fields it is given, and Obj says not to hand it a
+    // repeated key. This pins the consequence rather than hiding it: render does
+    // not quietly drop a field, and the parser does not quietly accept one, so
+    // the two never disagree about a document — they only ever both refuse.
+    val document = JsonValue.Obj("id" -> JsonValue.Num(1), "id" -> JsonValue.Num(2))
+
+    assertEquals(Json.render(document), """{"id":1,"id":2}""")
+    assert(Json.parse(Json.render(document)).isLeft)
+
   test("a large integer survives the round trip, which a Double would not"):
     // 2^53 + 1 is the first integer a Double cannot represent.
     val body = """{"id":9007199254740993}"""

@@ -18,6 +18,12 @@ package com.worxbend.codeberg4s.codec
   * all, or an array where an object was expected — are still failures, and are reported by [[JsonDecoder.objectOf]]
   * before this view is ever built.
   *
+  * '''No field can be shadowed by another.''' This view is a `Map`, and building a map from a field list resolves a
+  * repeated key by keeping the last one — so `{"id":1,"id":2}` would read as `2` here while [[JsonValue.field]] read
+  * the same document as `1`. Neither answer is reached any more: [[Json.parse]] rejects a document that names a field
+  * twice, for the reasons set out on [[JsonValue.Obj]], so a view is only ever built from fields whose names are
+  * already distinct and the question of which one wins does not arise.
+  *
   * Instances are immutable and safe to share.
   *
   * @param underlying

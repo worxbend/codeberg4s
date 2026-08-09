@@ -87,7 +87,9 @@ object PropertyBase:
   /** Text that survives `JsonFields.text`, which folds Forgejo's `""`-for-absent convention into `None`. */
   val nonBlankText: Gen[String] = text.suchThat(_.trim.nonEmpty)
 
-  /** A JSON object key. Distinct keys are enforced where it matters, since a duplicate key is not round-trippable. */
+  /** A JSON object key. The object generator below makes the names distinct, because a document that names a field
+    * twice does not round-trip — [[JsonValue.Obj]] explains why the parser refuses one outright.
+    */
   val key: Gen[String] = Gen.nonEmptyListOf(Gen.oneOf(('a' to 'z') ++ ('0' to '9'))).map(_.mkString)
 
   /** A JSON value that is not a container. */
