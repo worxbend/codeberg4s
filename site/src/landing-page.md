@@ -1,5 +1,3 @@
-# codeberg4s
-
 A Scala 3 client for the [Codeberg](https://codeberg.org) and
 [Forgejo](https://forgejo.org) REST API v1. All 439 in-scope operations are
 implemented, on both error rails, against models built from captured responses
