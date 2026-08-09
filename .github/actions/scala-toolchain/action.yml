@@ -8,6 +8,13 @@ description: >
 # four places for CI to drift away from itself, and the first symptom of that
 # drift is a release built on a different JDK from the one the tests ran on.
 #
+# It is also the single place where the release job's toolchain comes from, so
+# the two `uses:` below are pinned to commit SHAs rather than to `@v5` / `@v6`.
+# A major-version tag is a mutable pointer the action's maintainers — or anyone
+# who compromises them — can repoint at other code, and this action runs inside
+# the job that holds the artifact signing key. The trailing comment names the
+# release each SHA belongs to, so the line stays readable.
+#
 # scala-cli is not optional decoration: verify.sh runs scripts/coverage-gate.sc
 # on every invocation and scripts/crap.sc under --with-slow, and both are
 # scala-cli scripts. A runner without scala-cli fails at the coverage step.
@@ -45,13 +52,13 @@ runs:
         echo "MILL_JVM_OPTS=-Xmx3g" >> "$GITHUB_ENV"
 
     - name: Set up JDK ${{ inputs.java-version }} (Temurin)
-      uses: actions/setup-java@v5
+      uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
       with:
         distribution: temurin
         java-version: ${{ inputs.java-version }}
 
     - name: Cache Coursier
-      uses: actions/cache@v6
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: .cache/coursier
         # build.mill names every dependency; .mill-version names Mill's own;

@@ -10,6 +10,17 @@ name: Release
 # The full procedure — how to set the version, how the key and credentials are
 # produced, how to verify the release landed, what to do about a bad one — is
 # in RELEASING.md. This file is that document made executable.
+#
+# Every third-party action below is pinned to a full commit SHA, with the
+# release it belongs to in a trailing comment so the line stays readable. A tag
+# like `v7` is a mutable pointer: whoever controls the action's repository can
+# move it to different code at any time, and this job would fetch and run that
+# code with MILL_PGP_SECRET_BASE64 — the signing key — in its environment.
+# A commit SHA cannot be moved.
+#
+# `./.github/actions/scala-toolchain` is exempt because it is not fetched from
+# anywhere: a `uses:` beginning with `./` runs the copy in this repository at
+# the commit being built, so it is already pinned by the checkout above.
 
 on:
   push:
@@ -34,7 +45,7 @@ jobs:
       # artifact reaches Central.
       name: maven-central
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: ./.github/actions/scala-toolchain
 

@@ -33,7 +33,7 @@ jobs:
     # longer has hung, not slowed down.
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # verify.sh's scalafmt step asks Git which Scala sources are tracked
           # (.scalafmt.conf sets project.git = true). A shallow checkout is
@@ -53,7 +53,7 @@ jobs:
       # the gate reports a percentage, and the report says which lines.
       - name: Upload coverage reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: scoverage-${{ github.run_id }}
           path: out/modules/*/scoverage/
