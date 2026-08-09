@@ -31,6 +31,7 @@ import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.IOApp
 import laika.api.Transformer
+import laika.ast.LengthUnit.px
 import laika.ast.Path
 import laika.ast.Path.Root
 import laika.config.LinkConfig
@@ -40,7 +41,9 @@ import laika.config.TargetDefinition
 import laika.format.HTML
 import laika.format.Markdown
 import laika.helium.Helium
+import laika.helium.config.AnchorPlacement
 import laika.helium.config.ButtonLink
+import laika.helium.config.ColorQuintet
 import laika.helium.config.Favicon
 import laika.helium.config.HeliumIcon
 import laika.helium.config.IconLink
@@ -67,15 +70,65 @@ object SiteInfo:
   val codeFont: String =
     "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace"
 
-  /** Deep sea blue, which is close enough to Codeberg's own without pretending to be its brand. */
-  val primary: Color        = Color.hex("1d4f6e")
-  val primaryMedium: Color  = Color.hex("a7c6d9")
-  val primaryLight: Color   = Color.hex("edf3f7")
-  val secondary: Color      = Color.hex("8a4b1f")
-  val text: Color           = Color.hex("1c1f21")
-  val background: Color     = Color.hex("ffffff")
-  val gradientTop: Color    = Color.hex("1d4f6e")
-  val gradientBottom: Color = Color.hex("2e7096")
+/** The colour system.
+  *
+  * Dark is the mode this site is designed for; light is derived from it rather than the other way round. Both are
+  * defined here in full, because Helium generates one `:root` block per scheme and a value left unset falls back to a
+  * Helium default that was chosen for a different palette.
+  *
+  * One accent hue, azure, in two tones — the bright one carries interactive text on near-black, the deep one carries it
+  * on white. Keeping to a single hue is what stops a documentation site turning into a colour chart; the blue continues
+  * the identity the project already had, without claiming to be Codeberg's brand.
+  *
+  * Every text-on-background pair below clears WCAG AA (4.5:1 for body text, 3:1 for large text). The tightest pair is
+  * `muted` on `background`, at 7.0:1 dark and 5.9:1 light, so the small print is legible rather than merely present.
+  */
+object Palette:
+
+  /** Near-black with a trace of blue in it. Flat: the header takes this as both gradient stops, so there is no gradient
+    * — see [[Site.theme]].
+    */
+  object Dark:
+    val background: Color  = Color.hex("0b0f14")
+    val surface: Color     = Color.hex("131a22")
+    val border: Color      = Color.hex("26313d")
+    val text: Color        = Color.hex("e6edf5")
+    val accent: Color      = Color.hex("4cc2ff")
+    val accentHover: Color = Color.hex("9adcff")
+
+  object Light:
+    val background: Color  = Color.hex("ffffff")
+    val surface: Color     = Color.hex("f4f7fa")
+    val border: Color      = Color.hex("d5dee7")
+    val text: Color        = Color.hex("0f1720")
+    val accent: Color      = Color.hex("0a6a9c")
+    val accentHover: Color = Color.hex("064a6e")
+
+  /** The landing page header stays near-black in both schemes. A hero that inverts with the colour scheme gives the
+    * site two different first impressions; this way it has one.
+    */
+  val heroBackground: Color = Dark.background
+
+  /** Syntax highlighting, shared by both schemes because the code block keeps its dark surface in both.
+    *
+    * Helium takes two quintets. `base` is structural — c1 is the block background, c2 comments, c5 ordinary code text.
+    * `wheel` is the token colours: keywords, declarations, literals, strings, and type names, in that order.
+    */
+  val syntaxBase: ColorQuintet = ColorQuintet(
+    Color.hex("0f1620"), // block background — a shade off the page, so the block reads as a surface
+    Color.hex("6b7a8c"), // comments
+    Color.hex("8b9bb0"),
+    Color.hex("b7c7da"),
+    Color.hex("e6edf5"), // ordinary code text
+  )
+
+  val syntaxWheel: ColorQuintet = ColorQuintet(
+    Color.hex("ff7b9c"), // keywords
+    Color.hex("f5a97f"), // declaration names
+    Color.hex("ffd479"), // literals and numbers
+    Color.hex("a6e3a1"), // strings
+    Color.hex("7fd3ff"), // type names
+  )
 
 /** The four claims the landing page is built around. They are the same four the README opens with, deliberately: a
   * reader who arrives from either direction should be told the same thing.
@@ -171,16 +224,36 @@ object Site:
         version     = Some(args.version),
       )
 
+    // Helium's colour slots are named after its own defaults rather than after what they do, so the mapping is worth
+    // stating once: `primary` colours headings, links and navigation; `primaryLight` is the fill behind panels and the
+    // sidebar; `primaryMedium` is every border; `secondary` is the hover state. `bgGradient` gets the same colour twice
+    // on purpose — that is how Helium is told to draw a flat header rather than a gradient one.
     val withColours = withMetadata.site
       .themeColors(
-        primary       = SiteInfo.primary,
-        primaryMedium = SiteInfo.primaryMedium,
-        primaryLight  = SiteInfo.primaryLight,
-        secondary     = SiteInfo.secondary,
-        text          = SiteInfo.text,
-        background    = SiteInfo.background,
-        bgGradient    = (SiteInfo.gradientTop, SiteInfo.gradientBottom),
+        primary       = Palette.Light.accent,
+        primaryMedium = Palette.Light.border,
+        primaryLight  = Palette.Light.surface,
+        secondary     = Palette.Light.accentHover,
+        text          = Palette.Light.text,
+        background    = Palette.Light.background,
+        bgGradient    = (Palette.heroBackground, Palette.heroBackground),
       )
+      .site
+      .darkMode
+      .themeColors(
+        primary       = Palette.Dark.accent,
+        primaryMedium = Palette.Dark.border,
+        primaryLight  = Palette.Dark.surface,
+        secondary     = Palette.Dark.accentHover,
+        text          = Palette.Dark.text,
+        background    = Palette.Dark.background,
+        bgGradient    = (Palette.heroBackground, Palette.heroBackground),
+      )
+      .site
+      .syntaxHighlightingColors(base = Palette.syntaxBase, wheel = Palette.syntaxWheel)
+      .site
+      .darkMode
+      .syntaxHighlightingColors(base = Palette.syntaxBase, wheel = Palette.syntaxWheel)
 
     // Helium's default typography is Lato and Fira Mono, pulled from
     // fonts.googleapis.com by a <link> in every page. Two reasons not to keep it: a documentation site should not make
@@ -196,7 +269,44 @@ object Site:
         code      = SiteInfo.codeFont,
       )
 
-    val withChrome = withoutRemoteFonts.site
+    // Helium's defaults are a 15px body in an 860px column, with headings that step 34 / 28 / 20 / 15. Two problems for
+    // a page that is mostly prose about code: 15px is small for long-form reading at arm's length, and a 20px h3 next
+    // to a 15px h4 gives the reader no way to see the level of a heading without counting.
+    //
+    // 16px body, and a scale that keeps a visible ratio at every step. The column narrows rather than widens, because
+    // the constraint on a text column is the eye's return sweep, not the screen: ~75 characters at this size.
+    val withTypography = withoutRemoteFonts.site
+      .fontSizes(
+        body    = px(16),
+        code    = px(14),
+        title   = px(40),
+        header2 = px(27),
+        header3 = px(20),
+        header4 = px(16),
+        small   = px(13),
+      )
+      .site
+      .layout(
+        contentWidth        = px(820),
+        navigationWidth     = px(280),
+        topBarHeight        = px(48),
+        defaultBlockSpacing = px(14),
+        defaultLineHeight   = 1.65,
+        anchorPlacement     = AnchorPlacement.Right,
+      )
+
+    // The design lives in site/assets/css/site.css, not here.
+    //
+    // Helium exposes its palette and its metrics as configuration — that is everything above — but not its component
+    // shapes: the header is a centred block, the teasers are bare text, a code block is a rectangle with no border.
+    // Those are CSS, so they are changed in CSS, and `internalCSS` points at a directory in the input tree whose
+    // stylesheets are linked after Helium's own. Later in the cascade, same specificity, so an override is an override
+    // and nothing needs `!important`.
+    //
+    // scripts/site.sh copies site/assets to the staged tree, which is why the path is /assets and not /site/assets.
+    val withStyles = withTypography.site.internalCSS(Root / "assets" / "css")
+
+    val withChrome = withStyles.site
       .favIcons(Favicon.internal(Root / "assets" / "favicon.svg", sizes = "32x32"))
       .site
       .topNavigationBar(
@@ -231,12 +341,12 @@ object Site:
       .pageNavigation(depth = 3)
 
     // Everything below the header and the teaser rows is the prose of `site/src/landing-page.md`. That file has no
-    // top-level heading of its own on purpose: `title` here already renders "codeberg4s" at 48px directly above it,
-    // and a second `<h1>codeberg4s</h1>` under it said the same word twice.
+    // top-level heading of its own on purpose: `title` here already renders "codeberg4s" directly above it, and a
+    // second `<h1>codeberg4s</h1>` under it said the same word twice.
     //
     // The landing page carries no navigation bar — Helium renders it from a template of its own, which has no top bar
     // in it. `titleLinks` is the replacement: a reader who lands on the front page needs a way into the documentation
-    // that is not "scroll to the bottom and hope", and these cover what anyone arrives wanting.
+    // that is not "scroll to the bottom and hope", and these three cover the three things anyone arrives wanting.
     withChrome.site
       .landingPage(
         title              = Some(SiteInfo.title),
@@ -250,9 +360,9 @@ object Site:
         latestReleases     = Seq(ReleaseLine.current(args.version)),
         license            = Some(SiteInfo.licence),
         // No `documentationLinks`. Helium renders them as a boxed panel in the header's right-hand column, and every
-        // entry it would hold is now a link in `titleLinks` a few inches to the left. Saying the same three things
-        // twice in one header is worse than saying them once, and the panel was tall enough to set the height of the
-        // whole header, leaving the title column beside it looking abandoned.
+        // entry it would hold is already a button in `titleLinks` two inches to the left. Saying the same three things
+        // twice in one header is worse than saying them once, and the panel was tall enough to leave the left-hand
+        // column looking abandoned next to it.
         projectLinks       = Seq(
           TextLink.external(SiteInfo.sourceUrl, "Source"),
           TextLink.external(s"${SiteInfo.sourceUrl}/issues", "Issues"),

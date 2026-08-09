@@ -1,0 +1,704 @@
+/* codeberg4s — the design layer on top of Helium.
+ *
+ * Loaded after Helium's own stylesheets (see `internalCSS` in site/build/laika.scala), at the same specificity, so
+ * every rule here is a plain override and nothing needs `!important`.
+ *
+ * What belongs here and what does not: Helium's palette, type scale and metrics are *configuration*, and they are set
+ * in laika.scala. This file is for the things Helium does not expose — the shape of a component. Do not restate a
+ * colour here that laika.scala already sets; read it from the custom property instead, or the two will drift.
+ *
+ * The variables prefixed `--c4s-` are ours. Everything unprefixed is Helium's, and its names are listed at the top of
+ * the generated helium/site/laika-helium.css in any build.
+ */
+
+/* ============================================================================
+   Tokens
+   ============================================================================ */
+
+:root {
+  /* Read from Helium rather than repeated, so the palette has one home. */
+  --c4s-surface: var(--primary-light);
+  --c4s-border: var(--primary-medium);
+  --c4s-accent: var(--primary-color);
+
+  /* Secondary text: captions, metadata, the sidebar's inactive entries. Not in Helium's set. */
+  --c4s-muted: #5b6672;
+
+  /* The hero keeps its near-black in both colour schemes, so these are literals on purpose — they must not follow
+     the scheme. Matches Palette.heroBackground in laika.scala. */
+  --c4s-hero-bg: #0b0f14;
+  --c4s-hero-text: #f2f7fb;
+  --c4s-hero-muted: #9fb0c2;
+  --c4s-hero-border: rgba(255, 255, 255, 0.14);
+
+  /* The hero's own accent, and the reason it is separate from --c4s-accent: the page accent darkens in light mode so
+     it can carry link text on white, but the hero is near-black in both schemes. Using the page accent here put a
+     near-black label on a dark blue button in light mode, at about 2:1. This is Palette.Dark.accent. */
+  --c4s-hero-accent: #4cc2ff;
+
+  --c4s-radius: 10px;
+  --c4s-radius-sm: 6px;
+  --c4s-shadow: 0 1px 2px rgba(15, 23, 32, 0.05), 0 10px 30px rgba(15, 23, 32, 0.07);
+  --c4s-shell: 1180px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c4s-muted: #93a3b4;
+    --c4s-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.35);
+  }
+}
+
+/* ============================================================================
+   Base
+   ============================================================================ */
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ============================================================================
+   Top bar
+   ============================================================================ */
+
+/* Helium's three children are laid out with space-between, which parks the home icon in the dead centre of a wide
+ * screen — a place no one looks for it. Pack them to the left and let the link row take the slack, so home sits at
+ * the left edge where a brand mark goes. */
+#top-bar {
+  background-color: color-mix(in srgb, var(--bg-color) 82%, transparent);
+  backdrop-filter: saturate(160%) blur(12px);
+  -webkit-backdrop-filter: saturate(160%) blur(12px);
+  border-bottom: 1px solid var(--c4s-border);
+  padding: 0 18px;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+#top-bar .row.links {
+  margin-left: auto;
+}
+
+#top-bar .row.links {
+  gap: 4px;
+}
+
+#top-bar a.text-link {
+  padding: 6px 10px;
+  border-radius: var(--c4s-radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+#top-bar a.text-link:hover {
+  background-color: var(--c4s-surface);
+  text-decoration: none;
+}
+
+#top-bar a.icon-link:hover {
+  opacity: 0.75;
+  text-decoration: none;
+}
+
+/* ============================================================================
+   Sidebar
+   ============================================================================ */
+
+#sidebar {
+  background-color: var(--bg-color);
+  border-right: 1px solid var(--c4s-border);
+  padding-right: 4px;
+}
+
+#sidebar ul.nav-list {
+  margin-left: 10px;
+  padding-top: 16px;
+}
+
+#sidebar .nav-list li a {
+  border-radius: var(--c4s-radius-sm);
+  padding: 5px 12px;
+  color: var(--c4s-muted);
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+#sidebar .nav-list li a:hover {
+  background-color: var(--c4s-surface);
+  color: var(--text-color);
+  text-decoration: none;
+}
+
+/* A section heading is a label, not a link target. Set it apart by weight and case rather than by the 2px rule
+   Helium draws, which read as a divider in the wrong place. */
+#sidebar .nav-list li.level1.nav-node,
+#sidebar .nav-list li.level2.nav-header {
+  border-bottom: none;
+  margin-top: 18px;
+  margin-bottom: 2px;
+}
+
+#sidebar .nav-list li.level1.nav-node > a,
+#sidebar .nav-list li.level2.nav-header {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c4s-muted);
+  padding-left: 12px;
+}
+
+/* The current page. The bar on the left is what lets the eye find it without reading. Square on that edge, so the
+ * bar is a straight line rather than a bracket following the corner radius. */
+#sidebar .nav-list li.active > a,
+#sidebar .nav-list li a.active {
+  background-color: var(--c4s-surface);
+  color: var(--c4s-accent);
+  font-weight: 600;
+  border-radius: 0 var(--c4s-radius-sm) var(--c4s-radius-sm) 0;
+  box-shadow: inset 2px 0 0 var(--c4s-accent);
+}
+
+/* Helium sizes top-level entries at 1.1em, which made a page link ("Examples") louder than the section heading above
+ * it. One size for every page link; the section headings are already distinguished by case and weight. */
+#sidebar .nav-list li.level1 {
+  font-size: 1em;
+}
+
+#sidebar .nav-list li a {
+  font-size: 14px;
+}
+
+#sidebar .nav-list li.level1:not(.nav-node) > a {
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+/* ============================================================================
+   Page navigation (the "on this page" column)
+   ============================================================================ */
+
+#page-nav {
+  border: 1px solid var(--c4s-border);
+  border-radius: var(--c4s-radius);
+  background-color: transparent;
+  overflow: hidden;
+}
+
+#page-nav .header {
+  background-color: var(--c4s-surface);
+  border-bottom: 1px solid var(--c4s-border);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 9px 14px;
+}
+
+#page-nav .header a {
+  color: var(--c4s-muted);
+}
+
+#page-nav .nav-list li a {
+  color: var(--c4s-muted);
+  font-size: 13.5px;
+  padding: 4px 14px;
+  border-radius: 0;
+}
+
+#page-nav .nav-list li a:hover {
+  color: var(--c4s-accent);
+  text-decoration: none;
+}
+
+#page-nav .footer {
+  display: none;
+}
+
+/* ============================================================================
+   Content typography
+   ============================================================================ */
+
+/* Helium colours every heading with the accent. That reads as "this heading is a link", and on a page where real
+ * links are also the accent it leaves nothing to distinguish them. Headings take the body colour; the accent is
+ * reserved for things you can click. */
+main h1,
+main h2,
+main h3,
+main h4,
+main h5,
+body > main h1,
+body > main h2,
+body > main h3,
+body > main h4 {
+  color: var(--text-color);
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+
+main h1.title {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 28px;
+}
+
+/* A rule under every h2 gives the page a visible rhythm when it is skimmed rather than read. */
+main h2.section {
+  margin-top: 52px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--c4s-border);
+  font-weight: 700;
+}
+
+main h3 {
+  margin-top: 34px;
+  font-weight: 650;
+}
+
+main p,
+main li {
+  color: var(--text-color);
+}
+
+main a {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+main strong {
+  font-weight: 650;
+}
+
+/* Inline code is a chip, so a type name inside a sentence is distinguishable from emphasis. */
+main :not(pre) > code {
+  background-color: var(--c4s-surface);
+  border: 1px solid var(--c4s-border);
+  border-radius: var(--c4s-radius-sm);
+  padding: 0.12em 0.36em;
+  font-size: 0.875em;
+}
+
+main blockquote {
+  border-left: 3px solid var(--c4s-accent);
+  background-color: var(--c4s-surface);
+  border-radius: 0 var(--c4s-radius-sm) var(--c4s-radius-sm) 0;
+  padding: 12px 18px;
+  margin-left: 0;
+}
+
+main blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+main hr {
+  border: none;
+  border-top: 1px solid var(--c4s-border);
+  margin: 40px 0;
+}
+
+/* ============================================================================
+   Tables
+   ============================================================================ */
+
+main table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--c4s-border);
+  border-radius: var(--c4s-radius);
+  overflow: hidden;
+  font-size: 14.5px;
+}
+
+main th {
+  background-color: var(--c4s-surface);
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--c4s-muted);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--c4s-border);
+}
+
+main td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--c4s-border);
+  vertical-align: top;
+}
+
+main tr:last-child td {
+  border-bottom: none;
+}
+
+/* ============================================================================
+   Code blocks
+   ============================================================================ */
+
+/* `white-space: pre` rather than Helium's wrapping. A wrapped line breaks wherever the column ends, which in Scala
+ * means inside an identifier — `Future[Page[Issue]]` came out as `Futur` / `e[Page[Issue]]`. A snippet that a reader
+ * might copy should not be re-flowed; give it a scrollbar instead. */
+main pre {
+  border: 1px solid var(--c4s-border);
+  border-radius: var(--c4s-radius);
+  padding: 16px 18px;
+  white-space: pre;
+  overflow-x: auto;
+  line-height: 1.6;
+  box-shadow: none;
+  margin: 20px 0;
+}
+
+/* ============================================================================
+   Landing page — hero
+   ============================================================================ */
+
+/* Helium centres the header's two columns as a group, which leaves the hero's left edge somewhere other than the left
+ * edge of everything below it. There is no wrapper element inside #header to constrain, so the shell is emulated with
+ * padding: half the leftover width, plus the same 28px gutter .teasers and main use. Below the shell width the calc
+ * goes negative and max() falls back to the gutter, so it degrades to a normal narrow-screen layout. */
+#header {
+  background-image: none;
+  background-color: var(--c4s-hero-bg);
+  color: var(--c4s-hero-text);
+  border-bottom: 1px solid var(--c4s-hero-border);
+  text-align: left;
+  min-height: 0;
+  padding-top: 88px;
+  padding-bottom: 80px;
+  padding-left: max(28px, calc((100% - var(--c4s-shell)) / 2 + 28px));
+  padding-right: max(28px, calc((100% - var(--c4s-shell)) / 2 + 28px));
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 56px;
+}
+
+#header-left,
+#header-right {
+  color: var(--c4s-hero-text);
+  margin: 0;
+  max-width: none;
+}
+
+#header-left {
+  flex: 1 1 auto;
+}
+
+#header-left h1 {
+  color: #ffffff;
+  font-size: 60px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  margin: 0 0 16px;
+}
+
+#header-left h2 {
+  color: var(--c4s-hero-muted);
+  font-size: 21px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: -0.005em;
+  margin: 0;
+  /* Wide enough for the subtitle to sit on one line at desktop width, so it does not break after "Codeberg /". */
+  max-width: 58ch;
+}
+
+#header a,
+#header a:hover {
+  color: var(--c4s-hero-text);
+}
+
+/* --- hero action row --- */
+
+#header-left div.row.links {
+  border: none;
+  height: auto;
+  margin: 34px 0 0;
+  gap: 14px;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+#header-left div.row.links > * {
+  flex: 0 0 auto;
+}
+
+/* The button and the plain links sit on one row, so they need the same box: same padding, same line-height, and a
+ * transparent border on the button to match the 1px the links spend on theirs. Without that the filled button is a
+ * couple of pixels taller than its neighbours and the row looks accidental. */
+#header .button-link {
+  background-color: var(--c4s-hero-accent);
+  color: var(--c4s-hero-bg);
+  border: 1px solid transparent;
+  border-radius: var(--c4s-radius-sm);
+  padding: 11px 18px;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  transition: filter 0.15s ease;
+}
+
+#header .button-link:hover {
+  filter: brightness(1.12);
+  text-decoration: none;
+  color: var(--c4s-hero-bg);
+}
+
+#header .row.links a.text-link {
+  padding: 11px 18px;
+  border: 1px solid var(--c4s-hero-border);
+  border-radius: var(--c4s-radius-sm);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--c4s-hero-text);
+}
+
+#header .row.links a.text-link:hover {
+  background-color: rgba(255, 255, 255, 0.07);
+  text-decoration: none;
+}
+
+/* Helium's inline GitHub mark is an SVG whose shape is filled from the theme's primary colour, which on the near-black
+ * hero comes out barely darker than the background. Fill it like the other muted text in this column instead. */
+#header .row.links a.icon-link .svg-shape {
+  fill: var(--c4s-hero-muted);
+  transition: fill 0.15s ease;
+}
+
+#header .row.links a.icon-link:hover .svg-shape {
+  fill: var(--c4s-hero-text);
+}
+
+#header .row.links a.icon-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+}
+
+#header .row.links a.icon-link svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* --- hero metadata column --- */
+
+#header-right {
+  padding: 0;
+  min-width: 240px;
+}
+
+#header-right p {
+  color: var(--c4s-hero-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin: 0 0 2px;
+}
+
+#header-right p.large {
+  color: var(--c4s-hero-text);
+  font-family: var(--code-font);
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  margin-bottom: 22px;
+}
+
+#header-right p.medium {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+#header-right p.medium a {
+  color: var(--c4s-hero-muted);
+}
+
+#header-right p.medium a:hover {
+  color: var(--c4s-hero-text);
+}
+
+/* Helium boxes this panel and pads it generously. At the top of a hero that is otherwise three short lines, the box
+ * was tall enough to set the height of the whole header and leave a third of it empty. Unboxed and tightened, the
+ * metadata column ends up about the same height as the title column beside it. */
+#header #docs {
+  border: none;
+  background: none;
+  padding: 0;
+  margin-bottom: 20px;
+  font-size: inherit;
+}
+
+/* Helium fills the panel's caption with the inverted component background, which reads as a selected menu item
+ * rather than as a label. It is a label. */
+#header #docs p {
+  background: none;
+  padding: 0;
+  margin-bottom: 4px;
+}
+
+#header #docs li {
+  padding: 0;
+}
+
+#header #docs a {
+  display: block;
+  padding: 3px 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--c4s-hero-muted);
+}
+
+#header #docs a:hover {
+  color: var(--c4s-hero-text);
+  text-decoration: none;
+}
+
+/* ============================================================================
+   Landing page — teaser cards
+   ============================================================================ */
+
+.teasers {
+  max-width: var(--c4s-shell);
+  padding: 0 28px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  text-align: left;
+}
+
+/* First row opens the band, last row closes it. Helium emits one .teasers per row of up to three. */
+.teasers:first-of-type {
+  padding-top: 56px;
+}
+
+.teasers:last-of-type {
+  padding-bottom: 56px;
+}
+
+.teaser {
+  flex: none;
+  margin: 0;
+  padding: 22px 24px;
+  background-color: var(--c4s-surface);
+  border: 1px solid var(--c4s-border);
+  border-radius: var(--c4s-radius);
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.teaser:hover {
+  border-color: var(--c4s-accent);
+  transform: translateY(-2px);
+  box-shadow: var(--c4s-shadow);
+}
+
+.teaser h2 {
+  color: var(--text-color);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  margin: 0 0 8px;
+}
+
+.teaser p {
+  color: var(--c4s-muted);
+  font-size: 14.5px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ============================================================================
+   Landing page — prose below the teasers
+   ============================================================================ */
+
+body > main {
+  max-width: var(--c4s-shell);
+  padding: 8px 28px 90px;
+}
+
+body > main > * {
+  max-width: var(--content-width);
+}
+
+body > main pre {
+  max-width: var(--content-width);
+}
+
+/* ============================================================================
+   Footer
+   ============================================================================ */
+
+.footer-rule {
+  border-top: 1px solid var(--c4s-border);
+  margin-top: 56px;
+}
+
+footer {
+  color: var(--c4s-muted);
+  font-size: 13px;
+  line-height: 1.6;
+  padding-bottom: 24px;
+}
+
+/* ============================================================================
+   Responsive
+   ============================================================================ */
+
+@media (min-width: 700px) {
+  .teasers {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 1000px) {
+  .teasers {
+    display: grid;
+    justify-content: initial;
+    align-items: initial;
+    padding: 0 28px;
+  }
+
+  .teaser {
+    margin: 0;
+    padding: 22px 24px;
+  }
+}
+
+@media (max-width: 699px) {
+  #header {
+    padding: 56px 22px 48px;
+    gap: 36px;
+  }
+
+  #header-left h1 {
+    font-size: 42px;
+  }
+
+  #header-left h2 {
+    font-size: 18px;
+  }
+
+  #header-left div.row.links {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .teasers {
+    padding: 0 22px;
+  }
+
+  body > main {
+    padding: 8px 22px 64px;
+  }
+}
