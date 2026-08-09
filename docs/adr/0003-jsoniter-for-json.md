@@ -21,6 +21,13 @@ build declared and no code imported. It has been removed.
 The footprint argument was a wash: jsoniter-scala's core is comparable, and its
 macros module is compile-time only.
 
+> **Later correction.** That last clause was wrong twice over. `mvnDeps` in Mill
+> is compile *and* runtime scope, so a declared `jsoniter-scala-macros` reaches
+> every consumer's classpath through the published POM; and this build never
+> needed it in the first place, because the section below hand-writes its one
+> codec instead of deriving any. The dependency has since been dropped — see
+> "Consequences".
+
 Meanwhile the style guide — which `CLAUDE.md` names the single source of truth
 for the HTTP/JSON boundary — said jsoniter all along.
 
@@ -53,6 +60,14 @@ Good:
 
 - The style guide and the code agree again.
 - One fewer dependency: the unused sttp-jsoniter-scala integration is gone.
+- **And one fewer again: `jsoniter-scala-macros` is not declared.** Its whole
+  purpose is `JsonCodecMaker.make`, which derives a `JsonValueCodec[A]` from a
+  case class at compile time. The two-step boundary above derives nothing, so
+  every `com.github.plokhotnyuk` import under `modules/` is from
+  `jsoniter_scala.core`. `modules/codec` declares only that artifact, which
+  keeps roughly a megabyte of derivation machinery off a consumer's classpath
+  and makes README.md's "sttp client4 and jsoniter-scala, that is the list"
+  literally true.
 - **Numbers are exact.** The previous document model parsed every JSON number as
   a `Double`, which silently loses precision above 2^53. `JsonValue` holds a
   whole number as a `Long` (`JsonValue.Int64`) and everything else as a

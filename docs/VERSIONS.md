@@ -83,7 +83,14 @@ deliberately short (PLAN.md ADR-2, ADR-3).
 | sttp client4 core | `com.softwaremill.sttp.client4::core` | `4.0.26` | `4.0.26` | current | `transport` |
 | sttp-model core | `com.softwaremill.sttp.model::core` | `1.7.18` | `1.7.18` | current | `transport` |
 | jsoniter-scala core | `com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core` | `2.39.1` | `2.39.1` | current | `codec` |
-| jsoniter-scala macros | `com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros` | `2.39.1` | `2.39.1` | current | `codec` |
+
+Three artifacts, which is what README.md's "sttp client4 and jsoniter-scala,
+that is the list" claims. `jsoniter-scala-macros` used to be a fourth. It is the
+artifact that *derives* a codec from a case class at compile time, and this
+build derives none — `modules/codec` hand-writes one `JsonValueCodec` over a
+document model instead, for the reasons in `docs/HAZARDS.md` §1. Nothing under
+`modules/` imports anything outside `jsoniter_scala.core`, so the macros jar was
+about a megabyte of dead weight on every consumer's classpath.
 
 `modules/domain` and `modules/core` declare **no** `mvnDeps` at all — the
 hexagonal boundary is enforced by the build graph, not by convention
