@@ -9,14 +9,16 @@ import com.worxbend.codeberg4s.ValidationError
   * would corrupt the request line. Both are rejected here, once, rather than at each call site.
   *
   * [[from]] is for an identifier that must occupy exactly one segment. [[segmented]] is for the two that legitimately
-  * span several — [[BranchName]] and [[ContentPath]], whose routes Forgejo matches with a wildcard — and it rejects the
-  * traversal segments that would otherwise turn a slash into an escape hatch.
+  * span several — [[BranchName]] and [[ContentPath]], whose routes Forgejo matches with a wildcard. Both reject the
+  * traversal segments `.` and `..`: they carry no slash, so a slash rule alone never sees them, and they survive
+  * percent-encoding untouched, so one would reach the request path as a dot segment rather than as a name.
   */
 private[repositories] object PathSegment:
 
   /** Trims `value` and accepts it only if it can stand alone as one path segment.
     *
-    * Rejects an empty or blank value, a value containing `/`, and a value containing any control character.
+    * Rejects an empty or blank value, a value containing `/`, a value containing any control character, and the
+    * traversal segments `.` and `..`.
     *
     * @param field
     *   the field name to report in a [[ValidationError]]
@@ -26,6 +28,7 @@ private[repositories] object PathSegment:
     if trimmed.isEmpty then Left(ValidationError(field, "must not be blank"))
     else if trimmed.contains('/') then Left(ValidationError(field, "must not contain a slash"))
     else if trimmed.exists(_.isControl) then Left(ValidationError(field, "must not contain a control character"))
+    else if isTraversal(trimmed) then Left(ValidationError(field, "must not be '.' or '..'"))
     else Right(trimmed)
 
   /** Trims `value` and accepts it only if every `/`-separated part can stand alone as one path segment.

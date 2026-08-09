@@ -40,9 +40,10 @@ object BranchRuleName:
 
   /** Parses a branch protection rule name.
     *
-    * Trims surrounding whitespace. Rejects an empty or blank name, a name containing `/`, and a name containing a
-    * control character — see [[com.worxbend.codeberg4s.repositories.PathSegment]] for why that is a security boundary
-    * and not a convenience, and the type's own note for why the slash is rejected rather than encoded.
+    * Trims surrounding whitespace. Rejects an empty or blank name, a name containing `/`, a name containing a control
+    * character, and the traversal segments `.` and `..` — see [[com.worxbend.codeberg4s.repositories.PathSegment]] for
+    * why that is a security boundary and not a convenience, and the type's own note for why the slash is rejected
+    * rather than encoded.
     *
     * Glob characters are '''not''' rejected: `*` and `?` are what a rule name is made of, and they are legal in a URI
     * path segment.
@@ -113,8 +114,8 @@ object TeamName:
 
   /** Parses a team name.
     *
-    * Trims surrounding whitespace. Rejects an empty or blank name, a name containing `/`, and a name containing a
-    * control character.
+    * Trims surrounding whitespace. Rejects an empty or blank name, a name containing `/`, a name containing a control
+    * character, and the traversal segments `.` and `..`.
     *
     * @return
     *   the trimmed name, or a [[ValidationError]] on the `"teamName"` field

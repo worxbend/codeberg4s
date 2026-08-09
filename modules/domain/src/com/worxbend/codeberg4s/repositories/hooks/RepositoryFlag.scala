@@ -25,10 +25,11 @@ object RepositoryFlag:
 
   /** Parses a flag name.
     *
-    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, and a value containing a
-    * control character — see [[com.worxbend.codeberg4s.repositories.PathSegment]] for why that is a security boundary
-    * and not a convenience. Nothing else is checked: the vocabulary belongs to the instance, and a flag this library
-    * refused would be one the caller could not set.
+    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, a value containing a
+    * control character, and the traversal segments `.` and `..` — see
+    * [[com.worxbend.codeberg4s.repositories.PathSegment]] for why that is a security boundary and not a convenience.
+    * Nothing else is checked: the vocabulary belongs to the instance, and a flag this library refused would be one the
+    * caller could not set.
     *
     * @return
     *   the flag, or a [[ValidationError]] on the `"repositoryFlag"` field

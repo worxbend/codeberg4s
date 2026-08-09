@@ -25,8 +25,10 @@ object AccessTokenName:
 
   /** Parses a token name.
     *
-    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, and a value containing a
-    * control character — everything that would forge or corrupt a request path.
+    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, a value containing a
+    * control character, and the traversal segments `.` and `..` — everything that would forge or corrupt a request
+    * path. The dot segments need stating separately because they carry no slash, so the slash rule never sees them, and
+    * they survive percent-encoding untouched.
     *
     * @return
     *   the trimmed name, or a [[ValidationError]] on the `"accessTokenName"` field
@@ -37,6 +39,7 @@ object AccessTokenName:
     if trimmed.isEmpty then Left(ValidationError(Field, "must not be blank"))
     else if trimmed.contains('/') then Left(ValidationError(Field, "must not contain a slash"))
     else if trimmed.exists(_.isControl) then Left(ValidationError(Field, "must not contain a control character"))
+    else if trimmed.equals(".") || trimmed.equals("..") then Left(ValidationError(Field, "must not be '.' or '..'"))
     else Right(trimmed)
 
   extension (name: AccessTokenName)

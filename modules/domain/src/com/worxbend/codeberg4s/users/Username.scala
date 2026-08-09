@@ -23,14 +23,17 @@ object Username:
 
   /** Parses a username.
     *
-    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, and a value containing a
-    * control character.
+    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, a value containing a
+    * control character, and the traversal segments `.` and `..`.
     *
     * '''This is a security boundary, not a convenience.''' A `Username` is interpolated into a request path, so a value
     * containing `/` would let a caller reach an endpoint the API surface never offered — `client.users.keys` on
     * `"someone/../../admin"` — and a control character would corrupt the request line. Both are rejected here, once,
-    * rather than at each call site. Forgejo's own rules for what an account may be called are narrower still, but they
-    * are the instance's business: this type promises only that the value cannot forge a path.
+    * rather than at each call site. A bare `.` or `..` is rejected for the same reason and needs saying separately: it
+    * carries no slash, so the slash rule never sees it, and it survives percent-encoding untouched, so it would reach
+    * the request path as a dot segment rather than as an account name. Forgejo's own rules for what an account may be
+    * called are narrower still, but they are the instance's business: this type promises only that the value cannot
+    * forge a path.
     *
     * @return
     *   the trimmed username, or a [[ValidationError]] on the `"username"` field
@@ -40,6 +43,7 @@ object Username:
     if trimmed.isEmpty then Left(ValidationError(Field, "must not be blank"))
     else if trimmed.contains('/') then Left(ValidationError(Field, "must not contain a slash"))
     else if trimmed.exists(_.isControl) then Left(ValidationError(Field, "must not contain a control character"))
+    else if trimmed.equals(".") || trimmed.equals("..") then Left(ValidationError(Field, "must not be '.' or '..'"))
     else Right(trimmed)
 
   extension (username: Username)

@@ -12,8 +12,8 @@ object RepoName:
 
   /** Parses a repository name.
     *
-    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, and a value containing a
-    * control character.
+    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, a value containing a
+    * control character, and the traversal segments `.` and `..`.
     *
     * @return
     *   the trimmed name, or a [[ValidationError]] on the `"repoName"` field
