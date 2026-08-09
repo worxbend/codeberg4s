@@ -22,9 +22,9 @@ private[codeberg4s] object ArrayElements:
 
   /** Converts every element in order, answering the '''first''' failure or all of the converted values.
     *
-    * Written as a loop over a `Vector.newBuilder` rather than as a fold over `Either`, because the fold cost one
-    * tuple, one `Either` and one whole-vector copy per element and kept walking the rest of the array after it already
-    * knew the answer. The builder is local and never escapes, so the mutation is not observable.
+    * Written as a loop over a `Vector.newBuilder` rather than as a fold over `Either`, because the fold cost one tuple,
+    * one `Either` and one whole-vector copy per element and kept walking the rest of the array after it already knew
+    * the answer. The builder is local and never escapes, so the mutation is not observable.
     *
     * @param values
     *   the elements, in the order the server sent them
