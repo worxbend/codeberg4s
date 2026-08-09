@@ -532,21 +532,45 @@ val selfHosted: Either[ValidationError, CodebergConfig] =
     agent <- UserAgent.from("my-app/1.0")
     size  <- PageSize.from(50)
   yield CodebergConfig(
-    baseUri         = base,
-    auth            = Auth.Anonymous,
-    retry           = RetryPolicy.Default,
-    userAgent       = agent,
-    defaultPageSize = size,
-    connectTimeout  = 10.seconds,
-    readTimeout     = 30.seconds,
+    baseUri              = base,
+    auth                 = Auth.Anonymous,
+    retry                = RetryPolicy.Default,
+    userAgent            = agent,
+    defaultPageSize      = size,
+    connectTimeout       = 10.seconds,
+    readTimeout          = 30.seconds,
+    maxResponseBodyBytes = CodebergConfig.DefaultMaxResponseBodyBytes,
+    maxDownloadBodyBytes = CodebergConfig.DefaultMaxDownloadBodyBytes,
   )
 ```
 
-Every field is a validated type, so a misconfigured client fails at
-construction rather than on its first call. `CodebergConfig.toString` is safe to
-log: the credential types redact themselves.
+Every field naming a domain concept is a validated type, so a misconfigured
+client fails at construction rather than on its first call. The timeouts and the
+two byte bounds are plain quantities and are taken as given.
+`CodebergConfig.toString` is safe to log: the credential types redact
+themselves.
 
 `Auth` is `Anonymous`, `Token(ApiToken)` or `Basic(username, Password)`.
+
+### Response size
+
+This library reads a whole response into memory; it does not stream. So every
+request carries a byte bound, and a body that passes it is abandoned part-read
+as `CodebergError.Transport(ctx, TransportCause.ResponseTooLarge(detail))`.
+
+- `maxResponseBodyBytes` — 16 MiB, applied to every textual response. The
+  largest JSON body Forgejo produces is a file's contents, a blob capped by the
+  instance's `default_max_blob_size` (10 MiB on codeberg.org) and then
+  base64-encoded, which costs four bytes per three; 16 MiB clears that.
+- `maxDownloadBodyBytes` — 50 MiB, applied only to `client.repos.actions
+  .downloads`, which fetches ZIP archives. An artifact is whatever a workflow
+  uploaded, so nothing about `default_max_blob_size` bounds it, and one shared
+  number would have had to be either too small for ordinary artifacts or too
+  large to bound JSON usefully.
+
+Exceeding either bound is **not** retried. Repeating the call would download the
+oversized body once per attempt, which turns one oversized response into
+`maxAttempts` of them.
 
 ### Retries
 

@@ -27,13 +27,15 @@ val selfHosted: Either[ValidationError, CodebergConfig] =
     agent <- UserAgent.from("my-app/1.0")
     size  <- PageSize.from(50)
   yield CodebergConfig(
-    baseUri         = base,
-    auth            = Auth.Anonymous,
-    retry           = RetryPolicy.Default,
-    userAgent       = agent,
-    defaultPageSize = size,
-    connectTimeout  = 10.seconds,
-    readTimeout     = 30.seconds,
+    baseUri              = base,
+    auth                 = Auth.Anonymous,
+    retry                = RetryPolicy.Default,
+    userAgent            = agent,
+    defaultPageSize      = size,
+    connectTimeout       = 10.seconds,
+    readTimeout          = 30.seconds,
+    maxResponseBodyBytes = CodebergConfig.DefaultMaxResponseBodyBytes,
+    maxDownloadBodyBytes = CodebergConfig.DefaultMaxDownloadBodyBytes,
   )
 ```
 
@@ -234,6 +236,39 @@ honoured either way.
 
 Raise the read timeout for endpoints that do real work on the instance:
 generating an archive, comparing two distant commits, migrating a repository.
+
+## Response size on an instance you configured
+
+This library reads a whole response into memory rather than streaming it, so
+every request carries a byte bound. A body that passes the bound is abandoned
+part-read and reported as
+`CodebergError.Transport(ctx, TransportCause.ResponseTooLarge(detail))` — and
+that cause is deliberately **not** retried, because repeating the call would
+download the oversized body once per attempt.
+
+```scala mdoc:compile-only
+import com.worxbend.codeberg4s.CodebergConfig
+import com.worxbend.codeberg4s.auth.Auth
+
+val roomierBodies: CodebergConfig =
+  CodebergConfig(Auth.Anonymous).copy(
+    maxResponseBodyBytes = 64L * 1024 * 1024,
+    maxDownloadBodyBytes = 512L * 1024 * 1024,
+  )
+```
+
+The defaults are 16 MiB for a textual response and 50 MiB for the two ZIP
+downloads under `client.repos.actions.downloads`. Two settings rather than one,
+because the reasoning behind them is different: the textual bound is derived
+from `default_max_blob_size` — 10 MiB on codeberg.org, base64-encoded into a
+file-contents response at four bytes per three — while a CI artifact is whatever
+a workflow uploaded and no such number bounds it.
+
+That first number is per-instance configuration, not a protocol constant. If
+your Forgejo raises `default_max_blob_size`, read the instance's own value back
+from `client.misc.apiSettings()` — it is `maxBlobSizeBytes` on the returned
+`ServerApiSettings` — and raise `maxResponseBodyBytes` to match, or fetching a
+large file will fail as `ResponseTooLarge`.
 
 ## Self-signed certificates
 

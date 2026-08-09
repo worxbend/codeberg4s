@@ -321,9 +321,16 @@ def refusing()(using ExecutionContext): BackendStub[Future] =
 
 The transport adapter classifies the exception by walking its cause chain, so a
 `ConnectException` becomes `TransportCause.ConnectionFailed`, a
-`SocketTimeoutException` becomes `TransportCause.Timeout`, and an
-`UnknownHostException` becomes `TransportCause.Dns`. Assert on the case, not on
-the `detail` string.
+`SocketTimeoutException` becomes `TransportCause.Timeout`, an
+`UnknownHostException` becomes `TransportCause.Dns`, and sttp's
+`StreamMaxLengthExceededException` — thrown when a response body passes the
+bound in `CodebergConfig` — becomes `TransportCause.ResponseTooLarge`. Assert on
+the case, not on the `detail` string.
+
+One caveat if you are testing the oversized-body path: `BackendStub` does not
+apply `maxResponseBodyLength`, so failing the stub with a
+`StreamMaxLengthExceededException` is how you produce that cause. A real backend
+is what enforces the bound.
 
 **A rate limit.** `StatusCode(429)`, optionally with a `Retry-After` header:
 

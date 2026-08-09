@@ -9,7 +9,9 @@ package com.worxbend.codeberg4s.core
   * this, and one that cannot simply does not.
   *
   * The failure contract matches [[HttpPort]]: any HTTP status, including `5xx`, arrives as a `Right`; a `Left` means no
-  * response arrived at all.
+  * complete response arrived. The one difference is which bound applies to the body — these operations fetch archives,
+  * so an adapter applies [[com.worxbend.codeberg4s.CodebergConfig.maxDownloadBodyBytes]] here rather than the smaller
+  * [[com.worxbend.codeberg4s.CodebergConfig.maxResponseBodyBytes]].
   *
   * @tparam F
   *   the effect the client runs in

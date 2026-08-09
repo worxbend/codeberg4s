@@ -29,6 +29,24 @@ final class CodebergConfigSuite extends FunSuite:
     assertEquals(config.defaultPageSize.value, PageSize.Default.value)
     assertEquals(config.connectTimeout, CodebergConfig.DefaultConnectTimeout)
     assertEquals(config.readTimeout, CodebergConfig.DefaultReadTimeout)
+    assertEquals(config.maxResponseBodyBytes, CodebergConfig.DefaultMaxResponseBodyBytes)
+    assertEquals(config.maxDownloadBodyBytes, CodebergConfig.DefaultMaxDownloadBodyBytes)
+
+  test("the default response-body bound clears the largest JSON body Forgejo can produce"):
+    // `default_max_blob_size` is 10 MiB (docs/HAZARDS.md §4), and a file-contents
+    // response carries that blob base64-encoded, which costs four bytes per three.
+    val largestBlobBase64 = 10L * 1024 * 1024 * 4 / 3
+
+    assert(
+      CodebergConfig.DefaultMaxResponseBodyBytes > largestBlobBase64,
+      s"${CodebergConfig.DefaultMaxResponseBodyBytes} would reject a legitimate $largestBlobBase64-byte body",
+    )
+
+  test("the download bound is larger than the textual one, because an archive is not a JSON document"):
+    assert(
+      CodebergConfig.DefaultMaxDownloadBodyBytes > CodebergConfig.DefaultMaxResponseBodyBytes,
+      "a download bound at or below the textual bound would make the two settings pointless",
+    )
 
   test("a config carrying a token does not leak it through toString"):
     val rendered = CodebergConfig(Auth.Token(token(Secret))).toString

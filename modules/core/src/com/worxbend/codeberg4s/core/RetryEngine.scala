@@ -168,7 +168,10 @@ object RetryEngine:
       case CodebergError.Validation(_)              => false
       case CodebergError.RetriesExhausted(_, _, _)  => false
 
-  /** A TLS failure does not heal by itself and an interruption was asked for; everything else may be transient. */
+  /** A TLS failure does not heal by itself, an interruption was asked for, and an oversized body would arrive oversized
+    * again — repeating that one would download the body the bound exists to refuse once per attempt. Everything else
+    * may be transient.
+    */
   private[core] def isRetryable(cause: TransportCause): Boolean =
     cause match
       case TransportCause.ConnectionFailed(_) => true
@@ -177,6 +180,7 @@ object RetryEngine:
       case TransportCause.Unknown(_)          => true
       case TransportCause.Tls(_)              => false
       case TransportCause.Interrupted(_)      => false
+      case TransportCause.ResponseTooLarge(_) => false
 
   private[core] def contextOf(operation: String, method: HttpMethod, error: CodebergError): CallContext =
     error match

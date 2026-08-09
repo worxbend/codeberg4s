@@ -2,9 +2,9 @@ package com.worxbend.codeberg4s
 
 import munit.FunSuite
 
-/** [[TransportCause.describe]] is what a human reads when a request never produced a response, and its six arms are six
-  * near-identical one-liners — exactly the shape a copy-paste gets wrong. Each is asserted whole, so an arm that named
-  * the wrong failure or dropped the detail fails here.
+/** [[TransportCause.describe]] is what a human reads when a request produced no usable response, and its seven arms are
+  * seven near-identical one-liners — exactly the shape a copy-paste gets wrong. Each is asserted whole, so an arm that
+  * named the wrong failure or dropped the detail fails here.
   */
 final class TransportCauseSuite extends FunSuite:
 
@@ -25,6 +25,9 @@ final class TransportCauseSuite extends FunSuite:
   test("an interruption says so, and is not reported as a timeout"):
     assertEquals(TransportCause.Interrupted(Detail).describe, s"interrupted ($Detail)")
 
+  test("an oversized body says the body was too large, not that the connection failed"):
+    assertEquals(TransportCause.ResponseTooLarge(Detail).describe, s"response body too large ($Detail)")
+
   test("an unclassified failure says it is unclassified rather than guessing"):
     assertEquals(TransportCause.Unknown(Detail).describe, s"unclassified transport failure ($Detail)")
 
@@ -43,5 +46,6 @@ final class TransportCauseSuite extends FunSuite:
       TransportCause.Tls(Detail),
       TransportCause.Dns(Detail),
       TransportCause.Interrupted(Detail),
+      TransportCause.ResponseTooLarge(Detail),
       TransportCause.Unknown(Detail),
     )

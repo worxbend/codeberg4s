@@ -81,7 +81,11 @@ final class RetryEngineProps extends PropertyBase:
         .suchThat(status => !StatusMapping.isRetryable(status))
         .map(status => CodebergError.Api(context, status, ApiErrorBody.Empty)),
       Gen
-        .oneOf[TransportCause](TransportCause.Tls("certificate expired"), TransportCause.Interrupted("cancelled"))
+        .oneOf[TransportCause](
+          TransportCause.Tls("certificate expired"),
+          TransportCause.Interrupted("cancelled"),
+          TransportCause.ResponseTooLarge("Stream length limit of 16777216 bytes exceeded"),
+        )
         .map(cause  => CodebergError.Transport(context, cause)),
       Gen.const(CodebergError.DecodingFailed(context, "{", JsonPath.Root, "unexpected end of input")),
       Gen.const(CodebergError.Validation(ValidationError("owner", "must not be blank"))),

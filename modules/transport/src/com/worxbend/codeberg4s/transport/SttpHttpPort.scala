@@ -13,6 +13,7 @@ import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.ResponseBody
 import com.worxbend.codeberg4s.core.TransportFailure
 
+import sttp.capabilities.StreamMaxLengthExceededException
 import sttp.client4.Backend
 import sttp.client4.BackendOptions
 import sttp.client4.PartialRequest
@@ -48,11 +49,12 @@ import java.util.Locale
   * are called here and nowhere else.
   *
   * '''Failure contract.''' Every HTTP status — including `5xx` — is a `Right`, because deciding what a status means
-  * belongs to [[com.worxbend.codeberg4s.core.StatusMapping]]. A `Left` means no response arrived at all, classified
+  * belongs to [[com.worxbend.codeberg4s.core.StatusMapping]]. A `Left` means no complete response arrived, classified
   * into a [[com.worxbend.codeberg4s.TransportCause]] by walking the exception's cause chain; sttp wraps the original
   * `java.net` exception in an `SttpClientException`, so the outermost type is never the interesting one. An
   * unclassified non-fatal exception becomes [[com.worxbend.codeberg4s.TransportCause.Unknown]] rather than being
-  * dropped, and a fatal error stays fatal.
+  * dropped, and a fatal error stays fatal. Every cause but [[com.worxbend.codeberg4s.TransportCause.ResponseTooLarge]]
+  * means nothing arrived at all; see "Response size" below for the one that does not.
   *
   * '''Security contract.''' Nothing here logs, and nothing here renders a credential: the `Authorization` header is
   * built and handed straight to sttp, `toString` is deliberately opaque, and a [[TransportFailure]] carries only the
@@ -66,10 +68,17 @@ import java.util.Locale
   * sttp, so it is honoured only by a backend built through [[SttpHttpPort.defaultBackend]]; a caller who supplies their
   * own backend configures the connect timeout on that backend.
   *
+  * '''Response size.''' Every request carries a byte bound, because this library reads whole bodies into memory and
+  * never streams. [[send]] applies [[com.worxbend.codeberg4s.CodebergConfig.maxResponseBodyBytes]] and [[sendBinary]]
+  * applies the larger [[com.worxbend.codeberg4s.CodebergConfig.maxDownloadBodyBytes]]; passing either abandons the
+  * response as [[com.worxbend.codeberg4s.TransportCause.ResponseTooLarge]]. Unlike the connect timeout this holds for a
+  * caller-supplied backend too, since sttp models it per request.
+  *
   * @param backend
   *   the sttp backend requests are sent on, owned and closed by the caller
   * @param config
-  *   the instance to talk to, the credentials to use, the user agent to send and the read timeout to apply
+  *   the instance to talk to, the credentials to use, the user agent to send, and the read timeout and response-body
+  *   bounds to apply
   */
 final class SttpHttpPort(
     backend: Backend[Future],
@@ -96,19 +105,24 @@ final class SttpHttpPort(
     * rendering, and this adapter reports nothing at all.
     */
   override def send(request: CodebergRequest, redactedUri: String): Future[Either[TransportFailure, CodebergResponse]] =
-    dispatch(request, SttpHttpPort.succeed)
+    dispatch(request, config.maxResponseBodyBytes, SttpHttpPort.succeed)
 
   /** Sends `request` and reports what came back as a [[com.worxbend.codeberg4s.core.BinaryResponse]] instead.
     *
-    * Identical to [[send]] apart from the response type it assembles, because both read the body the same way now. Two
-    * methods remain because core still has two response types; see [[com.worxbend.codeberg4s.core.BinaryResponse]] for
-    * why that is expected to change.
+    * Identical to [[send]] apart from the response type it assembles and the body bound it applies, because both read
+    * the body the same way now. Two methods remain because core still has two response types; see
+    * [[com.worxbend.codeberg4s.core.BinaryResponse]] for why that is expected to change.
+    *
+    * The bound is [[com.worxbend.codeberg4s.CodebergConfig.maxDownloadBodyBytes]] rather than
+    * [[com.worxbend.codeberg4s.CodebergConfig.maxResponseBodyBytes]]: this is the path the ZIP-fetching operations
+    * under `client.repos.actions.downloads` take, and a CI artifact is legitimately far bigger than the largest JSON
+    * document Forgejo will produce.
     */
   override def sendBinary(
       request: CodebergRequest,
       redactedUri: String,
   ): Future[Either[TransportFailure, BinaryResponse]] =
-    dispatch(request, SttpHttpPort.succeedBinary)
+    dispatch(request, config.maxDownloadBodyBytes, SttpHttpPort.succeedBinary)
 
   /** Deliberately opaque: this object holds the configured credentials, so it renders nothing about its state. */
   override def toString: String = "SttpHttpPort"
@@ -124,9 +138,10 @@ final class SttpHttpPort(
     */
   private def dispatch[A](
       request: CodebergRequest,
+      maxBodyBytes: Long,
       onResponse: Response[Array[Byte]] => Either[TransportFailure, A],
   ): Future[Either[TransportFailure, A]] =
-    root.flatMap(uri => build(request, uri)) match
+    root.flatMap(uri => build(request, uri, maxBodyBytes)) match
       case Left(failure) => Future.successful(Left(failure))
       case Right(built)  =>
         built
@@ -144,10 +159,20 @@ final class SttpHttpPort(
     * looked at. The charset sttp would have applied is not lost: it is read off `Content-Type` into
     * [[com.worxbend.codeberg4s.core.ResponseBody]], which applies it if and when something actually asks for text.
     *
+    * `maxResponseBodyLength` is what keeps "read the whole body into memory" from meaning "read as much as the peer
+    * cares to send". sttp stops reading at `maxBodyBytes` and fails the request with a
+    * `sttp.capabilities.StreamMaxLengthExceededException`, which [[SttpHttpPort.classify]] turns into
+    * [[com.worxbend.codeberg4s.TransportCause.ResponseTooLarge]]. Without it the only bound on a response is
+    * `config.readTimeout` multiplied by the peer's bandwidth, which is not a bound.
+    *
     * The `Left` comes from [[SttpHttpPort.withBody]], which refuses a body whose media type cannot be written as a
     * header.
     */
-  private def build(request: CodebergRequest, uri: Uri): Either[TransportFailure, Request[Array[Byte]]] =
+  private def build(
+      request: CodebergRequest,
+      uri: Uri,
+      maxBodyBytes: Long,
+  ): Either[TransportFailure, Request[Array[Byte]]] =
     SttpHttpPort
       .withBody(request.body, basicRequest)
       .map: carrying =>
@@ -155,6 +180,7 @@ final class SttpHttpPort(
           .headers(request.headers.map((name, value) => Header(name, value))*)
           .header(HeaderNames.UserAgent, config.userAgent.value)
           .readTimeout(config.readTimeout)
+          .maxResponseBodyLength(maxBodyBytes)
           .method(Method(request.method.wireName), SttpHttpPort.target(uri, request))
           .response(asByteArrayAlways)
 
@@ -287,14 +313,18 @@ object SttpHttpPort:
   @tailrec
   private def classify(error: Throwable): TransportCause =
     error match
-      case _: UnknownHostException       => TransportCause.Dns(detail(error))
-      case _: SocketTimeoutException     => TransportCause.Timeout(detail(error))
-      case _: HttpTimeoutException       => TransportCause.Timeout(detail(error))
-      case _: javax.net.ssl.SSLException => TransportCause.Tls(detail(error))
-      case _: ConnectException           => TransportCause.ConnectionFailed(detail(error))
-      case _: SocketException            => TransportCause.ConnectionFailed(detail(error))
-      case _: InterruptedException       => TransportCause.Interrupted(detail(error))
-      case _                             =>
+      case _: UnknownHostException             => TransportCause.Dns(detail(error))
+      case _: SocketTimeoutException           => TransportCause.Timeout(detail(error))
+      case _: HttpTimeoutException             => TransportCause.Timeout(detail(error))
+      case _: javax.net.ssl.SSLException       => TransportCause.Tls(detail(error))
+      case _: ConnectException                 => TransportCause.ConnectionFailed(detail(error))
+      case _: SocketException                  => TransportCause.ConnectionFailed(detail(error))
+      case _: InterruptedException             => TransportCause.Interrupted(detail(error))
+      // Thrown by sttp when the body passes the request's maxResponseBodyLength.
+      // It arrives wrapped in an SttpClientException.ReadException, which is why
+      // this is a cause-chain walk and not a match on the outermost type.
+      case _: StreamMaxLengthExceededException => TransportCause.ResponseTooLarge(detail(error))
+      case _                                   =>
         Option(error.getCause).filterNot(_.eq(error)) match
           case Some(cause) => classify(cause)
           case None        => TransportCause.Unknown(detail(error))

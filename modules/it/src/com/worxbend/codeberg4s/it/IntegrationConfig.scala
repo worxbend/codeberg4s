@@ -30,6 +30,9 @@ object IntegrationConfig:
 
   /** Builds the configuration for one instance.
     *
+    * The response-body bounds are left at the library defaults on purpose: a suite that raised them would stop
+    * exercising the limit real callers get.
+    *
     * @param baseUri
     *   the API root, `…/api/v1`, of the instance under test
     * @param auth
@@ -40,11 +43,13 @@ object IntegrationConfig:
     */
   def forInstance(baseUri: BaseUri, auth: Auth, retry: RetryPolicy): CodebergConfig =
     CodebergConfig(
-      baseUri         = baseUri,
-      auth            = auth,
-      retry           = retry,
-      userAgent       = UserAgent.Default,
-      defaultPageSize = PageSize.Default,
-      connectTimeout  = ConnectTimeout,
-      readTimeout     = ReadTimeout,
+      baseUri              = baseUri,
+      auth                 = auth,
+      retry                = retry,
+      userAgent            = UserAgent.Default,
+      defaultPageSize      = PageSize.Default,
+      connectTimeout       = ConnectTimeout,
+      readTimeout          = ReadTimeout,
+      maxResponseBodyBytes = CodebergConfig.DefaultMaxResponseBodyBytes,
+      maxDownloadBodyBytes = CodebergConfig.DefaultMaxDownloadBodyBytes,
     )

@@ -146,6 +146,23 @@ final class RetryEngineSuite extends FunSuite:
     assertEquals(result, Left(last))
     assertEquals(attempts.toList, List(1))
 
+  test("an oversized response body is not downloaded a second time"):
+    // The point of this one is arithmetic, not taxonomy. If ResponseTooLarge were
+    // retryable — which it would be if it had been folded into TransportCause.Unknown
+    // — the default policy would fetch the oversized body once per attempt, so a
+    // bound meant to cap a call at N bytes would let through maxAttempts * N.
+    val timer    = FakeTimer(0L)
+    val attempts = ListBuffer.empty[Int]
+    val last     =
+      CodebergError.Transport(context, TransportCause.ResponseTooLarge("Stream length limit of 16777216 bytes exceeded"))
+
+    val result = engine(RetryPolicy.Default, timer, JitterSource.Deterministic)
+      .run("issues.list")(failing(attempts, last))
+
+    assertEquals(result, Left(last))
+    assertEquals(attempts.toList, List(1))
+    assert(timer.sleeps.isEmpty)
+
   test("a policy of one attempt reports the failure unwrapped"):
     val timer    = FakeTimer(0L)
     val attempts = ListBuffer.empty[Int]

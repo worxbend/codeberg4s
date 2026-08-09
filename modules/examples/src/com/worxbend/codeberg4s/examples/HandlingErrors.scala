@@ -127,7 +127,11 @@ object HandlingErrors:
         s"$status from ${ctx.operation} after ${ctx.durationMs}ms: $message"
 
       case CodebergError.Transport(ctx, cause) =>
-        s"nothing reached the instance for ${ctx.operation}: ${cause.describe}"
+        // Almost always "nothing arrived". The one case where something did is
+        // TransportCause.ResponseTooLarge — the body passed the configured bound
+        // and reading it was abandoned — so the wording stays neutral and lets
+        // `describe` say which it was.
+        s"no usable response for ${ctx.operation}: ${cause.describe}"
 
       case CodebergError.DecodingFailed(ctx, snippet, path, cause) =>
         s"${ctx.operation} answered 2xx but ${path.render} did not decode ($cause); body began $snippet"

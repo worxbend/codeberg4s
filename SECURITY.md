@@ -105,7 +105,13 @@ a smuggled query parameter, a CRLF injected into a header — is in scope.
 ### Parsing and resource use
 
 - A crafted 2xx payload that causes unbounded memory growth, non-terminating
-  decoding, or an exception that escapes the `CodebergError` channel.
+  decoding, or an exception that escapes the `CodebergError` channel. Note the
+  documented guard: every response is read under a byte bound —
+  `CodebergConfig.maxResponseBodyBytes`, 16 MiB by default, and
+  `maxDownloadBodyBytes`, 50 MiB, for the two archive downloads — and a body
+  that passes it is abandoned as `TransportCause.ResponseTooLarge` rather than
+  read to the end. A payload that exhausts memory while staying *inside* that
+  bound is a report.
 - A `Link` header that drives a pagination walk into an infinite loop. Note the
   documented guard: a walk stops when the server stops offering a next page,
   and callers are told to guard on an empty page as well.
@@ -132,8 +138,9 @@ none at all.
   `DownloadActionArtifact` and `repoGetActionRunLogs`, reachable as
   `client.downloads` — hold the whole archive in memory; the library does not
   stream, and attachment streaming above 50 MB is explicitly out of scope for
-  v1. A large artifact exhausting the heap is documented behaviour. If you can
-  make it happen with a *small* request, that is a report.
+  v1. Those two are bounded by `CodebergConfig.maxDownloadBodyBytes`, which
+  defaults to 50 MiB for exactly that reason; raising the setting yourself and
+  then running out of heap is your configuration, not a vulnerability.
 - **Missing hardening with no exploit path**, such as the absence of
   certificate pinning.
 
@@ -148,6 +155,9 @@ Stated so you know what to test against, not as a claim of safety:
   `new Exception` in production code fails `./verify.sh`.
 - Redaction is tested directly, including property suites asserting that no
   rendering path emits a credential.
+- Every request carries a response-body byte bound, so an instance cannot
+  answer a call with as many bytes as it likes. Exceeding it is not retried:
+  repeating the call would download the oversized body once per attempt.
 - Two dependencies, both widely used, both pinned in `build.mill`.
 - Released artifacts are PGP-signed and built by
   [`.github/workflows/release.yml`](.github/workflows/release.yml) from a

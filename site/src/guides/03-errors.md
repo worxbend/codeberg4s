@@ -33,13 +33,21 @@ guessing wrong in a library is worse than handing you the number.
 
 ### `TransportCause`
 
-`Transport` carries why nothing arrived:
-`ConnectionFailed`, `Timeout`, `Tls`, `Dns`, `Interrupted`, `Unknown`. Each
+`Transport` carries why no usable response came back: `ConnectionFailed`,
+`Timeout`, `Tls`, `Dns`, `Interrupted`, `ResponseTooLarge`, `Unknown`. Each
 holds a short `detail` string taken from the underlying exception. Branch on the
 case, never on the text.
 
 A status code — including `500` — is never a transport cause. If the server
 answered anything at all, you get `Api`.
+
+`ResponseTooLarge` is the one case where something did begin to arrive. This
+library reads whole bodies into memory, so every request carries a byte bound
+(`CodebergConfig.maxResponseBodyBytes`, and `maxDownloadBodyBytes` for the ZIP
+downloads); a body that passes it is abandoned part-read, which leaves no status
+to map and no body to decode. It is also the one transport cause besides `Tls`
+and `Interrupted` that is never retried — repeating the call would download the
+oversized body again on every attempt.
 
 ## The two rails
 

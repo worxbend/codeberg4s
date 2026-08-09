@@ -15,14 +15,18 @@ import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.ResponseBody
 import com.worxbend.codeberg4s.core.TransportFailure
 
+import sttp.capabilities.StreamMaxLengthExceededException
 import sttp.client4.Backend
 import sttp.client4.GenericRequest
+import sttp.client4.SttpClientException
+import sttp.client4.basicRequest
 import sttp.client4.testing.BackendStub
 import sttp.client4.testing.RecordingBackend
 import sttp.client4.testing.ResponseStub
 import sttp.model.Header
 import sttp.model.Method
 import sttp.model.StatusCode
+import sttp.model.Uri
 
 import munit.FunSuite
 
@@ -163,6 +167,47 @@ final class SttpHttpPortSuite extends FunSuite:
     causeOf(new InterruptedException("interrupted")).map: cause =>
       assertEquals(cause, TransportCause.Interrupted("interrupted"))
 
+  test("a body that passed the configured bound is classified as too large, not as unknown"):
+    // Unknown is retryable and ResponseTooLarge is not, so misclassifying this one
+    // would re-download the oversized body on every remaining attempt.
+    causeOf(StreamMaxLengthExceededException(1024L)).map: cause =>
+      assertEquals(cause, TransportCause.ResponseTooLarge("Stream length limit of 1024 bytes exceeded"))
+
+  test("the same failure is recognised through the sttp exception that wraps it"):
+    // This is the shape a real backend produces: sttp maps the internal exception
+    // to SttpClientException.ReadException before it reaches the recover block, so
+    // matching only the outermost type would classify every oversized body as unknown.
+    val wrapped = SttpClientException.ReadException(sttpRequest, StreamMaxLengthExceededException(1024L))
+
+    causeOf(wrapped).map: cause =>
+      assertEquals(cause, TransportCause.ResponseTooLarge("Stream length limit of 1024 bytes exceeded"))
+
+  test("a textual request carries the configured response-body bound"):
+    val backend = recording(respondingOk)
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+
+    send(port, awkwardRequest).map: _ =>
+      assertEquals(sent(backend).options.maxResponseBodyLength, Some(CodebergConfig.DefaultMaxResponseBodyBytes))
+
+  test("a download carries the larger download bound instead"):
+    val backend = recording(respondingOk)
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+
+    port.sendBinary(awkwardRequest, "https://forge.example/api/v1/repos/ow%20ner").map: _ =>
+      assertEquals(sent(backend).options.maxResponseBodyLength, Some(CodebergConfig.DefaultMaxDownloadBodyBytes))
+
+  test("both bounds are taken from the config rather than hardcoded"):
+    val config  = configFor(Auth.Anonymous).copy(maxResponseBodyBytes = 111L, maxDownloadBodyBytes = 222L)
+    val textual = recording(respondingOk)
+    val binary  = recording(respondingOk)
+
+    for
+      _ <- send(SttpHttpPort(textual, config), awkwardRequest)
+      _ <- SttpHttpPort(binary, config).sendBinary(awkwardRequest, "https://forge.example/api/v1")
+    yield
+      assertEquals(sent(textual).options.maxResponseBodyLength, Some(111L))
+      assertEquals(sent(binary).options.maxResponseBodyLength, Some(222L))
+
   test("an exception this library does not recognise is unknown, never dropped"):
     causeOf(new IllegalStateException("something else entirely")).map: cause =>
       assertEquals(cause, TransportCause.Unknown("something else entirely"))
@@ -229,6 +274,10 @@ final class SttpHttpPortSuite extends FunSuite:
 
   private def responding(status: Int, headers: List[Header], body: String): BackendStub[Future] =
     BackendStub.asynchronousFuture.whenAnyRequest.thenRespond(ResponseStub.adjust(body, StatusCode(status), headers))
+
+  /** A minimal sttp request, only so an `SttpClientException` can be built the way a real backend builds one. */
+  private def sttpRequest: GenericRequest[?, ?] =
+    basicRequest.get(Uri.unsafeParse("https://forge.example/api/v1"))
 
   private def failingWith(error: Throwable): BackendStub[Future] =
     BackendStub.asynchronousFuture.whenAnyRequest.thenThrow(error)

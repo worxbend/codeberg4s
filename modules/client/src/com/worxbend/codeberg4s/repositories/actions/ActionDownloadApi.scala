@@ -24,6 +24,13 @@ import scala.concurrent.Future
   * before downloading if that matters, or fetch
   * [[com.worxbend.codeberg4s.repositories.actions.ActionArtifact.archiveDownloadUrl]] with your own HTTP client.
   *
+  * The heap is not the only thing standing in the way: these two are the operations
+  * [[com.worxbend.codeberg4s.CodebergConfig.maxDownloadBodyBytes]] bounds — 50 MiB by default, rather than the 16 MiB
+  * every other operation gets, because an artifact is whatever a workflow uploaded and is legitimately far larger than
+  * a JSON document. An archive past the bound fails as [[com.worxbend.codeberg4s.TransportCause.ResponseTooLarge]] and
+  * is not retried, since a second attempt would download it again. Raise the setting if you need bigger archives and
+  * have the memory for them.
+  *
   * '''Failures.''' As everywhere else: [[com.worxbend.codeberg4s.CodebergError.Api]] for a non-2xx — `404` when the
   * artifact or run does not exist, has expired, or belongs to a repository the token cannot see, and `410` when Forgejo
   * has garbage-collected it — [[com.worxbend.codeberg4s.CodebergError.Transport]] when nothing arrived, and
