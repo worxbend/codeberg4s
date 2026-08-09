@@ -25,7 +25,10 @@ import scala.util.Try
   * a retried call produces one triple per attempt, and [[Telemetry.onError]] is called once more with the failure the
   * caller finally receives — which is [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] when the retry policy
   * ran out of attempts on a failure it was repeating, and the last failure unwrapped otherwise. A telemetry callback
-  * that fails is swallowed: observation must not decide whether a request succeeded.
+  * that fails in `F`'s error channel is swallowed here: observation must not decide whether a request succeeded. A
+  * callback that fails some other way — a raw throw, or an `F` whose failure channel is wider than
+  * [[com.worxbend.codeberg4s.CodebergError]] — is out of this class's reach, because [[Exec.attempt]] deliberately
+  * catches nothing else; whoever hands a caller's sink to this pipeline is responsible for wrapping it.
   *
   * '''Failure contract.''' `Left`/raised values are always a [[com.worxbend.codeberg4s.CodebergError]]:
   *   - no response at all becomes [[com.worxbend.codeberg4s.CodebergError.Transport]];

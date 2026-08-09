@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s
 
 import com.worxbend.codeberg4s.client.FutureExec
 import com.worxbend.codeberg4s.client.FutureTimer
+import com.worxbend.codeberg4s.client.GuardedTelemetry
 import com.worxbend.codeberg4s.codec.ApiErrorBodyCodec
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.BinaryHttpPort
@@ -132,7 +133,10 @@ object CodebergClient:
     *
     * This library has no logging dependency and writes nothing anywhere, so this is the only way to see requests. A
     * [[com.worxbend.codeberg4s.core.Telemetry]] failure never fails the call it was observing — instrumentation that
-    * breaks must not break the application it instruments.
+    * breaks must not break the application it instruments. That covers both ways a callback can go wrong: throwing
+    * where it stands, and returning a `Future` that fails afterwards. Either way the observation is lost and the
+    * request's own outcome is what the caller receives. A fatal error — an `OutOfMemoryError`, say — is not swallowed,
+    * because it says the process is no longer sound.
     *
     * The callbacks receive a [[CallContext]] whose URI is already redacted, so an implementation cannot leak a token by
     * logging what it is handed.
@@ -192,7 +196,13 @@ object CodebergClient:
 
     // Resolved here rather than at the call site because Telemetry.noOp needs
     // the Exec[Future] that only exists once this method has built it.
-    val observer = telemetry.getOrElse(Telemetry.noOp[Future])
+    //
+    // A caller's sink is wrapped so that a callback which throws, or which
+    // returns a failed Future, cannot fail the request it was watching; see
+    // GuardedTelemetry for why the guard belongs here and not in Exec.attempt.
+    // Telemetry.noOp is this library's own code and cannot fail, so it is left
+    // unwrapped rather than paying for a guard on every unconfigured request.
+    val observer = telemetry.fold(Telemetry.noOp[Future])(GuardedTelemetry(_))
 
     val port = SttpHttpPort(backend, config)
 
