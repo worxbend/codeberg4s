@@ -4,6 +4,7 @@ import com.worxbend.codeberg4s.ContentType
 import com.worxbend.codeberg4s.ValidationError
 
 import java.time.Instant
+import java.util.Arrays
 
 /** A file to attach to an issue or to a comment — the `multipart/form-data` half of
   * `POST /repos/{owner}/{repo}/issues/{index}/assets` and of the matching comment route.
@@ -24,8 +25,9 @@ import java.time.Instant
   * [[content]] is '''not''' copied, here or at the transport boundary, for the reason
   * `com.worxbend.codeberg4s.repositories.publishing.UploadAsset` gives: an attachment can be large and copying it to
   * gain an immutability guarantee the caller can already provide is the wrong trade. A caller must therefore not mutate
-  * the array after handing it over. For the same reason the generated `equals` compares [[content]] by reference, so
-  * two structurally identical uploads are not equal; nothing in this library depends on that.
+  * the array after handing it over.
+  *
+  * Equality is a separate question from copying, and is answered '''on the bytes''': see [[UploadAttachment.equals]].
   *
   * ==Construction==
   *
@@ -78,6 +80,28 @@ final case class UploadAttachment private (
 
   /** How many bytes would be sent. */
   def size: Int = content.length
+
+  /** Structural, on the names, the media type and the timestamp first and then on the bytes.
+    *
+    * Written out for the reason `com.worxbend.codeberg4s.repositories.publishing.UploadAsset.equals` gives: an array's
+    * own `equals` in Scala is identity, so the generated equality would report two uploads built from byte-identical
+    * files as different and hash them differently. Comparing the bytes copies nothing, so the aliasing decision above
+    * stands; the cheap fields are tested first so the scan is reached only when everything else already matched.
+    *
+    * The class is `final`, so no subclass can exist and the type test below is the whole of the compiler-generated
+    * `canEqual`; calling `canEqual` as well would add nothing. Removing `final` would change that.
+    */
+  override def equals(other: Any): Boolean =
+    other match
+      case that: UploadAttachment =>
+        fileName.equals(that.fileName) && mediaType.equals(that.mediaType) &&
+        storedName.equals(that.storedName) && updatedAt.equals(that.updatedAt) &&
+        Arrays.equals(content, that.content)
+      case _                      => false
+
+  override def hashCode(): Int =
+    31 * (31 * (31 * (31 * fileName.hashCode + mediaType.hashCode) + storedName.hashCode) + updatedAt.hashCode) +
+      Arrays.hashCode(content)
 
 object UploadAttachment:
 

@@ -198,6 +198,26 @@ final class IssueTailCommandSuite extends FunSuite:
     assertEquals(fieldOf(UploadAttachment.of("a\rb.log", bytes)), "fileName")
     assertEquals(fieldOf(UploadAttachment.of(s"a${Bell}b.log", bytes)), "fileName")
 
+  test("two uploads built from equal-but-distinct arrays are equal and hash alike"):
+    // `bytes` hands over a fresh array on every call, so these two uploads
+    // hold no array in common. An array's own equality is identity, so until
+    // the type compared its content they were unequal to each other.
+    val one = populatedUpload
+    val two = populatedUpload
+
+    assert(!one.content.eq(two.content), "the two arrays must be distinct objects, or the test proves nothing")
+    assertEquals(one, two)
+    assertEquals(one.hashCode, two.hashCode)
+    assertEquals(Set(one, two).size, 1)
+
+  test("an upload differing in one field, the bytes included, is not equal to the original"):
+    val upload = populatedUpload
+
+    assertNotEquals(upload, uploadCarrying("other".getBytes(StandardCharsets.UTF_8)))
+    assertNotEquals(upload, upload.named("failing-run.txt"))
+    assertNotEquals(upload, orFail(upload.as("application/json")))
+    assertNotEquals(upload, upload.recordedAt(Monday))
+
   // --- AddTrackedTime -------------------------------------------------------
 
   test("a duration one nanosecond off a whole second is refused, which a truncating check would accept"):
@@ -292,8 +312,13 @@ final class IssueTailCommandSuite extends FunSuite:
       state       = Some(IssueStateChange.Reopen),
     )
 
-  private def populatedUpload: UploadAttachment =
-    val named = orFail(UploadAttachment.of("run.txt", bytes)).named("run.txt")
+  private def populatedUpload: UploadAttachment = uploadCarrying(bytes)
+
+  /** The same fully populated upload, over content the caller chooses — so that a test can vary the bytes and nothing
+    * else.
+    */
+  private def uploadCarrying(content: Array[Byte]): UploadAttachment =
+    val named = orFail(UploadAttachment.of("run.txt", content)).named("run.txt")
     orFail(named.as("text/plain")).recordedAt(Friday)
 
   private def fieldsOf(upload: UploadAttachment): (String, Option[String], String, Option[Instant]) =

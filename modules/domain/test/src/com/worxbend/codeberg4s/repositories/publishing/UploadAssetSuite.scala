@@ -77,10 +77,37 @@ final class UploadAssetSuite extends FunSuite:
 
     assert(upload.content eq content, "the constructor copied the array, which the Scaladoc promises it does not")
 
-  private def accepted(fileName: String): UploadAsset =
-    UploadAsset.of(fileName, Bytes) match
+  test("two uploads built from equal-but-distinct arrays are equal and hash alike"):
+    // Holding the caller's array rather than copying it says nothing about
+    // equality: an array's own equality is identity, so these two uploads were
+    // unequal until the type started comparing its content.
+    val one = accepted("checksums.txt", "sha256".getBytes(StandardCharsets.UTF_8))
+    val two = accepted("checksums.txt", "sha256".getBytes(StandardCharsets.UTF_8))
+
+    assert(!one.content.eq(two.content), "the two arrays must be distinct objects, or the test proves nothing")
+    assertEquals(one, two)
+    assertEquals(one.hashCode, two.hashCode)
+    assertEquals(Set(one, two).size, 1)
+
+  test("an upload differing in one field, the bytes included, is not equal to the original"):
+    val upload = accepted("checksums.txt", "sha256".getBytes(StandardCharsets.UTF_8))
+
+    assertNotEquals(upload, accepted("checksums.txt", "sha512".getBytes(StandardCharsets.UTF_8)))
+    assertNotEquals(upload, accepted("other.txt", "sha256".getBytes(StandardCharsets.UTF_8)))
+    assertNotEquals(upload, upload.named("release-checksums"))
+    assertNotEquals(upload, retyped(upload, "text/plain"))
+
+  private def accepted(fileName: String): UploadAsset = accepted(fileName, Bytes)
+
+  private def accepted(fileName: String, content: Array[Byte]): UploadAsset =
+    UploadAsset.of(fileName, content) match
       case Right(upload) => upload
       case Left(error)   => fail(s"expected $fileName to be accepted, got ${error.message}")
+
+  private def retyped(upload: UploadAsset, media: String): UploadAsset =
+    upload.as(media) match
+      case Right(value) => value
+      case Left(error)  => fail(s"expected $media to be accepted, got ${error.message}")
 
   private def rejected(fileName: String): ValidationError =
     UploadAsset.of(fileName, Bytes) match

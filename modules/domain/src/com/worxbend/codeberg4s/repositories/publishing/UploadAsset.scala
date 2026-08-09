@@ -3,6 +3,8 @@ package com.worxbend.codeberg4s.repositories.publishing
 import com.worxbend.codeberg4s.ContentType
 import com.worxbend.codeberg4s.ValidationError
 
+import java.util.Arrays
+
 /** A file to attach to a release — the `multipart/form-data` half of `POST /repos/{owner}/{repo}/releases/{id}/assets`.
   *
   * Derived from that operation's parameters in `spec/swagger.v1.json`: a `name` query parameter, and a form part called
@@ -22,8 +24,9 @@ import com.worxbend.codeberg4s.ValidationError
   * [[content]] is '''not''' copied, here or at the transport boundary, because a release asset is routinely hundreds of
   * megabytes — the first element of `golden/repository/release-latest.json` is 119 MB — and copying it twice to gain an
   * immutability guarantee the caller can already provide is the wrong trade. A caller must therefore not mutate the
-  * array after handing it over. For the same reason the generated `equals` compares [[content]] by reference, so two
-  * structurally identical uploads are not equal; nothing in this library depends on that.
+  * array after handing it over.
+  *
+  * Equality is a separate question from copying, and is answered '''on the bytes''': see [[UploadAsset.equals]].
   *
   * ==Construction==
   *
@@ -64,6 +67,30 @@ final case class UploadAsset private (fileName: String, content: Array[Byte], me
 
   /** How many bytes would be sent. */
   def size: Int = content.length
+
+  /** Structural, on the names and the media type first and then on the bytes.
+    *
+    * Written out because an array's own `equals` in Scala is '''identity''': the equality a case class generates would
+    * compare [[content]] by reference, so two uploads built from byte-identical files would be unequal and would hash
+    * differently — a wrong answer with no warning attached, in an assertion or in a `Set`. Comparing the bytes copies
+    * nothing, so it does not undo the aliasing decision above; it only costs a scan, and only when everything cheaper
+    * already matched, which is why the three cheap fields are tested first.
+    *
+    * A consequence worth knowing for a very large asset: [[hashCode]] has to read the whole array, so using an upload
+    * as a key in a hashed collection reads the file's bytes once per lookup.
+    *
+    * The class is `final`, so no subclass can exist and the type test below is the whole of the compiler-generated
+    * `canEqual`; calling `canEqual` as well would add nothing. Removing `final` would change that.
+    */
+  override def equals(other: Any): Boolean =
+    other match
+      case that: UploadAsset =>
+        fileName.equals(that.fileName) && mediaType.equals(that.mediaType) && name.equals(that.name) &&
+        Arrays.equals(content, that.content)
+      case _                 => false
+
+  override def hashCode(): Int =
+    31 * (31 * (31 * fileName.hashCode + mediaType.hashCode) + name.hashCode) + Arrays.hashCode(content)
 
 object UploadAsset:
 
