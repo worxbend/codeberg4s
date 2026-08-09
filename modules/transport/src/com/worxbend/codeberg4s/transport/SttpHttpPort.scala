@@ -13,9 +13,11 @@ import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.ResponseBody
 import com.worxbend.codeberg4s.core.TransportFailure
 
+import sttp.capabilities.Effect
 import sttp.capabilities.StreamMaxLengthExceededException
 import sttp.client4.Backend
 import sttp.client4.BackendOptions
+import sttp.client4.GenericRequest
 import sttp.client4.PartialRequest
 import sttp.client4.Request
 import sttp.client4.Response
@@ -23,6 +25,7 @@ import sttp.client4.asByteArrayAlways
 import sttp.client4.basicRequest
 import sttp.client4.httpclient.HttpClientFutureBackend
 import sttp.client4.multipart
+import sttp.client4.wrappers.DelegateBackend
 import sttp.model.Header
 import sttp.model.HeaderNames
 import sttp.model.MediaType
@@ -33,14 +36,19 @@ import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.DurationConverters.ScalaDurationOps
 import scala.util.control.NonFatal
 
+import java.net.Authenticator
 import java.net.ConnectException
+import java.net.PasswordAuthentication
 import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import java.net.http.HttpClient
 import java.net.http.HttpTimeoutException
 import java.util.Locale
+import java.util.concurrent.Executor
 
 /** The sttp implementation of [[com.worxbend.codeberg4s.core.HttpPort]] for `Future`.
   *
@@ -61,8 +69,9 @@ import java.util.Locale
   * message of the exception that caused it. Credentials never reach the request URI, so the URI in an sttp exception
   * message is safe.
   *
-  * '''Resource ownership.''' `backend` belongs to whoever created it. This class never closes it, not even on failure —
-  * see [[SttpHttpPort.defaultBackend]].
+  * '''Resource ownership.''' `backend` belongs to whoever created it. This class never closes it, not even on failure.
+  * A backend built by [[SttpHttpPort.defaultBackend]] owns a JDK `java.net.http.HttpClient` and releases it when it is
+  * closed; see that method for what "released" means and for why sttp's own backend does not manage to do it.
   *
   * '''Timeouts.''' `config.readTimeout` is applied per request. `config.connectTimeout` is a property of the backend in
   * sttp, so it is honoured only by a backend built through [[SttpHttpPort.defaultBackend]]; a caller who supplies their
@@ -228,15 +237,108 @@ object SttpHttpPort:
 
   /** A `Future` backend built on the JDK HTTP client, with an explicit connect timeout and execution context.
     *
-    * '''Ownership.''' As above — the caller closes it.
+    * '''Ownership.''' As above — the caller closes it, and closing it really does release the connection pool.
+    *
+    * '''Why the client is built here rather than by sttp.''' `HttpClientFutureBackend(options)` decides whether it may
+    * release the `java.net.http.HttpClient` it creates by testing whether the `ExecutionContext` it was handed is also
+    * a `java.util.concurrent.Executor` — if it is, sttp assumes the executor is the caller's to shut down and sets its
+    * internal `closeClient` flag to `false`, after which `close()` releases nothing. Every ordinary `ExecutionContext`
+    * — `ExecutionContext.global`, one from `ExecutionContext.fromExecutor`, the one a test framework supplies — is an
+    * `ExecutionContextExecutor`, so that flag is always `false` and the pool always survived `close()`. Building the
+    * client here and handing it to `HttpClientFutureBackend.usingClient` moves the decision to this library, which
+    * knows it created the client and may therefore end it.
+    *
+    * The client is configured exactly as sttp configures its own: the connect timeout below, no redirect following
+    * (sttp's `FollowRedirectsBackend` wrapper does that itself, and a client that also followed them would apply the
+    * policy twice), the system proxy that `BackendOptions.Default` reads out of the standard `http.proxyHost` family of
+    * properties, and `executionContext` as the client's executor when it is one.
     *
     * @param connectTimeout
-    *   how long to wait for a connection to be established; sttp configures this per backend, not per request
+    *   how long to wait for a connection to be established; the JDK models this per client, not per request
     * @param executionContext
-    *   where response callbacks run
+    *   where response callbacks run, and the client's executor when it happens to be an `Executor` as well
     */
   def defaultBackend(connectTimeout: FiniteDuration, executionContext: ExecutionContext): Backend[Future] =
-    HttpClientFutureBackend(BackendOptions.Default.connectionTimeout(connectTimeout))(using executionContext)
+    owning(defaultHttpClient(connectTimeout, executionContext), executionContext)
+
+  /** The JDK HTTP client [[defaultBackend]] builds for itself, before it is wrapped in a backend.
+    *
+    * Internal: it exists apart from [[defaultBackend]] so a test can hold the client and ask it whether closing the
+    * backend terminated it. Callers outside the library have no reason to want the two halves separately.
+    */
+  private[codeberg4s] def defaultHttpClient(
+      connectTimeout: FiniteDuration,
+      executionContext: ExecutionContext,
+  ): HttpClient =
+    val configured = HttpClient
+      .newBuilder()
+      .followRedirects(HttpClient.Redirect.NEVER)
+      .connectTimeout(connectTimeout.toJava)
+
+    val executing = executionContext match
+      case executor: Executor => configured.executor(executor)
+      case _                  => configured
+
+    BackendOptions.Default.proxy.fold(executing)(proxy => proxied(executing, proxy)).build()
+
+  /** An sttp backend on `client` that shuts `client` down when it is closed.
+    *
+    * Internal, and the other half of [[defaultHttpClient]]: together they are [[defaultBackend]].
+    */
+  private[codeberg4s] def owning(client: HttpClient, executionContext: ExecutionContext): Backend[Future] =
+    OwnedClientBackend(HttpClientFutureBackend.usingClient(client)(using executionContext), client)
+
+  /** Points the builder at a proxy, and answers that proxy's authentication challenge when it has credentials. */
+  private def proxied(builder: HttpClient.Builder, proxy: BackendOptions.Proxy): HttpClient.Builder =
+    val routed = builder.proxy(proxy.asJavaProxySelector)
+    proxy.auth.fold(routed)(credentials => routed.authenticator(ProxyAuthenticator(credentials)))
+
+  /** What to answer a `requestor` that is asking for credentials: the proxy's own, and only if it is the proxy asking.
+    *
+    * Internal because it is the decision [[ProxyAuthenticator]] exists to make, and a test can then assert it without
+    * standing up a proxy. The `None` branch is the one that matters: a `java.net.Authenticator` is consulted for
+    * origin-server challenges too, and answering one of those with the proxy's password would disclose it to whatever
+    * host the request was aimed at.
+    */
+  private[codeberg4s] def proxyCredentialsFor(
+      requestor: Authenticator.RequestorType,
+      credentials: BackendOptions.ProxyAuth,
+  ): Option[PasswordAuthentication] =
+    requestor match
+      case Authenticator.RequestorType.PROXY =>
+        Some(PasswordAuthentication(credentials.username, credentials.password.toCharArray))
+      case _                                 => None
+
+  /** A backend that releases the JDK HTTP client underneath it, which is the one thing sttp's own `close` will not do.
+    *
+    * `close()` calls `shutdown()` and not `close()`. The JDK's `HttpClient.close()` waits until every in-flight request
+    * has finished, and [[com.worxbend.codeberg4s.CodebergClient.close]] is documented as returning promptly so that an
+    * ordinary `finally` block stays cheap. `shutdown()` starts the same orderly shutdown — requests already submitted
+    * run to completion, no new one is accepted — and returns without waiting for it.
+    *
+    * The client's executor is not touched, because it is `executionContext`, and that belongs to the caller. Only a
+    * client the JDK gave its own default executor loses one, and that executor was never anybody else's.
+    */
+  private final class OwnedClientBackend(delegate: Backend[Future], client: HttpClient)
+      extends DelegateBackend[Future, Any](delegate),
+        Backend[Future]:
+
+    override def send[T](request: GenericRequest[T, Any & Effect[Future]]): Future[Response[T]] =
+      delegate.send(request)
+
+    override def close(): Future[Unit] =
+      client.shutdown()
+      delegate.close()
+
+  /** Hands [[proxyCredentialsFor]]'s answer to the JDK.
+    *
+    * `java.net.Authenticator`'s contract for "I hold no credentials for this challenge" is a `null` return, so `orNull`
+    * here is the single point at which the `Option` that carries that answer meets the Java side.
+    */
+  private final class ProxyAuthenticator(proxyAuth: BackendOptions.ProxyAuth) extends Authenticator:
+
+    override protected def getPasswordAuthentication: PasswordAuthentication =
+      proxyCredentialsFor(getRequestorType, proxyAuth).orNull
 
   private def target(uri: Uri, request: CodebergRequest): Uri =
     uri.addPath(request.path).addParams(request.query*)
