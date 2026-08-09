@@ -173,6 +173,26 @@ if [[ -d "$ASSETS" ]]; then
   cp -R "$ASSETS/." "$STAGED/assets/"
 fi
 
+# The landing page is not a file anyone writes directly. Helium takes the content
+# of site/src/landing-page.md, lifts that document out of the tree and re-inserts
+# it as the root directory's *title document* — and a title document is what
+# renders to index.html.
+#
+# So a root index.md or README.md is not merely redundant, it is a second writer
+# to index.html. Laika renders documents in parallel, and nothing in Laika or in
+# this script arbitrates between them: whichever finishes last wins, and if they
+# overlap the file ends up holding both. That is not hypothetical. The published
+# site once served an index.html that was the landing page written over the first
+# half of a second, differently-templated copy of the same page — closing
+# </body></html> in the middle, the sidebar's link list dumped into the body
+# below it. Both builds exited 0.
+#
+# Fail here instead, naming the file and where its content belongs.
+for collision in index.md README.md; do
+  [[ -f "$STAGED/$collision" ]] || continue
+  die "site/src/$collision renders to index.html, and so does the generated landing page. Two writers, one file, no arbitration — see the note above homeLink in site/build/laika.scala. Put the front page's prose in site/src/landing-page.md instead."
+done
+
 # MEASURED, NOT ASSUMED: Laika 1.3.2 does not resolve a link target written
 # `./sibling.md` — it reads `.` as a path segment and reports "unresolved
 # internal reference". `sibling.md` resolves; `../other/page.md` resolves.
