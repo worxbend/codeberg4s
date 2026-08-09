@@ -32,8 +32,16 @@
 // WHAT IS MEASURED
 // ---------------------------------------------------------------------------
 //   parse.page-50       Json.parse of a 50-repository page — the parse step alone
-//   decode.page-50      Json.decode[Vector[RepositoryDto]] of the same page — the
-//                       parse plus the assembly of 50 wide DTOs, end to end
+//   decode.page-50      Json.decode[Vector[RepositoryDto]] of the same page from a
+//                       String — the parse plus the assembly of 50 wide DTOs
+//   decode.page-50-bytes      the same decode from the bytes the socket produced,
+//                       which is the path a response takes today
+//   decode.page-50-viastring  the same decode the way it worked before a response
+//                       body became bytes: decode the socket's bytes into a String
+//                       (what sttp's asStringAlways did), then hand that String to
+//                       the parser, which encodes it back into a byte[] to read it.
+//                       The gap between this row and decode.page-50-bytes is the
+//                       cost that carrying bytes removed
 //   decode.repo-wide    Json.decode[RepositoryDto] of one repository object
 //   assemble.repo-wide  the same DTO built from an ALREADY-PARSED document, so the
 //                       parse is excluded and only field lookup and assembly remain
@@ -276,6 +284,13 @@ val orgSingle: String  = fixture("organization/org-single.json")
 
 val page: String = Vector.fill(PageRepetitions)(repoSingle).mkString("[", ",", "]")
 
+/** The same page as it actually arrives: bytes off a socket, before anything has decoded them.
+  *
+  * This is what the transport now hands the parser. The two decode.page rows below read this array two different ways,
+  * which is the whole before/after of carrying a body as bytes.
+  */
+val pageBytes: Array[Byte] = page.getBytes(StandardCharsets.UTF_8)
+
 val integerArray: String = (0 until ScalarArrayLength).mkString("[", ",", "]")
 
 val booleanArray: String =
@@ -341,6 +356,26 @@ val parsePage: Op = new Op("parse.page-50", sizeOf(page), 100):
 val decodePage: Op = new Op("decode.page-50", sizeOf(page), 60):
 
   def run(): Int = Json.decode[Vector[RepositoryDto]](page) match
+    case Right(repositories) => repositories.size
+    case Left(_)             => -1
+
+/** The path a page takes today: the socket's bytes, straight into the parser. */
+val decodePageFromBytes: Op = new Op("decode.page-50-bytes", sizeOf(page), 60):
+
+  def run(): Int = Json.decode[Vector[RepositoryDto]](pageBytes) match
+    case Right(repositories) => repositories.size
+    case Left(_)             => -1
+
+/** The path a page took before the body became bytes, measured end to end and in one place.
+  *
+  * The socket's bytes are decoded into a `String` — what sttp's `asStringAlways` did — and that `String` is handed to
+  * the parser, which encodes it back into a `byte[]` to read it. Two copies of the payload. The gap between this row
+  * and `decode.page-50-bytes` is the size of what carrying bytes removed; `decode.page-50` is the same work minus
+  * sttp's half, kept so that the number can still be compared with runs from before the change.
+  */
+val decodePageViaString: Op = new Op("decode.page-50-viastring", sizeOf(page), 60):
+
+  def run(): Int = Json.decode[Vector[RepositoryDto]](String(pageBytes, StandardCharsets.UTF_8)) match
     case Right(repositories) => repositories.size
     case Left(_)             => -1
 
@@ -411,6 +446,8 @@ val operations: Vector[Op] =
   Vector(
     parsePage,
     decodePage,
+    decodePageFromBytes,
+    decodePageViaString,
     decodeWide,
     assembleWide,
     decodeNarrow,
