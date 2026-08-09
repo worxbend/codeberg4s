@@ -97,6 +97,15 @@ final class UploadAssetSuite extends FunSuite:
     assertNotEquals(upload, upload.named("release-checksums"))
     assertNotEquals(upload, retyped(upload, "text/plain"))
 
+  test("an upload is not equal to a value of some other type"):
+    // A hand-written equals has to answer this case itself, and answering it
+    // wrongly is how a type ends up throwing a ClassCastException out of a
+    // collection lookup rather than returning false.
+    val upload = accepted("checksums.txt", "sha256".getBytes(StandardCharsets.UTF_8))
+
+    assertNotEquals[Any, Any](upload, "checksums.txt")
+    assertNotEquals[Any, Any](upload, 0)
+
   private def accepted(fileName: String): UploadAsset = accepted(fileName, Bytes)
 
   private def accepted(fileName: String, content: Array[Byte]): UploadAsset =

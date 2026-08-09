@@ -218,6 +218,12 @@ final class IssueTailCommandSuite extends FunSuite:
     assertNotEquals(upload, orFail(upload.as("application/json")))
     assertNotEquals(upload, upload.recordedAt(Monday))
 
+  test("an upload is not equal to a value of some other type"):
+    // A hand-written equals owns this case. Getting it wrong turns a harmless
+    // collection lookup into a ClassCastException at the call site.
+    assertNotEquals[Any, Any](populatedUpload, "build.log")
+    assertNotEquals[Any, Any](populatedUpload, 0)
+
   // --- AddTrackedTime -------------------------------------------------------
 
   test("a duration one nanosecond off a whole second is refused, which a truncating check would accept"):
