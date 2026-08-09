@@ -11,6 +11,8 @@ final class UploadAssetSuite extends FunSuite:
 
   private val Bytes: Array[Byte] = "checksums".getBytes(StandardCharsets.UTF_8)
 
+  private val Bell: String = 7.toChar.toString
+
   test("an ordinary file name is accepted and the media type defaults to octet-stream"):
     val upload = accepted("forgejo-16.0.2-linux-amd64")
 
@@ -49,7 +51,23 @@ final class UploadAssetSuite extends FunSuite:
     assertEquals(upload.name, Some("forgejo-16.0.2-linux-amd64"))
 
   test("the media type can be stated"):
-    assertEquals(accepted("notes.txt").as("text/plain").mediaType, "text/plain")
+    assertEquals(accepted("notes.txt").as("text/plain").map(_.mediaType), Right("text/plain"))
+
+  test("surrounding whitespace in the media type is trimmed"):
+    assertEquals(accepted("notes.txt").as("  text/plain  ").map(_.mediaType), Right("text/plain"))
+
+  test("a blank media type is rejected, and the rejection names the mediaType field"):
+    assertEquals((refusedMedia("   ").field, refusedMedia("   ").message), ("mediaType", "must not be blank"))
+
+  test("a media type carrying a line break is rejected, because it would inject a header into the part"):
+    val injected = refusedMedia("text/plain\r\nX-Injected: 1")
+
+    assertEquals((injected.field, injected.message), ("mediaType", "must not contain a control character"))
+
+  test("any other control character in the media type is rejected too"):
+    // Mid-string on purpose: `trim` removes every character below a space,
+    // so a control character at either end never reaches the check.
+    assertEquals(refusedMedia(s"text/${Bell}plain").message, "must not contain a control character")
 
   test("the bytes are held, not copied — the caller keeps ownership of the array"):
     val content = "one".getBytes(StandardCharsets.UTF_8)
@@ -68,3 +86,8 @@ final class UploadAssetSuite extends FunSuite:
     UploadAsset.of(fileName, Bytes) match
       case Left(error)   => error
       case Right(upload) => fail(s"expected $fileName to be rejected, got ${upload.fileName}")
+
+  private def refusedMedia(media: String): ValidationError =
+    accepted("notes.txt").as(media) match
+      case Left(error)   => error
+      case Right(upload) => fail(s"expected the media type to be rejected, got ${upload.mediaType}")

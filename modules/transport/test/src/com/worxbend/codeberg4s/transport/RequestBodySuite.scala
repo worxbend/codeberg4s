@@ -3,9 +3,12 @@ package com.worxbend.codeberg4s.transport
 import com.worxbend.codeberg4s.BaseUri
 import com.worxbend.codeberg4s.CodebergConfig
 import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.TransportCause
 import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergResponse
 import com.worxbend.codeberg4s.core.RequestBody
+import com.worxbend.codeberg4s.core.TransportFailure
 
 import sttp.client4.GenericRequest
 import sttp.client4.MultipartBody
@@ -16,6 +19,7 @@ import sttp.model.HeaderNames
 import munit.FunSuite
 
 import scala.concurrent.ExecutionContext
+import scala.util.Success
 
 import java.nio.charset.StandardCharsets
 
@@ -32,7 +36,14 @@ final class RequestBodySuite extends FunSuite:
   private val config: CodebergConfig =
     CodebergConfig(Auth.Anonymous).copy(baseUri = BaseUri.Codeberg)
 
-  private def send(body: RequestBody): GenericRequest[?, ?] =
+  private val Payload: Array[Byte] = "hi".getBytes(StandardCharsets.UTF_8)
+
+  /** Sends `body` and reports both what the port answered and every request the backend actually saw.
+    *
+    * The backend list matters for the refusal case: a body the transport rejects must never reach a socket, and an
+    * assertion on the answer alone would not notice a request that was sent and then reported as failed.
+    */
+  private def attempt(body: RequestBody): (Either[TransportFailure, CodebergResponse], List[GenericRequest[?, ?]]) =
     val recording = RecordingBackend(BackendStub.asynchronousFuture.whenAnyRequest.thenRespondOk())
     val port      = SttpHttpPort(recording, config)
     val request   = CodebergRequest(
@@ -43,13 +54,17 @@ final class RequestBodySuite extends FunSuite:
       headers   = Nil,
       body      = Some(body),
     )
-    port.send(request, "probe").value.discard
-    recording.allInteractions.map(_._1).head
+    port.send(request, "probe").value match
+      case Some(Success(answer)) => (answer, recording.allInteractions.map(_._1))
+      case other                 => fail(s"expected the send to have completed, got $other")
+
+  private def send(body: RequestBody): GenericRequest[?, ?] =
+    attempt(body) match
+      case (_, request :: _) => request
+      case (answer, Nil)     => fail(s"the backend saw no request; the port answered $answer")
 
   private def contentTypeOf(request: GenericRequest[?, ?]): Option[String] =
     request.header(HeaderNames.ContentType)
-
-  extension [A](value: A) private def discard: Unit = ()
 
   test("a JSON body is sent as application/json"):
     val request = send(RequestBody.Json("""{"a":1}"""))
@@ -89,6 +104,30 @@ final class RequestBodySuite extends FunSuite:
         assertEquals(multipart.parts.map(_.name).toList, List("attachment"))
         assertEquals(multipart.parts.map(_.fileName).toList, List(Some("notes.txt")))
       case other                       => fail(s"expected a multipart body, got ${other.show}")
+
+  test("a multipart media type carrying a line break is refused, and no request reaches the backend"):
+    // Defence in depth: UploadAttachment.as and UploadAsset.as already refuse
+    // this, so getting here means a Multipart was built from a raw string. The
+    // value would have become the part's own Content-Type header, and the CRLF
+    // in it would have ended that header and opened one of the caller's
+    // choosing.
+    val (answer, seen) =
+      attempt(RequestBody.Multipart("attachment", "notes.txt", Payload, "text/plain\r\nX-Injected: 1"))
+
+    val expected: Either[TransportFailure, CodebergResponse] =
+      Left(TransportFailure(TransportCause.Unknown(SttpHttpPort.UnsafeMultipartMediaType)))
+
+    assertEquals(answer, expected)
+    assert(seen.isEmpty, s"the request was sent anyway: $seen")
+
+  test("a blank multipart media type is refused for the same reason"):
+    val (answer, seen) = attempt(RequestBody.Multipart("attachment", "notes.txt", Payload, "   "))
+
+    val expected: Either[TransportFailure, CodebergResponse] =
+      Left(TransportFailure(TransportCause.Unknown(SttpHttpPort.UnsafeMultipartMediaType)))
+
+    assertEquals(answer, expected)
+    assert(seen.isEmpty, s"the request was sent anyway: $seen")
 
   test("an empty body sends no content"):
     val request = send(RequestBody.Empty)

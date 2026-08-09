@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.publishing
 
+import com.worxbend.codeberg4s.ContentType
 import com.worxbend.codeberg4s.ValidationError
 
 /** A file to attach to a release — the `multipart/form-data` half of `POST /repos/{owner}/{repo}/releases/{id}/assets`.
@@ -24,11 +25,16 @@ import com.worxbend.codeberg4s.ValidationError
   * array after handing it over. For the same reason the generated `equals` compares [[content]] by reference, so two
   * structurally identical uploads are not equal; nothing in this library depends on that.
   *
+  * ==Construction==
+  *
+  * The constructor is private, so [[UploadAsset.of]] is the only way to obtain one and the checks it performs cannot be
+  * stepped around by calling the generated `apply` or `copy`. Reading the fields and pattern matching are unaffected.
+  *
   * ==Error contract==
   *
-  * Construction produces [[ValidationError]] on the `"fileName"` field and nothing else; it performs no I/O and never
-  * reads a file. Turning a path into bytes is the caller's job, and deliberately so: this library owns no filesystem
-  * effect.
+  * [[UploadAsset.of]] produces a [[ValidationError]] on the `"fileName"` field, [[as]] one on the `"mediaType"` field,
+  * and nothing else here can fail. No member performs I/O or reads a file. Turning a path into bytes is the caller's
+  * job, and deliberately so: this library owns no filesystem effect.
   *
   * @param fileName
   *   the file name announced in the multipart part
@@ -39,13 +45,22 @@ import com.worxbend.codeberg4s.ValidationError
   * @param name
   *   the `name` query parameter, when the stored name should differ from [[fileName]]
   */
-final case class UploadAsset(fileName: String, content: Array[Byte], mediaType: String, name: Option[String]):
+final case class UploadAsset private (fileName: String, content: Array[Byte], mediaType: String, name: Option[String]):
 
   /** Stores the attachment under `attachment` instead of under [[fileName]]. */
   def named(attachment: String): UploadAsset = copy(name = Some(attachment))
 
-  /** Declares the part's content type, for an instance or a proxy that acts on it. */
-  def as(media: String): UploadAsset = copy(mediaType = media)
+  /** Declares the part's own `Content-Type`, for an instance or a proxy that acts on it.
+    *
+    * The value is written into the multipart body as a header, so it is checked the way [[fileName]] is: trimmed, then
+    * refused when it is blank or carries a control character. A carriage return or a newline in it would end the part's
+    * header line and let whatever follows be read as headers of the caller's choosing.
+    *
+    * @return
+    *   the upload sent under `media`, or a [[ValidationError]] on the `"mediaType"` field
+    */
+  def as(media: String): Either[ValidationError, UploadAsset] =
+    ContentType.from("mediaType", media).map(checked => copy(mediaType = checked))
 
   /** How many bytes would be sent. */
   def size: Int = content.length

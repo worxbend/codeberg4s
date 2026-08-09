@@ -143,11 +143,31 @@ final class IssueTailCommandSuite extends FunSuite:
   // --- UploadAttachment -----------------------------------------------------
 
   test("every upload builder sets its own field and leaves every sibling alone"):
+    // Compared field by field rather than against a `copy`: the constructor is
+    // private now, which is the point of the type, so `copy` is not reachable
+    // from a test either.
     val upload = populatedUpload
 
-    assertEquals(upload.named("failing-run.txt"), upload.copy(storedName = Some("failing-run.txt")))
-    assertEquals(upload.as("application/json"), upload.copy(mediaType = "application/json"))
-    assertEquals(upload.recordedAt(Monday), upload.copy(updatedAt = Some(Monday)))
+    assertEquals(
+      fieldsOf(upload.named("failing-run.txt")),
+      (upload.fileName, Some("failing-run.txt"), upload.mediaType, upload.updatedAt),
+    )
+    assertEquals(
+      fieldsOf(orFail(upload.as("application/json"))),
+      (upload.fileName, upload.storedName, "application/json", upload.updatedAt),
+    )
+    assertEquals(
+      fieldsOf(upload.recordedAt(Monday)),
+      (upload.fileName, upload.storedName, upload.mediaType, Some(Monday)),
+    )
+
+  test("a media type that would inject a header into the part is refused, on the mediaType field"):
+    val upload = orFail(UploadAttachment.of("run.txt", bytes))
+
+    assertEquals(fieldOf(upload.as("text/plain\r\nX-Injected: 1")), "mediaType")
+    assertEquals(messageOf(upload.as("text/plain\r\nX-Injected: 1")), "must not contain a control character")
+    assertEquals(messageOf(upload.as(s"text/${Bell}plain")), "must not contain a control character")
+    assertEquals(messageOf(upload.as("   ")), "must not be blank")
 
   test("the stored name is a second name, and never overwrites the one the multipart part announces"):
     val upload = orFail(UploadAttachment.of("build/logs/run.txt", bytes)).named("failing-run.txt")
@@ -273,7 +293,11 @@ final class IssueTailCommandSuite extends FunSuite:
     )
 
   private def populatedUpload: UploadAttachment =
-    orFail(UploadAttachment.of("run.txt", bytes)).named("run.txt").as("text/plain").recordedAt(Friday)
+    val named = orFail(UploadAttachment.of("run.txt", bytes)).named("run.txt")
+    orFail(named.as("text/plain")).recordedAt(Friday)
+
+  private def fieldsOf(upload: UploadAttachment): (String, Option[String], String, Option[Instant]) =
+    (upload.fileName, upload.storedName, upload.mediaType, upload.updatedAt)
 
   private def populatedTrackedTime: AddTrackedTime =
     orFail(AddTrackedTime.of(90.seconds)).attributedTo("crystal").recordedAt(Friday)

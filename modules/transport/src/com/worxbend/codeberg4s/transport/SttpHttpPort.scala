@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.transport
 
 import com.worxbend.codeberg4s.CodebergConfig
+import com.worxbend.codeberg4s.ContentType
 import com.worxbend.codeberg4s.TransportCause
 import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.core.BinaryHttpPort
@@ -95,9 +96,7 @@ final class SttpHttpPort(
     * rendering, and this adapter reports nothing at all.
     */
   override def send(request: CodebergRequest, redactedUri: String): Future[Either[TransportFailure, CodebergResponse]] =
-    root match
-      case Left(failure) => Future.successful(Left(failure))
-      case Right(uri)    => dispatch(build(request, uri), SttpHttpPort.succeed)
+    dispatch(request, SttpHttpPort.succeed)
 
   /** Sends `request` and reports what came back as a [[com.worxbend.codeberg4s.core.BinaryResponse]] instead.
     *
@@ -109,44 +108,55 @@ final class SttpHttpPort(
       request: CodebergRequest,
       redactedUri: String,
   ): Future[Either[TransportFailure, BinaryResponse]] =
-    root match
-      case Left(failure) => Future.successful(Left(failure))
-      case Right(uri)    => dispatch(build(request, uri), SttpHttpPort.succeedBinary)
+    dispatch(request, SttpHttpPort.succeedBinary)
 
   /** Deliberately opaque: this object holds the configured credentials, so it renders nothing about its state. */
   override def toString: String = "SttpHttpPort"
 
-  /** Sends one request and turns whatever arrived into `A`, or into a classified transport failure.
+  /** Builds one request, sends it, and turns whatever arrived into `A`, or into a classified transport failure.
     *
-    * `onResponse` is the only thing that differed between the textual and the byte-carrying path, so the send, the
-    * recovery and the exception classification are now written once instead of twice.
+    * `onResponse` is the only thing that differed between the textual and the byte-carrying path, so the build, the
+    * send, the recovery and the exception classification are written once instead of twice.
+    *
+    * Two things can go wrong before a socket is touched: the configured base URI may not parse, and [[build]] may
+    * refuse the body. Both are already `Left` values, so they short-circuit here into an already-completed `Future` and
+    * the backend never sees the request.
     */
   private def dispatch[A](
-      request: Request[Array[Byte]],
+      request: CodebergRequest,
       onResponse: Response[Array[Byte]] => Either[TransportFailure, A],
   ): Future[Either[TransportFailure, A]] =
-    request
-      .send(backend)
-      .map(onResponse)
-      .recover:
-        case error: InterruptedException => SttpHttpPort.fail(error)
-        case NonFatal(error)             => SttpHttpPort.fail(error)
+    root.flatMap(uri => build(request, uri)) match
+      case Left(failure) => Future.successful(Left(failure))
+      case Right(built)  =>
+        built
+          .send(backend)
+          .map(onResponse)
+          .recover:
+            case error: InterruptedException => SttpHttpPort.fail(error)
+            case NonFatal(error)             => SttpHttpPort.fail(error)
 
-  /** Builds the sttp request, reading '''every''' response body as bytes.
+  /** Builds the sttp request, reading '''every''' response body as bytes, or refuses to build it at all.
     *
     * `asByteArrayAlways` rather than `asStringAlways`, and that single word is the point of this path. With
     * `asStringAlways`, sttp decodes the socket bytes into a `String`, and the JSON parser then encodes that `String`
     * straight back into a `byte[]` in order to read it — two full copies of every payload before a single field is
     * looked at. The charset sttp would have applied is not lost: it is read off `Content-Type` into
     * [[com.worxbend.codeberg4s.core.ResponseBody]], which applies it if and when something actually asks for text.
+    *
+    * The `Left` comes from [[SttpHttpPort.withBody]], which refuses a body whose media type cannot be written as a
+    * header.
     */
-  private def build(request: CodebergRequest, uri: Uri): Request[Array[Byte]] =
-    withAuth(SttpHttpPort.withBody(request.body, basicRequest))
-      .headers(request.headers.map((name, value) => Header(name, value))*)
-      .header(HeaderNames.UserAgent, config.userAgent.value)
-      .readTimeout(config.readTimeout)
-      .method(Method(request.method.wireName), SttpHttpPort.target(uri, request))
-      .response(asByteArrayAlways)
+  private def build(request: CodebergRequest, uri: Uri): Either[TransportFailure, Request[Array[Byte]]] =
+    SttpHttpPort
+      .withBody(request.body, basicRequest)
+      .map: carrying =>
+        withAuth(carrying)
+          .headers(request.headers.map((name, value) => Header(name, value))*)
+          .header(HeaderNames.UserAgent, config.userAgent.value)
+          .readTimeout(config.readTimeout)
+          .method(Method(request.method.wireName), SttpHttpPort.target(uri, request))
+          .response(asByteArrayAlways)
 
   /** The one sanctioned call site of `reveal`.
     *
@@ -165,6 +175,14 @@ object SttpHttpPort:
 
   /** The detail reported when sttp cannot parse the configured base URI. Never echoes the value. */
   val UnparseableBaseUri: String = "the configured base URI is not a valid request target"
+
+  /** The detail reported when a multipart part's media type cannot be written as a header. Never echoes the value.
+    *
+    * Reaching this means a [[com.worxbend.codeberg4s.core.RequestBody.Multipart]] was built from a raw string rather
+    * than from one of the upload commands, which already refuse a blank or control-carrying media type. The request is
+    * not sent either way.
+    */
+  val UnsafeMultipartMediaType: String = "the multipart part's media type is blank or contains a control character"
 
   /** The longest exception message copied into a [[com.worxbend.codeberg4s.TransportCause]].
     *
@@ -197,7 +215,29 @@ object SttpHttpPort:
   private def target(uri: Uri, request: CodebergRequest): Uri =
     uri.addPath(request.path).addParams(request.query*)
 
+  /** Attaches the body, unless the body carries a media type that must not become a header.
+    *
+    * '''Defence in depth, and deliberately a second copy of a rule the domain already enforces.'''
+    * [[com.worxbend.codeberg4s.issues.UploadAttachment.as]] and
+    * [[com.worxbend.codeberg4s.repositories.publishing.UploadAsset.as]] refuse such a value at construction, and that
+    * is the check a caller should ever see, because it names the field and happens before a request exists. This one
+    * exists because [[com.worxbend.codeberg4s.core.RequestBody.Multipart]] is a plain case of an enum that any code
+    * inside the library can build with a bare `String`, and this method is the last point at which that string is still
+    * a Scala value rather than wire bytes.
+    *
+    * A refusal is a [[TransportFailure]] and not an exception: a request that was never sent is exactly what
+    * [[com.worxbend.codeberg4s.TransportCause]] describes, and the pipeline above already knows how to report one.
+    */
   private def withBody(
+      body: Option[RequestBody],
+      request: PartialRequest[Either[String, String]],
+  ): Either[TransportFailure, PartialRequest[Either[String, String]]] =
+    body match
+      case Some(RequestBody.Multipart(_, _, _, mediaType)) if !ContentType.isSafe(mediaType) =>
+        Left(TransportFailure(TransportCause.Unknown(UnsafeMultipartMediaType)))
+      case other => Right(attach(other, request))
+
+  private def attach(
       body: Option[RequestBody],
       request: PartialRequest[Either[String, String]],
   ): PartialRequest[Either[String, String]] =
