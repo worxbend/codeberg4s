@@ -6,7 +6,7 @@ can tell a deliberate pin from a stale one.
 
 | | |
 | --- | --- |
-| Resolved on | `2026-08-01` |
+| Resolved on | `2026-08-09` |
 | Resolver | `https://repo1.maven.org/maven2` (`maven-metadata.xml`) |
 | Authority for build pins | [`build.mill`](../build.mill) — this document mirrors it and must never contradict it |
 
@@ -82,7 +82,7 @@ deliberately short (PLAN.md ADR-2, ADR-3).
 | --- | --- | --- | --- | --- | --- |
 | sttp client4 core | `com.softwaremill.sttp.client4::core` | `4.0.26` | `4.0.26` | current | `transport` |
 | sttp-model core | `com.softwaremill.sttp.model::core` | `1.7.18` | `1.7.18` | current | `transport` |
-| jsoniter-scala core | `com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core` | `2.39.1` | `2.39.1` | current | `codec` |
+| jsoniter-scala core | `com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core` | `2.40.1` | `2.40.1` | current | `codec` |
 
 Three artifacts, which is what README.md's "sttp client4 and jsoniter-scala,
 that is the list" claims. `jsoniter-scala-macros` used to be a fourth. It is the

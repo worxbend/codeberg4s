@@ -33,7 +33,9 @@ for the HTTP/JSON boundary — said jsoniter all along.
 
 ## Decision
 
-Use **jsoniter-scala** (`com.github.plokhotnyuk.jsoniter-scala`), 2.39.1.
+Use **jsoniter-scala** (`com.github.plokhotnyuk.jsoniter-scala`), 2.39.1 at the
+time this was decided. Only the `jsoniter-scala-core` artifact; the running pin
+lives in `build.mill` → `Versions.jsoniter` and moves with routine bumps.
 
 ## How it is used, and why not the obvious way
 

@@ -303,7 +303,7 @@ object JsonValue:
     * that does not, and a `java.math.BigDecimal` for everything else. Reading a `BigDecimal` unconditionally, which is
     * what this used to do, is what made every row id cost one.
     *
-    * Those three classes are the whole of what 2.39.1 returns — checked against the library rather than recalled. The
+    * Those three classes are the whole of what 2.40.1 returns — checked against the library rather than recalled. The
     * fourth branch is there because `java.lang.Number` is a plain abstract class that anyone may extend, so the match
     * has to be total; reaching it would mean jsoniter had grown a return type this reader does not know how to keep
     * exactly, and answering with an approximation is the one thing this type must not do.
