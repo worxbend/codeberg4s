@@ -229,6 +229,9 @@ object Site:
       .site
       .pageNavigation(depth = 3)
 
+    // Everything below the header and the teaser rows is the prose of `site/src/landing-page.md`. That file has no
+    // top-level heading of its own on purpose: `title` here already renders "codeberg4s" at 48px directly above it,
+    // and a second `<h1>codeberg4s</h1>` under it said the same word twice.
     withChrome.site
       .landingPage(
         title              = Some(SiteInfo.title),
