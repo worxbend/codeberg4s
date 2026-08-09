@@ -30,7 +30,7 @@ import java.time.Instant
   * @param archivedAt
   *   absent unless the repository is archived; Forgejo sends the Unix epoch as its "never" sentinel
   */
-final case class Repository(
+final case class Repository private[codeberg4s] (
     id: Long,
     slug: RepoSlug,
     fullName: String,

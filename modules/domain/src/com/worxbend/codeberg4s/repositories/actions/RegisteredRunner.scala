@@ -21,7 +21,7 @@ package com.worxbend.codeberg4s.repositories.actions
   *   the one-shot registration credential. Required: a registration response without it registers nothing, so decoding
   *   fails rather than handing back a runner nobody can start
   */
-final case class RegisteredRunner(
+final case class RegisteredRunner private[codeberg4s] (
     id: Option[RunnerId],
     uuid: Option[String],
     token: RunnerRegistrationToken,

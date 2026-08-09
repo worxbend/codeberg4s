@@ -46,7 +46,7 @@ import java.time.Instant
   * @param applyToAdmins
   *   whether repository administrators are bound by this rule too. `false` — the default reading — means they are not
   */
-final case class BranchProtection(
+final case class BranchProtection private[codeberg4s] (
     ruleName: String,
     legacyBranchName: Option[String],
     enablePush: Boolean,

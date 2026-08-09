@@ -17,7 +17,7 @@ package com.worxbend.codeberg4s.repositories.gitdata
   * @param values
   *   the properties exactly as the instance named them, in no particular order
   */
-final case class EditorConfigDefinitions(values: Map[String, String]):
+final case class EditorConfigDefinitions private[codeberg4s] (values: Map[String, String]):
 
   /** The value of `property`, matched case-insensitively.
     *

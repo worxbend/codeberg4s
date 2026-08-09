@@ -33,7 +33,7 @@ import java.time.Instant
   * @param htmlUrl
   *   the browser URL of the commit
   */
-final case class FileCommit(
+final case class FileCommit private[codeberg4s] (
     sha: CommitSha,
     message: Option[String],
     author: Option[GitIdentity],

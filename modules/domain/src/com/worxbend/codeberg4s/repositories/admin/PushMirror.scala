@@ -44,7 +44,7 @@ import java.time.Instant
   * @param lastUpdateAt
   *   when it last ran, absent when it has never run
   */
-final case class PushMirror(
+final case class PushMirror private[codeberg4s] (
     remoteName: MirrorName,
     remoteAddress: Option[String],
     repoName: Option[String],

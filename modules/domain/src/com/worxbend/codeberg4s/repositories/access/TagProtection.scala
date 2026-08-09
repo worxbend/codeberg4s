@@ -28,7 +28,7 @@ import java.time.Instant
   * @param whitelistTeams
   *   the teams exempt from the rule, on the same reading
   */
-final case class TagProtection(
+final case class TagProtection private[codeberg4s] (
     id: TagProtectionId,
     namePattern: String,
     whitelistUsernames: Vector[String],

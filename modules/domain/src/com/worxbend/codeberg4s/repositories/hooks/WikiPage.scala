@@ -39,7 +39,7 @@ import com.worxbend.codeberg4s.repositories.FileContent
   *   how many revisions the page has. Absent when the instance did not say; `0` is a value the instance can genuinely
   *   send and is preserved
   */
-final case class WikiPage(
+final case class WikiPage private[codeberg4s] (
     title: String,
     content: Option[FileContent],
     sidebar: Option[String],
@@ -67,7 +67,7 @@ final case class WikiPage(
   * @param lastCommit
   *   the page's most recent revision
   */
-final case class WikiPageMeta(
+final case class WikiPageMeta private[codeberg4s] (
     title: String,
     htmlUrl: Option[String],
     subUrl: Option[String],

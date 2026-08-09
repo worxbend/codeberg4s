@@ -19,4 +19,4 @@ package com.worxbend.codeberg4s.repositories.gitdata
   * @param target
   *   the object the ref points at, absent when the instance sent no usable `object`
   */
-final case class GitReference(name: RefName, url: Option[String], target: Option[GitObjectRef])
+final case class GitReference private[codeberg4s] (name: RefName, url: Option[String], target: Option[GitObjectRef])

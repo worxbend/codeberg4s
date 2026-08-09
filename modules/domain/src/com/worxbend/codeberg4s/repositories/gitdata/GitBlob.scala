@@ -22,4 +22,9 @@ import com.worxbend.codeberg4s.repositories.FileContent
   * @param url
   *   the API URL of the blob, when the endpoint reports one
   */
-final case class GitBlob(sha: CommitSha, size: Long, content: Option[FileContent], url: Option[String])
+final case class GitBlob private[codeberg4s] (
+    sha: CommitSha,
+    size: Long,
+    content: Option[FileContent],
+    url: Option[String],
+)

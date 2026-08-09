@@ -48,7 +48,7 @@ import java.time.Instant
   * @param archiveDownloads
   *   how often the generated source archives have been downloaded, when the instance reports it
   */
-final case class Release(
+final case class Release private[codeberg4s] (
     id: ReleaseId,
     tagName: TagName,
     targetCommitish: Option[String],

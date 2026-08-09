@@ -36,7 +36,7 @@ import java.time.Instant
   * @param stats
   *   the line counts, when the endpoint reports them
   */
-final case class Commit(
+final case class Commit private[codeberg4s] (
     sha: CommitSha,
     url: Option[String],
     htmlUrl: Option[String],

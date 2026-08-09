@@ -26,7 +26,7 @@ import java.time.Instant
   *   where the asset can be fetched. Downloading it is outside this library: the body is arbitrarily large and belongs
   *   in a stream, not in a `String`
   */
-final case class ReleaseAsset(
+final case class ReleaseAsset private[codeberg4s] (
     id: Long,
     name: String,
     size: Long,

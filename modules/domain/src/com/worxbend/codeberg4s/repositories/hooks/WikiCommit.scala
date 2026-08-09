@@ -27,7 +27,7 @@ import com.worxbend.codeberg4s.repositories.GitIdentity
   *   the commit message, which is the `message` a caller passed to [[CreateWikiPage]] or [[EditWikiPage]] when the edit
   *   came through this API
   */
-final case class WikiCommit(
+final case class WikiCommit private[codeberg4s] (
     sha: CommitSha,
     author: Option[GitIdentity],
     committer: Option[GitIdentity],

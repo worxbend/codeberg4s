@@ -33,7 +33,7 @@ import java.time.Instant
   * @param expiresAt
   *   when the bytes are removed, absent when the instance did not report a retention window
   */
-final case class ActionArtifact(
+final case class ActionArtifact private[codeberg4s] (
     id: ArtifactId,
     name: Option[String],
     sizeInBytes: Option[Long],

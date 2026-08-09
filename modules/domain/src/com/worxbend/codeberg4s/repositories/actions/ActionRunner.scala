@@ -32,7 +32,7 @@ package com.worxbend.codeberg4s.repositories.actions
   *   the repository this runner belongs to; `0` on the wire, and absent here, when it belongs to a user or an
   *   organisation
   */
-final case class ActionRunner(
+final case class ActionRunner private[codeberg4s] (
     id: RunnerId,
     uuid: Option[String],
     name: Option[String],

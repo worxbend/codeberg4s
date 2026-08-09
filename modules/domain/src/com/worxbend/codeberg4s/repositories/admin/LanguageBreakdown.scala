@@ -17,7 +17,7 @@ import java.time.Instant
   * @param bytes
   *   bytes per language name, exactly as the instance reported them
   */
-final case class LanguageBreakdown(bytes: Map[String, Long]):
+final case class LanguageBreakdown private[codeberg4s] (bytes: Map[String, Long]):
 
   /** Every counted byte, across all languages. `0` for a repository with no analysis. */
   def total: Long = bytes.values.sum
@@ -56,7 +56,7 @@ object LanguageBreakdown:
   * @param updatedAt
   *   when its repository count last changed
   */
-final case class TopicSummary(
+final case class TopicSummary private[codeberg4s] (
     id: TopicId,
     name: String,
     repositoryCount: Long,

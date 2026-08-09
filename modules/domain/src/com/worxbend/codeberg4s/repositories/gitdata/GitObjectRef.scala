@@ -19,4 +19,4 @@ import com.worxbend.codeberg4s.repositories.CommitSha
   * @param url
   *   the API URL of the object, when the endpoint reports one
   */
-final case class GitObjectRef(sha: CommitSha, kind: Option[GitObjectKind], url: Option[String])
+final case class GitObjectRef private[codeberg4s] (sha: CommitSha, kind: Option[GitObjectKind], url: Option[String])

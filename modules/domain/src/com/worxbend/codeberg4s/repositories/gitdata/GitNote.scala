@@ -14,4 +14,4 @@ import com.worxbend.codeberg4s.repositories.Commit
   * @param commit
   *   the commit the note is attached to, as the endpoint echoes it back. Absent when the instance sent no `commit`
   */
-final case class GitNote(message: Option[String], commit: Option[Commit])
+final case class GitNote private[codeberg4s] (message: Option[String], commit: Option[Commit])

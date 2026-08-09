@@ -209,7 +209,7 @@ object ActivityOperation:
   * @param createdAt
   *   when it happened
   */
-final case class RepositoryActivity(
+final case class RepositoryActivity private[codeberg4s] (
     id: ActivityId,
     actor: Option[User],
     operation: Option[ActivityOperation],

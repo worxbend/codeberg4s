@@ -31,7 +31,7 @@ import java.util.Locale
   * @param fields
   *   the form fields, in file order, for a template that is a form. Empty for a Markdown template
   */
-final case class IssueTemplate(
+final case class IssueTemplate private[codeberg4s] (
     fileName: String,
     name: Option[String],
     about: Option[String],
@@ -76,7 +76,7 @@ final case class IssueTemplate(
   *   `IssueFormFieldVisible` is a bare `type: string` that enumerates nothing, and inventing a vocabulary here would be
   *   exactly the guesswork `docs/HAZARDS.md` §1 warns against
   */
-final case class IssueFormField(
+final case class IssueFormField private[codeberg4s] (
     id: Option[String],
     fieldType: Option[IssueFormFieldType],
     attributes: Map[String, String],

@@ -20,7 +20,7 @@ import com.worxbend.codeberg4s.repositories.ContentEntry
   * @param verification
   *   the instance's signature verdict for the new commit, when it reports one
   */
-final case class FileChange(
+final case class FileChange private[codeberg4s] (
     commit: Option[FileCommit],
     content: Option[ContentEntry],
     verification: Option[CommitVerification],

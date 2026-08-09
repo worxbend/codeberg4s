@@ -18,7 +18,7 @@ package com.worxbend.codeberg4s.repositories.hooks
   *   the script itself, verbatim. Absent for a hook that has none, which is what an inactive hook usually is. '''Not
   *   base64''' — the spec declares it a plain string, unlike a wiki page's content
   */
-final case class GitHook(
+final case class GitHook private[codeberg4s] (
     name: GitHookName,
     isActive: Option[Boolean],
     content: Option[String],

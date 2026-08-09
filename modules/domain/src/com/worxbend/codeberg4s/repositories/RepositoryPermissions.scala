@@ -13,4 +13,4 @@ package com.worxbend.codeberg4s.repositories
   * @param pull
   *   may read; `true` for any repository a caller can see at all
   */
-final case class RepositoryPermissions(admin: Boolean, push: Boolean, pull: Boolean)
+final case class RepositoryPermissions private[codeberg4s] (admin: Boolean, push: Boolean, pull: Boolean)

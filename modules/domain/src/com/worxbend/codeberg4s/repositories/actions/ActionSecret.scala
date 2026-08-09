@@ -25,7 +25,7 @@ import java.time.Instant
   *   when the secret was first set. Forgejo reports no modification time, so a secret that has been rewritten looks
   *   exactly like one that has not
   */
-final case class ActionSecret(
+final case class ActionSecret private[codeberg4s] (
     name: SecretName,
     createdAt: Option[Instant],
 )

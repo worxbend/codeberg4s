@@ -330,7 +330,7 @@ object ChangeFiles:
   * @param verification
   *   what Forgejo made of the commit's signature, when it signed one
   */
-final case class FileChangeSet(
+final case class FileChangeSet private[codeberg4s] (
     commit: Option[FileCommit],
     files: Vector[ContentEntry],
     verification: Option[CommitVerification],
