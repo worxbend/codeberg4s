@@ -36,7 +36,7 @@ import com.worxbend.codeberg4s.users.User
   *   Forgejo's display name for the role, such as `Owner` or `Collaborator`. It is instance-configurable and localised,
   *   so it stays text rather than becoming an enum this library would have to keep in step with a deployment
   */
-final case class CollaboratorAccess(
+final case class CollaboratorAccess private[codeberg4s] (
     user: User,
     permission: Option[TeamPermission],
     rawPermission: Option[String],

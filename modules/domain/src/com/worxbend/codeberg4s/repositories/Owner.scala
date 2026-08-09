@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories
 
+import com.worxbend.codeberg4s.PathSegment
 import com.worxbend.codeberg4s.ValidationError
 
 /** The user or organisation that owns a repository — the first segment of `owner/name`.
@@ -13,8 +14,8 @@ object Owner:
 
   /** Parses an owner.
     *
-    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, and a value containing a
-    * control character.
+    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, a value containing a
+    * control character, and the traversal segments `.` and `..`.
     *
     * @return
     *   the trimmed owner, or a [[ValidationError]] on the `"owner"` field

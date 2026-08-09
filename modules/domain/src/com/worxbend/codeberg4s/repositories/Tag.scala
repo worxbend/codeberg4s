@@ -21,7 +21,7 @@ package com.worxbend.codeberg4s.repositories
   * @param archiveDownloads
   *   how often those archives have been downloaded, when the instance reports it
   */
-final case class Tag(
+final case class Tag private[codeberg4s] (
     name: TagName,
     message: Option[String],
     commitSha: CommitSha,

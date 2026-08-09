@@ -40,6 +40,22 @@ def mvnDeps = Seq(mvn"com.worxbend::codeberg4s-client:0.1.0")
 libraryDependencies += "com.worxbend" %% "codeberg4s-client" % "0.1.0"
 ```
 
+### Requires a Java 25 runtime
+
+**The jars are compiled for Java 25** (class-file major version 69), the current
+long-term-support release. A Java 21 or Java 17 JVM cannot load them: it fails
+at class-load time with an `UnsupportedClassVersionError` naming "class file
+version 69.0", which says nothing about which library caused it. Check what you
+are on with `java -version` before adding the dependency.
+
+This is deliberate, and it does narrow who can adopt the library — see
+[`CONTRIBUTING.md`](CONTRIBUTING.md#getting-set-up) for the same requirement on
+the build side. Java 25 is a policy floor, not a technical one: the lowest
+release the source actually compiles against is Java 21, because
+`SttpHttpPort` calls `java.net.http.HttpClient.shutdown()` and that method was
+added in Java 21. If a Java 21 baseline would unblock you, open an issue and
+say so — moving the floor down is a one-line change to `build.mill`.
+
 `codeberg4s-client` pulls in `-transport`, `-codec`, `-core` and `-domain`
 transitively. Depend on a narrower one if you want less: `codeberg4s-domain` is
 the models and the error ADT with no dependencies at all, which is enough to
@@ -412,7 +428,7 @@ val attempted: Future[Either[CodebergError, Repository]] =
 Pick one per call site. `.attempt` is the convenience rail with its failure
 channel materialised, so the two cannot drift.
 
-`CodebergError` is a closed family of five:
+`CodebergError` is a closed family of six:
 
 | Case                | Means                                                           | Reaction |
 | ------------------- | ---------------------------------------------------------------- | -------- |
@@ -421,6 +437,7 @@ channel materialised, so the two cannot drift.
 | `DecodingFailed`    | a 2xx payload did not match the model                            | retrying will not help; `path` and `snippet` are what a bug report needs |
 | `Validation`        | a smart constructor rejected an argument                         | fix the argument |
 | `RetriesExhausted`  | the retry engine gave up; `last` is preserved                    | surface `last` |
+| `WalkTruncated`     | a `PageWalk` hit its page cap with pages still to come            | walk again from `resumeFrom`, or narrow the query |
 
 There is **no** `RateLimited` case. Forgejo reports rate limiting as an
 ordinary `429`, so it arrives as `Api(ctx, 429, body)` — and the retry engine
@@ -430,6 +447,8 @@ which arrives as `RetriesExhausted` wrapping that `Api`.
 Every remote case carries a `CallContext` — operation id, method, redacted URI,
 optional request id, elapsed milliseconds — so you can tell *which* call failed
 without correlating logs. `error.describe` renders it, bounded and secret-free.
+`Validation` and `WalkTruncated` carry none, because neither of them is a
+request that reached a server.
 
 ## Pagination
 
@@ -513,6 +532,16 @@ PageWalk.all(PageParams.First): params =>
 `PageWalk.fold` and `PageWalk.foreach` are the bounded-memory forms — reach for
 those on a repository with tens of thousands of issues.
 
+A walk visits at most `PageWalk.MaxPages` (10 000) pages, so an instance that
+offers a next page forever cannot hang your process. Reaching that cap with the
+server still offering another page **fails** the `Future` with
+`WalkTruncated(pagesVisited, resumeFrom)` rather than handing back what it had
+gathered: a short answer shaped exactly like a complete one is the failure mode
+this whole section exists to prevent. `resumeFrom` is the window the walk was
+about to request, page size included, so continuing is `PageWalk.all(resumeFrom)`.
+A listing whose last page happens to be the ten-thousandth and offers nothing
+further has ended naturally and succeeds.
+
 ## Configuration
 
 ```scala
@@ -532,21 +561,45 @@ val selfHosted: Either[ValidationError, CodebergConfig] =
     agent <- UserAgent.from("my-app/1.0")
     size  <- PageSize.from(50)
   yield CodebergConfig(
-    baseUri         = base,
-    auth            = Auth.Anonymous,
-    retry           = RetryPolicy.Default,
-    userAgent       = agent,
-    defaultPageSize = size,
-    connectTimeout  = 10.seconds,
-    readTimeout     = 30.seconds,
+    baseUri              = base,
+    auth                 = Auth.Anonymous,
+    retry                = RetryPolicy.Default,
+    userAgent            = agent,
+    defaultPageSize      = size,
+    connectTimeout       = 10.seconds,
+    readTimeout          = 30.seconds,
+    maxResponseBodyBytes = CodebergConfig.DefaultMaxResponseBodyBytes,
+    maxDownloadBodyBytes = CodebergConfig.DefaultMaxDownloadBodyBytes,
   )
 ```
 
-Every field is a validated type, so a misconfigured client fails at
-construction rather than on its first call. `CodebergConfig.toString` is safe to
-log: the credential types redact themselves.
+Every field naming a domain concept is a validated type, so a misconfigured
+client fails at construction rather than on its first call. The timeouts and the
+two byte bounds are plain quantities and are taken as given.
+`CodebergConfig.toString` is safe to log: the credential types redact
+themselves.
 
 `Auth` is `Anonymous`, `Token(ApiToken)` or `Basic(username, Password)`.
+
+### Response size
+
+This library reads a whole response into memory; it does not stream. So every
+request carries a byte bound, and a body that passes it is abandoned part-read
+as `CodebergError.Transport(ctx, TransportCause.ResponseTooLarge(detail))`.
+
+- `maxResponseBodyBytes` — 16 MiB, applied to every textual response. The
+  largest JSON body Forgejo produces is a file's contents, a blob capped by the
+  instance's `default_max_blob_size` (10 MiB on codeberg.org) and then
+  base64-encoded, which costs four bytes per three; 16 MiB clears that.
+- `maxDownloadBodyBytes` — 50 MiB, applied only to `client.downloads`, which
+  fetches ZIP archives. An artifact is whatever a workflow uploaded, so nothing
+  about `default_max_blob_size` bounds it, and one shared number would have had
+  to be either too small for ordinary artifacts or too large to bound JSON
+  usefully.
+
+Exceeding either bound is **not** retried. Repeating the call would download the
+oversized body once per attempt, which turns one oversized response into
+`maxAttempts` of them.
 
 ### Retries
 

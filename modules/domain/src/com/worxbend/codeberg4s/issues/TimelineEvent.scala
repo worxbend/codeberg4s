@@ -56,7 +56,7 @@ import java.time.Instant
   * @param trackedTime
   *   the time entry a timetracking event recorded
   */
-final case class TimelineEvent(
+final case class TimelineEvent private[codeberg4s] (
     id: CommentId,
     eventType: Option[String],
     body: Option[String],

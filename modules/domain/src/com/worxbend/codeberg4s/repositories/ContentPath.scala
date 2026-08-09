@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories
 
+import com.worxbend.codeberg4s.PathSegment
 import com.worxbend.codeberg4s.ValidationError
 
 /** A path to a file or directory inside a repository, as `GET /repos/{owner}/{repo}/contents/{filepath}` spells it.
@@ -33,5 +34,10 @@ object ContentPath:
     /** The path split on `/`, for appending to a request path one segment at a time. */
     def segments: List[String] = path.split('/').toList
 
-    /** The last segment — the file or directory's own name. */
-    def name: String = path.split('/').lastOption.getOrElse(path)
+    /** The last segment — the file or directory's own name.
+      *
+      * `models/user.go` gives `user.go`; a path with no `/` at all is already its own name and is returned unchanged.
+      * Read off the last `/` rather than by splitting, so the answer costs one substring instead of an array holding
+      * every segment of the path. [[from]] has already rejected a trailing `/`, so the last segment is never empty.
+      */
+    def name: String = path.substring(path.lastIndexOf('/') + 1)

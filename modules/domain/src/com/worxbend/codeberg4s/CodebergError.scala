@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s
 
+import com.worxbend.codeberg4s.paging.PageParams
+
 /** Every failure this library reports, as one closed family.
   *
   * Recoverable failures are values: no operation throws for a `404`, a timeout, or a malformed payload. Each remote
@@ -13,6 +15,8 @@ package com.worxbend.codeberg4s
   *   - [[CodebergError.Validation]] — the request was rejected before it was built; fix the argument.
   *   - [[CodebergError.RetriesExhausted]] — the retry engine gave up; `last` is the failure that ended it, never
   *     discarded.
+  *   - [[CodebergError.WalkTruncated]] — a walk over every page hit its page cap with pages still to come; the answer
+  *     it would otherwise have returned was incomplete, so it is not returned at all.
   */
 enum CodebergError:
 
@@ -30,6 +34,23 @@ enum CodebergError:
 
   /** The retry engine ran out of attempts. `last` preserves the failure of the final attempt. */
   case RetriesExhausted(ctx: CallContext, attempts: Int, last: CodebergError)
+
+  /** A walk over every page of a collection stopped at its page cap while the server was still offering another page.
+    *
+    * This is not a remote failure — nothing went wrong on the wire — which is why it carries no [[CallContext]]. It
+    * says that the result the walk was assembling covers only `pagesVisited` pages of a longer collection, so handing
+    * that result back would be handing back a short answer indistinguishable from a complete one.
+    *
+    * `resumeFrom` is the window the walk was about to request, page size included. Passing it back as the starting
+    * window continues exactly where this walk stopped, which is what makes the failure recoverable rather than merely
+    * informative.
+    *
+    * @param pagesVisited
+    *   how many pages were fetched and folded before the cap was reached
+    * @param resumeFrom
+    *   the page the walk would have requested next
+    */
+  case WalkTruncated(pagesVisited: Int, resumeFrom: PageParams)
 
 object CodebergError:
 
@@ -62,6 +83,11 @@ object CodebergError:
           s"invalid ${problem.field}: ${bound(problem.message)}"
         case RetriesExhausted(ctx, attempts, last)     =>
           s"${renderContext(ctx)} gave up after $attempts attempts; last failure: ${bound(last.describe)}"
+        case WalkTruncated(pagesVisited, resumeFrom)   =>
+          // Every fragment is a number this library produced, so there is nothing
+          // here for `bound` to protect against.
+          s"page walk stopped after $pagesVisited pages with more pages still offered; " +
+            s"resume at page ${resumeFrom.page.value} with limit ${resumeFrom.size.value}"
 
   /** The most detail fragments any one rendering embeds, so the whole string stays bounded rather than merely each
     * piece of it.

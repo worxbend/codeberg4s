@@ -28,14 +28,14 @@ import com.worxbend.codeberg4s.ValidationError
   * a redacted URI and never a body, so no [[com.worxbend.codeberg4s.CodebergError]] built '''from a value''' can carry
   * the material. `AccountSecrecySuite` asserts every one of those paths.
   *
-  * '''There is one residual path, and it is the pipeline's rather than this type's.'''
-  * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] carries a bounded snippet of the '''raw response body''',
-  * taken before any conversion — so a `201` whose payload carries a `client_secret` and also fails to convert for some
-  * other reason produces a failure whose snippet contains the credential in the clear. That is inherent to reporting
-  * what could not be decoded, applies equally to every credential-bearing response in this library, and is bounded at
-  * [[com.worxbend.codeberg4s.CodebergError.MaxSnippetLength]]. `UserApplicationApiSuite` pins the behaviour so it
-  * cannot change unnoticed. The consequence for an application: a `DecodingFailed` from a creation is not safe to log
-  * verbatim, while every '''successful''' result is.
+  * '''The raw body is closed off too, and that is the pipeline's doing rather than this type's.'''
+  * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] ordinarily carries a bounded snippet of the raw response
+  * body, taken before any conversion — so a `201` whose payload carries a `client_secret` and fails to convert for some
+  * other reason would report the credential in the clear, mask or no mask. The decoder the creation and the update pass
+  * to the pipeline is therefore marked `Decode.sensitive`, and the pipeline substitutes a fixed placeholder naming the
+  * size of the withheld body. The consequence for an application: a `DecodingFailed` from any call in this group is
+  * safe to log, and so is every successful result. `UserApplicationApiSuite` asserts both, and asserts that a
+  * '''read''' keeps its snippet — a read carries no secret to withhold.
   *
   * Instances compare structurally on the underlying material, so a value stays comparable in a test. The comparison is
   * not constant-time; this type guards against accidental disclosure, not against a timing oracle.

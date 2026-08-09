@@ -21,7 +21,7 @@ distinguishes four things:
 | Constitution requirement            | Scala / Mill equivalent                                                        | Status |
 | ----------------------------------- | ------------------------------------------------------------------------------ | ------ |
 | Compile with warnings fatal         | `scalacOptions` with `-Werror -Wunused:all -Wvalue-discard -Wnonunit-statement` | Wired  |
-| Formatter                           | Scalafmt 3.11.4, `mill mill.scalalib.scalafmt/`                                 | Wired  |
+| Formatter                           | Scalafmt 3.11.5, `mill mill.scalalib.scalafmt/`                                 | Wired  |
 | Linter / semantic rules             | Scalafix, `mill modules.__.fix`, rules in `.scalafix.conf`                       | Wired  |
 | Coverage                            | scoverage via `mill-contrib-scoverage`; thresholds in `scripts/coverage-gate.sc`, called by `verify.sh` | Wired (report + gate script); thresholds never yet asserted on a real report |
 | Mutation tool (`mutate4*`)          | **Stryker4s 1.1.1** command runner over `domain` + `core` + `codec`, wrapped by `scripts/mutate.sh` | **Runner proven, result not** |
@@ -49,10 +49,14 @@ repository it tokenises Scala 3 indentation syntax, `given`/`using`, `enum`,
 `extension` and end markers without a single lexical error, and the duplications
 it reports are genuine. It is a real gate, not a stub.
 
-It is also **red**. `scripts/cpd.sh --report` finds **323 duplication groups at
-the 40-token threshold** — 128 source locations in `codec`, 40 in `client`, 15
-in `domain`, 2 in `core` — so `scripts/cpd.sh` in gate mode exits 1 today and
-`./verify.sh --with-slow` fails at that step. The findings corroborate
+It is also **red**. Measured on 2026-08-09, `scripts/cpd.sh --report` finds
+**378 duplication groups at the 40-token threshold**, spread over 1360 source
+locations — 764 in `codec`, 541 in `client`, 45 in `domain`, 8 in `core`, 2 in
+`transport`. `scripts/cpd.sh` in gate mode therefore exits 1 today.
+`./verify.sh --with-slow` does not fail on that count alone: it compares
+against `CPD_BASELINE_GROUPS` in `verify.sh`, which records the same 378, and
+fails only when the count rises above it. The recorded number is debt written
+down, not debt forgiven. The findings corroborate
 `docs/LEDGER.md` §"Helpers awaiting promotion" (`FilterToken.from` against
 `PathSegment.from`, the repeated `Wire.required`/`Wire.validated` blocks in the
 DTOs, the `page`/`limit` pair). Some groups are import blocks, which is CPD

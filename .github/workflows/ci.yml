@@ -33,7 +33,7 @@ jobs:
     # longer has hung, not slowed down.
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # verify.sh's scalafmt step asks Git which Scala sources are tracked
           # (.scalafmt.conf sets project.git = true). A shallow checkout is
@@ -49,13 +49,26 @@ jobs:
       - name: Verify
         run: ./verify.sh
 
-      # Coverage HTML is the one artifact worth keeping from a pull request:
-      # the gate reports a percentage, and the report says which lines.
+      # The coverage report is the one artifact worth keeping from a pull
+      # request: the gate prints a percentage, the report says which lines.
+      #
+      # It is XML, not HTML. verify.sh's coverage step runs
+      # `mill <module>.scoverage.xmlReport` and nothing else, because XML is
+      # what scripts/coverage-gate.sc and scripts/crap.sc read. Mill can also
+      # render `scoverage.htmlReport`, but generating it here would mean a
+      # `mill` invocation in this workflow, which the header above rules out,
+      # and adding it to verify.sh would charge every local run for a page
+      # nothing reads. To read a downloaded report as a web page, run
+      # `./mill modules.__.scoverage.htmlReport` locally against the same
+      # commit.
+      #
+      # The path is the report directory itself rather than the whole
+      # `scoverage/` tree, which is mostly Mill's own task cache.
       - name: Upload coverage reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: scoverage-${{ github.run_id }}
-          path: out/modules/*/scoverage/
+          name: scoverage-xml-${{ github.run_id }}
+          path: out/modules/*/scoverage/xmlReport.dest/scoverage.xml
           if-no-files-found: ignore
           retention-days: 14

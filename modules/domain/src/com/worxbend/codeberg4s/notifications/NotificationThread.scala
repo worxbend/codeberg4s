@@ -50,7 +50,7 @@ import java.time.Instant
   *   when the thread last changed. Absent when the instance omitted it or sent one of Forgejo's zero-time sentinels;
   *   see [[com.worxbend.codeberg4s.codec.Timestamps]]
   */
-final case class NotificationThread(
+final case class NotificationThread private[codeberg4s] (
     id: NotificationThreadId,
     subject: Option[NotificationSubject],
     repository: Option[Repository],

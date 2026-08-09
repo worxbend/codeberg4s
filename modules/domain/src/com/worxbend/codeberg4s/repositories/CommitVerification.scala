@@ -19,7 +19,7 @@ package com.worxbend.codeberg4s.repositories
   *   the exact bytes that were signed — the commit object as Git serialises it. Present so a caller can verify
   *   independently rather than take [[isVerified]] on trust
   */
-final case class CommitVerification(
+final case class CommitVerification private[codeberg4s] (
     isVerified: Boolean,
     reason: Option[String],
     signature: Option[String],

@@ -20,4 +20,4 @@ import java.time.Instant
   * @param createdAt
   *   when the reaction was recorded
   */
-final case class Reaction(content: ReactionContent, user: Option[User], createdAt: Option[Instant])
+final case class Reaction private[codeberg4s] (content: ReactionContent, user: Option[User], createdAt: Option[Instant])

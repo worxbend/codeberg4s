@@ -20,7 +20,7 @@ package com.worxbend.codeberg4s.repositories
   * @param verification
   *   the instance's signature verdict, when it reports one
   */
-final case class CommitDetails(
+final case class CommitDetails private[codeberg4s] (
     message: Option[String],
     url: Option[String],
     author: Option[GitIdentity],

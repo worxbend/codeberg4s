@@ -26,7 +26,7 @@ package com.worxbend.codeberg4s.repositories
   *   the name of the protection rule that matched, absent when none did. Forgejo sends `""` rather than `null` for
   *   "none", and that spelling is folded away before it reaches this model
   */
-final case class Branch(
+final case class Branch private[codeberg4s] (
     name: BranchName,
     commit: CommitSummary,
     isProtected: Boolean,

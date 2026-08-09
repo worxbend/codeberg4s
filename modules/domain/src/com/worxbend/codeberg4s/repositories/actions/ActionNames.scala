@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions
 
+import com.worxbend.codeberg4s.PathSegment
 import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.repositories.PathSegment
 
 /** The identifier of a registered runner, as the runner endpoints take it in a path.
   *
@@ -17,9 +17,9 @@ object RunnerId:
 
   /** Parses a runner identifier from its string spelling.
     *
-    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, and a value containing a
-    * control character — see [[com.worxbend.codeberg4s.repositories.PathSegment]] for why that is a security boundary
-    * and not a convenience.
+    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, a value containing a
+    * control character, and the traversal segments `.` and `..` — see
+    * [[com.worxbend.codeberg4s.repositories.PathSegment]] for why that is a security boundary and not a convenience.
     *
     * @return
     *   the identifier, or a [[ValidationError]] on the `"runnerId"` field
@@ -55,9 +55,10 @@ object SecretName:
 
   /** Parses a secret name.
     *
-    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, and a value containing a
-    * control character. Forgejo applies further rules of its own — it rejects a name that starts with a digit, and one
-    * that uses a reserved `GITHUB_` or `GITEA_` prefix — which arrive as a `400`, not as a [[ValidationError]].
+    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, a value containing a
+    * control character, and the traversal segments `.` and `..`. Forgejo applies further rules of its own — it rejects
+    * a name that starts with a digit, and one that uses a reserved `GITHUB_` or `GITEA_` prefix — which arrive as a
+    * `400`, not as a [[ValidationError]].
     *
     * @return
     *   the name, or a [[ValidationError]] on the `"secretName"` field
@@ -81,8 +82,9 @@ object VariableName:
 
   /** Parses a variable name.
     *
-    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, and a value containing a
-    * control character. As with [[SecretName]], Forgejo's own naming rules are enforced remotely and arrive as a `400`.
+    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, a value containing a
+    * control character, and the traversal segments `.` and `..`. As with [[SecretName]], Forgejo's own naming rules are
+    * enforced remotely and arrive as a `400`.
     *
     * @return
     *   the name, or a [[ValidationError]] on the `"variableName"` field
@@ -107,9 +109,9 @@ object WorkflowFileName:
 
   /** Parses a workflow file name.
     *
-    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, and a value containing a
-    * control character. The extension is not checked: Forgejo accepts both `.yml` and `.yaml`, and a name this library
-    * refused would be a workflow the caller could not dispatch.
+    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, a value containing a
+    * control character, and the traversal segments `.` and `..`. The extension is not checked: Forgejo accepts both
+    * `.yml` and `.yaml`, and a name this library refused would be a workflow the caller could not dispatch.
     *
     * @return
     *   the name, or a [[ValidationError]] on the `"workflowFileName"` field

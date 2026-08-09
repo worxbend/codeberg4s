@@ -10,7 +10,7 @@ package com.worxbend.codeberg4s.miscellaneous
   * @param armored
   *   the ASCII-armored key block exactly as the instance sent it, never blank
   */
-final case class SigningKey(armored: String)
+final case class SigningKey private[codeberg4s] (armored: String)
 
 object SigningKey:
 

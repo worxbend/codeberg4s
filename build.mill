@@ -1,9 +1,11 @@
 //| mvnDeps:
 //| - com.lihaoyi::mill-contrib-scoverage:1.1.7
 //| - com.goyeau::mill-scalafix::0.6.2
+//| - com.github.lolgab::mill-mima::0.2.2
 
 package build
 
+import com.github.lolgab.mill.mima.Mima
 import com.goyeau.mill.scalafix.ScalafixModule
 import mill.*
 import mill.contrib.scoverage.ScoverageModule
@@ -15,12 +17,12 @@ object Versions:
   val scala          = "3.8.4"
   val sttp           = "4.0.26"
   val sttpModel      = "1.7.18"
-  val jsoniter       = "2.39.1"
-  val munit          = "1.3.4"
+  val jsoniter       = "2.40.1"
+  val munit          = "1.3.5"
   val munitScalcheck = "1.3.0"
   val scalacheck     = "1.19.0"
   val testcontainers = "0.44.1"
-  val scoverage      = "2.3.0"
+  val scoverage      = "2.5.2"
 
 /** Everything the published POMs say about this project.
   *
@@ -54,6 +56,33 @@ object Publish:
     developers     = Seq(Developer("w0rxbend", "w0rxbend", "https://codeberg.org/worxbend")),
   )
 
+  /** The already-released versions that every artifact in this build must stay binary compatible with.
+    *
+    * MIMA — the Migration Manager, `com.typesafe:mima-core` driven here by the `mill-mima` plugin — answers one
+    * question: can a program that was compiled against version X of a jar be run against this build without relinking?
+    * It answers it by comparing the class files, so it catches the changes a compiler cannot see from this side, such
+    * as a removed `copy` overload or a widened opaque type.
+    *
+    * '''This list is empty on purpose, and emptying it was not an oversight.''' Nothing has ever been published under
+    * `com.worxbend`, so there is no jar on Maven Central to compare against; a non-empty list here would make
+    * `mimaReportBinaryIssues` fail with a resolution error rather than a compatibility report. The moment `v0.1.0` is
+    * on Central, this becomes:
+    *
+    * {{{
+    * val binaryCompatibleWith: Seq[String] = Seq("0.1.0")
+    * }}}
+    *
+    * and stays a list of every release in the current compatibility window — under Early SemVer, every `0.1.x` while
+    * the minor is `1`, reset to just the new minor when a deliberate break bumps it. `RELEASING.md` § "Binary
+    * compatibility is checked by MIMA" owns that procedure, measures what MIMA does and does not see through a
+    * `private[codeberg4s]` constructor, and the release checklist carries the step.
+    *
+    * While the list is empty the check is wired but inert: `./mill modules.__.mimaReportBinaryIssues` fails with the
+    * plugin's own "No previous artifacts configured" message, which is the honest answer to "is this build compatible
+    * with nothing?". No other task depends on it, so an empty list cannot fail a compile, a test or `verify.sh`.
+    */
+  val binaryCompatibleWith: Seq[String] = Seq.empty
+
 /** Common settings for every module in the build, published or not.
   *
   * Warnings are errors here on purpose — see CLAUDE.md "Compiler settings".
@@ -62,7 +91,14 @@ trait Codeberg4sModule extends ScalaModule with ScalafmtModule with ScoverageMod
   def scalaVersion     = Versions.scala
   def scoverageVersion = Versions.scoverage
 
+  /** `-java-output-version` is Scala 3's spelling of `javac --release`: it both stamps the class-file version and hides
+    * any JDK API newer than the named release, so a call that would not exist on a Java 25 runtime fails here rather
+    * than at a consumer's link time. Without it the compiler emits its own default — Java 17 bytecode for Scala 3.8.4 —
+    * no matter which JDK ran the build, which is a promise nobody made on purpose. `.mill-jvm-version` pins the JDK
+    * that has to understand `25`.
+    */
   def scalacOptions = Seq(
+    "-java-output-version:25",
     "-deprecation",
     "-feature",
     "-explain",
@@ -92,11 +128,38 @@ trait Codeberg4sModule extends ScalaModule with ScalafmtModule with ScoverageMod
   * Artifact ids are written out per module rather than derived from the module name, because `moduleSegments` would
   * publish `modules.domain` as `modules-domain` and because an artifact id is a permanent promise that must not move
   * when a module is renamed.
+  *
+  * Mixing in `Mima` here rather than per module is what makes one line cover all five artifacts: the plugin derives the
+  * coordinate to download from `pomSettings().organization`, `artifactId()` and each entry of `mimaPreviousVersions`,
+  * so `modules.codec` is checked against `com.worxbend:codeberg4s-codec_3:<version>` without naming it anywhere.
   */
-trait Codeberg4sPublishModule extends Codeberg4sModule with PublishModule:
+trait Codeberg4sPublishModule extends Codeberg4sModule with PublishModule with Mima:
   def pomSettings    = Publish.pom
   def publishVersion = Publish.version
   def versionScheme  = Some(VersionScheme.EarlySemVer)
+
+  /** The releases this artifact is checked against by `./mill <module>.mimaReportBinaryIssues`.
+    *
+    * '''Every module that inherits this trait inherits the claim that each listed version of it exists on Maven
+    * Central.''' That claim is true for the five artifacts released together as `0.1.0`, and it is false for any
+    * artifact added later: a sixth module first published in, say, `0.3.0` would send MIMA looking for a
+    * `codeberg4s-newthing_3:0.1.0` that was never uploaded, and the check would fail on a download error that says
+    * nothing about compatibility.
+    *
+    * A module first published after the versions in [[Publish.binaryCompatibleWith]] therefore overrides this with the
+    * releases that really exist for it — and only those:
+    *
+    * {{{
+    * object newthing extends Codeberg4sPublishModule:
+    *   def artifactName = "codeberg4s-newthing"
+    *   // First shipped in 0.3.0; there is no 0.1.0 or 0.2.0 of this artifact to compare against.
+    *   override def mimaPreviousVersions = Task { Seq("0.3.0") }
+    * }}}
+    *
+    * For the release in which the new module is itself brand new, that override is `Seq.empty` until the release lands,
+    * exactly as the shared list is empty today.
+    */
+  def mimaPreviousVersions = Task(Publish.binaryCompatibleWith)
 
   /** Mill feeds `scalacOptions` to Scaladoc as well as to the compiler, so `-Werror` would let one unresolved
     * `[[link]]` fail `docJar` — and Maven Central rejects a bundle that has no Javadoc jar. Doc warnings still print;
@@ -123,14 +186,20 @@ object modules extends Module:
     *
     * Depends on `core` because it is the adapter that implements core's `Decode` port — an adapter depending on the
     * port it satisfies is the expected direction. It still must not import sttp.
+    *
+    * Only `jsoniter-scala-core` is declared. The companion `jsoniter-scala-macros` artifact exists to '''derive''' a
+    * `JsonValueCodec[A]` from a case class at compile time, and this module derives nothing: `JsonValue.scala`
+    * hand-writes the single `JsonValueCodec` over a document model, because the Forgejo API needs "every field
+    * optional, `null` and absent identical, unknown kinds tolerated" — a shape derivation cannot express (see
+    * `docs/HAZARDS.md` §1). Declaring the macros artifact anyway put roughly a megabyte on every consumer's classpath
+    * for a `JsonCodecMaker` nothing calls.
     */
   object codec extends Codeberg4sPublishModule:
     def artifactName = "codeberg4s-codec"
     def moduleDeps   = Seq(domain, core)
 
     def mvnDeps = Seq(
-      mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core:${Versions.jsoniter}",
-      mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:${Versions.jsoniter}",
+      mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core:${Versions.jsoniter}"
     )
     object test extends Codeberg4sTests
 

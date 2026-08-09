@@ -23,7 +23,11 @@ import com.worxbend.codeberg4s.repositories.CommitFile
   *   the files the difference touches. Names and statuses only — the diff itself is a different endpoint, and
   *   [[com.worxbend.codeberg4s.repositories.CommitFile]] says why
   */
-final case class CommitComparison(totalCommits: Long, commits: Vector[Commit], files: Vector[CommitFile]):
+final case class CommitComparison private[codeberg4s] (
+    totalCommits: Long,
+    commits: Vector[Commit],
+    files: Vector[CommitFile],
+):
 
   /** Whether the instance returned fewer commits than it says the comparison holds — see the note on [[totalCommits]]. */
   def isTruncated: Boolean = commits.size.toLong < totalCommits

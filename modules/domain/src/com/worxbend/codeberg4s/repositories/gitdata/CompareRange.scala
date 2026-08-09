@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
+import com.worxbend.codeberg4s.PathSegment
 import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.repositories.PathSegment
 
 /** The `basehead` path parameter of `GET /repos/{owner}/{repo}/compare/{basehead}` — two refs joined by `...`.
   *

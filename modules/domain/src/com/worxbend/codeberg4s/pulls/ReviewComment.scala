@@ -56,7 +56,7 @@ import java.time.Instant
   * @param resolver
   *   the account that marked the conversation resolved, absent while it is still open
   */
-final case class ReviewComment(
+final case class ReviewComment private[codeberg4s] (
     id: ReviewCommentId,
     reviewId: Option[ReviewId],
     body: Option[String],

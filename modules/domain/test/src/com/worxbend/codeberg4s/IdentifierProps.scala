@@ -98,10 +98,16 @@ final class IdentifierProps extends PropertyBase:
 
   private def isHexadecimal(value: String): Boolean = value.forall(digit => "0123456789abcdef".contains(digit))
 
-  /** Types that must occupy exactly one URI path segment: no slash gets through, at any cost. */
+  /** Types that must occupy exactly one URI path segment: no slash and no dot segment gets through, at any cost. */
   private val singleSegment: Vector[StringIdentifier] =
     val promise: String => Boolean =
-      value => value.nonEmpty && !value.contains('/') && !value.exists(_.isControl) && isTrimmed(value)
+      value =>
+        value.nonEmpty &&
+        !value.contains('/') &&
+        !value.exists(_.isControl) &&
+        isTrimmed(value) &&
+        !value.equals(".") &&
+        !value.equals("..")
     Vector(
       StringIdentifier("Owner", "owner", PropertyBase.plainSegment, promise, text => Owner.from(text).map(_.value)),
       StringIdentifier(

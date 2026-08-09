@@ -40,7 +40,7 @@ object JsonDecoder:
     *   assembles the value from the object's fields
     */
   def objectOf[A](build: JsonFields => A): JsonDecoder[A] =
-    case JsonValue.Obj(fields) => Right(build(JsonFields(fields.toMap)))
+    case JsonValue.Obj(fields) => Right(build(JsonFields(fields)))
     case other                 => Left(DecodeFailure(JsonPath.Root, s"expected an object but found ${other.kind}"))
 
   /** A decoder for a top-level array of objects, which is what most Forgejo list endpoints return.
@@ -50,15 +50,13 @@ object JsonDecoder:
     */
   def arrayOf[A](element: JsonDecoder[A]): JsonDecoder[Vector[A]] =
     case JsonValue.Arr(values) =>
-      values.zipWithIndex.foldLeft(Right(Vector.empty): Either[DecodeFailure, Vector[A]]):
-        case (Left(failure), _)        => Left(failure)
-        case (Right(built), (raw, at)) =>
-          element.decode(raw).left.map(failure => failure.copy(path = JsonPath.Root.index(at))).map(built :+ _)
+      ArrayElements.convert(values): (raw, at) =>
+        element.decode(raw).left.map(failure => failure.copy(path = JsonPath.Root.index(at)))
     case other                 => Left(DecodeFailure(JsonPath.Root, s"expected an array but found ${other.kind}"))
 
   /** As [[objectOf]], for a build step that can itself fail — an envelope whose elements are decoded, say. */
   def objectOfEither[A](build: JsonFields => Either[DecodeFailure, A]): JsonDecoder[A] =
-    case JsonValue.Obj(fields) => build(JsonFields(fields.toMap))
+    case JsonValue.Obj(fields) => build(JsonFields(fields))
     case other                 => Left(DecodeFailure(JsonPath.Root, s"expected an object but found ${other.kind}"))
 
   /** Decodes every element of an already-extracted array, failing on the first element that will not decode.
@@ -67,8 +65,7 @@ object JsonDecoder:
     * under-report, and a caller cannot tell an under-report from a short page.
     */
   def all[A](values: Vector[JsonValue])(using element: JsonDecoder[A]): Either[DecodeFailure, Vector[A]] =
-    values.foldLeft(Right(Vector.empty): Either[DecodeFailure, Vector[A]]): (built, raw) =>
-      built.flatMap(soFar => element.decode(raw).map(soFar :+ _))
+    ArrayElements.convert(values)((raw, _) => element.decode(raw))
 
   /** A decoder that hands the parsed document over untouched, for the few payloads whose shape is not fixed. */
   given identity: JsonDecoder[JsonValue] = (value: JsonValue) => Right(value)
@@ -80,10 +77,14 @@ object JsonDecoder:
     */
   given vector[A](using element: JsonDecoder[A]): JsonDecoder[Vector[A]] = arrayOf(element)
 
-  /** A JSON object, as its fields. The shape [[JsonFields]] is built from, exposed for a caller decoding a payload
-    * whose keys are data rather than a schema — an EditorConfig, say.
+  /** A JSON object, as a map from field name to value, for a caller decoding a payload whose keys are data rather than
+    * a schema — an EditorConfig, say.
+    *
+    * This is the one place in the library that pays for a map. [[JsonFields]] reads named fields straight out of the
+    * vector the parser built; a caller who does not know the names has to enumerate them, and a map is the shape that
+    * caller wants. Anything with a fixed set of fields should use [[JsonFields.reader]] instead.
     */
-  given fields: JsonDecoder[Map[String, JsonValue]] = objectOf(_.underlying)
+  given fields: JsonDecoder[Map[String, JsonValue]] = objectOf(_.toMap)
 
   /** A JSON string.
     *
@@ -100,7 +101,13 @@ object JsonDecoder:
     case JsonValue.Bool(value) => Right(value)
     case other                 => Left(DecodeFailure(JsonPath.Root, s"expected a boolean but found ${other.kind}"))
 
-  /** A JSON number, truncated toward zero. */
+  /** A JSON number, truncated toward zero.
+    *
+    * The two number cases are named rather than matched through `JsonValue.Num`, whose extractor would build a
+    * `BigDecimal` for the [[JsonValue.Int64]] case that this decoder would then throw away — which is the cost the two
+    * cases exist to avoid.
+    */
   given long: JsonDecoder[Long] =
-    case JsonValue.Num(value) => Right(value.toLong)
-    case other                => Left(DecodeFailure(JsonPath.Root, s"expected a number but found ${other.kind}"))
+    case JsonValue.Int64(value)   => Right(value)
+    case JsonValue.Decimal(value) => Right(value.toLong)
+    case other                    => Left(DecodeFailure(JsonPath.Root, s"expected a number but found ${other.kind}"))

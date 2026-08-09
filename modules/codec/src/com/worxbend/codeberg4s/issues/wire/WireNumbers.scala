@@ -4,9 +4,9 @@ import com.worxbend.codeberg4s.codec.JsonValue
 
 /** Builds the JSON scalars and arrays this group's request bodies are made of.
   *
-  * [[JsonValue.Num]] holds a `BigDecimal`, so an `int64` identifier reaches the wire exactly — the previous document
-  * model held a `Double` and represented integers exactly only up to 2^53. Building the scalars here rather than at
-  * each call site means the conversion happens once.
+  * [[JsonValue.Num]] puts a whole number into the document model's `Long` case, so an `int64` identifier reaches the
+  * wire exactly — a document model that held a `Double`, as an earlier one did, represents integers exactly only up to
+  * 2^53. Building the scalars here rather than at each call site means the conversion happens once.
   *
   * Internal to this group's wire package, and a candidate to move into `com.worxbend.codeberg4s.codec` once a second
   * endpoint group writes a request body.
@@ -18,8 +18,8 @@ private[codeberg4s] object WireNumbers:
     JsonValue.Num(value)
 
   /** One whole number as a JSON number, for an `int64` wire field that is not an identifier — a duration in seconds,
-    * say. Kept distinct from [[identifier]] so a reader of a request builder can tell which is which; the `Double`
-    * caveat above applies to both.
+    * say. Kept distinct from [[identifier]] so a reader of a request builder can tell which is which; the exactness
+    * above applies to both.
     */
   def whole(value: Long): JsonValue =
     JsonValue.Num(value)

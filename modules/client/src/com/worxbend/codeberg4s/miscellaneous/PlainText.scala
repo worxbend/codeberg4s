@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.miscellaneous
 
 import com.worxbend.codeberg4s.core.Decode
+import com.worxbend.codeberg4s.core.ResponseBody
 
 /** The identity [[com.worxbend.codeberg4s.core.Decode]]: a response body, unchanged.
   *
@@ -23,13 +24,18 @@ import com.worxbend.codeberg4s.core.Decode
   */
 private[codeberg4s] object PlainText:
 
-  /** The body exactly as received: no trimming, no charset guessing, no parsing.
+  /** The body exactly as received: no trimming, no parsing.
     *
-    * The transport has already decoded the bytes into a `String`, so the only thing left to get wrong would be changing
-    * them.
+    * '''This is one of the few places that genuinely turns bytes into text.''' The transport no longer does it — it
+    * carries the bytes and the charset the response declared, so that the JSON endpoints, which are nearly all of them,
+    * never pay for a decoding they do not want. Here the decoding is exactly what was asked for, and it uses the
+    * charset the response declared rather than one picked here: see [[com.worxbend.codeberg4s.core.ResponseBody.text]].
+    * In practice that charset is UTF-8, because Forgejo answers `text/plain; charset=utf-8` on every endpoint that
+    * reaches this decoder, but the header is read rather than assumed and an instance behind a proxy that rewrote it is
+    * still understood.
     */
   val decoder: Decode[String] =
-    (body: String) => Right(body)
+    (body: ResponseBody) => Right(body.text)
 
   /** The identity decoder followed by `interpret`, for an endpoint whose body is text but whose result is not a
     * `String`.
@@ -43,4 +49,4 @@ private[codeberg4s] object PlainText:
     *   [[com.worxbend.codeberg4s.miscellaneous.SigningKey]]
     */
   def decodedAs[A](interpret: String => A): Decode[A] =
-    (body: String) => decoder(body).map(interpret)
+    (body: ResponseBody) => decoder(body).map(interpret)

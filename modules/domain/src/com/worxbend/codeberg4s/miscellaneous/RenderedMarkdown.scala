@@ -17,4 +17,4 @@ package com.worxbend.codeberg4s.miscellaneous
   * @param html
   *   the response body verbatim, exactly as the instance rendered it
   */
-final case class RenderedMarkdown(html: String)
+final case class RenderedMarkdown private[codeberg4s] (html: String)

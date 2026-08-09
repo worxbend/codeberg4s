@@ -53,11 +53,15 @@ import scala.concurrent.Future
   * ==Five of these endpoints do not answer JSON==
   *
   * `{sha}.diff` and `{sha}.patch` produce `text/plain`, and this library returns that text unchanged. `/raw`, `/media`
-  * and `/archive` produce '''bytes''' — `application/octet-stream`, a zip, a gzipped tar — and that is a shape the
-  * current core vocabulary cannot express: [[com.worxbend.codeberg4s.core.CodebergResponse]] carries its body as a
-  * `String`, so the transport has already decoded those bytes as text before any code here sees them. The three methods
-  * therefore return a `String` and say so plainly on each of them rather than pretending to hand back a file. A
-  * byte-carrying response body is a change to `modules/core` and `modules/transport`, not to this group.
+  * and `/archive` produce '''bytes''' — `application/octet-stream`, a zip, a gzipped tar — and the three methods that
+  * serve them return a `String`, which is lossy for anything that is not text.
+  *
+  * That was once a limitation of core: a response body was a `String`, so the bytes were already gone before any code
+  * here saw them. It no longer is. [[com.worxbend.codeberg4s.core.CodebergResponse]] carries a
+  * [[com.worxbend.codeberg4s.core.ResponseBody]], so the bytes survive as far as the decoder, and the `String` these
+  * three return is now this group's own choice rather than something forced on it. Changing their return type is a
+  * change to the published API of this group, with its own tests and its own migration note, so it is deliberately not
+  * folded into the change that removed the constraint.
   */
 final class RepositoryGitApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using exec: Exec[Future]):
 
@@ -497,13 +501,12 @@ final class RepositoryGitApi private[codeberg4s] (pipeline: ApiPipeline[Future])
   /** Reads a file's raw bytes — `GET /repos/{owner}/{repo}/raw/{filepath}`.
     *
     * '''The result is the response body decoded as text, and that is a real limitation.''' The endpoint produces
-    * `application/octet-stream`; the transport turns the bytes into a `String` before any code here sees them, because
-    * [[com.worxbend.codeberg4s.core.CodebergResponse]] has nowhere else to put them. For a text file that is exactly
-    * what a caller wants. '''For a binary file it is lossy''' — bytes that are not valid in the response's charset
-    * become replacement characters, and re-encoding the result does not give the file back. Use
+    * `application/octet-stream`, and this method decodes it with the charset the response declared. For a text file
+    * that is exactly what a caller wants. '''For a binary file it is lossy''' — bytes that are not valid in that
+    * charset become replacement characters, and re-encoding the result does not give the file back. Use
     * [[com.worxbend.codeberg4s.repositories.RepositoryApi.getContents]] for a binary blob under the instance's inline
-    * size limit, whose base64 payload does survive; there is no lossless path here for one above it until core grows a
-    * byte-carrying response.
+    * size limit, whose base64 payload does survive. The bytes now reach the decoder intact, so a lossless variant of
+    * this method has become possible; see the group note above for why it is not part of this signature yet.
     *
     * Unlike the contents endpoint this returns the file itself with no envelope, and is therefore the cheap way to read
     * a large text file.
@@ -555,8 +558,9 @@ final class RepositoryGitApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     *
     * '''An archive is always binary, so the text limitation on [[getRawFile]] is not a caveat here but the whole
     * story.''' A zip or a gzipped tar decoded as text is not recoverable. This method builds and issues the request
-    * correctly and returns what the current transport can express; it is not a way to obtain a usable archive file, and
-    * making it one is a change to `modules/core` and `modules/transport`.
+    * correctly and returns what its own signature can express; it is not a way to obtain a usable archive file. Making
+    * it one is now a change to this method's return type alone — the transport and core carry the bytes intact, and
+    * `com.worxbend.codeberg4s.repositories.actions.ActionDownloadApi` shows the shape such an operation takes.
     *
     * '''Failures.''' The group contract above. [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] is not
     * reachable: nothing is parsed.

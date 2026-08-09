@@ -20,7 +20,7 @@ package com.worxbend.codeberg4s.repositories.actions
   * @param repoId
   *   the repository the variable belongs to; `0` on the wire, and absent here, for an owner-level variable
   */
-final case class ActionVariable(
+final case class ActionVariable private[codeberg4s] (
     name: VariableName,
     value: String,
     ownerId: Option[Long],

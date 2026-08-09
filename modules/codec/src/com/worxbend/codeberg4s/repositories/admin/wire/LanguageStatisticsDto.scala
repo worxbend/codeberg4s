@@ -38,8 +38,11 @@ object LanguageStatisticsDto:
   given JsonDecoder[LanguageStatisticsDto] =
     JsonFields.reader(fromFields)
 
-  /** Projects an already-decoded object by reading every key it happens to have. */
+  /** Projects an already-decoded object by reading every key it happens to have.
+    *
+    * The names come straight off [[com.worxbend.codeberg4s.codec.JsonFields.entries]] rather than from a map built for
+    * the purpose, because the object's own key list is what has to be walked here and a map would be built only to be
+    * asked for its keys.
+    */
   def fromFields(fields: JsonFields): LanguageStatisticsDto =
-    LanguageStatisticsDto(
-      fields.underlying.keys.toVector.flatMap(name => fields.number(name).map(count => name -> count)).toMap
-    )
+    LanguageStatisticsDto(fields.entries.flatMap((name, _) => fields.number(name).map(count => name -> count)).toMap)

@@ -49,7 +49,7 @@ import java.time.Instant
   * @param createdAt
   *   when the organisation was created
   */
-final case class Organization(
+final case class Organization private[codeberg4s] (
     id: Long,
     name: OrgName,
     fullName: Option[String],

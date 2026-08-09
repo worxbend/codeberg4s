@@ -1,6 +1,9 @@
 package com.worxbend.codeberg4s.repositories.publishing
 
+import com.worxbend.codeberg4s.ContentType
 import com.worxbend.codeberg4s.ValidationError
+
+import java.util.Arrays
 
 /** A file to attach to a release — the `multipart/form-data` half of `POST /repos/{owner}/{repo}/releases/{id}/assets`.
   *
@@ -21,14 +24,20 @@ import com.worxbend.codeberg4s.ValidationError
   * [[content]] is '''not''' copied, here or at the transport boundary, because a release asset is routinely hundreds of
   * megabytes — the first element of `golden/repository/release-latest.json` is 119 MB — and copying it twice to gain an
   * immutability guarantee the caller can already provide is the wrong trade. A caller must therefore not mutate the
-  * array after handing it over. For the same reason the generated `equals` compares [[content]] by reference, so two
-  * structurally identical uploads are not equal; nothing in this library depends on that.
+  * array after handing it over.
+  *
+  * Equality is a separate question from copying, and is answered '''on the bytes''': see [[UploadAsset.equals]].
+  *
+  * ==Construction==
+  *
+  * The constructor is private, so [[UploadAsset.of]] is the only way to obtain one and the checks it performs cannot be
+  * stepped around by calling the generated `apply` or `copy`. Reading the fields and pattern matching are unaffected.
   *
   * ==Error contract==
   *
-  * Construction produces [[ValidationError]] on the `"fileName"` field and nothing else; it performs no I/O and never
-  * reads a file. Turning a path into bytes is the caller's job, and deliberately so: this library owns no filesystem
-  * effect.
+  * [[UploadAsset.of]] produces a [[ValidationError]] on the `"fileName"` field, [[as]] one on the `"mediaType"` field,
+  * and nothing else here can fail. No member performs I/O or reads a file. Turning a path into bytes is the caller's
+  * job, and deliberately so: this library owns no filesystem effect.
   *
   * @param fileName
   *   the file name announced in the multipart part
@@ -39,16 +48,49 @@ import com.worxbend.codeberg4s.ValidationError
   * @param name
   *   the `name` query parameter, when the stored name should differ from [[fileName]]
   */
-final case class UploadAsset(fileName: String, content: Array[Byte], mediaType: String, name: Option[String]):
+final case class UploadAsset private (fileName: String, content: Array[Byte], mediaType: String, name: Option[String]):
 
   /** Stores the attachment under `attachment` instead of under [[fileName]]. */
   def named(attachment: String): UploadAsset = copy(name = Some(attachment))
 
-  /** Declares the part's content type, for an instance or a proxy that acts on it. */
-  def as(media: String): UploadAsset = copy(mediaType = media)
+  /** Declares the part's own `Content-Type`, for an instance or a proxy that acts on it.
+    *
+    * The value is written into the multipart body as a header, so it is checked the way [[fileName]] is: trimmed, then
+    * refused when it is blank or carries a control character. A carriage return or a newline in it would end the part's
+    * header line and let whatever follows be read as headers of the caller's choosing.
+    *
+    * @return
+    *   the upload sent under `media`, or a [[ValidationError]] on the `"mediaType"` field
+    */
+  def as(media: String): Either[ValidationError, UploadAsset] =
+    ContentType.from("mediaType", media).map(checked => copy(mediaType = checked))
 
   /** How many bytes would be sent. */
   def size: Int = content.length
+
+  /** Structural, on the names and the media type first and then on the bytes.
+    *
+    * Written out because an array's own `equals` in Scala is '''identity''': the equality a case class generates would
+    * compare [[content]] by reference, so two uploads built from byte-identical files would be unequal and would hash
+    * differently — a wrong answer with no warning attached, in an assertion or in a `Set`. Comparing the bytes copies
+    * nothing, so it does not undo the aliasing decision above; it only costs a scan, and only when everything cheaper
+    * already matched, which is why the three cheap fields are tested first.
+    *
+    * A consequence worth knowing for a very large asset: [[hashCode]] has to read the whole array, so using an upload
+    * as a key in a hashed collection reads the file's bytes once per lookup.
+    *
+    * The class is `final`, so no subclass can exist and the type test below is the whole of the compiler-generated
+    * `canEqual`; calling `canEqual` as well would add nothing. Removing `final` would change that.
+    */
+  override def equals(other: Any): Boolean =
+    other match
+      case that: UploadAsset =>
+        fileName.equals(that.fileName) && mediaType.equals(that.mediaType) && name.equals(that.name) &&
+        Arrays.equals(content, that.content)
+      case _                 => false
+
+  override def hashCode(): Int =
+    31 * (31 * (31 * fileName.hashCode + mediaType.hashCode) + name.hashCode) + Arrays.hashCode(content)
 
 object UploadAsset:
 

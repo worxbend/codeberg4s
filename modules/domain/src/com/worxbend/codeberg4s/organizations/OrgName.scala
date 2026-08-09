@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.organizations
 
+import com.worxbend.codeberg4s.PathSegment
 import com.worxbend.codeberg4s.ValidationError
 
 /** The handle that names an organisation — the `{org}` of `/orgs/{org}`.
@@ -23,14 +24,17 @@ object OrgName:
 
   /** Parses an organisation name.
     *
-    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, and a value containing a
-    * control character.
+    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, a value containing a
+    * control character, and the traversal segments `.` and `..`.
     *
     * '''This is a security boundary, not a convenience.''' An `OrgName` is interpolated into a request path, so a value
     * containing `/` would let a caller reach an endpoint the API surface never offered — `client.organizations.get` on
     * `"forgejo/../../admin"` — and a control character would corrupt the request line. Both are rejected here, once,
-    * rather than at each call site. Forgejo's own rules for what an organisation may be called are narrower still, but
-    * they are the instance's business: this type promises only that the value cannot forge a path.
+    * rather than at each call site. A bare `.` or `..` is rejected for the same reason and needs saying separately: it
+    * carries no slash, so the slash rule never sees it, and it survives percent-encoding untouched, so it would reach
+    * the request path as a dot segment rather than as an organisation name. Forgejo's own rules for what an
+    * organisation may be called are narrower still, but they are the instance's business: this type promises only that
+    * the value cannot forge a path.
     *
     * The rules are deliberately no narrower than that, because `golden/organization/org-list.json` contains
     * organisations named `_CYBER_STONES_`, `-_` and `-_-`. An identifier validator that assumed alphanumerics would
@@ -40,11 +44,7 @@ object OrgName:
     *   the trimmed name, or a [[ValidationError]] on the `"orgName"` field
     */
   def from(value: String): Either[ValidationError, OrgName] =
-    val trimmed = value.trim
-    if trimmed.isEmpty then Left(ValidationError(Field, "must not be blank"))
-    else if trimmed.contains('/') then Left(ValidationError(Field, "must not contain a slash"))
-    else if trimmed.exists(_.isControl) then Left(ValidationError(Field, "must not contain a control character"))
-    else Right(trimmed)
+    PathSegment.from(Field, value)
 
   extension (name: OrgName)
 

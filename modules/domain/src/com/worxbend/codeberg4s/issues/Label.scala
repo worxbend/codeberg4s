@@ -22,7 +22,7 @@ package com.worxbend.codeberg4s.issues
   * @param url
   *   the API URL of the label itself, not a browser URL — Forgejo sends no `html_url` for labels
   */
-final case class Label(
+final case class Label private[codeberg4s] (
     id: LabelId,
     name: String,
     color: Option[LabelColor],

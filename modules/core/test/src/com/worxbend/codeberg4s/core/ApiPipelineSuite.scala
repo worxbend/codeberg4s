@@ -68,13 +68,13 @@ final class ApiPipelineSuite extends FunSuite:
       JitterSource.Deterministic)
 
   private def responseOf(status: Int, body: String, headers: (String, List[String])*): CodebergResponse =
-    CodebergResponse(status, headers.toMap, body)
+    CodebergResponse(status, headers.toMap, ResponseBody.utf8(body))
 
   private def contextOf(operation: String, method: HttpMethod, requestId: Option[String]): CallContext =
     CallContext(operation, method, expectedUri, requestId, 0L)
 
   test("a 2xx body is decoded and returned"):
-    given Decode[String] = body => Right(body)
+    given Decode[String] = body => Right(body.text)
     val http             = FakeHttpPort.always(responseOf(200, "payload"))
 
     val result = pipelineOf(http, FakeTimer(0L), silent, stubErrorBody)
@@ -84,7 +84,7 @@ final class ApiPipelineSuite extends FunSuite:
     assertEquals(http.sends, 1)
 
   test("the URI handed to the transport is redacted"):
-    given Decode[String] = body => Right(body)
+    given Decode[String] = body => Right(body.text)
     val http             = FakeHttpPort.always(responseOf(200, "payload"))
 
     val result = pipelineOf(http, FakeTimer(0L), silent, stubErrorBody)
@@ -94,7 +94,7 @@ final class ApiPipelineSuite extends FunSuite:
     assertEquals(http.uris, Vector("https://codeberg.org/api/v1/repos/owner/name/issues?page=1&token=***"))
 
   test("a 404 becomes an Api failure carrying the parsed error body and the request id"):
-    given Decode[String] = body => Right(body)
+    given Decode[String] = body => Right(body.text)
     val http             = FakeHttpPort.always(responseOf(404, forgejoErrorBody, "x-request-id" -> List("abc123")))
 
     val result = pipelineOf(http, FakeTimer(0L), silent, stubErrorBody)
@@ -113,7 +113,7 @@ final class ApiPipelineSuite extends FunSuite:
     assertEquals(http.sends, 1)
 
   test("a 500 is attempted again and the later success is returned"):
-    given Decode[String] = body => Right(body)
+    given Decode[String] = body => Right(body.text)
     val timer            = FakeTimer(0L)
     val http             = FakeHttpPort(Vector(Right(responseOf(500, "boom")), Right(responseOf(200, "payload"))))
 
@@ -125,7 +125,7 @@ final class ApiPipelineSuite extends FunSuite:
     assertEquals(timer.sleeps, Vector(250.millis))
 
   test("a 429 is retried after the delay the server asked for"):
-    given Decode[String] = body => Right(body)
+    given Decode[String] = body => Right(body.text)
     val timer            = FakeTimer(0L)
 
     val http = FakeHttpPort(
@@ -170,6 +170,55 @@ final class ApiPipelineSuite extends FunSuite:
 
     assertEquals(http.sends, 1)
 
+  test("a sensitive body is replaced by the placeholder, never excerpted"):
+    val credential = "gto_thisisarealtoken"
+    val payload    = s"""{"sha1": "$credential"}"""
+
+    given Decode[String] =
+      Decode.sensitive(_ => Left(DecodeFailure(JsonPath.of("id"), "no such field")))
+
+    val http = FakeHttpPort.always(responseOf(201, payload))
+
+    val result = pipelineOf(http, FakeTimer(0L), silent, stubErrorBody)
+      .call[String](creation, RetryEligibility.Never)
+
+    result match
+      case Left(error @ CodebergError.DecodingFailed(_, snippet, path, cause)) =>
+        assertEquals(snippet, ApiPipeline.redactedSnippet(payload.length))
+        assertEquals(path, JsonPath.of("id"))
+        assertEquals(cause, "no such field")
+        assert(!error.describe.contains(credential), s"the body reached the rendered failure: ${error.describe}")
+      case other                                                               =>
+        fail(s"expected a decoding failure, got $other")
+
+  test("the placeholder is what a telemetry sink observes, not only what the caller receives"):
+    val credential = "gto_thisisarealtoken"
+
+    given Decode[String] = Decode.sensitive(_ => Left(DecodeFailure(JsonPath.Root, "not an object")))
+
+    val http      = FakeHttpPort.always(responseOf(201, s"""{"sha1": "$credential"}"""))
+    val telemetry = RecordingTelemetry(failing = false)
+
+    pipelineOf(http, FakeTimer(0L), telemetry, stubErrorBody)
+      .call[String](creation, RetryEligibility.Never)
+      .discard
+
+    val rendered = telemetry.observed.map(_.describe)
+
+    assert(rendered.nonEmpty, "the sink observed no failure at all")
+    rendered.foreach(line => assert(!line.contains(credential), s"a credential was observed: $line"))
+
+  test("an ordinary decoder keeps its excerpt, because that is what makes a failure diagnosable"):
+    given Decode[String] = _ => Left(DecodeFailure(JsonPath.Root, "not an object"))
+    val http             = FakeHttpPort.always(responseOf(200, """{"unexpected": true}"""))
+
+    val result = pipelineOf(http, FakeTimer(0L), silent, stubErrorBody)
+      .call[String](listing, RetryEligibility.Never)
+
+    result match
+      case Left(CodebergError.DecodingFailed(_, snippet, _, _)) => assertEquals(snippet, """{"unexpected": true}""")
+      case other                                                => fail(s"expected a decoding failure, got $other")
+
   test("a decoding failure is never attempted again"):
     given Decode[String] = _ => Left(DecodeFailure(JsonPath.Root, "not an object"))
     val http             = FakeHttpPort.always(responseOf(200, "{}"))
@@ -181,7 +230,7 @@ final class ApiPipelineSuite extends FunSuite:
     assertEquals(http.sends, 1)
 
   test("a request that never reaches the server becomes a Transport failure"):
-    given Decode[String] = body => Right(body)
+    given Decode[String] = body => Right(body.text)
     val cause            = TransportCause.Tls("certificate expired")
     val http             = FakeHttpPort.broken(TransportFailure(cause))
 
@@ -192,7 +241,7 @@ final class ApiPipelineSuite extends FunSuite:
     assertEquals(http.sends, 1)
 
   test("a transport failure that keeps recurring ends as RetriesExhausted preserving the last failure"):
-    given Decode[String] = body => Right(body)
+    given Decode[String] = body => Right(body.text)
     val cause            = TransportCause.Timeout("read timed out")
     val http             = FakeHttpPort.broken(TransportFailure(cause))
     val context          = contextOf("issues.list", HttpMethod.Get, None)
@@ -204,7 +253,7 @@ final class ApiPipelineSuite extends FunSuite:
     assertEquals(http.sends, 3)
 
   test("a successful call reports a request and a response and no error"):
-    given Decode[String] = body => Right(body)
+    given Decode[String] = body => Right(body.text)
     val telemetry        = RecordingTelemetry(failing = false)
     val http             = FakeHttpPort.always(responseOf(200, "payload"))
 
@@ -215,7 +264,7 @@ final class ApiPipelineSuite extends FunSuite:
     assertEquals(telemetry.events, Vector("request issues.list", "response 200"))
 
   test("a failing call reports the attempt in order and then the failure the caller receives"):
-    given Decode[String] = body => Right(body)
+    given Decode[String] = body => Right(body.text)
     val telemetry        = RecordingTelemetry(failing = false)
     val http             = FakeHttpPort.always(responseOf(404, forgejoErrorBody))
 
@@ -226,7 +275,7 @@ final class ApiPipelineSuite extends FunSuite:
     assertEquals(telemetry.events, Vector("request issues.list", "response 404", "error Api", "error Api"))
 
   test("a retried call reports one request and one response per attempt"):
-    given Decode[String] = body => Right(body)
+    given Decode[String] = body => Right(body.text)
     val telemetry        = RecordingTelemetry(failing = false)
     val http             = FakeHttpPort(Vector(Right(responseOf(503, "down")), Right(responseOf(200, "payload"))))
 
@@ -240,7 +289,7 @@ final class ApiPipelineSuite extends FunSuite:
     )
 
   test("a telemetry sink that fails does not fail the call it is only watching"):
-    given Decode[String] = body => Right(body)
+    given Decode[String] = body => Right(body.text)
     val telemetry        = RecordingTelemetry(failing = true)
     val http             = FakeHttpPort.always(responseOf(200, "payload"))
 
@@ -251,7 +300,7 @@ final class ApiPipelineSuite extends FunSuite:
     assertEquals(telemetry.events, Vector("request issues.list", "response 200"))
 
   test("an error body the parser cannot read falls back to Empty and never masks the status"):
-    given Decode[String] = body => Right(body)
+    given Decode[String] = body => Right(body.text)
     val http             = FakeHttpPort.always(responseOf(422, "<html>not json</html>"))
 
     val result = pipelineOf(http, FakeTimer(0L), silent, failingErrorBody)
@@ -263,7 +312,7 @@ final class ApiPipelineSuite extends FunSuite:
     )
 
   test("an empty error body becomes Empty without consulting the parser"):
-    given Decode[String] = body => Right(body)
+    given Decode[String] = body => Right(body.text)
     val http             = FakeHttpPort.always(responseOf(500, "   "))
 
     val result = pipelineOf(http, FakeTimer(0L), silent, failingErrorBody)
@@ -350,7 +399,7 @@ final class ApiPipelineSuite extends FunSuite:
         fail(s"expected a decoding failure, got $other")
 
   test("the duration on a call context is measured with the timer around the send"):
-    given Decode[String] = body => Right(body)
+    given Decode[String] = body => Right(body.text)
     val http             = FakeHttpPort.always(responseOf(404, forgejoErrorBody))
 
     val result = pipelineOf(http, SteppingTimer(7L), silent, stubErrorBody)

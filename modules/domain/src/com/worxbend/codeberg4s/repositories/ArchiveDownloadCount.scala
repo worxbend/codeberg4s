@@ -10,4 +10,4 @@ package com.worxbend.codeberg4s.repositories
   * @param tarGz
   *   downloads of the `.tar.gz` archive
   */
-final case class ArchiveDownloadCount(zip: Long, tarGz: Long)
+final case class ArchiveDownloadCount private[codeberg4s] (zip: Long, tarGz: Long)

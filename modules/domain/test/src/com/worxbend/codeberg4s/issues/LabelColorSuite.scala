@@ -32,3 +32,20 @@ final class LabelColorSuite extends FunSuite:
 
   test("an empty colour is rejected"):
     assert(LabelColor.from("").isLeft)
+
+  /** The one case where dropping the regular expression changed an answer, pinned so it cannot drift back.
+    *
+    * `from` used to match `^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$`. In a Java regular expression `$` matches not only at
+    * the end of the input but also immediately before a line terminator that ends it, and Java counts NEL (U+0085),
+    * LINE SEPARATOR (U+2028) and PARAGRAPH SEPARATOR (U+2029) as line terminators. `String.trim` strips only characters
+    * up to and including U+0020, so those three reached the matcher intact and were then silently swallowed by `$`:
+    * `"eb6420\u0085"` came back as an accepted `"eb6420"`. U+0085 is a control character — the kind this module rejects
+    * everywhere a value reaches a request — so accepting it here was a hole, not a convenience.
+    */
+  test("a trailing Unicode line separator is rejected rather than quietly swallowed"):
+    assert(LabelColor.from("eb6420\u0085").isLeft)
+    assert(LabelColor.from("eb6420\u2028").isLeft)
+    assert(LabelColor.from("eb6420\u2029").isLeft)
+
+  test("whitespace up to U+0020 is still trimmed, line separator or not"):
+    assertEquals(LabelColor.from("\neb6420\t").map(_.value), Right("eb6420"))

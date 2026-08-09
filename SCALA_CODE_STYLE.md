@@ -68,7 +68,7 @@ Pinned versions for this repository:
 | --------- | --------- | --------------------------------------------------------- |
 | Scala     | 3.8.4     | Latest stable; pin in `build.mill`, do not float.         |
 | Mill      | 0.12.x    | Pinned in `.mill-version`, which is committed.            |
-| Scalafmt  | 3.11.4    | Pinned in `.scalafmt.conf`; matches the installed binary. |
+| Scalafmt  | 3.11.5    | Pinned in `.scalafmt.conf`; matches the installed binary. |
 | Ox        | 1.0.6     | Direct-style concurrency.                                 |
 
 Resolve versions from the canonical resolver —

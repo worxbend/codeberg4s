@@ -73,7 +73,7 @@ import java.time.Instant
   * @param dueDate
   *   the deadline set on the pull request, absent when it has none
   */
-final case class PullRequest(
+final case class PullRequest private[codeberg4s] (
     id: Long,
     number: PullRequestNumber,
     title: String,

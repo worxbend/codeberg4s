@@ -12,16 +12,21 @@ import com.worxbend.codeberg4s.auth.Password
 import com.worxbend.codeberg4s.core.CodebergRequest
 import com.worxbend.codeberg4s.core.CodebergResponse
 import com.worxbend.codeberg4s.core.RequestBody
+import com.worxbend.codeberg4s.core.ResponseBody
 import com.worxbend.codeberg4s.core.TransportFailure
 
+import sttp.capabilities.StreamMaxLengthExceededException
 import sttp.client4.Backend
 import sttp.client4.GenericRequest
+import sttp.client4.SttpClientException
+import sttp.client4.basicRequest
 import sttp.client4.testing.BackendStub
 import sttp.client4.testing.RecordingBackend
 import sttp.client4.testing.ResponseStub
 import sttp.model.Header
 import sttp.model.Method
 import sttp.model.StatusCode
+import sttp.model.Uri
 
 import munit.FunSuite
 
@@ -84,6 +89,42 @@ final class SttpHttpPortSuite extends FunSuite:
     send(port, awkwardRequest).map: _ =>
       assertEquals(headerOf(backend, "authorization"), None)
 
+  test("a caller's Authorization header cannot override the configured credential"):
+    val backend = recording(respondingOk)
+    val port    = SttpHttpPort(backend, configFor(Auth.Token(token(Secret))))
+    val request = awkwardRequest.copy(headers = List("Authorization" -> "token someone-elses-token"))
+
+    send(port, request).map: _ =>
+      assertEquals(valuesOf(backend, "authorization"), List(s"token $Secret"))
+
+  test("a caller's Authorization header is dropped whatever case it spells the name in"):
+    val backend = recording(respondingOk)
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val request = awkwardRequest.copy(headers = List("authorization" -> "token someone-elses-token"))
+
+    send(port, request).map: _ =>
+      assertEquals(valuesOf(backend, "authorization"), Nil)
+
+  test("a caller's Proxy-Authorization header never reaches the wire"):
+    val backend = recording(respondingOk)
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val request = awkwardRequest.copy(headers = List("Proxy-Authorization" -> "Basic c29tZTpvbmU="))
+
+    send(port, request).map: _ =>
+      assertEquals(valuesOf(backend, "proxy-authorization"), Nil)
+
+  test("a caller's Content-Type still overrides the one the body implies"):
+    val backend = recording(respondingOk)
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val request = awkwardRequest.copy(
+      method  = HttpMethod.Post,
+      headers = List("Content-Type" -> "text/plain; charset=utf-8"),
+      body    = Some(RequestBody.Json("# Title")),
+    )
+
+    send(port, request).map: _ =>
+      assertEquals(valuesOf(backend, "content-type"), List("text/plain; charset=utf-8"))
+
   test("the configured user agent is sent"):
     val agent  = orFail(UserAgent.from("codeberg4s-test/1.0"))
     val config = configFor(Auth.Anonymous).copy(userAgent = agent)
@@ -123,7 +164,7 @@ final class SttpHttpPortSuite extends FunSuite:
     val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
 
     send(port, awkwardRequest).map: result =>
-      assertEquals(result, Right(CodebergResponse(500, Map.empty, "upstream exploded")))
+      assertEquals(result, Right(CodebergResponse(500, Map.empty, ResponseBody.utf8("upstream exploded"))))
 
   test("response header names are lowercased and repeated values are kept in order"):
     val headers = List(Header("X-Total-Count", "1590"), Header("Link", "<a>; rel=\"next\""), Header("Link", "<b>"))
@@ -161,6 +202,47 @@ final class SttpHttpPortSuite extends FunSuite:
   test("an interrupted call is classified as interrupted"):
     causeOf(new InterruptedException("interrupted")).map: cause =>
       assertEquals(cause, TransportCause.Interrupted("interrupted"))
+
+  test("a body that passed the configured bound is classified as too large, not as unknown"):
+    // Unknown is retryable and ResponseTooLarge is not, so misclassifying this one
+    // would re-download the oversized body on every remaining attempt.
+    causeOf(StreamMaxLengthExceededException(1024L)).map: cause =>
+      assertEquals(cause, TransportCause.ResponseTooLarge("Stream length limit of 1024 bytes exceeded"))
+
+  test("the same failure is recognised through the sttp exception that wraps it"):
+    // This is the shape a real backend produces: sttp maps the internal exception
+    // to SttpClientException.ReadException before it reaches the recover block, so
+    // matching only the outermost type would classify every oversized body as unknown.
+    val wrapped = SttpClientException.ReadException(sttpRequest, StreamMaxLengthExceededException(1024L))
+
+    causeOf(wrapped).map: cause =>
+      assertEquals(cause, TransportCause.ResponseTooLarge("Stream length limit of 1024 bytes exceeded"))
+
+  test("a textual request carries the configured response-body bound"):
+    val backend = recording(respondingOk)
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+
+    send(port, awkwardRequest).map: _ =>
+      assertEquals(sent(backend).options.maxResponseBodyLength, Some(CodebergConfig.DefaultMaxResponseBodyBytes))
+
+  test("a download carries the larger download bound instead"):
+    val backend = recording(respondingOk)
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+
+    port.sendBinary(awkwardRequest, "https://forge.example/api/v1/repos/ow%20ner").map: _ =>
+      assertEquals(sent(backend).options.maxResponseBodyLength, Some(CodebergConfig.DefaultMaxDownloadBodyBytes))
+
+  test("both bounds are taken from the config rather than hardcoded"):
+    val config  = configFor(Auth.Anonymous).copy(maxResponseBodyBytes = 111L, maxDownloadBodyBytes = 222L)
+    val textual = recording(respondingOk)
+    val binary  = recording(respondingOk)
+
+    for
+      _ <- send(SttpHttpPort(textual, config), awkwardRequest)
+      _ <- SttpHttpPort(binary, config).sendBinary(awkwardRequest, "https://forge.example/api/v1")
+    yield
+      assertEquals(sent(textual).options.maxResponseBodyLength, Some(111L))
+      assertEquals(sent(binary).options.maxResponseBodyLength, Some(222L))
 
   test("an exception this library does not recognise is unknown, never dropped"):
     causeOf(new IllegalStateException("something else entirely")).map: cause =>
@@ -229,6 +311,10 @@ final class SttpHttpPortSuite extends FunSuite:
   private def responding(status: Int, headers: List[Header], body: String): BackendStub[Future] =
     BackendStub.asynchronousFuture.whenAnyRequest.thenRespond(ResponseStub.adjust(body, StatusCode(status), headers))
 
+  /** A minimal sttp request, only so an `SttpClientException` can be built the way a real backend builds one. */
+  private def sttpRequest: GenericRequest[?, ?] =
+    basicRequest.get(Uri.unsafeParse("https://forge.example/api/v1"))
+
   private def failingWith(error: Throwable): BackendStub[Future] =
     BackendStub.asynchronousFuture.whenAnyRequest.thenThrow(error)
 
@@ -242,6 +328,15 @@ final class SttpHttpPortSuite extends FunSuite:
 
   private def headerOf(backend: RecordingBackend, name: String): Option[String] =
     sent(backend).headers.find(_.is(name)).map(_.value)
+
+  /** Every value sent under `name`, in order.
+    *
+    * [[headerOf]] reports the first match and so cannot tell "sent once" from "sent twice with different values", which
+    * is exactly the difference the credential tests are about. `Header.is` compares the name case-insensitively, the
+    * way HTTP does.
+    */
+  private def valuesOf(backend: RecordingBackend, name: String): List[String] =
+    sent(backend).headers.filter(_.is(name)).map(_.value).toList
 
   // --- validated fixtures ---------------------------------------------------
 

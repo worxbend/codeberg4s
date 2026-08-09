@@ -43,7 +43,7 @@ import java.time.Instant
   * @param updatedAt
   *   when the hook was last changed, on the same terms as [[createdAt]]
   */
-final case class Webhook(
+final case class Webhook private[codeberg4s] (
     id: HookId,
     hookType: Option[HookType],
     configuration: HookConfig,

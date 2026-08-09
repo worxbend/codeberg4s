@@ -16,4 +16,4 @@ import java.time.Instant
   *   the commit time, when the endpoint reports one. Forgejo sends its zero-time sentinel here on trees, and
   *   [[com.worxbend.codeberg4s.codec.Timestamps]] folds that into `None`
   */
-final case class CommitRef(sha: CommitSha, url: Option[String], created: Option[Instant])
+final case class CommitRef private[codeberg4s] (sha: CommitSha, url: Option[String], created: Option[Instant])

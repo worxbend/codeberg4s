@@ -10,7 +10,9 @@ import com.worxbend.codeberg4s.HttpMethod
   *
   * '''Security contract:''' `headers` never contains an `Authorization` header. Credentials are applied by the
   * transport from [[com.worxbend.codeberg4s.auth.Auth]], so no credential can reach a log line, a
-  * [[com.worxbend.codeberg4s.CallContext]] or an error payload through this type.
+  * [[com.worxbend.codeberg4s.CallContext]] or an error payload through this type. The rule is enforced and not merely
+  * documented: the transport adapter drops an `Authorization` or `Proxy-Authorization` entry from this list before it
+  * applies the configured credential, so a request built with one still goes out authenticated as `Auth` says.
   *
   * @param operation
   *   the stable, greppable operation id, for example `"repos.get"`; it is copied into every failure

@@ -11,4 +11,4 @@ package com.worxbend.codeberg4s.repositories
   *   what the commit did to the file, absent when the instance sent a value this library does not recognise; see
   *   [[CommitFileStatus.parse]]
   */
-final case class CommitFile(filename: String, status: Option[CommitFileStatus])
+final case class CommitFile private[codeberg4s] (filename: String, status: Option[CommitFileStatus])

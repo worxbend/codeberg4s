@@ -1,0 +1,81 @@
+# Keeps the commit-SHA action pins from rotting.
+#
+# Every `uses:` in .github/ names a 40-character commit SHA rather than a tag,
+# so nobody can repoint the code a workflow runs (see the header of
+# .github/workflows/release.yml for why that matters in the job holding the
+# signing key). The cost of that safety is that a pin is frozen: a fix released
+# upstream never arrives on its own, and an unattended pin drifts from
+# "deliberate" to "nobody looked at this in two years", which is its own kind of
+# stale. Dependabot closes that gap — it opens a pull request when a pinned
+# action publishes a new release, rewriting both the SHA and the trailing
+# version comment, and a human reviews and merges it like any other change.
+#
+# SCOPE — this file covers GitHub Actions only.
+#
+# Two things it deliberately does not cover:
+#
+#   * Scala and Mill dependencies. Dependabot has no Mill support, and
+#     build.mill is where those versions live. `mill mill.scalalib.Dependency/
+#     showUpdates` reports them today, and docs/READINESS.md still names
+#     Renovate as the eventual automation for them — Renovate also runs on
+#     Codeberg, which Dependabot does not.
+#
+#   * .forgejo/workflows/ci.yml. Dependabot reads .github/workflows and the
+#     directories listed below; it does not see the Forgejo workflow, and it
+#     should not touch it anyway. Those SHAs come from code.forgejo.org, and
+#     Dependabot would resolve versions against github.com, where the same tag
+#     is different code. That file is updated by hand; its own header says so.
+
+version: 2
+
+updates:
+  # `directory: "/"` means ".github/workflows" for this ecosystem — the four
+  # workflow files. It does not reach into .github/actions/, which is why the
+  # composite action gets its own entry below.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      # Monday morning, so an update is waiting at the start of the week
+      # rather than landing on a Friday afternoon.
+      day: monday
+      time: "07:00"
+      timezone: Europe/Warsaw
+    # One pull request for all of them. Six separate pull requests to move six
+    # `actions/*` pins forward is six reviews of the same decision, and the
+    # reliable outcome of that is that none of them get reviewed.
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 5
+    # Produces subjects like "ci(deps): bump actions/checkout from 7.0.1 to
+    # 7.0.2", which is the Conventional Commits form CLAUDE.md requires.
+    commit-message:
+      prefix: ci
+      include: scope
+    labels:
+      - dependencies
+      - github-actions
+
+  # The composite action every workflow builds its toolchain through. Its two
+  # pins are the ones the release job runs with, so they matter at least as
+  # much as the workflow-level ones.
+  - package-ecosystem: github-actions
+    directory: "/.github/actions/scala-toolchain"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: Europe/Warsaw
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci
+      include: scope
+    labels:
+      - dependencies
+      - github-actions

@@ -272,6 +272,17 @@ final class RepositoryActionApiSuite extends FunSuite:
         .registerRunner(Handle, Name, orFail(RegisterRunner.named("build-box-3")))
         .map(_ => assertEquals(backend.allInteractions.size, 1, "the POST was retried"))
 
+  test("a registration response that does not decode reports no part of the credential"):
+    val truncated = RepositoryActionApiSuite.RegisteredBody.dropRight(1)
+
+    onBackend(RecordingBackend(responding(201, truncated))): api =>
+      api.attempt.registerRunner(Handle, Name, orFail(RegisterRunner.named("build-box-3"))).map:
+        case Left(error @ CodebergError.DecodingFailed(_, snippet, _, _)) =>
+          assertEquals(snippet, ApiPipeline.redactedSnippet(truncated.length))
+          assert(!error.describe.contains("QWERTY123"), s"the body excerpt carried the token: ${error.describe}")
+        case other                                                        =>
+          fail(s"expected a decoding failure, got $other")
+
   test("actions.runners.delete is a DELETE on the runner"):
     val backend = RecordingBackend(responding(204, ""))
 

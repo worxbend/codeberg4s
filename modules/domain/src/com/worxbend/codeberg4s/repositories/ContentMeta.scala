@@ -26,7 +26,7 @@ import java.time.Instant
   * @param gitUrl
   *   the API URL of the underlying Git object
   */
-final case class ContentMeta(
+final case class ContentMeta private[codeberg4s] (
     name: String,
     path: ContentPath,
     sha: CommitSha,

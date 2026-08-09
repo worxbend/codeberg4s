@@ -143,11 +143,31 @@ final class IssueTailCommandSuite extends FunSuite:
   // --- UploadAttachment -----------------------------------------------------
 
   test("every upload builder sets its own field and leaves every sibling alone"):
+    // Compared field by field rather than against a `copy`: the constructor is
+    // private now, which is the point of the type, so `copy` is not reachable
+    // from a test either.
     val upload = populatedUpload
 
-    assertEquals(upload.named("failing-run.txt"), upload.copy(storedName = Some("failing-run.txt")))
-    assertEquals(upload.as("application/json"), upload.copy(mediaType = "application/json"))
-    assertEquals(upload.recordedAt(Monday), upload.copy(updatedAt = Some(Monday)))
+    assertEquals(
+      fieldsOf(upload.named("failing-run.txt")),
+      (upload.fileName, Some("failing-run.txt"), upload.mediaType, upload.updatedAt),
+    )
+    assertEquals(
+      fieldsOf(orFail(upload.as("application/json"))),
+      (upload.fileName, upload.storedName, "application/json", upload.updatedAt),
+    )
+    assertEquals(
+      fieldsOf(upload.recordedAt(Monday)),
+      (upload.fileName, upload.storedName, upload.mediaType, Some(Monday)),
+    )
+
+  test("a media type that would inject a header into the part is refused, on the mediaType field"):
+    val upload = orFail(UploadAttachment.of("run.txt", bytes))
+
+    assertEquals(fieldOf(upload.as("text/plain\r\nX-Injected: 1")), "mediaType")
+    assertEquals(messageOf(upload.as("text/plain\r\nX-Injected: 1")), "must not contain a control character")
+    assertEquals(messageOf(upload.as(s"text/${Bell}plain")), "must not contain a control character")
+    assertEquals(messageOf(upload.as("   ")), "must not be blank")
 
   test("the stored name is a second name, and never overwrites the one the multipart part announces"):
     val upload = orFail(UploadAttachment.of("build/logs/run.txt", bytes)).named("failing-run.txt")
@@ -177,6 +197,32 @@ final class IssueTailCommandSuite extends FunSuite:
     assertEquals(fieldOf(UploadAttachment.of("   ", bytes)), "fileName")
     assertEquals(fieldOf(UploadAttachment.of("a\rb.log", bytes)), "fileName")
     assertEquals(fieldOf(UploadAttachment.of(s"a${Bell}b.log", bytes)), "fileName")
+
+  test("two uploads built from equal-but-distinct arrays are equal and hash alike"):
+    // `bytes` hands over a fresh array on every call, so these two uploads
+    // hold no array in common. An array's own equality is identity, so until
+    // the type compared its content they were unequal to each other.
+    val one = populatedUpload
+    val two = populatedUpload
+
+    assert(!one.content.eq(two.content), "the two arrays must be distinct objects, or the test proves nothing")
+    assertEquals(one, two)
+    assertEquals(one.hashCode, two.hashCode)
+    assertEquals(Set(one, two).size, 1)
+
+  test("an upload differing in one field, the bytes included, is not equal to the original"):
+    val upload = populatedUpload
+
+    assertNotEquals(upload, uploadCarrying("other".getBytes(StandardCharsets.UTF_8)))
+    assertNotEquals(upload, upload.named("failing-run.txt"))
+    assertNotEquals(upload, orFail(upload.as("application/json")))
+    assertNotEquals(upload, upload.recordedAt(Monday))
+
+  test("an upload is not equal to a value of some other type"):
+    // A hand-written equals owns this case. Getting it wrong turns a harmless
+    // collection lookup into a ClassCastException at the call site.
+    assertNotEquals[Any, Any](populatedUpload, "build.log")
+    assertNotEquals[Any, Any](populatedUpload, 0)
 
   // --- AddTrackedTime -------------------------------------------------------
 
@@ -272,8 +318,17 @@ final class IssueTailCommandSuite extends FunSuite:
       state       = Some(IssueStateChange.Reopen),
     )
 
-  private def populatedUpload: UploadAttachment =
-    orFail(UploadAttachment.of("run.txt", bytes)).named("run.txt").as("text/plain").recordedAt(Friday)
+  private def populatedUpload: UploadAttachment = uploadCarrying(bytes)
+
+  /** The same fully populated upload, over content the caller chooses — so that a test can vary the bytes and nothing
+    * else.
+    */
+  private def uploadCarrying(content: Array[Byte]): UploadAttachment =
+    val named = orFail(UploadAttachment.of("run.txt", content)).named("run.txt")
+    orFail(named.as("text/plain")).recordedAt(Friday)
+
+  private def fieldsOf(upload: UploadAttachment): (String, Option[String], String, Option[Instant]) =
+    (upload.fileName, upload.storedName, upload.mediaType, upload.updatedAt)
 
   private def populatedTrackedTime: AddTrackedTime =
     orFail(AddTrackedTime.of(90.seconds)).attributedTo("crystal").recordedAt(Friday)

@@ -8,6 +8,8 @@ import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.RepositoryApi
 import com.worxbend.codeberg4s.retry.Jitter
 import com.worxbend.codeberg4s.retry.RetryPolicy
+import com.worxbend.codeberg4s.syntax.discard
+import com.worxbend.codeberg4s.transport.SttpHttpPort
 
 import sttp.client4.Backend
 import sttp.client4.testing.BackendStub
@@ -20,8 +22,15 @@ import munit.FunSuite
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.FiniteDuration
+import scala.jdk.DurationConverters.ScalaDurationOps
+
+import java.util.concurrent.Executors
 
 /** The published façade, end to end, over a `BackendStub`: nothing in this suite opens a socket.
+  *
+  * The one exception is the JDK-HTTP-client test below, which builds a real client to watch it shut down. It sends no
+  * request, so it opens no socket either.
   *
   * The subject here is the wiring, not the codecs — `modules/codec` already asserts decoding against the golden
   * captures. The payloads below are therefore small hand-written bodies chosen to exercise the seams: what a caller
@@ -106,6 +115,43 @@ final class CodebergClientSuite extends FunSuite:
 
     assertEquals(backend.closes, 1)
 
+  /** The stub above proves `close` was called; this proves the call reaches something.
+    *
+    * `CountingBackend` cannot tell a `close()` that released a connection pool from one that returned an
+    * already-completed `Future` and did nothing, which is exactly what sttp's own backend used to do here. So this test
+    * runs against a real JDK HTTP client and asks the client itself. No request is sent — the JDK starts the client's
+    * selector thread when the client is built — so nothing here opens a socket.
+    *
+    * The execution context is this test's own rather than the suite's, because the assertion blocks the calling thread
+    * and the client's callbacks must have a thread of their own to run on.
+    */
+  test("close terminates the JDK HTTP client behind a backend the client owns"):
+    // munit continues on whichever thread completed the previous test's Future,
+    // and the retry tests above are completed by the client's own scheduler
+    // thread — which `CodebergClient.close` then interrupts, by design, to
+    // abandon a retry that was waiting. So this body can start on a thread
+    // whose interrupt flag is already set, and the blocking wait below would
+    // throw InterruptedException before it waited at all. Clearing the flag
+    // makes the test independent of which thread it was handed; nothing in this
+    // suite is waiting to be interrupted.
+    Thread.interrupted().discard
+
+    val executor = ExecutionContext.fromExecutorService(Executors.newSingleThreadExecutor())
+
+    try
+      val http   = SttpHttpPort.defaultHttpClient(CodebergClientSuite.ConnectTimeout, executor)
+      val client = CodebergClient.owning(configFor(Auth.Anonymous), SttpHttpPort.owning(http, executor))(using executor)
+
+      assert(!http.isTerminated, "a client that was never closed already reports itself terminated")
+
+      client.close()
+
+      assert(
+        http.awaitTermination(CodebergClientSuite.TerminationLimit.toJava),
+        "close() left the JDK HTTP client running",
+      )
+    finally executor.shutdown()
+
   test("close leaves a backend the caller supplied open, because the caller owns it"):
     val backend = CountingBackend(responding(200, CodebergClientSuite.VersionBody))
     val client  = CodebergClient.usingBackend(configFor(Auth.Anonymous), backend)
@@ -177,6 +223,13 @@ object CodebergClientSuite:
 
   /** A token that must not turn up in any rendering of a failure. */
   private val Secret: String = "cb-0123456789abcdef-secret"
+
+  private val ConnectTimeout: FiniteDuration = 3.seconds
+
+  /** Generous on purpose: an idle JDK HTTP client terminates in single-digit milliseconds, so this is a hang detector
+    * rather than a race the test is trying to win.
+    */
+  private val TerminationLimit: FiniteDuration = 10.seconds
 
   private val ExpectedVersion: ServerVersion = ServerVersion("16.0.0-dev-668-1bdb1938+gitea-1.22.0")
 

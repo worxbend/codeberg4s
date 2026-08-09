@@ -2,7 +2,8 @@ package com.worxbend.codeberg4s.core
 
 /** The port every transport adapter implements — the single hole through which this library reaches the network.
   *
-  * '''Failure contract.''' A `Left` means no response was produced at all: DNS, TLS, connection or timeout. Every HTTP
+  * '''Failure contract.''' A `Left` means no complete response was produced: DNS, TLS, connection, timeout, or a body
+  * that passed [[com.worxbend.codeberg4s.CodebergConfig.maxResponseBodyBytes]] and was abandoned part-read. Every HTTP
   * status, including `4xx` and `5xx`, arrives as a `Right`; deciding what a status means belongs to [[StatusMapping]],
   * not to the adapter. An implementation must therefore not throw and must not translate a status into a failure.
   *

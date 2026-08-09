@@ -6,6 +6,8 @@ import com.worxbend.codeberg4s.core.Exec
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.Success
 
 /** The [[com.worxbend.codeberg4s.core.Exec]] instance the published client runs on.
   *
@@ -45,10 +47,16 @@ final class FutureExec(using executionContext: ExecutionContext) extends Exec[Fu
     *
     * This is what the typed rail is built from: `client.repos.attempt.get(…)` is `attempt(client.repos.get(…))`, so the
     * two rails cannot drift apart.
+    *
+    * Written as one `transform` rather than `map(…).recover(…)`: the pair would build an intermediate `Future` and
+    * dispatch to the execution context twice for every call, and this sits on the path of every request the typed rail
+    * makes.
     */
   override def attempt[A](fa: Future[A]): Future[Either[CodebergError, A]] =
-    fa.map(Right.apply).recover:
-      case CodebergException(error) => Left(error)
+    fa.transform:
+      case Success(value)                    => Success(Right(value))
+      case Failure(CodebergException(error)) => Success(Left(error))
+      case Failure(other)                    => Failure(other)
 
   /** Defers `thunk` until the returned effect is composed, so each retry issues a fresh request. See the class note. */
   override def suspend[A](thunk: () => Future[A]): Future[A] = Future.delegate(thunk())

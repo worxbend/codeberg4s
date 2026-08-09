@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s
 
 import com.worxbend.codeberg4s.client.FutureExec
 import com.worxbend.codeberg4s.client.FutureTimer
+import com.worxbend.codeberg4s.client.GuardedTelemetry
 import com.worxbend.codeberg4s.codec.ApiErrorBodyCodec
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.BinaryHttpPort
@@ -101,13 +102,24 @@ final class CodebergClient private (
     * [[CodebergClient.usingBackend]] belongs to the caller, who may well be sharing it with the rest of their
     * application, and closing it here would break them.
     *
-    * Idempotent and safe to call from any thread: the second and later calls do nothing. Backend shutdown is
-    * asynchronous in sttp, so this method returns before the backend's own connections are gone; nothing in this
-    * library observes that, and waiting for it would make an ordinary `finally` block block.
+    * Closing an owned backend ends the JDK `java.net.http.HttpClient` under it: this library calls that client's
+    * `shutdown()`, which refuses new requests, lets the ones already sent run to completion, and returns without
+    * waiting for them. The JDK also offers a `close()` that waits, and this method deliberately does not use it — see
+    * "Idempotent" below. The `ExecutionContext` the client was built with is untouched, because that one belongs to the
+    * caller.
     *
-    * Using a client after closing it is a defect. Calls will fail with a rejected-execution failure from the scheduler
-    * rather than with a [[CodebergError]], because a closed client is a programming mistake and not a remote failure to
+    * Idempotent and safe to call from any thread: the second and later calls do nothing. Nothing here blocks, so this
+    * method returns before the last in-flight response has been delivered; nothing in this library observes that, and
+    * waiting for it would make an ordinary `finally` block block.
+    *
+    * Using a client after closing it is a defect. A call started afterwards fails with a rejected-execution failure
+    * from the scheduler, and a call that was already sitting in retry backoff fails with a
+    * `java.util.concurrent.CancellationException` — see [[com.worxbend.codeberg4s.client.FutureTimer.close]]. Neither
+    * is reported as a [[CodebergError]], because a closed client is a programming mistake and not a remote failure to
     * be retried.
+    *
+    * Both are failures, which is the guarantee that matters at shutdown: no `Future` this client handed out is left
+    * without an outcome, so an application closing down never waits on one that cannot finish.
     */
   def close(): Unit =
     if closed.compareAndSet(false, true) then
@@ -120,7 +132,8 @@ object CodebergClient:
   /** Builds a client that creates and owns its own HTTP backend.
     *
     * The backend is a JDK-HTTP-client sttp backend configured with [[CodebergConfig.connectTimeout]], and [[close]]
-    * shuts it down. This is the right constructor unless the application already has an sttp backend it wants reused.
+    * shuts it down — the connection pool and the JDK client's own selector thread go with it. This is the right
+    * constructor unless the application already has an sttp backend it wants reused.
     *
     * @param config
     *   the instance to talk to, the credentials, the retry policy and the timeouts
@@ -132,7 +145,10 @@ object CodebergClient:
     *
     * This library has no logging dependency and writes nothing anywhere, so this is the only way to see requests. A
     * [[com.worxbend.codeberg4s.core.Telemetry]] failure never fails the call it was observing — instrumentation that
-    * breaks must not break the application it instruments.
+    * breaks must not break the application it instruments. That covers both ways a callback can go wrong: throwing
+    * where it stands, and returning a `Future` that fails afterwards. Either way the observation is lost and the
+    * request's own outcome is what the caller receives. A fatal error — an `OutOfMemoryError`, say — is not swallowed,
+    * because it says the process is no longer sound.
     *
     * The callbacks receive a [[CallContext]] whose URI is already redacted, so an implementation cannot leak a token by
     * logging what it is handed.
@@ -192,7 +208,13 @@ object CodebergClient:
 
     // Resolved here rather than at the call site because Telemetry.noOp needs
     // the Exec[Future] that only exists once this method has built it.
-    val observer = telemetry.getOrElse(Telemetry.noOp[Future])
+    //
+    // A caller's sink is wrapped so that a callback which throws, or which
+    // returns a failed Future, cannot fail the request it was watching; see
+    // GuardedTelemetry for why the guard belongs here and not in Exec.attempt.
+    // Telemetry.noOp is this library's own code and cannot fail, so it is left
+    // unwrapped rather than paying for a guard on every unconfigured request.
+    val observer = telemetry.fold(Telemetry.noOp[Future])(GuardedTelemetry(_))
 
     val port = SttpHttpPort(backend, config)
 

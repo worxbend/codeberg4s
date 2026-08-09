@@ -46,7 +46,7 @@ import java.time.Instant
   *   model may over-state a key's power, never under-state it. Forgejo sends the field on every real payload, so the
   *   case is theoretical
   */
-final case class DeployKey(
+final case class DeployKey private[codeberg4s] (
     id: DeployKeyId,
     key: String,
     keyId: Option[Long],

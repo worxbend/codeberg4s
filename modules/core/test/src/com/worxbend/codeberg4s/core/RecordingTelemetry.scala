@@ -19,6 +19,7 @@ final class RecordingTelemetry(failing: Boolean) extends Telemetry[Exec.Result]:
 
   private val recorded = ListBuffer.empty[String]
   private val contexts = ListBuffer.empty[CallContext]
+  private val failures = ListBuffer.empty[CodebergError]
 
   override def onRequest(ctx: CallContext): Exec.Result[Unit] =
     record(ctx, s"request ${ctx.operation}")
@@ -27,6 +28,7 @@ final class RecordingTelemetry(failing: Boolean) extends Telemetry[Exec.Result]:
     record(ctx, s"response $status")
 
   override def onError(ctx: CallContext, error: CodebergError): Exec.Result[Unit] =
+    failures.append(error).discard
     record(ctx, s"error ${RecordingTelemetry.nameOf(error)}")
 
   /** Every callback, rendered as a short label, in the order it fired. */
@@ -34,6 +36,14 @@ final class RecordingTelemetry(failing: Boolean) extends Telemetry[Exec.Result]:
 
   /** The call context each callback received, in the same order as [[events]]. */
   def seen: Vector[CallContext] = contexts.toVector
+
+  /** The failures the sink was handed, whole rather than as labels.
+    *
+    * A sink is the first thing to see a failure — the hook fires while the pipeline settles the attempt — so it is also
+    * the first place a body excerpt could be logged. Keeping the values, and not only their case names, is what lets a
+    * test assert on what a real sink would have printed.
+    */
+  def observed: Vector[CodebergError] = failures.toVector
 
   private def record(ctx: CallContext, event: String): Exec.Result[Unit] =
     recorded.append(event).discard
@@ -54,3 +64,4 @@ object RecordingTelemetry:
       case CodebergError.DecodingFailed(_, _, _, _) => "DecodingFailed"
       case CodebergError.Validation(_)              => "Validation"
       case CodebergError.RetriesExhausted(_, _, _)  => "RetriesExhausted"
+      case CodebergError.WalkTruncated(_, _)        => "WalkTruncated"

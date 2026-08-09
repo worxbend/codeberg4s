@@ -35,7 +35,7 @@ import com.worxbend.codeberg4s.repositories.TagName
   * @param url
   *   the API URL of the tag object, when the endpoint reports one
   */
-final case class AnnotatedTag(
+final case class AnnotatedTag private[codeberg4s] (
     name: TagName,
     sha: CommitSha,
     target: Option[GitObjectRef],

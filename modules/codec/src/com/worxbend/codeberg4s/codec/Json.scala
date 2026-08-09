@@ -3,8 +3,10 @@ package com.worxbend.codeberg4s.codec
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.DecodeFailure
+import com.worxbend.codeberg4s.core.ResponseBody
 
 import com.github.plokhotnyuk.jsoniter_scala.core.ReaderConfig
+import com.github.plokhotnyuk.jsoniter_scala.core.readFromArray
 import com.github.plokhotnyuk.jsoniter_scala.core.readFromString
 import com.github.plokhotnyuk.jsoniter_scala.core.writeToString
 
@@ -12,10 +14,14 @@ import scala.util.control.NonFatal
 
 /** The single door between a response body and a wire DTO.
   *
-  * Nothing else in this library calls jsoniter's `readFromString`. Keeping the call in one place is what lets the
-  * module promise that a decoding failure is always a [[com.worxbend.codeberg4s.core.DecodeFailure]] value and never an
+  * Nothing else in this library asks jsoniter to read anything. Keeping the call in one place is what lets the module
+  * promise that a decoding failure is always a [[com.worxbend.codeberg4s.core.DecodeFailure]] value and never an
   * escaping `JsonReaderException` — the promise ADR-0003 makes and `SCALA_CODE_STYLE.md` restates as "malformed and
   * unexpected JSON produces a failure value, never an exception".
+  *
+  * '''Bytes are the primary input shape.''' A response arrives as bytes and jsoniter reads bytes, so the pair of entry
+  * points that take an `Array[Byte]` is the one the request pipeline uses; the `String` overloads exist for the callers
+  * that genuinely start from text and pay a UTF-8 encoding to join the same path.
   *
   * '''Where a path comes from.''' Decoding is two steps: jsoniter parses the body into [[JsonValue]], then the DTO
   * assembles itself from that document. Only the first step can fail structurally, and when it does the problem is the
@@ -50,7 +56,11 @@ object Json:
       .withMaxBufSize(1 << 22)
       .withPreferredBufSize(1 << 14)
 
-  /** Decodes a body into `A`.
+  /** Decodes a body into `A`, from the bytes that arrived.
+    *
+    * This is the shape the request pipeline uses. jsoniter — like every JSON parser worth using — reads bytes, so
+    * handing it the bytes is the direct route; handing it a `String` makes it encode that `String` back into a `byte[]`
+    * before it can start, which is a full copy of the payload for nothing.
     *
     * '''Never throws.''' Everything jsoniter can raise — a body that is not JSON, a truncated body, an empty body, a
     * document nested past [[JsonValue.MaxDepth]] — is caught and returned as a
@@ -58,7 +68,19 @@ object Json:
     * [[MaxReasonLength]].
     *
     * @param body
-    *   the raw response body, exactly as received
+    *   the raw response body as UTF-8 bytes, exactly as received
+    */
+  def decode[A](body: Array[Byte])(using decoder: JsonDecoder[A]): Either[DecodeFailure, A] =
+    parse(body).flatMap(decoder.decode)
+
+  /** Decodes a body given as text.
+    *
+    * Kept for the callers that genuinely hold a `String` and not bytes — the error-payload parser, which is handed
+    * already-decoded text, and tests written against a literal. It encodes to UTF-8 and then parses, so prefer the
+    * `Array[Byte]` overload wherever the bytes are still available.
+    *
+    * @param body
+    *   the raw response body as text, exactly as received
     */
   def decode[A](body: String)(using decoder: JsonDecoder[A]): Either[DecodeFailure, A] =
     parse(body).flatMap(decoder.decode)
@@ -67,23 +89,40 @@ object Json:
     *
     * Use this to hand a DTO to a use case without core learning that jsoniter exists. Instances are stateless and safe
     * to share between threads.
+    *
+    * Reads [[com.worxbend.codeberg4s.core.ResponseBody.utf8Bytes]] rather than the raw bytes, because JSON is UTF-8 by
+    * RFC 8259 §8.1 and jsoniter reads UTF-8 and nothing else. For every response Forgejo has ever sent, that is the
+    * array the socket produced and no work happens at all; for a server that declared something else, it is a
+    * transcoding, which is still right and merely slow.
     */
   def decoder[A](using JsonDecoder[A]): Decode[A] =
-    (body: String) => decode[A](body)
+    (body: ResponseBody) => decode[A](body.utf8Bytes)
 
-  /** Parses a body into the document model, without interpreting it.
+  /** Parses UTF-8 bytes into the document model, without interpreting it.
     *
     * The bare literal `null` is a successful parse producing [[JsonValue.Null]], not a `null` reference — which is the
     * whole reason this library models JSON rather than mapping it onto Scala types at the parser. Whether `null` is an
     * acceptable document is the decoder's question, and [[JsonDecoder.objectOf]] answers no.
     */
+  def parse(body: Array[Byte]): Either[DecodeFailure, JsonValue] =
+    read(readFromArray[JsonValue](body, Config)(using JsonValue.codec))
+
+  /** [[parse]] for a body already held as text; it is encoded to UTF-8 and parsed. */
   def parse(body: String): Either[DecodeFailure, JsonValue] =
-    try Right(readFromString[JsonValue](body, Config)(using JsonValue.codec))
-    catch case NonFatal(error) => Left(DecodeFailure(JsonPath.Root, reasonOf(error)))
+    read(readFromString[JsonValue](body, Config)(using JsonValue.codec))
 
   /** Renders a document to its compact wire form. The only place this library serialises JSON. */
   def render(value: JsonValue): String =
     writeToString(value)(using JsonValue.codec)
+
+  /** The promise that no `JsonReaderException` escapes, made once for both entry points.
+    *
+    * `parsed` is by-name so that the parse happens inside the `try` rather than at the call site, which is the whole
+    * point of routing both overloads through here.
+    */
+  private def read(parsed: => JsonValue): Either[DecodeFailure, JsonValue] =
+    try Right(parsed)
+    catch case NonFatal(error) => Left(DecodeFailure(JsonPath.Root, reasonOf(error)))
 
   private def reasonOf(error: Throwable): String =
     Option(error.getMessage).map(bound).getOrElse(error.getClass.getName)

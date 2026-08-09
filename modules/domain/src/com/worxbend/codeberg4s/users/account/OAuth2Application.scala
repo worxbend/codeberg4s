@@ -37,7 +37,7 @@ import java.time.Instant
   * @param createdAt
   *   when the application was registered, absent when the instance sent no timestamp or the zero-time sentinel
   */
-final case class OAuth2Application(
+final case class OAuth2Application private[codeberg4s] (
     id: OAuth2ApplicationId,
     name: Option[String],
     clientId: Option[String],

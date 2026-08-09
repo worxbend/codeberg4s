@@ -34,7 +34,7 @@ import java.time.Instant
   * @param createdAt
   *   when the entry was recorded, which an import may backdate
   */
-final case class TrackedTime(
+final case class TrackedTime private[codeberg4s] (
     id: TrackedTimeId,
     issue: Option[Issue],
     spent: FiniteDuration,

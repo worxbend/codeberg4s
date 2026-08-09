@@ -42,7 +42,7 @@ import java.time.Instant
   *   the browser URL of the review, absent for a review request — `""` on the fixture's two request rows and a real
   *   anchor on the approval
   */
-final case class Review(
+final case class Review private[codeberg4s] (
     id: ReviewId,
     state: Option[ReviewState],
     body: Option[String],

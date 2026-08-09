@@ -20,11 +20,13 @@ import scala.concurrent.duration.FiniteDuration
   *   1. how long to wait — the server's `Retry-After` when the policy honours it, otherwise `baseDelay * 2^(n - 1)`
   *      after the *n*-th failed attempt, clamped to `maxDelay` and then jittered.
   *
-  * Nothing is lost when it gives up: as soon as more than one attempt has been made, the failure the caller receives is
+  * Nothing is lost when it gives up: a call the engine was repeating and could not repeat again reports
   * [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]], carrying the number of attempts and the last underlying
-  * error verbatim. A call that fails once and is not repeated — a `404`, a `POST` under
-  * [[RetryEligibility.IdempotentOnly]], a policy of [[com.worxbend.codeberg4s.retry.RetryPolicy.Off]] — returns that
-  * failure unwrapped, because there is nothing to explain.
+  * error verbatim. Every other failure is reported unwrapped, because there is nothing to explain: a call that fails
+  * once and is not repeated — a `404`, a `POST` under [[RetryEligibility.IdempotentOnly]], a policy of
+  * [[com.worxbend.codeberg4s.retry.RetryPolicy.Off]] — and equally a call whose last attempt failed in a way no
+  * repetition could fix, such as a `503` followed by a `404`. `RetriesExhausted` therefore means the attempt budget ran
+  * out, never merely that more than one attempt was made.
   *
   * Waiting goes through [[Timer]] and jitter through [[JitterSource]], so the whole schedule is observable in a unit
   * test without a single real millisecond passing.
@@ -91,7 +93,7 @@ final class RetryEngine[F[_]](policy: RetryPolicy, timer: Timer[F])(using exec: 
         case Left(error)  =>
           if shouldRetry(method, eligibility, number, error) then
             waitThenRetry(operation, method, eligibility, number, attempt, outcome.retryAfter)
-          else exec.raise(giveUp(operation, method, number, error))
+          else exec.raise(giveUp(operation, method, eligibility, number, error))
 
   private def waitThenRetry[A](
       operation: String,
@@ -112,8 +114,23 @@ final class RetryEngine[F[_]](policy: RetryPolicy, timer: Timer[F])(using exec: 
   ): Boolean =
     number < policy.maxAttempts && eligibility.allows(method) && RetryEngine.isRetryable(error)
 
-  private def giveUp(operation: String, method: HttpMethod, attempts: Int, error: CodebergError): CodebergError =
-    if attempts > 1 then
+  /** The failure the caller receives once the loop has stopped.
+    *
+    * Wrapping in [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] is a claim that the attempt budget is what
+    * ended the call, so it is made only when every part of that claim holds: more than one attempt was made, the caller
+    * allowed repetition, and the failure that ended the loop is itself one the engine would have repeated had an
+    * attempt been left. A call that meets a `503` and then a `404` stopped because a `404` cannot be repeated, not
+    * because the budget ran out, so it reports that `404` unwrapped — the same failure it would have reported had the
+    * `404` arrived first.
+    */
+  private def giveUp(
+      operation: String,
+      method: HttpMethod,
+      eligibility: RetryEligibility,
+      attempts: Int,
+      error: CodebergError,
+  ): CodebergError =
+    if attempts > 1 && eligibility.allows(method) && RetryEngine.isRetryable(error) then
       CodebergError.RetriesExhausted(RetryEngine.contextOf(operation, method, error), attempts, error)
     else error
 
@@ -150,8 +167,15 @@ object RetryEngine:
       case CodebergError.DecodingFailed(_, _, _, _) => false
       case CodebergError.Validation(_)              => false
       case CodebergError.RetriesExhausted(_, _, _)  => false
+      // Never reaches this engine — a page walk is assembled above it — and
+      // repeating the walk would stop at the same cap, so it is not retryable
+      // even in principle.
+      case CodebergError.WalkTruncated(_, _)        => false
 
-  /** A TLS failure does not heal by itself and an interruption was asked for; everything else may be transient. */
+  /** A TLS failure does not heal by itself, an interruption was asked for, and an oversized body would arrive oversized
+    * again — repeating that one would download the body the bound exists to refuse once per attempt. Everything else
+    * may be transient.
+    */
   private[core] def isRetryable(cause: TransportCause): Boolean =
     cause match
       case TransportCause.ConnectionFailed(_) => true
@@ -160,6 +184,7 @@ object RetryEngine:
       case TransportCause.Unknown(_)          => true
       case TransportCause.Tls(_)              => false
       case TransportCause.Interrupted(_)      => false
+      case TransportCause.ResponseTooLarge(_) => false
 
   private[core] def contextOf(operation: String, method: HttpMethod, error: CodebergError): CallContext =
     error match
@@ -168,6 +193,7 @@ object RetryEngine:
       case CodebergError.DecodingFailed(ctx, _, _, _) => ctx
       case CodebergError.RetriesExhausted(ctx, _, _)  => ctx
       case CodebergError.Validation(_)                => CallContext(operation, method, UnknownUri, None, 0L)
+      case CodebergError.WalkTruncated(_, _)          => CallContext(operation, method, UnknownUri, None, 0L)
 
   /** `value` doubled `times` over, stopping at `cap`. Written as a fold rather than a shift so that a large attempt
     * count cannot overflow the exponent.

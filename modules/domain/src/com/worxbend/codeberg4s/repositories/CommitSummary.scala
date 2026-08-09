@@ -26,7 +26,7 @@ import java.time.Instant
   * @param timestamp
   *   when the commit was made
   */
-final case class CommitSummary(
+final case class CommitSummary private[codeberg4s] (
     sha: CommitSha,
     message: Option[String],
     url: Option[String],

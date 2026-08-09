@@ -11,11 +11,11 @@ import java.time.Instant
   *
   * ==Downloading==
   *
-  * This library does '''not''' implement `GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/zip`, because it
-  * cannot do so honestly: the transport reads every response as text, and a ZIP that has been through a UTF-8 decoder
-  * is no longer a ZIP. [[archiveDownloadUrl]] is the supported route — hand it to an HTTP client that can stream bytes.
-  * Note that the URL is authenticated exactly like the API is, so the caller's own client must send the same
-  * credentials.
+  * `GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/zip` is implemented, on
+  * `com.worxbend.codeberg4s.repositories.actions.ActionDownloadApi` — reached as `client.downloads`. It holds the whole
+  * archive in memory, because nothing in this library streams, so [[archiveDownloadUrl]] remains the route for an
+  * archive too large to want in the heap: hand it to an HTTP client that can stream bytes. Note that the URL is
+  * authenticated exactly like the API is, so the caller's own client must send the same credentials.
   *
   * @param id
   *   the identifier the artifact endpoints address this artifact by
@@ -33,7 +33,7 @@ import java.time.Instant
   * @param expiresAt
   *   when the bytes are removed, absent when the instance did not report a retention window
   */
-final case class ActionArtifact(
+final case class ActionArtifact private[codeberg4s] (
     id: ArtifactId,
     name: Option[String],
     sizeInBytes: Option[Long],

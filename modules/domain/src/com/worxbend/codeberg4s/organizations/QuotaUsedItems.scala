@@ -20,7 +20,11 @@ package com.worxbend.codeberg4s.organizations
   * @param htmlUrl
   *   a browser link to the action run containing the artifact
   */
-final case class QuotaArtifact(name: Option[String], sizeBytes: Option[Long], htmlUrl: Option[String])
+final case class QuotaArtifact private[codeberg4s] (
+    name: Option[String],
+    sizeBytes: Option[Long],
+    htmlUrl: Option[String],
+)
 
 /** Where an attachment hangs — the `contained_in` object of Forgejo's `QuotaUsedAttachment`.
   *
@@ -32,7 +36,7 @@ final case class QuotaArtifact(name: Option[String], sizeBytes: Option[Long], ht
   * @param htmlUrl
   *   the browser URL of the containing object
   */
-final case class QuotaAttachmentContext(apiUrl: Option[String], htmlUrl: Option[String])
+final case class QuotaAttachmentContext private[codeberg4s] (apiUrl: Option[String], htmlUrl: Option[String])
 
 /** One attachment counting towards an organisation's quota — Forgejo's `QuotaUsedAttachment`.
   *
@@ -48,7 +52,7 @@ final case class QuotaAttachmentContext(apiUrl: Option[String], htmlUrl: Option[
   * @param containedIn
   *   what it is attached to, absent when the instance sent no context object
   */
-final case class QuotaAttachment(
+final case class QuotaAttachment private[codeberg4s] (
     name: Option[String],
     sizeBytes: Option[Long],
     apiUrl: Option[String],
@@ -72,7 +76,7 @@ final case class QuotaAttachment(
   * @param htmlUrl
   *   a browser link to the package version
   */
-final case class QuotaPackage(
+final case class QuotaPackage private[codeberg4s] (
     name: Option[String],
     version: Option[String],
     packageType: Option[String],

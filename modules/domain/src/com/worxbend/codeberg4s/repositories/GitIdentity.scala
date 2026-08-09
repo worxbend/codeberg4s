@@ -25,7 +25,7 @@ import java.time.Instant
   * @param date
   *   when the authorship or the commit was recorded, when the endpoint reports it
   */
-final case class GitIdentity(
+final case class GitIdentity private[codeberg4s] (
     name: Option[String],
     email: Option[String],
     username: Option[String],

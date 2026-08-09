@@ -17,7 +17,7 @@ package com.worxbend.codeberg4s.repositories.hooks
   *   the alternatives offered alongside the templates, in the order the file lists them. Empty when the payload carried
   *   no `contact_links` key, `null`, or an empty array
   */
-final case class IssueConfig(
+final case class IssueConfig private[codeberg4s] (
     blankIssuesEnabled: Option[Boolean],
     contactLinks: Vector[IssueContactLink],
 )
@@ -33,7 +33,7 @@ final case class IssueConfig(
   * @param about
   *   the sentence explaining when to use this link instead of an issue
   */
-final case class IssueContactLink(
+final case class IssueContactLink private[codeberg4s] (
     name: String,
     url: String,
     about: Option[String],
@@ -53,7 +53,7 @@ final case class IssueContactLink(
   * @param message
   *   what was wrong, when something was. Absent for a valid config
   */
-final case class IssueConfigValidation(
+final case class IssueConfigValidation private[codeberg4s] (
     isValid: Boolean,
     message: Option[String],
 )

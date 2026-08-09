@@ -32,7 +32,7 @@ private[hooks] object HookWire:
   def stringMap(fields: JsonFields, name: String): Map[String, String] =
     fields
       .nested(name)
-      .fold(Map.empty)(nested => nested.underlying.flatMap((key, value) => value.strOpt.map(text => key -> text)))
+      .fold(Map.empty)(nested => nested.toMap.flatMap((key, value) => value.strOpt.map(text => key -> text)))
 
   /** The object at `name` read as a map of text, keeping values of any JSON kind.
     *
@@ -46,4 +46,4 @@ private[hooks] object HookWire:
     fields
       .nested(name)
       .fold(Map.empty): nested =>
-        nested.underlying.map((key, value) => key -> value.strOpt.getOrElse(Json.render(value)))
+        nested.toMap.map((key, value) => key -> value.strOpt.getOrElse(Json.render(value)))

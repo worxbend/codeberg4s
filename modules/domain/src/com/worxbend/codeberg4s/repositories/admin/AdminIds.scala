@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin
 
+import com.worxbend.codeberg4s.PathSegment
 import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.repositories.PathSegment
 
 /** Validation shared by every identifier in this group that Forgejo expresses as a positive integer.
   *
@@ -105,8 +105,8 @@ object MirrorName:
 
   /** Parses a push-mirror remote name.
     *
-    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, and a value containing a
-    * control character.
+    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, a value containing a
+    * control character, and the traversal segments `.` and `..`.
     *
     * @return
     *   the trimmed name, or a [[ValidationError]] on the `"mirrorName"` field

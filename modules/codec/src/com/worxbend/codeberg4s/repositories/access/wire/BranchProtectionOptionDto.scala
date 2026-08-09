@@ -68,7 +68,7 @@ private[wire] object BranchProtectionSettingsDto:
     value => key -> JsonValue.Bool(value)
 
   private def approvals(key: String): ApprovalCount => (String, JsonValue) =
-    count => key -> JsonValue.Num(count.value.toDouble)
+    count => key -> JsonValue.Num(count.value)
 
   private def text(key: String): String => (String, JsonValue) =
     value => key -> JsonValue.Str(value)

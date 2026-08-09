@@ -2,7 +2,6 @@ package com.worxbend.codeberg4s.core
 
 import com.worxbend.codeberg4s.CallContext
 import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.syntax.discard
 
 /** Observation hooks for applications that want to see what the client is doing.
   *
@@ -38,17 +37,13 @@ object Telemetry:
 
   private final class NoOp[F[_]](exec: Exec[F]) extends Telemetry[F]:
 
+    /** The one effect this sink ever returns. Built once per instance so that no callback allocates: a client that
+      * leaves telemetry unconfigured still reaches this class three times per attempt, on every request it makes.
+      */
     private val done: F[Unit] = exec.pure(())
 
-    override def onRequest(ctx: CallContext): F[Unit] = ignoring(ctx)
+    override def onRequest(ctx: CallContext): F[Unit] = done
 
-    override def onResponse(ctx: CallContext, status: Int): F[Unit] = ignoring(ctx, status)
+    override def onResponse(ctx: CallContext, status: Int): F[Unit] = done
 
-    override def onError(ctx: CallContext, error: CodebergError): F[Unit] = ignoring(ctx, error)
-
-    /** Discards what it was told, explicitly: the build treats an unused value in statement position as an error, and a
-      * no-op sink is exactly the place where ignoring an argument is the intended behaviour.
-      */
-    private def ignoring(observed: Any*): F[Unit] =
-      observed.discard
-      done
+    override def onError(ctx: CallContext, error: CodebergError): F[Unit] = done

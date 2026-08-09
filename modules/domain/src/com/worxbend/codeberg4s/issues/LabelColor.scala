@@ -2,8 +2,6 @@ package com.worxbend.codeberg4s.issues
 
 import com.worxbend.codeberg4s.ValidationError
 
-import scala.util.matching.Regex
-
 import java.util.Locale
 
 /** The background colour of a [[Label]], as a hexadecimal RGB triplet.
@@ -21,21 +19,41 @@ opaque type LabelColor = String
 
 object LabelColor:
 
-  private val Hexadecimal: Regex = "^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$".r
-
   /** Parses a label colour.
     *
     * Trims surrounding whitespace, drops a leading `#`, and lowercases the digits. Rejects anything that is not three
     * or six hexadecimal digits.
     *
+    * Checked by counting the digits and then scanning them, rather than by a regular expression. Every label Forgejo
+    * returns carries a colour, so this runs once per label on every issue and label listing; a `Pattern` match
+    * allocates a `Matcher` and a match result per call, and the grammar it encodes — a length and an alphabet — is
+    * cheaper to state directly.
+    *
     * @return
     *   the normalised colour, or a [[ValidationError]] on the `"labelColor"` field
     */
   def from(value: String): Either[ValidationError, LabelColor] =
-    Hexadecimal.findFirstMatchIn(value.trim) match
-      case Some(digits) => Right(digits.group(1).toLowerCase(Locale.ROOT))
-      case None         =>
-        Left(ValidationError("labelColor", "must be three or six hexadecimal digits, optionally prefixed with '#'"))
+    val trimmed = value.trim
+    val digits  = if trimmed.startsWith("#") then trimmed.substring(1) else trimmed
+    if isTripletLength(digits.length) && digits.forall(isHexadecimalDigit) then
+      Right(digits.toLowerCase(Locale.ROOT))
+    else Left(ValidationError("labelColor", "must be three or six hexadecimal digits, optionally prefixed with '#'"))
+
+  /** Whether `length` is one of the two digit counts Forgejo takes: three-digit shorthand or a six-digit triplet. */
+  private def isTripletLength(length: Int): Boolean =
+    length match
+      case 3 | 6 => true
+      case _ => false
+
+  /** Whether `digit` is one of `0`-`9`, `a`-`f` or `A`-`F`.
+    *
+    * Spelled out as range comparisons rather than delegating to `Character.digit`, which also accepts the non-ASCII
+    * decimal digits of every Unicode script — `٣` and `३` are digits to the JDK, and neither belongs in a colour.
+    */
+  private def isHexadecimalDigit(digit: Char): Boolean =
+    (digit >= '0' && digit <= '9') ||
+    (digit >= 'a' && digit <= 'f') ||
+    (digit >= 'A' && digit <= 'F')
 
   extension (color: LabelColor)
 

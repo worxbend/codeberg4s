@@ -57,7 +57,7 @@ import java.time.Instant
   * @param stoppedAt
   *   when the run finished, absent while it is still going
   */
-final case class ActionRun(
+final case class ActionRun private[codeberg4s] (
     id: RunId,
     indexInRepo: Option[Long],
     title: Option[String],

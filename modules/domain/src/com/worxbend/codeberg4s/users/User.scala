@@ -30,7 +30,7 @@ import java.time.Instant
   * @param lastLoginAt
   *   absent unless the caller is an administrator; Forgejo reports the zero-time sentinel otherwise
   */
-final case class User(
+final case class User private[codeberg4s] (
     id: Long,
     login: String,
     fullName: Option[String],

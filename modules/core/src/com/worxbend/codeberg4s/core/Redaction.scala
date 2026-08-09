@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.core
 
+import com.worxbend.codeberg4s.syntax.discard
+
 import java.nio.charset.StandardCharsets
 import java.util.Locale
 
@@ -36,15 +38,53 @@ object Redaction:
     * The value of a parameter named in [[SensitiveQueryParameters]] is replaced by [[Mask]] and never encoded, so the
     * result shows `?token=***` rather than an encoded secret.
     *
+    * The base URI is not trusted to be clean. `com.worxbend.codeberg4s.BaseUri.from` rejects one carrying
+    * `user:password@`, a query or a fragment, but this method takes a plain `String` and a test fake can pass anything
+    * at all, so those three parts are removed here as well. Without that, a password in a hand-built base URI would be
+    * copied into every rendered URI, and therefore into every error and every telemetry event.
+    *
     * @param baseUri
-    *   the API root, already normalised without a trailing slash
+    *   the API root, expected to be normalised without a trailing slash
     * @param path
     *   unencoded path segments, in order; an empty list renders just the base URI
     * @param query
     *   query parameters in order, keys may repeat
     */
   def uri(baseUri: String, path: List[String], query: List[(String, String)]): String =
-    s"$baseUri${renderPath(path)}${renderQuery(query)}"
+    s"${safeBase(baseUri)}${renderPath(path)}${renderQuery(query)}"
+
+  /** Strips the parts of a base URI that must never be rendered: anything from the first `?` or `#`, and the
+    * `user:password@` prefix of the authority.
+    */
+  private def safeBase(baseUri: String): String =
+    withoutUserInfo(withoutTail(baseUri))
+
+  /** The value up to its first `?` or `#`, dropping a query or fragment along with everything after it. */
+  private def withoutTail(value: String): String =
+    val tail = value.indexWhere(startsTail)
+    if tail < 0 then value else value.take(tail)
+
+  private def startsTail(char: Char): Boolean =
+    char match
+      case '?' | '#' => true
+      case _ => false
+
+  /** The value with any `user:password@` removed from its authority.
+    *
+    * The authority runs from `://` to the next `/`, so an `@` in a path segment — `https://forge.example/api/v1/@me` —
+    * is left alone. A value with no `://` is returned unchanged: there is no authority to trim.
+    */
+  private def withoutUserInfo(value: String): String =
+    val marker = value.indexOf(AuthorityMarker)
+    if marker < 0 then value
+    else
+      val start = marker + AuthorityMarker.length
+      val end   = value.indexOf('/', start)
+      val at    = value.lastIndexOf('@', (if end < 0 then value.length else end) - 1)
+      if at < start then value else value.substring(0, start) + value.substring(at + 1)
+
+  /** What separates a scheme from an authority; the authority is where user information can hide. */
+  private val AuthorityMarker: String = "://"
 
   /** Masks the value of every credential-carrying header, keeping order and every other header untouched.
     *
@@ -70,15 +110,39 @@ object Redaction:
   private def renderValue(name: String, value: String): String =
     if isSensitiveParameter(name) then Mask else percentEncode(value)
 
+  /** The uppercase hex alphabet, indexed by nibble. A `String` rather than an `Array[Char]` so that the lookup table
+    * cannot be mutated by anything holding a reference to it.
+    */
+  private val HexDigits: String = "0123456789ABCDEF"
+
+  /** Percent-encodes `value` per RFC 3986 into one buffer.
+    *
+    * Every octet is appended to a single [[StringBuilder]] rather than turned into its own `String` first. The result
+    * is character-for-character what a per-octet `map(...).mkString` produces; only the allocation count differs, and
+    * this runs on every path segment and every query value of every attempt of every call.
+    */
   private def percentEncode(value: String): String =
-    value.getBytes(StandardCharsets.UTF_8).map(encodeByte).mkString
+    val octets  = value.getBytes(StandardCharsets.UTF_8)
+    val encoded = StringBuilder(octets.length)
+    octets.foreach(byte => appendEncoded(encoded, byte))
+    encoded.toString
 
-  private def encodeByte(byte: Byte): String =
+  /** Appends one UTF-8 octet: literally when it is unreserved, otherwise as `%` and two uppercase hex digits. */
+  private def appendEncoded(target: StringBuilder, byte: Byte): Unit =
     val octet = byte & 0xFF
-    if isUnreserved(octet.toChar) then octet.toChar.toString else f"%%$octet%02X"
+    if isUnreserved(octet.toChar) then target.append(octet.toChar).discard
+    else target.append('%').append(HexDigits(octet >> 4)).append(HexDigits(octet & 0x0F)).discard
 
+  /** Whether `char` is RFC 3986 unreserved.
+    *
+    * The four punctuation marks are matched literally rather than looked for inside a `"-._~"` string, so deciding a
+    * character costs a comparison instead of a scan. A `match` rather than `==` because the build's Scalafix
+    * configuration bans universal equality, and rather than `.equals` because that would box the `Char`.
+    */
   private def isUnreserved(char: Char): Boolean =
     (char >= 'a' && char <= 'z') ||
     (char >= 'A' && char <= 'Z') ||
     (char >= '0' && char <= '9') ||
-    "-._~".contains(char)
+    (char match
+      case '-' | '.' | '_' | '~' => true
+      case _ => false)

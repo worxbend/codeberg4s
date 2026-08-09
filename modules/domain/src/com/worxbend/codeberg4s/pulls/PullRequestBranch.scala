@@ -29,7 +29,7 @@ import com.worxbend.codeberg4s.repositories.Repository
   * @param repository
   *   the repository this end lives in, when the endpoint supplied it
   */
-final case class PullRequestBranch(
+final case class PullRequestBranch private[codeberg4s] (
     label: Option[String],
     ref: Option[BranchName],
     sha: Option[CommitSha],

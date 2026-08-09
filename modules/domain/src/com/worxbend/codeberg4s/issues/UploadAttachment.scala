@@ -1,8 +1,10 @@
 package com.worxbend.codeberg4s.issues
 
+import com.worxbend.codeberg4s.ContentType
 import com.worxbend.codeberg4s.ValidationError
 
 import java.time.Instant
+import java.util.Arrays
 
 /** A file to attach to an issue or to a comment — the `multipart/form-data` half of
   * `POST /repos/{owner}/{repo}/issues/{index}/assets` and of the matching comment route.
@@ -23,13 +25,21 @@ import java.time.Instant
   * [[content]] is '''not''' copied, here or at the transport boundary, for the reason
   * `com.worxbend.codeberg4s.repositories.publishing.UploadAsset` gives: an attachment can be large and copying it to
   * gain an immutability guarantee the caller can already provide is the wrong trade. A caller must therefore not mutate
-  * the array after handing it over. For the same reason the generated `equals` compares [[content]] by reference, so
-  * two structurally identical uploads are not equal; nothing in this library depends on that.
+  * the array after handing it over.
+  *
+  * Equality is a separate question from copying, and is answered '''on the bytes''': see [[UploadAttachment.equals]].
+  *
+  * ==Construction==
+  *
+  * The constructor is private, so [[UploadAttachment.of]] is the only way to obtain one and the checks it performs
+  * cannot be stepped around by calling the generated `apply` or `copy`. Reading the fields and pattern matching are
+  * unaffected.
   *
   * ==Error contract==
   *
-  * Construction produces [[ValidationError]] on the `"fileName"` field and nothing else; it performs no I/O and never
-  * reads a file. Turning a path into bytes is the caller's job, deliberately: this library owns no filesystem effect.
+  * [[UploadAttachment.of]] produces a [[ValidationError]] on the `"fileName"` field, [[as]] one on the `"mediaType"`
+  * field, and nothing else here can fail. No member performs I/O or reads a file. Turning a path into bytes is the
+  * caller's job, deliberately: this library owns no filesystem effect.
   *
   * @param fileName
   *   the file name announced in the multipart part
@@ -42,7 +52,7 @@ import java.time.Instant
   * @param updatedAt
   *   the `updated_at` query parameter, which an import uses to backdate the attachment
   */
-final case class UploadAttachment(
+final case class UploadAttachment private (
     fileName: String,
     content: Array[Byte],
     mediaType: String,
@@ -53,14 +63,45 @@ final case class UploadAttachment(
   /** Records the attachment under `attachment` instead of under [[fileName]]. */
   def named(attachment: String): UploadAttachment = copy(storedName = Some(attachment))
 
-  /** Declares the part's content type, for an instance or a proxy that acts on it. */
-  def as(media: String): UploadAttachment = copy(mediaType = media)
+  /** Declares the part's own `Content-Type`, for an instance or a proxy that acts on it.
+    *
+    * The value is written into the multipart body as a header, so it is checked the way [[fileName]] is: trimmed, then
+    * refused when it is blank or carries a control character. A carriage return or a newline in it would end the part's
+    * header line and let whatever follows be read as headers of the caller's choosing.
+    *
+    * @return
+    *   the upload sent under `media`, or a [[ValidationError]] on the `"mediaType"` field
+    */
+  def as(media: String): Either[ValidationError, UploadAttachment] =
+    ContentType.from("mediaType", media).map(checked => copy(mediaType = checked))
 
   /** Backdates the attachment, which is what an importer wants and nothing else does. */
   def recordedAt(moment: Instant): UploadAttachment = copy(updatedAt = Some(moment))
 
   /** How many bytes would be sent. */
   def size: Int = content.length
+
+  /** Structural, on the names, the media type and the timestamp first and then on the bytes.
+    *
+    * Written out for the reason `com.worxbend.codeberg4s.repositories.publishing.UploadAsset.equals` gives: an array's
+    * own `equals` in Scala is identity, so the generated equality would report two uploads built from byte-identical
+    * files as different and hash them differently. Comparing the bytes copies nothing, so the aliasing decision above
+    * stands; the cheap fields are tested first so the scan is reached only when everything else already matched.
+    *
+    * The class is `final`, so no subclass can exist and the type test below is the whole of the compiler-generated
+    * `canEqual`; calling `canEqual` as well would add nothing. Removing `final` would change that.
+    */
+  override def equals(other: Any): Boolean =
+    other match
+      case that: UploadAttachment =>
+        fileName.equals(that.fileName) && mediaType.equals(that.mediaType) &&
+        storedName.equals(that.storedName) && updatedAt.equals(that.updatedAt) &&
+        Arrays.equals(content, that.content)
+      case _                      => false
+
+  override def hashCode(): Int =
+    31 * (31 * (31 * (31 * fileName.hashCode + mediaType.hashCode) + storedName.hashCode) + updatedAt.hashCode) +
+      Arrays.hashCode(content)
 
 object UploadAttachment:
 

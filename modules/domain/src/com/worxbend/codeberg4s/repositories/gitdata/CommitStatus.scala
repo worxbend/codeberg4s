@@ -29,7 +29,7 @@ import java.time.Instant
   * @param url
   *   the API URL of the status, when the endpoint reports one
   */
-final case class CommitStatus(
+final case class CommitStatus private[codeberg4s] (
     id: Long,
     state: Option[CommitStatusState],
     context: Option[String],

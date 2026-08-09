@@ -14,15 +14,22 @@ import scala.concurrent.Future
 
 /** The two Actions endpoints whose success body is a ZIP archive rather than text.
   *
-  * Reached as `client.repos.actions.downloads`. They are separate from [[RepositoryActionApi]] because they are the
-  * only operations in the library that need a byte-carrying transport
-  * ([[com.worxbend.codeberg4s.core.BinaryHttpPort]]), and folding that requirement into the class that serves the other
-  * twenty-six would have made every one of them depend on a capability none of them use.
+  * Reached as `client.downloads`. They are separate from [[RepositoryActionApi]] because they are the only operations
+  * in the library that need a byte-carrying transport ([[com.worxbend.codeberg4s.core.BinaryHttpPort]]), and folding
+  * that requirement into the class that serves the other twenty-six would have made every one of them depend on a
+  * capability none of them use.
   *
   * '''Memory.''' Both operations hold the whole archive in memory as an `Array[Byte]`. A CI artifact can be large, and
   * this library does not stream. Check [[com.worxbend.codeberg4s.repositories.actions.ActionArtifact.sizeInBytes]]
   * before downloading if that matters, or fetch
   * [[com.worxbend.codeberg4s.repositories.actions.ActionArtifact.archiveDownloadUrl]] with your own HTTP client.
+  *
+  * The heap is not the only thing standing in the way: these two are the operations
+  * [[com.worxbend.codeberg4s.CodebergConfig.maxDownloadBodyBytes]] bounds — 50 MiB by default, rather than the 16 MiB
+  * every other operation gets, because an artifact is whatever a workflow uploaded and is legitimately far larger than
+  * a JSON document. An archive past the bound fails as [[com.worxbend.codeberg4s.TransportCause.ResponseTooLarge]] and
+  * is not retried, since a second attempt would download it again. Raise the setting if you need bigger archives and
+  * have the memory for them.
   *
   * '''Failures.''' As everywhere else: [[com.worxbend.codeberg4s.CodebergError.Api]] for a non-2xx — `404` when the
   * artifact or run does not exist, has expired, or belongs to a repository the token cannot see, and `410` when Forgejo

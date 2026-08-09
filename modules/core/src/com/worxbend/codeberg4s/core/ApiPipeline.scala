@@ -13,8 +13,6 @@ import com.worxbend.codeberg4s.syntax.discard
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
-import java.nio.charset.StandardCharsets
-
 /** The single path every API call takes: send, retry, classify, decode, observe.
   *
   * Endpoints describe *what* to call by building a [[CodebergRequest]]; this class owns *how* a call is made. Keeping
@@ -25,9 +23,12 @@ import java.nio.charset.StandardCharsets
   * '''Order of events for one attempt.''' [[Telemetry.onRequest]], the send, then [[Telemetry.onResponse]] if a
   * response arrived, then [[Telemetry.onError]] if the attempt failed. The retry engine repeats that whole sequence, so
   * a retried call produces one triple per attempt, and [[Telemetry.onError]] is called once more with the failure the
-  * caller finally receives — which is [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] when more than one
-  * attempt was made. A telemetry callback that fails is swallowed: observation must not decide whether a request
-  * succeeded.
+  * caller finally receives — which is [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] when the retry policy
+  * ran out of attempts on a failure it was repeating, and the last failure unwrapped otherwise. A telemetry callback
+  * that fails in `F`'s error channel is swallowed here: observation must not decide whether a request succeeded. A
+  * callback that fails some other way — a raw throw, or an `F` whose failure channel is wider than
+  * [[com.worxbend.codeberg4s.CodebergError]] — is out of this class's reach, because [[Exec.attempt]] deliberately
+  * catches nothing else; whoever hands a caller's sink to this pipeline is responsible for wrapping it.
   *
   * '''Failure contract.''' `Left`/raised values are always a [[com.worxbend.codeberg4s.CodebergError]]:
   *   - no response at all becomes [[com.worxbend.codeberg4s.CodebergError.Transport]];
@@ -36,7 +37,9 @@ import java.nio.charset.StandardCharsets
   *     never masks the status;
   *   - a 2xx payload that does not decode becomes [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] with the
   *     failing JSON path and an excerpt of the body bounded at
-  *     [[com.worxbend.codeberg4s.CodebergError.MaxSnippetLength]];
+  *     [[com.worxbend.codeberg4s.CodebergError.MaxSnippetLength]] — or, when the [[Decode]] instance declared itself
+  *     [[Decode.sensitive]] because the endpoint answers with a credential, [[ApiPipeline.redactedSnippet]] in place of
+  *     the excerpt;
   *   - a failure the retry engine gave up on becomes [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]],
   *     preserving the last underlying failure.
   *
@@ -108,21 +111,25 @@ final class ApiPipeline[F[_]](
     * never need one are unaffected and every existing [[HttpPort]] fake keeps compiling.
     *
     * Retry, telemetry, status mapping and `CallContext` behave exactly as they do for a textual call. An error body is
-    * still JSON text even on an endpoint whose success body is binary, so a non-2xx response is decoded as UTF-8 and
-    * parsed the usual way; a successful body is never decoded, which is the whole point.
+    * still JSON text even on an endpoint whose success body is binary, so a non-2xx response is decoded with the
+    * charset it declared and parsed the usual way; a successful body is never decoded, which is the whole point.
     *
     * Always [[RetryEligibility.IdempotentOnly]] — every endpoint that answers bytes in this API is a `GET`.
     */
   def callBinary(request: CodebergRequest, binary: BinaryHttpPort[F]): F[BinaryResponse] =
+    val uri      = redactedUri(request)
     val attempts = engine.runWith(request.operation, request.method, RetryEligibility.IdempotentOnly)(_ =>
-      binaryAttempt(request, binary)
+      binaryAttempt(request, uri, binary)
     )
     exec.attempt(attempts).flatMap:
       case Right(value) => exec.pure(value)
       case Left(error)  => reportFinal(request, error).flatMap(_ => exec.raise(error))
 
-  private def binaryAttempt(request: CodebergRequest, binary: BinaryHttpPort[F]): F[AttemptOutcome[BinaryResponse]] =
-    val uri = Redaction.uri(config.baseUri.value, request.path, request.query)
+  private def binaryAttempt(
+      request: CodebergRequest,
+      uri: String,
+      binary: BinaryHttpPort[F],
+  ): F[AttemptOutcome[BinaryResponse]] =
     timer.nowMillis.flatMap: started =>
       observe(telemetry.onRequest(contextOf(request, uri, None, 0L))).flatMap: _ =>
         binary.sendBinary(request, uri).flatMap: sent =>
@@ -144,25 +151,36 @@ final class ApiPipeline[F[_]](
         observe(telemetry.onResponse(ctx, response.status)).flatMap: _ =>
           if StatusMapping.isSuccess(response.status) then exec.pure(AttemptOutcome.succeeded(response))
           else
-            val text  = String(response.bytes, StandardCharsets.UTF_8)
-            val error = StatusMapping.toError(ctx, response.status, parsedErrorBody(text))
+            val body  = ResponseBody.of(response.bytes, ResponseBody.charsetOf(response.contentType))
+            val error = StatusMapping.toError(ctx, response.status, parsedErrorBody(body))
             failedWith(ctx, error, response.retryAfter)
 
   private def perform[A](request: CodebergRequest, eligibility: RetryEligibility)(
       onSuccess: (CallContext, CodebergResponse) => Either[CodebergError, A]
   ): F[A] =
+    val uri      = redactedUri(request)
     val attempts = engine.runWith(request.operation, request.method, eligibility)(_ =>
-      attemptOnce(request, onSuccess)
+      attemptOnce(request, uri, onSuccess)
     )
     exec.attempt(attempts).flatMap:
       case Right(value) => exec.pure(value)
       case Left(error)  => reportFinal(request, error).flatMap(_ => exec.raise(error))
 
+  /** Renders the URI every attempt of this call reports.
+    *
+    * A retried call re-sends an identical request, so the redacted URI it reports is identical too. Building it here,
+    * once per call rather than once per attempt, keeps the string every attempt shares — and therefore every
+    * `CallContext` and every telemetry event — exactly what it was, while a five-attempt call encodes its path and
+    * query once instead of five times.
+    */
+  private def redactedUri(request: CodebergRequest): String =
+    Redaction.uri(config.baseUri.value, request.path, request.query)
+
   private def attemptOnce[A](
       request: CodebergRequest,
+      uri: String,
       onSuccess: (CallContext, CodebergResponse) => Either[CodebergError, A],
   ): F[AttemptOutcome[A]] =
-    val uri = Redaction.uri(config.baseUri.value, request.path, request.query)
     timer.nowMillis.flatMap: started =>
       observe(telemetry.onRequest(contextOf(request, uri, None, 0L))).flatMap: _ =>
         http.send(request, uri).flatMap: sent =>
@@ -219,22 +237,52 @@ final class ApiPipeline[F[_]](
   ): CallContext =
     CallContext(request.operation, request.method, uri, requestId, elapsedMs)
 
-  private def decoded[A](ctx: CallContext, body: String)(using decode: Decode[A]): Either[CodebergError, A] =
+  private def decoded[A](ctx: CallContext, body: ResponseBody)(using decode: Decode[A]): Either[CodebergError, A] =
     decode(body).left.map(failure =>
-      CodebergError.DecodingFailed(ctx, ApiPipeline.snippetOf(body), failure.path, failure.message)
+      CodebergError.DecodingFailed(ctx, ApiPipeline.snippetOf(body, decode.sensitive), failure.path, failure.message)
     )
 
-  /** Reads a non-2xx payload, tolerating both an empty body and an injected parser that fails outright. */
-  private def parsedErrorBody(body: String): ApiErrorBody =
+  /** Reads a non-2xx payload, tolerating both an empty body and an injected parser that fails outright.
+    *
+    * This is one of the few places that genuinely wants text: the injected parser takes a `String`, an error payload is
+    * a few hundred bytes, and it is only ever read on the failure path. Decoding it here rather than at the transport
+    * is what keeps the successful path — every listing, every read — free of the copy.
+    */
+  private def parsedErrorBody(body: ResponseBody): ApiErrorBody =
     if body.isBlank then ApiErrorBody.Empty
-    else Try(errorBody(body)).getOrElse(ApiErrorBody.Empty)
+    else Try(errorBody(body.text)).getOrElse(ApiErrorBody.Empty)
 
 object ApiPipeline:
 
-  /** An excerpt of `body` no longer than [[com.worxbend.codeberg4s.CodebergError.MaxSnippetLength]] characters.
+  /** What a body is reported as when its [[Decode]] declared itself [[Decode.sensitive]].
     *
-    * Bounding happens here, once, rather than at each call site: a decoding failure on a 40 MB repository listing must
-    * not put 40 MB into an error value that an application is about to log.
+    * A fixed string, so nothing about the payload survives into it, but not an empty one: a reader still has to be able
+    * to tell "the instance answered with a body this library refuses to quote" from "the instance answered with
+    * nothing". The size is what remains — enough to distinguish a truncated response from a complete one that did not
+    * match the model, and not enough to reconstruct a byte of it.
+    *
+    * @param bytes
+    *   how many bytes the withheld body held, [[ResponseBody.size]] of the response
     */
-  private[core] def snippetOf(body: String): String =
-    body.take(CodebergError.MaxSnippetLength)
+  def redactedSnippet(bytes: Int): String =
+    s"${Redaction.Mask} ($bytes bytes withheld)"
+
+  /** What [[com.worxbend.codeberg4s.CodebergError.DecodingFailed.snippet]] carries for `body`.
+    *
+    * Ordinarily an excerpt no longer than [[com.worxbend.codeberg4s.CodebergError.MaxSnippetLength]] '''characters'''.
+    * Bounding happens here, once, rather than at each call site: a decoding failure on a 40 MB repository listing must
+    * not put 40 MB into an error value that an application is about to log. [[ResponseBody.excerpt]] does the work,
+    * because bounding a body that is now bytes at a number of characters is a job with a trap in it — see its own
+    * documentation for why slicing the bytes and decoding the slice is not the same thing.
+    *
+    * When `sensitive` is set, the excerpt is replaced by [[redactedSnippet]] and no part of the body is quoted. That is
+    * decided here rather than by the endpoint that made the call, so it holds for the failure a caller receives
+    * '''and''' for the one [[Telemetry.onError]] observes — the hook fires inside the pipeline, so anything an endpoint
+    * scrubbed afterwards would already have been handed to a telemetry sink that logs what it is given.
+    *
+    * @param sensitive
+    *   [[Decode.sensitive]] of the instance that read this body
+    */
+  private[core] def snippetOf(body: ResponseBody, sensitive: Boolean): String =
+    if sensitive then redactedSnippet(body.size)
+    else body.excerpt(CodebergError.MaxSnippetLength)

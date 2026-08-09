@@ -31,7 +31,7 @@ package com.worxbend.codeberg4s.organizations
   * @param canCreateRepository
   *   whether the account may create a repository under the organisation
   */
-final case class OrganizationPermissions(
+final case class OrganizationPermissions private[codeberg4s] (
     isOwner: Boolean,
     isAdmin: Boolean,
     canWrite: Boolean,

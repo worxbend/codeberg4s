@@ -24,4 +24,4 @@ import java.time.Instant
   * @param createdAt
   *   when the block was put in place
   */
-final case class BlockedUser(blockId: BlockId, createdAt: Option[Instant])
+final case class BlockedUser private[codeberg4s] (blockId: BlockId, createdAt: Option[Instant])

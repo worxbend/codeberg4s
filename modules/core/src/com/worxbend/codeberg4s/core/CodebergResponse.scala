@@ -20,9 +20,10 @@ import java.util.Locale
   *   response headers with '''already lowercased''' keys, as the transport adapter normalises them; a key maps to every
   *   value the server sent for it, in order
   * @param body
-  *   the response body as text, empty for a `204`
+  *   the response body as the bytes that arrived, with the charset the response declared for them; empty for a `204`.
+  *   See [[ResponseBody]] for why this is not a `String`
   */
-final case class CodebergResponse(status: Int, headers: Map[String, List[String]], body: String):
+final case class CodebergResponse(status: Int, headers: Map[String, List[String]], body: ResponseBody):
 
   /** The first value of `name`, matched case-insensitively.
     *
@@ -62,8 +63,11 @@ final case class CodebergResponse(status: Int, headers: Map[String, List[String]
     * All values of the `Link` header are considered, not just the first: a proxy is allowed to split one header into
     * several, and the RFC says the result is the same as if they had been joined with commas. An unreadable header
     * yields an empty map — see [[LinkHeader]] for why that is never an error.
+    *
+    * The header is parsed the first time this is read and the result is kept, because [[nextPage]], [[prevPage]] and
+    * [[lastPage]] all go through it and page one alone would otherwise parse the same string three times.
     */
-  def links: Map[String, String] =
+  lazy val links: Map[String, String] =
     LinkHeader.parse(headers.getOrElse(LinkHeader.Name, Nil).mkString(","))
 
   /** The page number of `rel="next"`, and nothing else.

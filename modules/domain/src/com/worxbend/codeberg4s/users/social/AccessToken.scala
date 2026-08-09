@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.users.social
 
+import com.worxbend.codeberg4s.PathSegment
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.auth.ApiToken
 import com.worxbend.codeberg4s.repositories.RepoSlug
@@ -25,19 +26,16 @@ object AccessTokenName:
 
   /** Parses a token name.
     *
-    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, and a value containing a
-    * control character — everything that would forge or corrupt a request path.
+    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, a value containing a
+    * control character, and the traversal segments `.` and `..` — everything that would forge or corrupt a request
+    * path. The dot segments need stating separately because they carry no slash, so the slash rule never sees them, and
+    * they survive percent-encoding untouched.
     *
     * @return
     *   the trimmed name, or a [[ValidationError]] on the `"accessTokenName"` field
     */
   def from(value: String): Either[ValidationError, AccessTokenName] =
-    val trimmed = value.trim
-
-    if trimmed.isEmpty then Left(ValidationError(Field, "must not be blank"))
-    else if trimmed.contains('/') then Left(ValidationError(Field, "must not contain a slash"))
-    else if trimmed.exists(_.isControl) then Left(ValidationError(Field, "must not contain a control character"))
-    else Right(trimmed)
+    PathSegment.from(Field, value)
 
   extension (name: AccessTokenName)
 
@@ -103,7 +101,7 @@ enum AccessTokenRef:
   * @param createdAt
   *   when the token was issued
   */
-final case class AccessToken(
+final case class AccessToken private[codeberg4s] (
     id: AccessTokenId,
     name: Option[AccessTokenName],
     scopes: Vector[TokenScope],
@@ -130,16 +128,18 @@ final case class AccessToken(
   * ==Where the material can and cannot reach==
   *
   * It reaches the caller and nothing else. [[com.worxbend.codeberg4s.CallContext]] carries a redacted URI and never a
-  * response body; [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] snippets a body only on the failure path,
-  * and a body that failed to decode produced no token; and the mask makes every accidental rendering safe even so.
-  * `UserTokenApiSuite` asserts all of that rather than asserting the intention.
+  * response body; the mask makes every accidental rendering safe; and the one channel that would otherwise have carried
+  * the material — the body snippet on [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]], which is the '''raw'''
+  * payload and therefore survives every mask — is replaced by a placeholder, because the decoder this endpoint uses
+  * declares itself sensitive to the pipeline. `UserTokenApiSuite` asserts all of that rather than asserting the
+  * intention.
   *
   * @param token
   *   the credential, available on this response and never again
   * @param details
   *   everything a listing would also have shown: the identifier, the name, the scopes and the repository restriction
   */
-final case class CreatedAccessToken(token: ApiToken, details: AccessToken)
+final case class CreatedAccessToken private[codeberg4s] (token: ApiToken, details: AccessToken)
 
 /** What `POST /users/{username}/tokens` needs to mint a token.
   *

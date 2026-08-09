@@ -2,7 +2,18 @@
 
 set -e
 
-if [ -z "${DEFAULT_MILL_VERSION}" ] ; then DEFAULT_MILL_VERSION="1.1.6-104-5bbe1e"; fi
+# This is the upstream Mill bootstrap script with two local additions, both
+# marked "LOCAL CHANGE" below: the default version is a released one, and the
+# downloaded distribution is checked against `.mill-checksums` before it runs.
+# Re-generating this file from upstream drops both; re-apply them.
+
+# LOCAL CHANGE: upstream ships an untagged development build here
+# ("1.1.6-104-5bbe1e" — a snapshot 104 commits past the 1.1.6 tag). It is only
+# a fallback for a checkout without `.mill-version`, but a fallback that lands
+# on an unreleased snapshot is still a build nobody can reproduce. `1.1.7` is
+# the release `.mill-version` already pins, so the fallback and the pin now
+# agree.
+if [ -z "${DEFAULT_MILL_VERSION}" ] ; then DEFAULT_MILL_VERSION="1.1.7"; fi
 
 if [ -z "${GITHUB_RELEASE_CDN}" ] ; then GITHUB_RELEASE_CDN=""; fi
 
@@ -119,6 +130,73 @@ esac
 
 MILL="${MILL_FINAL_DOWNLOAD_FOLDER}/$MILL_VERSION$ARTIFACT_SUFFIX"
 
+# LOCAL CHANGE: verify the distribution before it is ever executed.
+#
+# Everything this project builds, tests, signs and publishes runs through the
+# executable named by ${MILL}, so a swapped download is a swapped build. The
+# three helpers below check it against a digest committed in `.mill-checksums`.
+#
+# `.mill-checksums` is read relative to the working directory, the same way the
+# script already reads `.mill-version` a few lines up: `./mill` is always run
+# from the repository root.
+MILL_CHECKSUMS_FILE=".mill-checksums"
+MILL_DIST_ID="$MILL_VERSION$ARTIFACT_SUFFIX"
+
+# Print the SHA-256 of "$1" as lowercase hex. sha256sum is coreutils (Linux),
+# shasum ships with macOS, openssl is the last resort. No fallback to "skip the
+# check": a machine that cannot hash the file cannot vouch for it either.
+mill_sha256() {
+  if command -v sha256sum > /dev/null 2>&1 ; then
+    sha256sum "$1" | cut -d ' ' -f 1
+  elif command -v shasum > /dev/null 2>&1 ; then
+    shasum -a 256 "$1" | cut -d ' ' -f 1
+  elif command -v openssl > /dev/null 2>&1 ; then
+    openssl dgst -sha256 "$1" | sed 's/.*= *//'
+  else
+    echo "mill: cannot verify the download: no sha256sum, shasum or openssl on PATH" 1>&2
+    exit 1
+  fi
+}
+
+# Print the recorded digest for distribution id "$1", or fail if there is none.
+mill_expected_sha256() {
+  if [ ! -f "${MILL_CHECKSUMS_FILE}" ] ; then return 1 ; fi
+  awk -v id="$1" '
+    $1 ~ /^#/ { next }
+    $1 == id  { print $2 ; found = 1 ; exit }
+    END       { exit !found }
+  ' "${MILL_CHECKSUMS_FILE}"
+}
+
+# Set MILL_WANT_SHA256 to the recorded digest, or abort saying how to add one.
+# Called before the download too, so an unlisted version fails in a second
+# instead of after pulling 60 MB it was never going to be allowed to run.
+mill_require_sha256() {
+  if ! MILL_WANT_SHA256="$(mill_expected_sha256 "${MILL_DIST_ID}")" ; then
+    echo "mill: no recorded SHA-256 for Mill ${MILL_DIST_ID}" 1>&2
+    echo "mill: ${MILL_CHECKSUMS_FILE} decides which Mill distributions this" 1>&2
+    echo "mill: repository will run. Add an entry for ${MILL_DIST_ID} (that" 1>&2
+    echo "mill: file explains how) or pin a version already listed there." 1>&2
+    exit 1
+  fi
+}
+
+# Abort unless the file at "$1" is the distribution we recorded.
+mill_verify_sha256() {
+  mill_require_sha256
+  MILL_GOT_SHA256="$(mill_sha256 "$1")"
+  if [ "${MILL_GOT_SHA256}" != "${MILL_WANT_SHA256}" ] ; then
+    echo "mill: SHA-256 mismatch for Mill ${MILL_DIST_ID} at $1" 1>&2
+    echo "mill:   expected ${MILL_WANT_SHA256}" 1>&2
+    echo "mill:   actual   ${MILL_GOT_SHA256}" 1>&2
+    echo "mill: refusing to run it. If a retry does not fix this, the file is" 1>&2
+    echo "mill: not the published distribution — do not execute it." 1>&2
+    exit 1
+  fi
+  unset MILL_WANT_SHA256
+  unset MILL_GOT_SHA256
+}
+
 # If not already downloaded, download it
 if [ ! -s "${MILL}" ] || [ "$MILL_TEST_DRY_RUN_LAUNCHER_SCRIPT" = "1" ] ; then
   case $MILL_VERSION in
@@ -168,8 +246,17 @@ if [ ! -s "${MILL}" ] || [ "$MILL_TEST_DRY_RUN_LAUNCHER_SCRIPT" = "1" ] ; then
     exit 0
   fi
 
+  # LOCAL CHANGE: fail now if this version has no recorded digest, rather than
+  # after spending the bandwidth.
+  mill_require_sha256
+
   echo "Downloading mill ${MILL_VERSION} from ${MILL_DOWNLOAD_URL} ..." 1>&2
   curl -f -L -o "${MILL_TEMP_DOWNLOAD_FILE}" "${MILL_DOWNLOAD_URL}"
+
+  # LOCAL CHANGE: check it while it is still an inert file in out/, before it
+  # is made executable and before it is moved into the shared cache. A download
+  # that fails the check never becomes something a later run would trust.
+  mill_verify_sha256 "${MILL_TEMP_DOWNLOAD_FILE}"
 
   chmod +x "${MILL_TEMP_DOWNLOAD_FILE}"
 
@@ -178,6 +265,14 @@ if [ ! -s "${MILL}" ] || [ "$MILL_TEST_DRY_RUN_LAUNCHER_SCRIPT" = "1" ] ; then
 
   unset MILL_TEMP_DOWNLOAD_FILE
   unset MILL_DOWNLOAD_SUFFIX
+else
+  # LOCAL CHANGE: a cached distribution is not a verified one. The cache lives
+  # outside the repository, is shared by every project on the machine, and may
+  # predate this check entirely — as it did on every machine that ran Mill
+  # before this commit. Hashing 60 MB costs tens of milliseconds; re-checking
+  # on each run is what makes "verified" mean the binary about to be executed
+  # rather than a download that happened once, months ago.
+  mill_verify_sha256 "${MILL}"
 fi
 
 MILL_FIRST_ARG=""
@@ -192,6 +287,8 @@ unset MILL_OLD_DOWNLOAD_PATH
 unset OLD_MILL
 unset MILL_VERSION
 unset MILL_REPO_URL
+unset MILL_CHECKSUMS_FILE
+unset MILL_DIST_ID
 
 # -D mill.main.cli is for compatibility with Mill 0.10.9 - 0.13.0-M2
 # We don't quote MILL_FIRST_ARG on purpose, so we can expand the empty value without quotes

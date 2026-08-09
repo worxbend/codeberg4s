@@ -34,7 +34,7 @@ package com.worxbend.codeberg4s.repositories.actions
   * @param repoId
   *   the numeric id of the repository the job ran for
   */
-final case class ActionRunJob(
+final case class ActionRunJob private[codeberg4s] (
     id: JobId,
     name: Option[String],
     runId: Option[RunId],

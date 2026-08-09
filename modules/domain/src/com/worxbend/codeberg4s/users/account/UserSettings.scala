@@ -45,7 +45,7 @@ package com.worxbend.codeberg4s.users.account
   * @param showsRepoUnitHints
   *   whether the repository view offers hints for units that are enabled but empty
   */
-final case class UserSettings(
+final case class UserSettings private[codeberg4s] (
     fullName: Option[String],
     website: Option[String],
     location: Option[String],

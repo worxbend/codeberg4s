@@ -53,18 +53,38 @@ readonly COVERED_MODULES=(modules.domain modules.core modules.codec)
 # change that adds one group fails, and a change that removes ten is told to
 # bank the win by lowering this number.
 #
-# MEASURED, NOT RECALLED: `scripts/cpd.sh --report` on 2026-08-02 against
+# MEASURED, NOT RECALLED: `scripts/cpd.sh --report` on 2026-08-09 against
 # modules/{domain,core,codec,transport,client}/src with PMD 7.26.0 at 40
-# tokens — 323 groups over 1195 locations (599 in codec, 541 in client, 45 in
-# domain, 8 in core, 2 in transport). docs/LEDGER.md still says 62; that figure
-# predates the long tail, which took the surface from 61 operations to 439.
+# tokens — 363 groups over 1342 locations (762 in codec, 535 in client, 39 in
+# domain, 6 in core, none in transport).
+#
+# The ten groups between 373 and 363 came off with the credential-redaction
+# change: the three copies of the Actions runner registration decoders no
+# longer read as one repeated shape, and UserTokenApi lost the bespoke
+# error-rewriting helper that the pipeline now makes unnecessary. Banked here
+# rather than left as headroom, per the paragraph above.
+#
+# The baseline recorded before that was 323 groups over 1195 locations,
+# measured on 2026-08-02. Everything between the two numbers is codec: the
+# upickle-to-jsoniter rewrite (commit 48f64fe) replaced hand-written readers
+# and writers with per-DTO codec definitions that repeat the same shape once
+# per field, so codec's share of the reported locations went from 599 to 764
+# while every other module stayed where it was. Recording the higher number
+# registered that debt; it did not forgive it, and it was not a licence to
+# add more.
+#
+# The five groups between 378 and 373 were then paid off rather than
+# tolerated: four copies of the same element-decoding fold became one shared
+# helper, and the four inline copies of the path-segment security rule became
+# one call to PathSegment. Both are why this number is a recorded measurement
+# and not a threshold — a threshold would have absorbed the win silently.
 #
 # The number is specific to PMD 7.26.0 at 40 tokens. Change either and remeasure
 # rather than guessing which way the count moved.
 #
 # Deliberately not overridable from the environment: moving the baseline has to
 # appear in a diff, with a commit message saying why.
-readonly CPD_BASELINE_GROUPS=323
+readonly CPD_BASELINE_GROUPS=363
 
 with_slow=false
 nightly=false
@@ -202,15 +222,41 @@ boundary_violation() {
 # scala.concurrent.duration is fine everywhere — FiniteDuration is how timeouts
 # and backoff are typed. It is Future and ExecutionContext that must not appear
 # below the client module.
-readonly FORBIDDEN_BELOW_CLIENT='^import (sttp|upickle|ujson|scala\.concurrent\.(Future|ExecutionContext|Await|Promise|blocking))'
+#
+# The JSON alternatives are the other half of PLAN.md §3.1: domain and core know
+# neither the transport nor a JSON library. Until this commit the list read
+# `upickle|ujson`, which stopped being a boundary the moment commit 48f64fe
+# removed upickle — the library actually on the classpath,
+# `com.github.plokhotnyuk.jsoniter_scala`, could have been imported straight
+# into domain or core and this step would still have printed "boundaries clean".
+# The vendor prefix is matched rather than the full package so a future
+# `jsoniter_scala.macros` import is caught by the same alternative.
+#
+# upickle, ujson, circe, play-json, zio-json, Jackson, json4s and Gson are named
+# even though none of them is a dependency. A pattern for a library that is not
+# there costs one alternation and catches the day somebody adds it, which is the
+# only day this check has anything to say.
+#
+# Matching imports rather than the build graph is deliberate: the graph already
+# gives domain and core no `mvnDeps` at all, so a violation needs a `mvnDeps`
+# edit as well as an import. This grep is what makes the import half fail
+# loudly, and it is also what covers the case where the offending symbol arrives
+# through a module that is on the graph.
+readonly FORBIDDEN_JSON='com\.github\.plokhotnyuk|upickle|ujson|io\.circe|play\.api\.libs\.json|zio\.json|com\.fasterxml\.jackson|org\.json4s|com\.google\.gson'
+readonly FORBIDDEN_BELOW_CLIENT="^import (sttp|$FORBIDDEN_JSON|scala\\.concurrent\\.(Future|ExecutionContext|Await|Promise|blocking))"
 
 boundaries_ok=true
 boundary_violation modules/domain/src "$FORBIDDEN_BELOW_CLIENT" \
   'domain must depend on nothing but the standard library' || boundaries_ok=false
 boundary_violation modules/core/src "$FORBIDDEN_BELOW_CLIENT" \
-  'core must not know about sttp, upickle or Future' || boundaries_ok=false
+  'core must not know about sttp, a JSON library or Future' || boundaries_ok=false
 boundary_violation modules/codec/src '^import sttp' \
   'codec must not know about the transport' || boundaries_ok=false
+# The mirror image of the line above, and stated in docs/adr/0003 as the reason
+# the unused sttp-upickle integration was dropped: the transport reads every
+# body as a String and hands it to codec, so the JSON library stays out of it.
+boundary_violation modules/transport/src "^import ($FORBIDDEN_JSON)" \
+  'transport must not know about a JSON library — it reads bodies as String' || boundaries_ok=false
 boundary_violation 'modules/domain/src modules/core/src modules/codec/src modules/transport/src modules/client/src' \
   'Await\.(result|ready)' 'Await is banned in production code' || boundaries_ok=false
 boundary_violation 'modules/domain/src modules/core/src modules/codec/src modules/transport/src modules/client/src' \
@@ -225,7 +271,8 @@ for module in "${COVERED_MODULES[@]}"; do
   "$MILL" "${module}.scoverage.xmlReport" || fail "coverage report for $module"
 done
 if [[ -f scripts/coverage-gate.sc ]]; then
-  scala-cli run scripts/coverage-gate.sc -- "${COVERED_MODULES[@]}" || fail "coverage thresholds"
+  scala-cli run scripts/coverage-gate.sc --server=false -- "${COVERED_MODULES[@]}" ||
+    fail "coverage thresholds"
 else
   echo "  (scripts/coverage-gate.sc absent — thresholds not enforced yet)"
 fi
@@ -289,7 +336,7 @@ if $with_slow; then
   announce "CRAP (coverage-weighted complexity)"
   if [[ -f scripts/crap.sc ]]; then
     set +e
-    scala-cli run scripts/crap.sc -- "${COVERED_MODULES[@]}"
+    scala-cli run scripts/crap.sc --server=false -- "${COVERED_MODULES[@]}"
     crap_status=$?
     set -e
     case "$crap_status" in

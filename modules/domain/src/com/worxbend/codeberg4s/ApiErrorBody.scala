@@ -13,7 +13,7 @@ package com.worxbend.codeberg4s
   * @param errors
   *   per-field problems reported by validation endpoints; empty when the server sent none
   */
-final case class ApiErrorBody(message: Option[String], url: Option[String], errors: List[String])
+final case class ApiErrorBody private[codeberg4s] (message: Option[String], url: Option[String], errors: List[String])
 
 object ApiErrorBody:
 

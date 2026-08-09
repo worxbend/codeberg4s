@@ -20,7 +20,7 @@ package com.worxbend.codeberg4s.repositories.actions
   * @param jobs
   *   the names of the jobs the run will execute, as the workflow file spells them
   */
-final case class DispatchedWorkflowRun(
+final case class DispatchedWorkflowRun private[codeberg4s] (
     id: Option[RunId],
     runNumber: Option[Long],
     jobs: Vector[String],

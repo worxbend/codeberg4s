@@ -1,8 +1,11 @@
 package com.worxbend.codeberg4s.codec
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.core.ResponseBody
 
 import munit.FunSuite
+
+import java.nio.charset.StandardCharsets
 
 /** `Json` is the only place in the library that calls jsoniter, so this suite is where "no codec exception ever
   * escapes" is proved. Every case below is a body that makes the parser throw.
@@ -85,10 +88,22 @@ final class JsonSuite extends FunSuite:
     assertEquals(Json.decode[Vector[Leaf]]("[]"), Right(Vector.empty))
 
   test("decoder produces a Decode port that agrees with decode"):
-    assertEquals(Json.decoder[Leaf].apply(leaf), Json.decode[Leaf](leaf))
+    assertEquals(Json.decoder[Leaf].apply(ResponseBody.utf8(leaf)), Json.decode[Leaf](leaf))
 
   test("decoder never throws either"):
-    assert(Json.decoder[Leaf].apply("not json").isLeft)
+    assert(Json.decoder[Leaf].apply(ResponseBody.utf8("not json")).isLeft)
+
+  test("the two decode overloads agree, so a caller holding text is not on a different code path"):
+    assertEquals(Json.decode[Leaf](leaf.getBytes(StandardCharsets.UTF_8)), Json.decode[Leaf](leaf))
+
+  test("decoder reads a body the response declared as something other than UTF-8"):
+    // Nothing Forgejo serves looks like this. The point is that the charset on
+    // the body is honoured rather than ignored: the same characters encoded as
+    // ISO-8859-1 must decode to the same value, not to mojibake.
+    val accented = """{"name":"café"}"""
+    val latin1   = ResponseBody.of(accented.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.ISO_8859_1)
+
+    assertEquals(Json.decoder[Leaf].apply(latin1), Json.decode[Leaf](accented))
 
   test("a document nested past the depth bound is a failure, not a stack overflow"):
     // Remote input must not be able to exhaust the caller's stack.
@@ -111,8 +126,122 @@ final class JsonSuite extends FunSuite:
 
     assertEquals(Json.render(document), """{"z":"1","a":"2"}""")
 
+  test("a document that names a field twice is rejected rather than quietly resolved"):
+    // JsonValue.Obj argues the decision. In short: the three ways of reading an
+    // object disagreed about {"id":1,"id":2} — first, last, and both — and only
+    // one of the available answers loses no data, which is to refuse it.
+    assert(Json.parse("""{"id":1,"id":2}""").isLeft)
+
+  test("the repeated-field failure names the field that was repeated"):
+    Json.parse("""{"id":1,"id":2}""") match
+      case Left(failure) => assert(failure.message.contains("""duplicated field "id""""), failure.message)
+      case Right(value)  => fail(s"expected a failure, got $value")
+
+  test("a repeated field fails at the root, like every other structural failure"):
+    Json.parse("""{"id":1,"id":2}""") match
+      case Left(failure) => assertEquals(failure.path, JsonPath.Root)
+      case Right(value)  => fail(s"expected a failure, got $value")
+
+  test("a repeated field is rejected whichever door the body is decoded through"):
+    // This is the disagreement that made the decision necessary: JsonValue.field
+    // answered 1, and a DTO assembled from the same object answered 2.
+    assert(Json.decode[Leaf]("""{"name":"a","name":"b"}""").isLeft)
+    assert(Json.decode[Map[String, JsonValue]]("""{"id":1,"id":2}""").isLeft)
+
+  test("a repeated field is rejected wherever in the document it sits"):
+    assert(Json.parse("""{"owner":{"id":1,"id":2}}""").isLeft)
+    assert(Json.parse("""[{"id":1},{"id":2,"id":3}]""").isLeft)
+
+  test("the same field name in two sibling objects is not a repeat"):
+    // The rule is about one object naming a field twice. Every element of a page
+    // carrying an "id" is what a page looks like.
+    assertEquals(Json.parse("""[{"id":1},{"id":2}]""").map(Json.render), Right("""[{"id":1},{"id":2}]"""))
+
+  test("a repeated field is caught in a wide object, where the check hashes instead of comparing"):
+    // Objects this wide are checked by a different branch than the narrow ones
+    // above — a repository response has 64 keys, so both branches carry real
+    // traffic and both need a test. 200 keeps this clear of the width the two
+    // branches split at without the test having to know that width.
+    val distinct = (1 to 200).map(index => s""""k$index":$index""").mkString("{", ",", "}")
+    val repeated = distinct.replace(""""k137":137""", """"k42":137""")
+
+    assert(Json.parse(distinct).isRight)
+    assert(Json.parse(repeated).isLeft)
+
+  test("rendering stays faithful, so a document built with a repeated field is one parse refuses"):
+    // Json.render writes the fields it is given, and Obj says not to hand it a
+    // repeated key. This pins the consequence rather than hiding it: render does
+    // not quietly drop a field, and the parser does not quietly accept one, so
+    // the two never disagree about a document — they only ever both refuse.
+    val document = JsonValue.Obj("id" -> JsonValue.Num(1), "id" -> JsonValue.Num(2))
+
+    assertEquals(Json.render(document), """{"id":1,"id":2}""")
+    assert(Json.parse(Json.render(document)).isLeft)
+
   test("a large integer survives the round trip, which a Double would not"):
     // 2^53 + 1 is the first integer a Double cannot represent.
     val body = """{"id":9007199254740993}"""
 
     assertEquals(Json.parse(body).map(Json.render), Right(body))
+
+  test("a whole number parses into the Long case and nothing else does"):
+    // The split is what keeps a BigDecimal off the path every row id takes.
+    // Which case a number lands in follows the text on the wire, so that render
+    // can write back what it read.
+    assertEquals(Json.parse("7"), Right(JsonValue.Int64(7L)))
+    assertEquals(Json.parse("-7"), Right(JsonValue.Int64(-7L)))
+    assertEquals(Json.parse("9223372036854775807"), Right(JsonValue.Int64(Long.MaxValue)))
+    assertEquals(Json.parse("2.5"), Right(JsonValue.Decimal(BigDecimal("2.5"))))
+    assertEquals(Json.parse("7.0"), Right(JsonValue.Decimal(BigDecimal("7.0"))))
+    assertEquals(Json.parse("7e2"), Right(JsonValue.Decimal(BigDecimal("7E+2"))))
+
+  test("a whole number past the Long range is exact rather than rounded"):
+    // One past Long.MaxValue, so the Long case cannot hold it. jsoniter hands
+    // this back as a BigInteger; losing it to a Double or clamping it to
+    // Long.MaxValue are both silent corruptions of an identifier.
+    val body = """{"id":9223372036854775808}"""
+
+    assertEquals(Json.parse("9223372036854775808"), Right(JsonValue.Decimal(BigDecimal("9223372036854775808"))))
+    assertEquals(Json.parse(body).map(Json.render), Right(body))
+
+  test("both number cases say they are a number when a failure has to name a kind"):
+    assertEquals(JsonValue.Int64(7L).kind, "a number")
+    assertEquals(JsonValue.Decimal(BigDecimal("2.5")).kind, "a number")
+
+  test("Num builds whichever case renders the text back unchanged"):
+    // Forgejo's integer fields reject 102.0, so a whole value must never pick up
+    // a fractional part on its way to a request body — whichever of the four
+    // ways of writing it down the caller reached for.
+    assertEquals(Json.render(JsonValue.Num(102)), "102")
+    assertEquals(Json.render(JsonValue.Num(102L)), "102")
+    assertEquals(Json.render(JsonValue.Num(102.0)), "102")
+    assertEquals(Json.render(JsonValue.Num(BigDecimal(102))), "102")
+    assertEquals(Json.render(JsonValue.Num(102.5)), "102.5")
+    assertEquals(Json.render(JsonValue.Num(BigDecimal("102.0"))), "102.0")
+
+  test("a number Num built parses back to the same value"):
+    // The two cases are only telling apart if one constructor decides between
+    // them: Decimal(BigDecimal(102)) would render 102 and then not equal the
+    // Int64(102) that parsing 102 produces. Num is that constructor.
+    val built = Vector(JsonValue.Num(102), JsonValue.Num(102.0), JsonValue.Num(BigDecimal(102)))
+
+    built.foreach(number => assertEquals(Json.parse(Json.render(number)), Right(number)))
+
+  test("Num matches either case and hands back an exact decimal"):
+    // Kept so that a call site written when Num was one case class holding a
+    // BigDecimal still compiles and still means the same thing.
+    assertEquals(JsonValue.Int64(7L).numOpt, Some(BigDecimal(7)))
+    assertEquals(JsonValue.Decimal(BigDecimal("2.5")).numOpt, Some(BigDecimal("2.5")))
+    assertEquals(JsonValue.Str("7").numOpt, None)
+
+    val matched = Json.parse("""[7,2.5,"7"]""").map(_.arrOpt.toVector.flatten.collect { case JsonValue.Num(n) => n })
+
+    assertEquals(matched, Right(Vector(BigDecimal(7), BigDecimal("2.5"))))
+
+  test("a number read as a Long truncates toward zero, whichever case it is in"):
+    assertEquals(Json.decode[Long]("7"), Right(7L))
+    assertEquals(Json.decode[Long]("2.9"), Right(2L))
+    assertEquals(Json.decode[Long]("-2.9"), Right(-2L))
+    assertEquals(JsonValue.Int64(7L).longOpt, Some(7L))
+    assertEquals(JsonValue.Decimal(BigDecimal("2.9")).longOpt, Some(2L))
+    assertEquals(JsonValue.Bool(true).longOpt, None)

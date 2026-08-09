@@ -11,6 +11,8 @@ final class UploadAssetSuite extends FunSuite:
 
   private val Bytes: Array[Byte] = "checksums".getBytes(StandardCharsets.UTF_8)
 
+  private val Bell: String = 7.toChar.toString
+
   test("an ordinary file name is accepted and the media type defaults to octet-stream"):
     val upload = accepted("forgejo-16.0.2-linux-amd64")
 
@@ -49,7 +51,23 @@ final class UploadAssetSuite extends FunSuite:
     assertEquals(upload.name, Some("forgejo-16.0.2-linux-amd64"))
 
   test("the media type can be stated"):
-    assertEquals(accepted("notes.txt").as("text/plain").mediaType, "text/plain")
+    assertEquals(accepted("notes.txt").as("text/plain").map(_.mediaType), Right("text/plain"))
+
+  test("surrounding whitespace in the media type is trimmed"):
+    assertEquals(accepted("notes.txt").as("  text/plain  ").map(_.mediaType), Right("text/plain"))
+
+  test("a blank media type is rejected, and the rejection names the mediaType field"):
+    assertEquals((refusedMedia("   ").field, refusedMedia("   ").message), ("mediaType", "must not be blank"))
+
+  test("a media type carrying a line break is rejected, because it would inject a header into the part"):
+    val injected = refusedMedia("text/plain\r\nX-Injected: 1")
+
+    assertEquals((injected.field, injected.message), ("mediaType", "must not contain a control character"))
+
+  test("any other control character in the media type is rejected too"):
+    // Mid-string on purpose: `trim` removes every character below a space,
+    // so a control character at either end never reaches the check.
+    assertEquals(refusedMedia(s"text/${Bell}plain").message, "must not contain a control character")
 
   test("the bytes are held, not copied — the caller keeps ownership of the array"):
     val content = "one".getBytes(StandardCharsets.UTF_8)
@@ -59,12 +77,53 @@ final class UploadAssetSuite extends FunSuite:
 
     assert(upload.content eq content, "the constructor copied the array, which the Scaladoc promises it does not")
 
-  private def accepted(fileName: String): UploadAsset =
-    UploadAsset.of(fileName, Bytes) match
+  test("two uploads built from equal-but-distinct arrays are equal and hash alike"):
+    // Holding the caller's array rather than copying it says nothing about
+    // equality: an array's own equality is identity, so these two uploads were
+    // unequal until the type started comparing its content.
+    val one = accepted("checksums.txt", "sha256".getBytes(StandardCharsets.UTF_8))
+    val two = accepted("checksums.txt", "sha256".getBytes(StandardCharsets.UTF_8))
+
+    assert(!one.content.eq(two.content), "the two arrays must be distinct objects, or the test proves nothing")
+    assertEquals(one, two)
+    assertEquals(one.hashCode, two.hashCode)
+    assertEquals(Set(one, two).size, 1)
+
+  test("an upload differing in one field, the bytes included, is not equal to the original"):
+    val upload = accepted("checksums.txt", "sha256".getBytes(StandardCharsets.UTF_8))
+
+    assertNotEquals(upload, accepted("checksums.txt", "sha512".getBytes(StandardCharsets.UTF_8)))
+    assertNotEquals(upload, accepted("other.txt", "sha256".getBytes(StandardCharsets.UTF_8)))
+    assertNotEquals(upload, upload.named("release-checksums"))
+    assertNotEquals(upload, retyped(upload, "text/plain"))
+
+  test("an upload is not equal to a value of some other type"):
+    // A hand-written equals has to answer this case itself, and answering it
+    // wrongly is how a type ends up throwing a ClassCastException out of a
+    // collection lookup rather than returning false.
+    val upload = accepted("checksums.txt", "sha256".getBytes(StandardCharsets.UTF_8))
+
+    assertNotEquals[Any, Any](upload, "checksums.txt")
+    assertNotEquals[Any, Any](upload, 0)
+
+  private def accepted(fileName: String): UploadAsset = accepted(fileName, Bytes)
+
+  private def accepted(fileName: String, content: Array[Byte]): UploadAsset =
+    UploadAsset.of(fileName, content) match
       case Right(upload) => upload
       case Left(error)   => fail(s"expected $fileName to be accepted, got ${error.message}")
+
+  private def retyped(upload: UploadAsset, media: String): UploadAsset =
+    upload.as(media) match
+      case Right(value) => value
+      case Left(error)  => fail(s"expected $media to be accepted, got ${error.message}")
 
   private def rejected(fileName: String): ValidationError =
     UploadAsset.of(fileName, Bytes) match
       case Left(error)   => error
       case Right(upload) => fail(s"expected $fileName to be rejected, got ${upload.fileName}")
+
+  private def refusedMedia(media: String): ValidationError =
+    accepted("notes.txt").as(media) match
+      case Left(error)   => error
+      case Right(upload) => fail(s"expected the media type to be rejected, got ${upload.mediaType}")

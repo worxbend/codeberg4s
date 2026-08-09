@@ -44,6 +44,18 @@ final class RedactionSuite extends FunSuite:
   test("no path and no query renders the base uri alone"):
     assertEquals(Redaction.uri(base, Nil, Nil), base)
 
+  test("user information in the base uri never reaches the rendered uri"):
+    val rendered = Redaction.uri("https://user:hunter2@forge.example/api/v1", List("repos"), Nil)
+
+    assertEquals(rendered, "https://forge.example/api/v1/repos")
+    assert(!rendered.contains("hunter2"), s"the password survived in: $rendered")
+
+  test("a query already on the base uri is dropped rather than rendered"):
+    assertEquals(Redaction.uri(s"$base?token=s3cret", List("repos"), Nil), s"$base/repos")
+
+  test("a fragment already on the base uri is dropped rather than rendered"):
+    assertEquals(Redaction.uri(s"$base#frag", Nil, Nil), base)
+
   test("an authorization header is masked"):
     val masked = Redaction.headers(List("authorization" -> "token s3cret", "accept" -> "application/json"))
 

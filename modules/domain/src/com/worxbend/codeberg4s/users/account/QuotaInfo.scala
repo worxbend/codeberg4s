@@ -21,7 +21,7 @@ package com.worxbend.codeberg4s.users.account
   * @param used
   *   what the account is currently storing, broken down by what is storing it
   */
-final case class QuotaInfo(
+final case class QuotaInfo private[codeberg4s] (
     groups: Vector[QuotaGroup],
     used: QuotaUsedSize,
 ):
@@ -41,7 +41,7 @@ final case class QuotaInfo(
   * @param rules
   *   the limits the group imposes. Empty when the payload carried none
   */
-final case class QuotaGroup(
+final case class QuotaGroup private[codeberg4s] (
     name: Option[String],
     rules: Vector[QuotaRule],
 )
@@ -59,7 +59,7 @@ final case class QuotaGroup(
   *   what the rule counts; see [[QuotaSubject]] for why the vocabulary is not enumerated. A subject the instance sent
   *   that cannot be one — blank, or carrying a control character — is dropped rather than failing the whole rule
   */
-final case class QuotaRule(
+final case class QuotaRule private[codeberg4s] (
     name: Option[String],
     limit: Option[Long],
     subjects: Vector[QuotaSubject],
@@ -95,7 +95,7 @@ final case class QuotaRule(
   * @param packages
   *   the size of the account's published packages
   */
-final case class QuotaUsedSize(
+final case class QuotaUsedSize private[codeberg4s] (
     publicRepositories: Option[Long],
     privateRepositories: Option[Long],
     gitLfs: Option[Long],

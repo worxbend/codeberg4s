@@ -20,7 +20,7 @@ package com.worxbend.codeberg4s.users.account
   *   a browser link to the run that produced the artifact, which is the closest thing this payload has to a way back to
   *   the object
   */
-final case class QuotaUsedArtifact(
+final case class QuotaUsedArtifact private[codeberg4s] (
     name: Option[String],
     size: Option[Long],
     htmlUrl: Option[String],
@@ -41,7 +41,7 @@ final case class QuotaUsedArtifact(
   *   where the attachment hangs — the issue, comment or release it belongs to. Absent when the payload carried no
   *   `contained_in` object at all
   */
-final case class QuotaUsedAttachment(
+final case class QuotaUsedAttachment private[codeberg4s] (
     name: Option[String],
     size: Option[Long],
     apiUrl: Option[String],
@@ -60,7 +60,7 @@ final case class QuotaUsedAttachment(
   * @param htmlUrl
   *   the browser link to the containing object
   */
-final case class AttachmentContainer(
+final case class AttachmentContainer private[codeberg4s] (
     apiUrl: Option[String],
     htmlUrl: Option[String],
 )
@@ -82,7 +82,7 @@ final case class AttachmentContainer(
   * @param htmlUrl
   *   a browser link to the package version
   */
-final case class QuotaUsedPackage(
+final case class QuotaUsedPackage private[codeberg4s] (
     name: Option[String],
     version: Option[String],
     packageType: Option[String],

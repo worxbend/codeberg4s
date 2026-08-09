@@ -35,7 +35,7 @@ import com.worxbend.codeberg4s.repositories.Repository
   * @param url
   *   the API URL of the combined status itself
   */
-final case class CombinedCommitStatus(
+final case class CombinedCommitStatus private[codeberg4s] (
     sha: CommitSha,
     state: Option[CommitStatusState],
     totalCount: Long,

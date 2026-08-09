@@ -9,4 +9,4 @@ package com.worxbend.codeberg4s.repositories
   * @param deletions
   *   lines removed
   */
-final case class CommitStats(total: Long, additions: Long, deletions: Long)
+final case class CommitStats private[codeberg4s] (total: Long, additions: Long, deletions: Long)

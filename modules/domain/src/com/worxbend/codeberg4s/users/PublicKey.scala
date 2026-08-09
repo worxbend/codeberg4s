@@ -32,7 +32,7 @@ import java.time.Instant
   *   whether the account holder proved possession of the private half, which Forgejo tracks separately from
   *   registration
   */
-final case class PublicKey(
+final case class PublicKey private[codeberg4s] (
     id: Long,
     key: String,
     title: Option[String],

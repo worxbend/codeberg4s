@@ -265,9 +265,13 @@ docs/ai/
 # AI-generated plan / scratch documents
 #
 # These are agent working notes, not project docs. If you ever want to commit
-# one deliberately, use:  git add -f PLAN.md
+# one deliberately, use:  git add -f <name>.md
+#
+# PLAN.md is the exception and is deliberately absent from the list below. It
+# is tracked, because two dozen tracked files cite it by section number and a
+# citation to an ignored file is a dead reference for everyone who clones this
+# repository. Its own header says what it is and where it has been superseded.
 # ---------------------------------------------------------------------------
-PLAN.md
 PLANS.md
 PLANNING.md
 IMPLEMENTATION_PLAN.md

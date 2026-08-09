@@ -69,6 +69,10 @@ all such logic lives in `core` over `Exec[F]` and is tested with `F = Either`;
 `Future` appears only at the outermost projection, where each attempt is a fresh
 thunk (`Exec.suspend`).
 
-Bad: the style guide's Ox and jsoniter examples no longer match the code.
-`SCALA_CODE_STYLE.md` is left unedited — it is upstream-derived — and this ADR is
-the pointer that explains the divergence.
+Bad: the style guide's examples no longer match the code in two places. Its Ox
+examples describe a dependency this build does not have at all. Its jsoniter
+examples now name the right library — that part was settled by ADR-0003 — but
+they derive a codec per DTO with `JsonCodecMaker`, and this build derives none;
+`modules/codec` hand-writes a single codec for a document model instead, for the
+reasons ADR-0003 gives. `SCALA_CODE_STYLE.md` is left unedited — it is
+upstream-derived — and this ADR is the pointer that explains the divergence.

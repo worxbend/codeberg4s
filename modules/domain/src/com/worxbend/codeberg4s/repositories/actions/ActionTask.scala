@@ -33,7 +33,7 @@ import java.time.Instant
   * @param runStartedAt
   *   when execution began, absent while the task is still queued
   */
-final case class ActionTask(
+final case class ActionTask private[codeberg4s] (
     id: TaskId,
     name: Option[String],
     status: Option[ActionStatus],

@@ -24,7 +24,7 @@ import com.worxbend.codeberg4s.repositories.ContentPath
   * @param url
   *   the API URL of the entry's object, when the endpoint reports one
   */
-final case class GitTreeEntry(
+final case class GitTreeEntry private[codeberg4s] (
     path: ContentPath,
     sha: CommitSha,
     kind: Option[GitObjectKind],

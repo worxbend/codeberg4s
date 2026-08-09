@@ -35,7 +35,7 @@ import com.worxbend.codeberg4s.repositories.CommitFileStatus
   * @param rawUrl
   *   the browser URL of the raw file at that same commit
   */
-final case class ChangedFile(
+final case class ChangedFile private[codeberg4s] (
     filename: String,
     status: Option[CommitFileStatus],
     additions: Long,

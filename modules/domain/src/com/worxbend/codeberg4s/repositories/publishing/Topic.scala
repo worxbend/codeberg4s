@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.publishing
 
+import com.worxbend.codeberg4s.PathSegment
 import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.repositories.PathSegment
 
 /** One repository topic — `forge`, `forgejo`, `git`, `self-hosted` on `golden/repository/topics.json`.
   *
@@ -25,9 +25,9 @@ object Topic:
 
   /** Parses a topic name.
     *
-    * Trims surrounding whitespace. Rejects a blank name, a name containing `/`, and a name containing a control
-    * character — the three things that would let a value escape its path segment. See the type's own note for what is
-    * deliberately '''not''' checked.
+    * Trims surrounding whitespace. Rejects a blank name, a name containing `/`, a name containing a control character,
+    * and the traversal segments `.` and `..` — the four things that would let a value escape its path segment. See the
+    * type's own note for what is deliberately '''not''' checked.
     *
     * @return
     *   the trimmed name, or a [[ValidationError]] on the `"topic"` field

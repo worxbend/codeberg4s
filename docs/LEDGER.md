@@ -9,10 +9,13 @@ The rule from `PLAN.md` §7: **the first wave that needs a shared model owns it.
 Later waves import it and must not redefine, fork, or "temporarily" copy it.
 A duplicated model is a review-blocking defect — and it is what PMD CPD catches.
 The duplication gate is now real: `scripts/cpd.sh` runs PMD 7.26.0's Scala
-tokenizer over the production sources and, at the 40-token threshold, currently
-reports **62 duplication groups**. Several of them are exactly the helpers this
-file lists below. `./verify.sh --with-slow` fails at that step until they are
-fixed.
+tokenizer over the production sources and, at the 40-token threshold, reports
+**378 duplication groups** as of 2026-08-09. Several of them are exactly the
+helpers this file lists below. `./verify.sh --with-slow` does not fail on that
+number by itself — it compares it against `CPD_BASELINE_GROUPS` in `verify.sh`,
+which records today's count, and fails on any increase. Bringing the count down
+is what closes these entries; the baseline is then lowered in the same commit so
+the ground gained is held.
 
 This file records who owns what. A wave updates it as part of its definition of
 done, in the same commit that introduces the model.

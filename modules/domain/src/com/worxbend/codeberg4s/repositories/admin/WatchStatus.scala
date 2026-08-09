@@ -32,7 +32,7 @@ import java.time.Instant
   * @param createdAt
   *   when the subscription started
   */
-final case class WatchStatus(
+final case class WatchStatus private[codeberg4s] (
     subscribed: Boolean,
     ignored: Boolean,
     reason: Option[String],
@@ -64,7 +64,7 @@ final case class WatchStatus(
   * @param forkCommit
   *   the commit this fork's branch is at, on the same terms as [[baseCommit]]
   */
-final case class ForkSyncInfo(
+final case class ForkSyncInfo private[codeberg4s] (
     allowed: Boolean,
     commitsBehind: Long,
     baseCommit: Option[String],
@@ -87,4 +87,4 @@ final case class ForkSyncInfo(
   * @param pullRequests
   *   whether one more pull request may be pinned
   */
-final case class IssuePinsAllowed(issues: Boolean, pullRequests: Boolean)
+final case class IssuePinsAllowed private[codeberg4s] (issues: Boolean, pullRequests: Boolean)
