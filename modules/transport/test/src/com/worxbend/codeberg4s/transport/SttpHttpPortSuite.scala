@@ -12,6 +12,7 @@ import com.worxbend.codeberg4s.auth.Password
 import com.worxbend.codeberg4s.core.CodebergRequest
 import com.worxbend.codeberg4s.core.CodebergResponse
 import com.worxbend.codeberg4s.core.RequestBody
+import com.worxbend.codeberg4s.core.ResponseBody
 import com.worxbend.codeberg4s.core.TransportFailure
 
 import sttp.client4.Backend
@@ -123,7 +124,7 @@ final class SttpHttpPortSuite extends FunSuite:
     val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
 
     send(port, awkwardRequest).map: result =>
-      assertEquals(result, Right(CodebergResponse(500, Map.empty, "upstream exploded")))
+      assertEquals(result, Right(CodebergResponse(500, Map.empty, ResponseBody.utf8("upstream exploded"))))
 
   test("response header names are lowercased and repeated values are kept in order"):
     val headers = List(Header("X-Total-Count", "1590"), Header("Link", "<a>; rel=\"next\""), Header("Link", "<b>"))

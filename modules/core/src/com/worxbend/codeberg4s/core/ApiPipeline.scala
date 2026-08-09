@@ -13,8 +13,6 @@ import com.worxbend.codeberg4s.syntax.discard
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
-import java.nio.charset.StandardCharsets
-
 /** The single path every API call takes: send, retry, classify, decode, observe.
   *
   * Endpoints describe *what* to call by building a [[CodebergRequest]]; this class owns *how* a call is made. Keeping
@@ -108,8 +106,8 @@ final class ApiPipeline[F[_]](
     * never need one are unaffected and every existing [[HttpPort]] fake keeps compiling.
     *
     * Retry, telemetry, status mapping and `CallContext` behave exactly as they do for a textual call. An error body is
-    * still JSON text even on an endpoint whose success body is binary, so a non-2xx response is decoded as UTF-8 and
-    * parsed the usual way; a successful body is never decoded, which is the whole point.
+    * still JSON text even on an endpoint whose success body is binary, so a non-2xx response is decoded with the
+    * charset it declared and parsed the usual way; a successful body is never decoded, which is the whole point.
     *
     * Always [[RetryEligibility.IdempotentOnly]] — every endpoint that answers bytes in this API is a `GET`.
     */
@@ -148,8 +146,8 @@ final class ApiPipeline[F[_]](
         observe(telemetry.onResponse(ctx, response.status)).flatMap: _ =>
           if StatusMapping.isSuccess(response.status) then exec.pure(AttemptOutcome.succeeded(response))
           else
-            val text  = String(response.bytes, StandardCharsets.UTF_8)
-            val error = StatusMapping.toError(ctx, response.status, parsedErrorBody(text))
+            val body  = ResponseBody.of(response.bytes, ResponseBody.charsetOf(response.contentType))
+            val error = StatusMapping.toError(ctx, response.status, parsedErrorBody(body))
             failedWith(ctx, error, response.retryAfter)
 
   private def perform[A](request: CodebergRequest, eligibility: RetryEligibility)(
@@ -234,22 +232,29 @@ final class ApiPipeline[F[_]](
   ): CallContext =
     CallContext(request.operation, request.method, uri, requestId, elapsedMs)
 
-  private def decoded[A](ctx: CallContext, body: String)(using decode: Decode[A]): Either[CodebergError, A] =
+  private def decoded[A](ctx: CallContext, body: ResponseBody)(using decode: Decode[A]): Either[CodebergError, A] =
     decode(body).left.map(failure =>
       CodebergError.DecodingFailed(ctx, ApiPipeline.snippetOf(body), failure.path, failure.message)
     )
 
-  /** Reads a non-2xx payload, tolerating both an empty body and an injected parser that fails outright. */
-  private def parsedErrorBody(body: String): ApiErrorBody =
+  /** Reads a non-2xx payload, tolerating both an empty body and an injected parser that fails outright.
+    *
+    * This is one of the few places that genuinely wants text: the injected parser takes a `String`, an error payload is
+    * a few hundred bytes, and it is only ever read on the failure path. Decoding it here rather than at the transport
+    * is what keeps the successful path — every listing, every read — free of the copy.
+    */
+  private def parsedErrorBody(body: ResponseBody): ApiErrorBody =
     if body.isBlank then ApiErrorBody.Empty
-    else Try(errorBody(body)).getOrElse(ApiErrorBody.Empty)
+    else Try(errorBody(body.text)).getOrElse(ApiErrorBody.Empty)
 
 object ApiPipeline:
 
-  /** An excerpt of `body` no longer than [[com.worxbend.codeberg4s.CodebergError.MaxSnippetLength]] characters.
+  /** An excerpt of `body` no longer than [[com.worxbend.codeberg4s.CodebergError.MaxSnippetLength]] '''characters'''.
     *
     * Bounding happens here, once, rather than at each call site: a decoding failure on a 40 MB repository listing must
-    * not put 40 MB into an error value that an application is about to log.
+    * not put 40 MB into an error value that an application is about to log. [[ResponseBody.excerpt]] does the work,
+    * because bounding a body that is now bytes at a number of characters is a job with a trap in it — see its own
+    * documentation for why slicing the bytes and decoding the slice is not the same thing.
     */
-  private[core] def snippetOf(body: String): String =
-    body.take(CodebergError.MaxSnippetLength)
+  private[core] def snippetOf(body: ResponseBody): String =
+    body.excerpt(CodebergError.MaxSnippetLength)

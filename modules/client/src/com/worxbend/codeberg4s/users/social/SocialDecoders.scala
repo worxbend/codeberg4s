@@ -5,6 +5,7 @@ import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.DecodeFailure
+import com.worxbend.codeberg4s.core.ResponseBody
 import com.worxbend.codeberg4s.issues.TrackedTime
 import com.worxbend.codeberg4s.issues.wire.TrackedTimeDto
 import com.worxbend.codeberg4s.miscellaneous.PlainText
@@ -114,7 +115,7 @@ private[social] object SocialDecoders:
     * a caller. The failure carries [[com.worxbend.codeberg4s.ValidationError.message]] and never the rejected body.
     */
   val verificationToken: Decode[GpgKeyToken] =
-    (body: String) =>
+    (body: ResponseBody) =>
       PlainText
         .decoder(body)
         .flatMap(text => GpgKeyToken.from(text).left.map(error => DecodeFailure(JsonPath.Root, error.message)))

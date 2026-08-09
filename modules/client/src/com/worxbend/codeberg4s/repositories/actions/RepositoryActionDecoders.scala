@@ -4,6 +4,7 @@ import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
+import com.worxbend.codeberg4s.core.ResponseBody
 import com.worxbend.codeberg4s.miscellaneous.PlainText
 import com.worxbend.codeberg4s.repositories.actions.wire.ActionArtifactDto
 import com.worxbend.codeberg4s.repositories.actions.wire.ActionRunDto
@@ -103,7 +104,7 @@ private[actions] object RepositoryActionDecoders:
   val dispatchedRun: Decode[Option[DispatchedWorkflowRun]] =
     val present = WireDecode.of(Json.decoder[DispatchedWorkflowRunDto])(_.toDomain)
 
-    (body: String) => if body.isBlank then Right(None) else present(body).map(Some.apply)
+    (body: ResponseBody) => if body.isBlank then Right(None) else present(body).map(Some.apply)
 
   /** A job's log, exactly as the instance sent it.
     *

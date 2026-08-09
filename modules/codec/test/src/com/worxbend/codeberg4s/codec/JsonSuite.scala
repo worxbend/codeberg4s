@@ -1,8 +1,11 @@
 package com.worxbend.codeberg4s.codec
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.core.ResponseBody
 
 import munit.FunSuite
+
+import java.nio.charset.StandardCharsets
 
 /** `Json` is the only place in the library that calls jsoniter, so this suite is where "no codec exception ever
   * escapes" is proved. Every case below is a body that makes the parser throw.
@@ -85,10 +88,22 @@ final class JsonSuite extends FunSuite:
     assertEquals(Json.decode[Vector[Leaf]]("[]"), Right(Vector.empty))
 
   test("decoder produces a Decode port that agrees with decode"):
-    assertEquals(Json.decoder[Leaf].apply(leaf), Json.decode[Leaf](leaf))
+    assertEquals(Json.decoder[Leaf].apply(ResponseBody.utf8(leaf)), Json.decode[Leaf](leaf))
 
   test("decoder never throws either"):
-    assert(Json.decoder[Leaf].apply("not json").isLeft)
+    assert(Json.decoder[Leaf].apply(ResponseBody.utf8("not json")).isLeft)
+
+  test("the two decode overloads agree, so a caller holding text is not on a different code path"):
+    assertEquals(Json.decode[Leaf](leaf.getBytes(StandardCharsets.UTF_8)), Json.decode[Leaf](leaf))
+
+  test("decoder reads a body the response declared as something other than UTF-8"):
+    // Nothing Forgejo serves looks like this. The point is that the charset on
+    // the body is honoured rather than ignored: the same characters encoded as
+    // ISO-8859-1 must decode to the same value, not to mojibake.
+    val accented = """{"name":"café"}"""
+    val latin1   = ResponseBody.of(accented.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.ISO_8859_1)
+
+    assertEquals(Json.decoder[Leaf].apply(latin1), Json.decode[Leaf](accented))
 
   test("a document nested past the depth bound is a failure, not a stack overflow"):
     // Remote input must not be able to exhaust the caller's stack.

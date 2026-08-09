@@ -20,9 +20,10 @@ import java.util.Locale
   *   response headers with '''already lowercased''' keys, as the transport adapter normalises them; a key maps to every
   *   value the server sent for it, in order
   * @param body
-  *   the response body as text, empty for a `204`
+  *   the response body as the bytes that arrived, with the charset the response declared for them; empty for a `204`.
+  *   See [[ResponseBody]] for why this is not a `String`
   */
-final case class CodebergResponse(status: Int, headers: Map[String, List[String]], body: String):
+final case class CodebergResponse(status: Int, headers: Map[String, List[String]], body: ResponseBody):
 
   /** The first value of `name`, matched case-insensitively.
     *

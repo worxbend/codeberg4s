@@ -4,6 +4,7 @@ import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
+import com.worxbend.codeberg4s.core.ResponseBody
 import com.worxbend.codeberg4s.issues.wire.AttachmentDto
 import com.worxbend.codeberg4s.issues.wire.CommentDto
 import com.worxbend.codeberg4s.issues.wire.IssueDeadlineDto
@@ -55,7 +56,7 @@ private[issues] object IssueDecoders:
   val comment: Decode[Option[Comment]] =
     val present = WireDecode.of(Json.decoder[CommentDto])(_.toDomain)
 
-    (body: String) => if body.isBlank then Right(None) else present(body).map(Some.apply)
+    (body: ResponseBody) => if body.isBlank then Right(None) else present(body).map(Some.apply)
 
   /** A bare array of comment objects, as the repository-wide comment listing returns it. */
   val comments: Decode[Vector[Comment]] =

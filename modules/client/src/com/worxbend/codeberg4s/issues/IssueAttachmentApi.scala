@@ -37,10 +37,14 @@ import scala.concurrent.Future
   * ==Nothing here downloads==
   *
   * Every method returns metadata. [[IssueAttachment.browserDownloadUrl]] is the supported route to the content: hand it
-  * to an HTTP client that can stream bytes. [[com.worxbend.codeberg4s.core.CodebergResponse]] carries a body as
-  * `String` and the transport reads every response with sttp's `asStringAlways`, so an arbitrary file that has been
-  * through a UTF-8 decoder is no longer that file — which is the same reason
-  * [[com.worxbend.codeberg4s.repositories.actions.RepositoryActionApi]] does not offer its two ZIP endpoints.
+  * to an HTTP client that can stream bytes.
+  *
+  * That used to be forced by the library: a response body was a `String`, and an arbitrary file that has been through a
+  * UTF-8 decoder is no longer that file. It is no longer forced — [[com.worxbend.codeberg4s.core.CodebergResponse]]
+  * carries a [[com.worxbend.codeberg4s.core.ResponseBody]], which is bytes — so an attachment-download operation is now
+  * something this group '''could''' offer. It does not yet, because adding one is a new endpoint with its own tests
+  * rather than a rider on the change that made it possible, and because an attachment can be arbitrarily large and
+  * nothing here streams.
   *
   * ==Not paged, and that is the endpoints' decision==
   *

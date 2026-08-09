@@ -84,13 +84,11 @@ import scala.concurrent.Future
   *   - `GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/zip` (`DownloadActionArtifact`);
   *   - `GET /repos/{owner}/{repo}/actions/runs/{run_id}/logs` (`repoGetActionRunLogs`).
   *
-  * Both answer a ZIP archive. [[com.worxbend.codeberg4s.core.CodebergResponse]] carries a body as `String`, and the
-  * transport reads every response with sttp's `asStringAlways` — a ZIP that has been through a UTF-8 decoder is no
-  * longer a ZIP, and no amount of re-encoding recovers it. There is no `Decode[Array[Byte]]` and no streaming response
-  * in the core vocabulary to model them with, so they are not offered rather than offered broken.
-  *
-  * The supported routes are [[ActionArtifact.archiveDownloadUrl]], which a caller hands to an HTTP client that can
-  * stream bytes, and [[jobLogs]], which is genuinely text and is implemented.
+  * Both answer a ZIP archive, which is not text, so neither belongs on a class whose every other operation decodes one.
+  * They are '''implemented''', on [[ActionDownloadApi]] — reached as `client.repos.actions.downloads` — which reads a
+  * body as bytes. [[ActionArtifact.archiveDownloadUrl]] remains available for a caller who would rather stream the
+  * archive with their own HTTP client, since nothing in this library streams. [[jobLogs]] is genuinely text and is
+  * implemented here.
   *
   * @param pipeline
   *   the shared request pipeline; the only thing here that reaches the network

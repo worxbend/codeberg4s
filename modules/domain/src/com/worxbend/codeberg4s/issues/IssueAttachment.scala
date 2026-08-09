@@ -19,8 +19,8 @@ import java.time.Instant
   *
   * This library returns metadata only. [[browserDownloadUrl]] is the supported route to the content: hand it to an HTTP
   * client that can stream, exactly as `com.worxbend.codeberg4s.repositories.actions.ActionArtifact.archiveDownloadUrl`
-  * does. Nothing here downloads, because [[com.worxbend.codeberg4s.core.CodebergResponse]] carries a body as `String`
-  * and an arbitrary file is not text.
+  * does. Nothing here downloads. That was once a limitation of the response type, which carried text and so could not
+  * carry a file; it is now a decision, since a response body is bytes.
   *
   * @param id
   *   the instance-wide identifier, and the only way to address the attachment again; see [[AttachmentId]]

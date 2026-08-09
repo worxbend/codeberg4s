@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.client
 
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.DecodeFailure
+import com.worxbend.codeberg4s.core.ResponseBody
 
 /** Joins the two halves of reading a response: parse the wire DTO, then project it into the domain.
   *
@@ -24,4 +25,4 @@ private[codeberg4s] object WireDecode:
     *   the DTO's own projection, which reports the JSON path of whatever the domain required and did not get
     */
   def of[D, A](wire: Decode[D])(toDomain: D => Either[DecodeFailure, A]): Decode[A] =
-    (body: String) => wire(body).flatMap(toDomain)
+    (body: ResponseBody) => wire(body).flatMap(toDomain)

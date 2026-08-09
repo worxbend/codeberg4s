@@ -11,7 +11,7 @@ final class CodebergResponsePagingSuite extends FunSuite:
       "<https://codeberg.org/api/v1/repos/forgejo/forgejo/issues?limit=2&page=795>; rel=\"last\""
 
   private def responseWith(headers: (String, List[String])*): CodebergResponse =
-    CodebergResponse(200, headers.toMap, "[]")
+    CodebergResponse(200, headers.toMap, ResponseBody.utf8("[]"))
 
   private def page(value: Int): PageNumber =
     PageNumber.from(value).getOrElse(PageNumber.First)

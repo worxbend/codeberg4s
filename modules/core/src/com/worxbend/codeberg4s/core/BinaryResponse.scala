@@ -4,10 +4,14 @@ import scala.concurrent.duration.FiniteDuration
 
 /** A response whose body is bytes rather than text.
   *
-  * [[CodebergResponse]] carries a `String`, which is right for the JSON and `text/plain` endpoints that make up almost
-  * all of this API — but a few answer a ZIP: an Actions artifact and a workflow run's logs. Decoding those bytes as
-  * UTF-8 destroys them before any [[Decode]] could see them, so they need their own response type rather than a lossy
-  * reuse of the textual one.
+  * A few endpoints answer a ZIP rather than text: an Actions artifact and a workflow run's logs. This is what
+  * [[BinaryHttpPort]] hands back for those.
+  *
+  * '''It is now a near-duplicate of [[CodebergResponse]].''' It exists because [[CodebergResponse]] used to carry a
+  * `String`, which would have destroyed a ZIP before any [[Decode]] could see it. Now that [[CodebergResponse]] carries
+  * a [[ResponseBody]] the two types say the same thing, and the download endpoints could be served by the ordinary
+  * pipeline. Merging them changes the published signature of the download API, so it is a change of its own rather than
+  * a rider on the one that made it possible.
   *
   * Headers are lowercased by the transport, exactly as they are on [[CodebergResponse]].
   *
@@ -33,11 +37,11 @@ final case class BinaryResponse(
 
   /** The `Retry-After` delay, parsed defensively — a missing or malformed header is `None`, never a failure. */
   def retryAfter: Option[FiniteDuration] =
-    CodebergResponse(status, headers, "").retryAfter
+    CodebergResponse(status, headers, ResponseBody.Empty).retryAfter
 
   /** The request id the instance echoed, when it echoed one. */
   def requestId: Option[String] =
-    CodebergResponse(status, headers, "").requestId
+    CodebergResponse(status, headers, ResponseBody.Empty).requestId
 
   /** How large the body is. Cheaper to read than to render, and the thing worth logging. */
   def size: Int = bytes.length

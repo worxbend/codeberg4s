@@ -39,7 +39,7 @@ final class BinaryPipelineSuite extends FunSuite:
 
   private def pipeline(telemetry: Telemetry[Result]): ApiPipeline[Result] =
     ApiPipeline[Result](
-      FakeHttpPort(Vector(Right(CodebergResponse(200, Map.empty, "")))),
+      FakeHttpPort(Vector(Right(CodebergResponse(200, Map.empty, ResponseBody.Empty)))),
       config,
       FakeTimer(0L),
       telemetry,
@@ -74,7 +74,7 @@ final class BinaryPipelineSuite extends FunSuite:
     val body     = """{"message":"gone"}""".getBytes(StandardCharsets.UTF_8)
     val port     = StubBinaryPort(List(Right(BinaryResponse(410, Map.empty, body))))
     val recorded = ApiPipeline[Result](
-      FakeHttpPort(Vector(Right(CodebergResponse(200, Map.empty, "")))),
+      FakeHttpPort(Vector(Right(CodebergResponse(200, Map.empty, ResponseBody.Empty)))),
       config,
       FakeTimer(0L),
       Telemetry.noOp[Result],
@@ -92,7 +92,7 @@ final class BinaryPipelineSuite extends FunSuite:
     val port = StubBinaryPort(List(Right(BinaryResponse(404, Map.empty, body))))
 
     val seen = ApiPipeline[Result](
-      FakeHttpPort(Vector(Right(CodebergResponse(200, Map.empty, "")))),
+      FakeHttpPort(Vector(Right(CodebergResponse(200, Map.empty, ResponseBody.Empty)))),
       config,
       FakeTimer(0L),
       Telemetry.noOp[Result],

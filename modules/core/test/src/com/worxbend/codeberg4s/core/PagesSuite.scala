@@ -9,7 +9,7 @@ import munit.FunSuite
 final class PagesSuite extends FunSuite:
 
   private def responseWith(headers: (String, List[String])*): CodebergResponse =
-    CodebergResponse(200, headers.toMap, "[]")
+    CodebergResponse(200, headers.toMap, ResponseBody.utf8("[]"))
 
   private def page(value: Int): PageNumber =
     PageNumber.from(value).getOrElse(PageNumber.First)

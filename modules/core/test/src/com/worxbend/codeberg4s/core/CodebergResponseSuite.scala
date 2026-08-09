@@ -19,7 +19,7 @@ final class CodebergResponseSuite extends FunSuite:
     assertEquals(headers("x-request-id" -> " abc123 ").requestId, Some("abc123"))
 
   test("only the first value of a repeated header is used"):
-    val response = CodebergResponse(200, Map("x-total-count" -> List("42", "7")), "")
+    val response = CodebergResponse(200, Map("x-total-count" -> List("42", "7")), ResponseBody.Empty)
 
     assertEquals(response.totalCount, Some(42))
 
@@ -53,4 +53,4 @@ final class CodebergResponseSuite extends FunSuite:
     assertEquals(headers("x-request-id" -> "abc123").requestId, Some("abc123"))
 
   private def headers(entries: (String, String)*): CodebergResponse =
-    CodebergResponse(200, entries.map((name, value) => (name, List(value))).toMap, "")
+    CodebergResponse(200, entries.map((name, value) => (name, List(value))).toMap, ResponseBody.Empty)
