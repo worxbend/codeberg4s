@@ -591,11 +591,11 @@ as `CodebergError.Transport(ctx, TransportCause.ResponseTooLarge(detail))`.
   largest JSON body Forgejo produces is a file's contents, a blob capped by the
   instance's `default_max_blob_size` (10 MiB on codeberg.org) and then
   base64-encoded, which costs four bytes per three; 16 MiB clears that.
-- `maxDownloadBodyBytes` — 50 MiB, applied only to `client.repos.actions
-  .downloads`, which fetches ZIP archives. An artifact is whatever a workflow
-  uploaded, so nothing about `default_max_blob_size` bounds it, and one shared
-  number would have had to be either too small for ordinary artifacts or too
-  large to bound JSON usefully.
+- `maxDownloadBodyBytes` — 50 MiB, applied only to `client.downloads`, which
+  fetches ZIP archives. An artifact is whatever a workflow uploaded, so nothing
+  about `default_max_blob_size` bounds it, and one shared number would have had
+  to be either too small for ordinary artifacts or too large to bound JSON
+  usefully.
 
 Exceeding either bound is **not** retried. Repeating the call would download the
 oversized body once per attempt, which turns one oversized response into

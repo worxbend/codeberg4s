@@ -107,8 +107,8 @@ import java.time.LocalDate
   *   - `GET /repos/{owner}/{repo}/actions/runs/{run_id}/logs` (`repoGetActionRunLogs`).
   *
   * Both answer a ZIP archive, so neither is served by a class whose every other operation decodes text. They are
-  * implemented on [[com.worxbend.codeberg4s.repositories.actions.ActionDownloadApi]], reached as
-  * `client.repos.actions.downloads`, which reads a body as bytes.
+  * implemented on [[com.worxbend.codeberg4s.repositories.actions.ActionDownloadApi]], reached as `client.downloads`,
+  * which reads a body as bytes.
   *
   * @param pipeline
   *   the shared request pipeline; the only thing here that reaches the network

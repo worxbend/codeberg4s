@@ -85,10 +85,9 @@ import scala.concurrent.Future
   *   - `GET /repos/{owner}/{repo}/actions/runs/{run_id}/logs` (`repoGetActionRunLogs`).
   *
   * Both answer a ZIP archive, which is not text, so neither belongs on a class whose every other operation decodes one.
-  * They are '''implemented''', on [[ActionDownloadApi]] — reached as `client.repos.actions.downloads` — which reads a
-  * body as bytes. [[ActionArtifact.archiveDownloadUrl]] remains available for a caller who would rather stream the
-  * archive with their own HTTP client, since nothing in this library streams. [[jobLogs]] is genuinely text and is
-  * implemented here.
+  * They are '''implemented''', on [[ActionDownloadApi]] — reached as `client.downloads` — which reads a body as bytes.
+  * [[ActionArtifact.archiveDownloadUrl]] remains available for a caller who would rather stream the archive with their
+  * own HTTP client, since nothing in this library streams. [[jobLogs]] is genuinely text and is implemented here.
   *
   * @param pipeline
   *   the shared request pipeline; the only thing here that reaches the network

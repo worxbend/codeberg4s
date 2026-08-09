@@ -14,10 +14,10 @@ import scala.concurrent.Future
 
 /** The two Actions endpoints whose success body is a ZIP archive rather than text.
   *
-  * Reached as `client.repos.actions.downloads`. They are separate from [[RepositoryActionApi]] because they are the
-  * only operations in the library that need a byte-carrying transport
-  * ([[com.worxbend.codeberg4s.core.BinaryHttpPort]]), and folding that requirement into the class that serves the other
-  * twenty-six would have made every one of them depend on a capability none of them use.
+  * Reached as `client.downloads`. They are separate from [[RepositoryActionApi]] because they are the only operations
+  * in the library that need a byte-carrying transport ([[com.worxbend.codeberg4s.core.BinaryHttpPort]]), and folding
+  * that requirement into the class that serves the other twenty-six would have made every one of them depend on a
+  * capability none of them use.
   *
   * '''Memory.''' Both operations hold the whole archive in memory as an `Array[Byte]`. A CI artifact can be large, and
   * this library does not stream. Check [[com.worxbend.codeberg4s.repositories.actions.ActionArtifact.sizeInBytes]]

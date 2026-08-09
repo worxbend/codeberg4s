@@ -39,7 +39,7 @@ enum TransportCause:
     * this case is excluded from retrying.
     *
     * Which bound was passed depends on the operation: [[CodebergConfig.maxDownloadBodyBytes]] for the archive downloads
-    * under `client.repos.actions.downloads`, [[CodebergConfig.maxResponseBodyBytes]] for everything else.
+    * under `client.downloads`, [[CodebergConfig.maxResponseBodyBytes]] for everything else.
     */
   case ResponseTooLarge(detail: String)
 

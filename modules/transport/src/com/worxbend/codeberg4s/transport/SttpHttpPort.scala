@@ -143,8 +143,8 @@ final class SttpHttpPort(
     *
     * The bound is [[com.worxbend.codeberg4s.CodebergConfig.maxDownloadBodyBytes]] rather than
     * [[com.worxbend.codeberg4s.CodebergConfig.maxResponseBodyBytes]]: this is the path the ZIP-fetching operations
-    * under `client.repos.actions.downloads` take, and a CI artifact is legitimately far bigger than the largest JSON
-    * document Forgejo will produce.
+    * under `client.downloads` take, and a CI artifact is legitimately far bigger than the largest JSON document Forgejo
+    * will produce.
     */
   override def sendBinary(
       request: CodebergRequest,
