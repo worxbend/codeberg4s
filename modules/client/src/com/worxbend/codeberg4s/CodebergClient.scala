@@ -112,9 +112,14 @@ final class CodebergClient private (
     * method returns before the last in-flight response has been delivered; nothing in this library observes that, and
     * waiting for it would make an ordinary `finally` block block.
     *
-    * Using a client after closing it is a defect. Calls will fail with a rejected-execution failure from the scheduler
-    * rather than with a [[CodebergError]], because a closed client is a programming mistake and not a remote failure to
+    * Using a client after closing it is a defect. A call started afterwards fails with a rejected-execution failure
+    * from the scheduler, and a call that was already sitting in retry backoff fails with a
+    * `java.util.concurrent.CancellationException` — see [[com.worxbend.codeberg4s.client.FutureTimer.close]]. Neither
+    * is reported as a [[CodebergError]], because a closed client is a programming mistake and not a remote failure to
     * be retried.
+    *
+    * Both are failures, which is the guarantee that matters at shutdown: no `Future` this client handed out is left
+    * without an outcome, so an application closing down never waits on one that cannot finish.
     */
   def close(): Unit =
     if closed.compareAndSet(false, true) then
