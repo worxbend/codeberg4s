@@ -50,10 +50,8 @@ object JsonDecoder:
     */
   def arrayOf[A](element: JsonDecoder[A]): JsonDecoder[Vector[A]] =
     case JsonValue.Arr(values) =>
-      values.zipWithIndex.foldLeft(Right(Vector.empty): Either[DecodeFailure, Vector[A]]):
-        case (Left(failure), _)        => Left(failure)
-        case (Right(built), (raw, at)) =>
-          element.decode(raw).left.map(failure => failure.copy(path = JsonPath.Root.index(at))).map(built :+ _)
+      ArrayElements.convert(values): (raw, at) =>
+        element.decode(raw).left.map(failure => failure.copy(path = JsonPath.Root.index(at)))
     case other                 => Left(DecodeFailure(JsonPath.Root, s"expected an array but found ${other.kind}"))
 
   /** As [[objectOf]], for a build step that can itself fail — an envelope whose elements are decoded, say. */
@@ -67,8 +65,7 @@ object JsonDecoder:
     * under-report, and a caller cannot tell an under-report from a short page.
     */
   def all[A](values: Vector[JsonValue])(using element: JsonDecoder[A]): Either[DecodeFailure, Vector[A]] =
-    values.foldLeft(Right(Vector.empty): Either[DecodeFailure, Vector[A]]): (built, raw) =>
-      built.flatMap(soFar => element.decode(raw).map(soFar :+ _))
+    ArrayElements.convert(values)((raw, _) => element.decode(raw))
 
   /** A decoder that hands the parsed document over untouched, for the few payloads whose shape is not fixed. */
   given identity: JsonDecoder[JsonValue] = (value: JsonValue) => Right(value)
