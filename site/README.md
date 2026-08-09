@@ -22,7 +22,8 @@ scripts/site.sh --help         # the pipeline, step by step
 | `src/directory.conf` | Laika configuration for the content tree: title and sidebar order. | this directory |
 | `src/guides/` | The task-oriented guides. | the guides work stream |
 | `src/reference/` | The lookup pages. | the guides work stream |
-| `assets/` | Static files copied to the site root, currently the favicon. | this directory |
+| `assets/` | Static files copied to the site root: the favicon, and the stylesheet below. | this directory |
+| `assets/css/site.css` | The design layer over Helium — component shapes only. Colours, type scale and metrics are configuration and live in `build/laika.scala`; do not set them in both places. | this directory |
 | `build/laika.scala` | The Laika driver: theme, colours, navigation, link validation. | this directory |
 
 Nothing under `site/` is compiled by Mill. `build/laika.scala` is a scala-cli
