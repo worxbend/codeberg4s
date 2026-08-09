@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.core
 
+import com.worxbend.codeberg4s.syntax.discard
+
 import java.nio.charset.StandardCharsets
 import java.util.Locale
 
@@ -70,15 +72,39 @@ object Redaction:
   private def renderValue(name: String, value: String): String =
     if isSensitiveParameter(name) then Mask else percentEncode(value)
 
+  /** The uppercase hex alphabet, indexed by nibble. A `String` rather than an `Array[Char]` so that the lookup table
+    * cannot be mutated by anything holding a reference to it.
+    */
+  private val HexDigits: String = "0123456789ABCDEF"
+
+  /** Percent-encodes `value` per RFC 3986 into one buffer.
+    *
+    * Every octet is appended to a single [[StringBuilder]] rather than turned into its own `String` first. The result
+    * is character-for-character what a per-octet `map(...).mkString` produces; only the allocation count differs, and
+    * this runs on every path segment and every query value of every attempt of every call.
+    */
   private def percentEncode(value: String): String =
-    value.getBytes(StandardCharsets.UTF_8).map(encodeByte).mkString
+    val octets  = value.getBytes(StandardCharsets.UTF_8)
+    val encoded = StringBuilder(octets.length)
+    octets.foreach(byte => appendEncoded(encoded, byte))
+    encoded.toString
 
-  private def encodeByte(byte: Byte): String =
+  /** Appends one UTF-8 octet: literally when it is unreserved, otherwise as `%` and two uppercase hex digits. */
+  private def appendEncoded(target: StringBuilder, byte: Byte): Unit =
     val octet = byte & 0xFF
-    if isUnreserved(octet.toChar) then octet.toChar.toString else f"%%$octet%02X"
+    if isUnreserved(octet.toChar) then target.append(octet.toChar).discard
+    else target.append('%').append(HexDigits(octet >> 4)).append(HexDigits(octet & 0x0F)).discard
 
+  /** Whether `char` is RFC 3986 unreserved.
+    *
+    * The four punctuation marks are matched literally rather than looked for inside a `"-._~"` string, so deciding a
+    * character costs a comparison instead of a scan. A `match` rather than `==` because the build's Scalafix
+    * configuration bans universal equality, and rather than `.equals` because that would box the `Char`.
+    */
   private def isUnreserved(char: Char): Boolean =
     (char >= 'a' && char <= 'z') ||
     (char >= 'A' && char <= 'Z') ||
     (char >= '0' && char <= '9') ||
-    "-._~".contains(char)
+    (char match
+      case '-' | '.' | '_' | '~' => true
+      case _ => false)

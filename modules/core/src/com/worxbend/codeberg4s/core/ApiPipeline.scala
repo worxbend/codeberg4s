@@ -114,15 +114,19 @@ final class ApiPipeline[F[_]](
     * Always [[RetryEligibility.IdempotentOnly]] — every endpoint that answers bytes in this API is a `GET`.
     */
   def callBinary(request: CodebergRequest, binary: BinaryHttpPort[F]): F[BinaryResponse] =
+    val uri      = redactedUri(request)
     val attempts = engine.runWith(request.operation, request.method, RetryEligibility.IdempotentOnly)(_ =>
-      binaryAttempt(request, binary)
+      binaryAttempt(request, uri, binary)
     )
     exec.attempt(attempts).flatMap:
       case Right(value) => exec.pure(value)
       case Left(error)  => reportFinal(request, error).flatMap(_ => exec.raise(error))
 
-  private def binaryAttempt(request: CodebergRequest, binary: BinaryHttpPort[F]): F[AttemptOutcome[BinaryResponse]] =
-    val uri = Redaction.uri(config.baseUri.value, request.path, request.query)
+  private def binaryAttempt(
+      request: CodebergRequest,
+      uri: String,
+      binary: BinaryHttpPort[F],
+  ): F[AttemptOutcome[BinaryResponse]] =
     timer.nowMillis.flatMap: started =>
       observe(telemetry.onRequest(contextOf(request, uri, None, 0L))).flatMap: _ =>
         binary.sendBinary(request, uri).flatMap: sent =>
@@ -151,18 +155,29 @@ final class ApiPipeline[F[_]](
   private def perform[A](request: CodebergRequest, eligibility: RetryEligibility)(
       onSuccess: (CallContext, CodebergResponse) => Either[CodebergError, A]
   ): F[A] =
+    val uri      = redactedUri(request)
     val attempts = engine.runWith(request.operation, request.method, eligibility)(_ =>
-      attemptOnce(request, onSuccess)
+      attemptOnce(request, uri, onSuccess)
     )
     exec.attempt(attempts).flatMap:
       case Right(value) => exec.pure(value)
       case Left(error)  => reportFinal(request, error).flatMap(_ => exec.raise(error))
 
+  /** Renders the URI every attempt of this call reports.
+    *
+    * A retried call re-sends an identical request, so the redacted URI it reports is identical too. Building it here,
+    * once per call rather than once per attempt, keeps the string every attempt shares — and therefore every
+    * `CallContext` and every telemetry event — exactly what it was, while a five-attempt call encodes its path and
+    * query once instead of five times.
+    */
+  private def redactedUri(request: CodebergRequest): String =
+    Redaction.uri(config.baseUri.value, request.path, request.query)
+
   private def attemptOnce[A](
       request: CodebergRequest,
+      uri: String,
       onSuccess: (CallContext, CodebergResponse) => Either[CodebergError, A],
   ): F[AttemptOutcome[A]] =
-    val uri = Redaction.uri(config.baseUri.value, request.path, request.query)
     timer.nowMillis.flatMap: started =>
       observe(telemetry.onRequest(contextOf(request, uri, None, 0L))).flatMap: _ =>
         http.send(request, uri).flatMap: sent =>
