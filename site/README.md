@@ -16,7 +16,7 @@ scripts/site.sh --help         # the pipeline, step by step
 
 | Path | What it is | Owner |
 | --- | --- | --- |
-| `src/index.md` | The landing page. | this directory |
+| `src/landing-page.md` | The prose of the front page, rendered below the header and the teasers. The filename is fixed by Helium, and `src/` must hold no `index.md` or `README.md` — see the note above `homeLink` in `build/laika.scala`. | this directory |
 | `src/getting-started.md` | Install, first request, error rails, pagination. | this directory |
 | `src/examples.md` | The `modules/examples` programs. Its table is generated at build time. | this directory |
 | `src/directory.conf` | Laika configuration for the content tree: title and sidebar order. | this directory |

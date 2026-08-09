@@ -199,7 +199,24 @@ object Site:
       .favIcons(Favicon.internal(Root / "assets" / "favicon.svg", sizes = "32x32"))
       .site
       .topNavigationBar(
-        homeLink = IconLink.internal(Root / "index.md", HeliumIcon.home),
+        // `Root / "README"`, with no `.md` and no such file in site/src, is not a typo.
+        //
+        // MEASURED, NOT ASSUMED. The landing page configured below is not a page anyone writes directly. Helium takes
+        // the content of `site/src/landing-page.md`, lifts that document out of the content tree, and re-inserts it as
+        // the *title document* of the root directory — at the suffix-less path `/README`, because `README` is Laika's
+        // default title-document input name. A directory's title document is what renders to `index.html`, which is how
+        // the landing page comes to be the site's front page.
+        //
+        // So this is the only path that resolves to the front page. `Root / "landing-page.md"` fails link validation,
+        // because by the time links are resolved that document is gone from the tree. `Root / "README.md"` fails too:
+        // the re-inserted document carries no suffix.
+        //
+        // The consequence to keep in mind is that site/src must contain no `index.md` and no `README.md`. Either one
+        // would also render to `index.html`, and Laika renders documents in parallel — so the two writers race for the
+        // same file. That is not hypothetical: it is what produced a published `index.html` holding the landing page
+        // spliced on top of the tail of a second, differently-templated copy of the same page. scripts/site.sh fails
+        // the build if either file reappears.
+        homeLink = IconLink.internal(Root / "README", HeliumIcon.home),
         navLinks = Seq(
           TextLink.internal(Root / "getting-started.md", "Getting Started"),
           TextLink.internal(Root / "examples.md", "Examples"),
