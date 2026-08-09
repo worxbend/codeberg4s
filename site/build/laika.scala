@@ -40,6 +40,7 @@ import laika.config.TargetDefinition
 import laika.format.HTML
 import laika.format.Markdown
 import laika.helium.Helium
+import laika.helium.config.ButtonLink
 import laika.helium.config.Favicon
 import laika.helium.config.HeliumIcon
 import laika.helium.config.IconLink
@@ -232,17 +233,26 @@ object Site:
     // Everything below the header and the teaser rows is the prose of `site/src/landing-page.md`. That file has no
     // top-level heading of its own on purpose: `title` here already renders "codeberg4s" at 48px directly above it,
     // and a second `<h1>codeberg4s</h1>` under it said the same word twice.
+    //
+    // The landing page carries no navigation bar — Helium renders it from a template of its own, which has no top bar
+    // in it. `titleLinks` is the replacement: a reader who lands on the front page needs a way into the documentation
+    // that is not "scroll to the bottom and hope", and these cover what anyone arrives wanting.
     withChrome.site
       .landingPage(
         title              = Some(SiteInfo.title),
         subtitle           = Some("A Scala 3 client for the Codeberg / Forgejo REST API v1"),
+        titleLinks         = Seq(
+          ButtonLink.internal(Root / "getting-started.md", "Get started"),
+          TextLink.internal(Root / "examples.md", "Examples"),
+          TextLink.internal(Args.apiPath, "API reference"),
+          IconLink.external(SiteInfo.sourceUrl, HeliumIcon.github),
+        ),
         latestReleases     = Seq(ReleaseLine.current(args.version)),
         license            = Some(SiteInfo.licence),
-        documentationLinks = Seq(
-          TextLink.internal(Root / "getting-started.md", "Getting Started"),
-          TextLink.internal(Root / "examples.md", "Examples"),
-          TextLink.internal(Args.apiPath, "API (Scaladoc)"),
-        ),
+        // No `documentationLinks`. Helium renders them as a boxed panel in the header's right-hand column, and every
+        // entry it would hold is now a link in `titleLinks` a few inches to the left. Saying the same three things
+        // twice in one header is worse than saying them once, and the panel was tall enough to set the height of the
+        // whole header, leaving the title column beside it looking abandoned.
         projectLinks       = Seq(
           TextLink.external(SiteInfo.sourceUrl, "Source"),
           TextLink.external(s"${SiteInfo.sourceUrl}/issues", "Issues"),
