@@ -67,4 +67,4 @@ classpath=$(
 # on the classpath, and two copies make the compiler warn that several versions
 # of the standard library are present — noise on every single run.
 
-exec scala-cli run "$HARNESS" --extra-jars "$classpath" -- "$@"
+exec scala-cli run "$HARNESS" --server=false --extra-jars "$classpath" -- "$@"

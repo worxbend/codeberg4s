@@ -1,7 +1,7 @@
 name: Scala toolchain
 description: >
-  JDK 25 (Temurin), a workspace-local Coursier cache and scala-cli — everything
-  ./verify.sh needs and nothing it does not.
+  JDK 25 (Temurin), a workspace-local Coursier cache, scala-cli and the Coursier
+  CLI — everything ./verify.sh and scripts/site.sh need, and nothing they do not.
 
 # Every workflow in this repository sets its toolchain up through this one
 # action. Four copies of "install a JDK, warm the cache, fetch scala-cli" is
@@ -17,9 +17,11 @@ description: >
 # .github/dependabot.yml lists this directory explicitly so the two pins are
 # proposed for update alongside the workflow-level ones.
 #
-# scala-cli is not optional decoration: verify.sh runs scripts/coverage-gate.sc
-# on every invocation and scripts/crap.sc under --with-slow, and both are
-# scala-cli scripts. A runner without scala-cli fails at the coverage step.
+# Neither tool is optional decoration. verify.sh runs scripts/coverage-gate.sc on
+# every invocation and scripts/crap.sc under --with-slow, and both are scala-cli
+# scripts, so a runner without scala-cli fails at the coverage step. scripts/site.sh
+# resolves its mdoc and scaladoc classpaths with `cs fetch`, so a runner without the
+# Coursier CLI fails the site build before it compiles a single page.
 
 inputs:
   java-version:
@@ -93,3 +95,25 @@ runs:
         rm -f "$dir/scala-cli.gz"
         echo "$dir" >> "$GITHUB_PATH"
         "$dir/scala-cli" version --cli-version
+
+    # scripts/site.sh calls `cs fetch` to resolve the mdoc and scaladoc
+    # classpaths, so the site build needs the Coursier CLI as a binary on PATH —
+    # having a Coursier *cache* is not the same thing. Pinned by version and
+    # checksum for the reason the block above gives.
+    - name: Install the Coursier CLI
+      shell: bash
+      env:
+        COURSIER_CLI_VERSION: "2.1.24"
+        COURSIER_CLI_SHA256: "d2c0572a17fb6146ea65349b59dd216b38beff60ae22bce6e549867c6ed2eda6"
+      run: |
+        set -euo pipefail
+        dir="$RUNNER_TEMP/coursier"
+        mkdir -p "$dir"
+        url="https://github.com/coursier/coursier/releases/download/v${COURSIER_CLI_VERSION}/cs-x86_64-pc-linux.gz"
+        curl -fsSL -o "$dir/cs.gz" "$url"
+        echo "${COURSIER_CLI_SHA256}  $dir/cs.gz" | sha256sum --check --strict
+        gunzip -c "$dir/cs.gz" > "$dir/cs"
+        chmod +x "$dir/cs"
+        rm -f "$dir/cs.gz"
+        echo "$dir" >> "$GITHUB_PATH"
+        "$dir/cs" version

@@ -271,7 +271,8 @@ for module in "${COVERED_MODULES[@]}"; do
   "$MILL" "${module}.scoverage.xmlReport" || fail "coverage report for $module"
 done
 if [[ -f scripts/coverage-gate.sc ]]; then
-  scala-cli run scripts/coverage-gate.sc -- "${COVERED_MODULES[@]}" || fail "coverage thresholds"
+  scala-cli run scripts/coverage-gate.sc --server=false -- "${COVERED_MODULES[@]}" ||
+    fail "coverage thresholds"
 else
   echo "  (scripts/coverage-gate.sc absent — thresholds not enforced yet)"
 fi
@@ -335,7 +336,7 @@ if $with_slow; then
   announce "CRAP (coverage-weighted complexity)"
   if [[ -f scripts/crap.sc ]]; then
     set +e
-    scala-cli run scripts/crap.sc -- "${COVERED_MODULES[@]}"
+    scala-cli run scripts/crap.sc --server=false -- "${COVERED_MODULES[@]}"
     crap_status=$?
     set -e
     case "$crap_status" in
