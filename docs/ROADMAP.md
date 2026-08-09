@@ -9,16 +9,20 @@ Gate names match `PLAN.md` §7.
 ## Phase 0 — Bootstrap · **Gate G0**
 
 - [x] Mill 1.1.7 pinned in `.mill-version`; bootstrap `./mill` committed (ADR-0006)
-- [x] Six hexagonal modules: `domain`, `core`, `codec`, `transport`, `client`, `it`
+- [x] Seven modules under `object modules`: the five published ones — `domain`,
+      `core`, `codec`, `transport`, `client` — plus `it` (integration suites)
+      and `examples` (compiled by the build so a stale example breaks it)
 - [x] `scalacOptions` with warnings fatal
 - [x] Scalafmt + Scalafix configs, `mill modules.__.reformat` green
 - [x] scoverage wired via `mill-contrib-scoverage`
 - [x] ADRs 0001–0006, constitution mapping
 - [x] Scalafix wired via `mill-scalafix` (Mill 1.x has no built-in `fix`; ADR-0006)
 - [x] `verify.sh` with the ordered gate and an architecture-boundary check
-- [x] CI pipeline (`.forgejo/workflows/ci.yml`) — the `verify` job runs on push
-      and pull request. The `nightly` and `spec-drift` jobs are defined but
-      unreachable; see Phase 4.
+- [x] CI pipeline — `.forgejo/workflows/ci.yml` runs the `verify` job on push
+      and pull request, and `.github/workflows/` carries the same gate plus
+      `nightly.yml`, which holds the slow analysis and the spec-drift detector
+      behind a real `schedule:` trigger. Every action is pinned to a commit
+      SHA rather than a tag, and Dependabot keeps those pins moving.
 
 ## Phase 1 — Recon and foundation · **Gate G-R**, **Gate G1**
 
@@ -95,23 +99,28 @@ on paper only until those tools are proven — `docs/CONSTITUTION_MAPPING.md`.)
 
 - [ ] Stryker4s wired, ≥ 80 % mutation score on `domain` + `core` + `codec` —
       `scripts/mutate.sh` exists and the **runner is proven**: the 1.1.1 command
-      runner generates mutants from these sources, scalameta parses all 196
-      production files under the Scala 3 dialect, the instrumented output
-      recompiles under `-Werror`, and the break threshold demonstrably fails the
-      run. **No score exists for this repository** — that needs a run with the
-      real test command, roughly 1400 `mill test` invocations. The ≥ 80 % figure
-      is still a target. `docs/CONSTITUTION_MAPPING.md` has the detail.
-- [ ] PMD CPD wired, fails above 40 duplicated tokens in production sources —
-      **wired and verified; the gate is red.** PMD 7.26.0's scalameta Scala
-      module tokenises Scala 3 here without a lexical error, and
-      `scripts/cpd.sh --report` currently finds **323 duplication groups** (128
-      locations in `codec`, 40 in `client`, 15 in `domain`, 2 in `core`), so
-      `./verify.sh --with-slow` fails at that step. Unticked because the
-      codebase does not pass, not because the tool does not work. The fix is
-      `docs/LEDGER.md` §"Helpers awaiting promotion", not a lower threshold.
+      runner generates mutants from these sources, scalameta parsed every one of
+      the 196 production files those modules held at the time under the Scala 3
+      dialect, the instrumented output recompiles under `-Werror`, and the break
+      threshold demonstrably fails the run. Those modules hold 503 production
+      files today, so even the parse half of that proof predates the current
+      sources. **No score exists for this repository** — that needs a run with
+      the real test command, roughly 1400 `mill test` invocations. The ≥ 80 %
+      figure is still a target and is still **unproven**.
+      `docs/CONSTITUTION_MAPPING.md` has the detail.
+- [x] PMD CPD wired, fails above 40 duplicated tokens in production sources —
+      **wired, verified, and green.** PMD 7.26.0's scalameta Scala module
+      tokenises Scala 3 here without a lexical error, and `scripts/cpd.sh
+      --report` finds **363 duplication groups** at 40+ tokens. Ticked because
+      the tool runs and the gate holds, not because the code is
+      duplication-free: `verify.sh` compares that count against
+      `CPD_BASELINE_GROUPS`, so it fails on an increase and tells you to bank a
+      decrease. `CPD_MIN_TOKENS` is still 40 and every group is still reported.
+      Paying the debt down is `docs/LEDGER.md` §"Helpers awaiting promotion".
 - [x] `scripts/crap.sc`, fails on any method with CRAP > 30 — implemented over
-      the scoverage XML. Note the complexity input is a documented proxy
-      (`branch="true"` statement count), not a control-flow analysis; the
+      the scoverage XML, and **run against a fresh report**: 2,217 methods
+      measured, worst 28.0, limit 30. Note the complexity input is a documented
+      proxy (`branch="true"` statement count), not a control-flow analysis; the
       script's header lists the three directions it is known to be wrong in.
       Read it as a ranking, not a certified metric.
 - [x] `modules/it` — Testcontainers-Forgejo suite (`ForgejoContainerSuite`) plus
@@ -120,24 +129,35 @@ on paper only until those tools are proven — `docs/CONSTITUTION_MAPPING.md`.)
 - [x] `scripts/coverage-gate.sc` — reads scoverage's own `statement-rate` and
       `branch-rate`, floors at 90/85 for `domain`+`core`+`codec` and 80/80 for
       `transport`+`client`, and treats a missing report as a failure rather than
-      a skip. Called by `verify.sh`; the thresholds have not yet been asserted
-      against a freshly generated report.
-- [ ] README with compiling examples, `CHANGELOG.md` — `CHANGELOG.md` written;
-      README rewritten and every Scala block compiled against the current
-      sources under the project's flags. Unticked because that check is manual:
-      `PLAN.md` §"Phase 4" asks for mdoc so the *build* enforces it.
+      a skip. Called by `verify.sh`, and **asserted against a freshly generated
+      report**: `domain` 100.00 % statement / 100.00 % branch, `core` 96.59 % /
+      92.48 %, `codec` 95.20 % / 91.47 %.
+- [ ] README with compiling examples, `CHANGELOG.md` — `CHANGELOG.md` written
+      and corrected against the current sources; README rewritten and every
+      Scala block compiled against those sources under the project's flags.
+      Unticked because that check is manual: `PLAN.md` §"Phase 4" asks for mdoc
+      so the *build* enforces it.
 - [ ] Maven Central publishing config, MIMA baseline from 0.1.0 — publishing is
       **configured**: `build.mill` publishes five artifacts
       (`codeberg4s-domain`, `-core`, `-codec`, `-transport`, `-client`) under
       `com.worxbend` at `0.1.0-SNAPSHOT`, MIT, `EarlySemVer`, with `modules.it`
-      deliberately excluded. Nothing has been published, and there is **no MIMA
-      setup at all** — no plugin, no baseline. Both remain.
-- [ ] Nightly spec-drift detector — `.forgejo/workflows/ci.yml` defines both a
-      `nightly` job and a `spec-drift` job, and **both are gated on
-      `github.event_name == 'schedule'` while the workflow declares only `push`
-      and `pull_request` triggers.** Neither has ever run. Adding a `schedule:`
-      trigger is the whole fix, and the drift job currently only warns on a
-      sha mismatch — it does not open an issue, as `PLAN.md` §7 asks.
+      deliberately excluded. **MIMA is now wired** through
+      `com.github.lolgab::mill-mima::0.2.2`, mixed into
+      `Codeberg4sPublishModule` so one declaration covers all five artifacts.
+      What remains is the publication itself: `binaryCompatibleWith` is
+      `Seq.empty` because there is nothing on Central to compare against, so
+      `mimaReportBinaryIssues` reports nothing until 0.1.0 is released.
+      `RELEASING.md` § "Binary compatibility is checked by MIMA" carries the
+      measured detail of what MIMA does and does not see through the response
+      models' `private[codeberg4s]` constructors.
+- [x] Nightly spec-drift detector — it lives in `.github/workflows/nightly.yml`
+      behind a real `schedule:` trigger (03:00 UTC) plus `workflow_dispatch`,
+      alongside the `verify.sh --nightly` job. It was previously declared in
+      `.forgejo/workflows/ci.yml` gated on a `schedule` event that workflow
+      never emitted, so it had never run. It compares the sha256 of the live
+      `swagger.v1.json` against the pinned copy and, on a mismatch, emits a
+      warning and a truncated diff in the job summary. It still does **not**
+      open an issue, as `PLAN.md` §7 asks — that is the piece left.
 
 ## Distance to 0.1.0
 
@@ -145,21 +165,23 @@ on paper only until those tools are proven — `docs/CONSTITUTION_MAPPING.md`.)
 
 | Definition-of-done clause | State |
 | ------------------------- | ----- |
-| All in-scope endpoints on both rails with documented error contracts | 61 / 439 — every one of the 61 is on both rails with a Scaladoc error contract, so the shape is right and the surface is 14 % of the way there |
-| `verify.sh` green | Default run yes: format, lint, zero-warning compile, 1072 unit tests, boundary check, coverage. **`--with-slow` is red** at the CPD step |
-| Coverage per §6.1 (≥ 90 % line / ≥ 85 % branch on `domain`+`core`+`codec`) | Report is produced and `scripts/coverage-gate.sc` now enforces the floors; the assertion has not yet been run against a fresh report |
-| Mutation ≥ 80 % | Runner proven, **no score produced** — see Phase 4 |
-| Zero CRAP > 30 | Gate implemented; not yet run against a fresh coverage report, and its complexity input is a proxy |
-| CPD clean | **No — 323 duplication groups at 40 tokens.** The tool works; the codebase does not pass it yet |
+| All in-scope endpoints on both rails with documented error contracts | **439 / 439, 100 %** (`docs/API_INVENTORY.md` §0) — every one on both rails with a Scaladoc error contract |
+| `verify.sh` green | **Yes, both modes.** Default run: format, lint, zero-warning compile, **3,658 unit tests**, boundary check, coverage. `--with-slow` adds duplication and CRAP and also passes |
+| Coverage per §6.1 (≥ 90 % line / ≥ 85 % branch on `domain`+`core`+`codec`) | **Enforced and asserted against a fresh report** by `scripts/coverage-gate.sc`: `domain` 100.00 % / 100.00 %, `core` 96.59 % / 92.48 %, `codec` 95.20 % / 91.47 % |
+| Mutation ≥ 80 % | Runner proven, **no score produced — the figure is unproven** — see Phase 4 |
+| Zero CRAP > 30 | **Yes:** 2,217 methods measured, worst 28.0. Its complexity input is a documented proxy, so read it as a ranking |
+| CPD clean | **No — 363 duplication groups at 40 tokens.** The gate passes because it fails on an increase over that recorded number, not because the duplication is gone. A real finding about the code; `docs/LEDGER.md` names most of them |
 | Acceptance features + Gherkin mutation clean | Dormant by decision — `docs/CONSTITUTION_MAPPING.md` |
-| Published to Maven Central | Configured but not published; no MIMA baseline |
+| Published to Maven Central | Configured and MIMA wired, but nothing published, so there is still no baseline to compare against |
 | README quickstart works against live codeberg.org | Samples are checked against the source signatures by hand. `CodebergLiveSmokeSuite` exercises the same calls against codeberg.org under `CODEBERG_IT=1`, but nobody has run the README itself |
 | Mapping doc, ADRs, inventory, provenance current | Yes, as of this revision |
 
-The single largest remaining item is the endpoint surface. The most urgent one
-is the CPD result: the duplication gate now works, and it says the codebase has
-323 duplication groups. That is a real finding about the code, not a tooling
-problem, and `docs/LEDGER.md` already names most of them.
+The endpoint surface is done. What is left is evidence, not code. Two clauses
+are genuinely unmet — the mutation score does not exist, and the codebase
+carries 363 duplication groups that the gate records rather than forgives — and
+two more are met only by hand: the README's examples are checked by a person
+rather than by mdoc, and nothing has been published, so MIMA has nothing to
+compare 0.1.1 against until the 0.1.0 tag is on Central.
 
 ## Out of scope for 0.1.0
 
@@ -167,3 +189,8 @@ Per `PLAN.md` §0: OAuth2 token *acquisition* flows (pre-obtained tokens only),
 ActivityPub federation, admin endpoints, attachment streaming above 50 MB, and
 Scala.js / Native cross-builds. The Gherkin acceptance pipeline is dormant —
 see `docs/CONSTITUTION_MAPPING.md`.
+
+The 50 MB line is now enforced rather than merely written down:
+`CodebergConfig.maxDownloadBodyBytes` defaults to 50 MiB and a body past it is
+`TransportCause.ResponseTooLarge`, non-retryable. Textual responses have their
+own, smaller bound at `maxResponseBodyBytes`.
