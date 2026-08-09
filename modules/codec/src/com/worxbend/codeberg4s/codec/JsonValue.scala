@@ -18,8 +18,24 @@ import scala.annotation.tailrec
   * So the boundary is two steps rather than one: parse into this model, then assemble the DTO from it. The parse is
   * jsoniter's, through the hand-written [[JsonValue.codec]] below.
   *
-  * Numbers are `BigDecimal` rather than `Double`. The previous model parsed every number as a `Double`, which silently
-  * loses precision above 2^53 — fine for Forgejo's row ids today, but a latent defect rather than a decision.
+  * ==Numbers come in two cases, and neither of them is a `Double`==
+  *
+  * The model before this one parsed every number as a `Double`, which silently loses precision above 2^53 — fine for
+  * Forgejo's row ids today, but a latent defect rather than a decision. What replaced it made every number a
+  * `BigDecimal`, which is exact and costs: measured with `scripts/alloc-bench.sh`, parsing a thousand small integers
+  * allocated 88.5 bytes an element against 26.6 for the same array of booleans, so roughly sixty of those bytes were
+  * the `BigDecimal` and the `java.math.BigDecimal` inside it. A response is mostly numbers, and every row id, count and
+  * timestamp offset in it was paying that.
+  *
+  * So a number is now one of two cases:
+  *
+  *   - [[JsonValue.Int64]] holds a `Long`, and is what a number written without a fractional part or an exponent
+  *     becomes when it fits in 64 bits — which is every identifier, count and offset a Forgejo response carries;
+  *   - [[JsonValue.Decimal]] holds a `BigDecimal`, and is what everything else becomes: a fractional value, an exponent
+  *     form, or a whole number too large for a `Long`. Still exact, still never a `Double`.
+  *
+  * Which case a parsed number lands in follows the text that was on the wire and nothing else, so [[Json.render]]
+  * writes back what it read. [[JsonValue.Num]] builds and reads either one without a caller having to know which.
   */
 sealed trait JsonValue:
 
@@ -33,10 +49,32 @@ sealed trait JsonValue:
     case JsonValue.Str(value) => Some(value)
     case _                    => None
 
-  /** The number, when this is one. */
+  /** The number, when this is one, as an exact decimal.
+    *
+    * This builds a `BigDecimal` for an [[JsonValue.Int64]], which is the case almost every number a response carries
+    * lands in — so it undoes, at this one call, the saving the two cases exist for. Reach for [[longOpt]] instead
+    * whenever a `Long` is what the caller wanted anyway, which in this library it always is.
+    */
   def numOpt: Option[BigDecimal] = this match
-    case JsonValue.Num(value) => Some(value)
-    case _                    => None
+    case JsonValue.Int64(value)   => Some(BigDecimal(value))
+    case JsonValue.Decimal(value) => Some(value)
+    case _                        => None
+
+  /** The number, when this is one, truncated toward zero.
+    *
+    * Truncation is what a wire `int64` field wants and what the previous accessor did — `numOpt.map(_.toLong)` — so a
+    * fractional value still answers with its whole part rather than with `None`. Nothing is allocated for an
+    * [[JsonValue.Int64]] beyond the `Option` itself.
+    */
+  def longOpt: Option[Long] = this match
+    case JsonValue.Int64(value)   => Some(value)
+    case JsonValue.Decimal(value) => Some(value.toLong)
+    case _                        => None
+
+  /** Whether this is a number, of either case. */
+  def isNum: Boolean = this match
+    case JsonValue.Int64(_) | JsonValue.Decimal(_) => true
+    case _ => false
 
   /** The boolean, when this is one. */
   def boolOpt: Option[Boolean] = this match
@@ -72,10 +110,10 @@ sealed trait JsonValue:
   def kind: String = this match
     case JsonValue.Null    => "null"
     case JsonValue.Bool(_) => "a boolean"
-    case JsonValue.Num(_)  => "a number"
-    case JsonValue.Str(_)  => "a string"
-    case JsonValue.Arr(_)  => "an array"
-    case JsonValue.Obj(_)  => "an object"
+    case JsonValue.Int64(_) | JsonValue.Decimal(_) => "a number"
+    case JsonValue.Str(_) => "a string"
+    case JsonValue.Arr(_) => "an array"
+    case JsonValue.Obj(_) => "an object"
 
 object JsonValue:
 
@@ -84,7 +122,30 @@ object JsonValue:
 
   final case class Bool(value: Boolean) extends JsonValue
 
-  final case class Num(value: BigDecimal) extends JsonValue
+  /** A whole number that fits in 64 bits — the case nearly every number in a Forgejo response lands in.
+    *
+    * A parsed document puts a number here when it was written on the wire without a fractional part and without an
+    * exponent, and its digits fit a `Long`. `12` is one of these; `12.0` and `1.2e1` are [[Decimal]], because that is
+    * what they were written as and [[Json.render]] has to be able to write them back.
+    *
+    * '''Build one through [[Num]] rather than directly.''' [[Num.apply]] is what decides which of the two cases a value
+    * belongs in, and the two are only ever distinguishable if that decision is made in one place:
+    * `Decimal(BigDecimal(5))` renders as `5`, exactly as `Int64(5)` does, yet is a different value from it. This is the
+    * same unpoliced invariant [[Obj]] carries about a repeated key, and it is unpoliced for the same reason — a
+    * constructor cannot refuse a value that is perfectly well formed on its own.
+    */
+  final case class Int64(value: Long) extends JsonValue
+
+  /** Every number that is not an [[Int64]]: a fractional value, an exponent form, or a whole number past 64 bits.
+    *
+    * Exact, and deliberately not a `Double` — the model this replaced parsed `9007199254740993` into a `Double` and
+    * gave back `9007199254740992` without saying so.
+    *
+    * The note on [[Int64]] about building through [[Num]] applies here too, and matters more: handing this constructor
+    * a value that is a whole number inside the `Long` range produces a document that does not compare equal to the one
+    * [[Json.parse]] reads back from its own rendering.
+    */
+  final case class Decimal(value: BigDecimal) extends JsonValue
 
   final case class Str(value: String) extends JsonValue
 
@@ -115,19 +176,54 @@ object JsonValue:
     */
   final case class Obj(fields: Vector[(String, JsonValue)]) extends JsonValue
 
+  /** Builds and reads a number of either case, so that a caller who has one does not have to know which.
+    *
+    * This is the only constructor that keeps [[Int64]] and [[Decimal]] apart correctly, and it is why they were split
+    * without every call site in the library having to change: `JsonValue.Num(7)` still builds a number and
+    * `case JsonValue.Num(value)` still matches one.
+    */
   object Num:
-    def apply(value: Long): Num = Num(BigDecimal(value))
 
-    def apply(value: Int): Num = Num(BigDecimal(value))
+    /** A whole number. */
+    def apply(value: Long): JsonValue = Int64(value)
+
+    /** A whole number. */
+    def apply(value: Int): JsonValue = Int64(value.toLong)
 
     /** A number from a `Double`, rendered without a fractional part when it has none.
       *
       * `BigDecimal(102.0)` keeps a scale of one and renders `102.0`, which Forgejo's integer fields reject and which
-      * would silently change every request body carrying an identifier. A whole value therefore becomes a whole
-      * `BigDecimal`.
+      * would silently change every request body carrying an identifier. A whole value therefore becomes an [[Int64]],
+      * which renders `102`.
+      *
+      * The bound is strict at the top and not at the bottom because `Long.MaxValue` has no exact `Double` — the nearest
+      * one is 2^63, one past the largest `Long` — whereas `Long.MinValue` is exactly -2^63 and does. Without the strict
+      * bound a `Double` of 2^63 would silently become `Long.MaxValue`, which is the class of quiet rounding this whole
+      * type exists to avoid.
       */
-    def apply(value: Double): Num =
-      if value.isWhole then Num(BigDecimal(value.toLong)) else Num(BigDecimal(value))
+    def apply(value: Double): JsonValue =
+      if value.isWhole && value >= Long.MinValue.toDouble && value < Long.MaxValue.toDouble then Int64(value.toLong)
+      else Decimal(BigDecimal(value))
+
+    /** A number from an exact decimal, put into whichever case renders the same text back.
+      *
+      * A `BigDecimal` of scale zero that fits a `Long` writes itself as plain digits — `BigDecimal(5)` renders `5` — so
+      * it becomes an [[Int64]] and parsing that rendering returns the same value. Everything else keeps its scale and
+      * stays a [[Decimal]]: `BigDecimal("1.0")` renders `1.0`, `BigDecimal("1E+3")` renders `1E+3`, and both read back
+      * as themselves.
+      */
+    def apply(value: BigDecimal): JsonValue =
+      value.scale match
+        case 0 if value.isValidLong => Int64(value.toLong)
+        case _                      => Decimal(value)
+
+    /** The number, whichever case it is, as an exact decimal.
+      *
+      * Present so that `case JsonValue.Num(value)` keeps meaning what it meant when `Num` was a single case class
+      * holding a `BigDecimal`. It allocates one for an [[Int64]], so a match that only wants a `Long` should say
+      * [[JsonValue.longOpt]] or name the two cases instead.
+      */
+    def unapply(value: JsonValue): Option[BigDecimal] = value.numOpt
 
   object Arr:
     /** An array from any collection of values. */
@@ -180,7 +276,7 @@ object JsonValue:
   private val UnreachableString: String = ""
 
   /** As [[UnreachableString]], for the number reader. */
-  private val UnreachableNumber: BigDecimal = BigDecimal(0)
+  private val UnreachableNumber: java.lang.Number = java.lang.Long.valueOf(0L)
 
   private def read(in: JsonReader, depth: Int): JsonValue =
     if depth > MaxDepth then in.decodeError(s"the document nests deeper than $MaxDepth levels")
@@ -190,7 +286,7 @@ object JsonValue:
       // below re-reads the token itself and so needs it put back.
       in.nextToken() match
         case 'n' => in.readNullOrError(Null, "expected the literal null")
-        // The argument to readString and readBigDecimal is what jsoniter returns
+        // The argument to readString and readNumber is what jsoniter returns
         // for a JSON null. Generated codecs pass null there; these defaults are
         // unreachable instead, because the 'n' branch above has already taken
         // every null — which keeps a null literal out of the codebase.
@@ -198,7 +294,31 @@ object JsonValue:
         case 't' | 'f' => in.rollbackToken(); Bool(in.readBoolean())
         case '[' => in.rollbackToken(); readArray(in, depth)
         case '{' => in.rollbackToken(); readObject(in, depth)
-        case _   => in.rollbackToken(); Num(in.readBigDecimal(UnreachableNumber))
+        case _   => in.rollbackToken(); readNumber(in)
+
+  /** Reads a number into whichever of the two number cases matches how it was written.
+    *
+    * `readNumber` is jsoniter's own answer to this question and does the hard part: it returns a `java.lang.Long` for a
+    * number written without a fractional part or an exponent that fits in 64 bits, a `java.math.BigInteger` for one
+    * that does not, and a `java.math.BigDecimal` for everything else. Reading a `BigDecimal` unconditionally, which is
+    * what this used to do, is what made every row id cost one.
+    *
+    * Those three classes are the whole of what 2.39.1 returns — checked against the library rather than recalled. The
+    * fourth branch is there because `java.lang.Number` is a plain abstract class that anyone may extend, so the match
+    * has to be total; reaching it would mean jsoniter had grown a return type this reader does not know how to keep
+    * exactly, and answering with an approximation is the one thing this type must not do.
+    *
+    * One allocation is left on this path and is jsoniter's rather than this reader's: the `java.lang.Long` it boxes to
+    * return, which dies immediately. Avoiding it needs a look-ahead the reader interface does not offer — the only way
+    * to it is to try `readLong` behind a mark and catch the failure, which hands a remote party a document that throws
+    * once per fractional number.
+    */
+  private def readNumber(in: JsonReader): JsonValue =
+    in.readNumber(UnreachableNumber) match
+      case whole: java.lang.Long       => Int64(whole.longValue)
+      case exact: java.math.BigDecimal => Decimal(BigDecimal(exact))
+      case big: java.math.BigInteger   => Decimal(BigDecimal(BigInt(big)))
+      case other                       => in.decodeError(s"read a number as an unsupported ${other.getClass.getName}")
 
   private def readArray(in: JsonReader, depth: Int): JsonValue =
     if !in.isNextToken('[') then in.decodeError("expected an array")
@@ -298,15 +418,16 @@ object JsonValue:
 
   private def write(value: JsonValue, out: JsonWriter): Unit =
     value match
-      case Null        => out.writeNull()
-      case Bool(flag)  => out.writeVal(flag)
-      case Num(number) => out.writeVal(number)
-      case Str(text)   => out.writeVal(text)
-      case Arr(values) =>
+      case Null            => out.writeNull()
+      case Bool(flag)      => out.writeVal(flag)
+      case Int64(whole)    => out.writeVal(whole)
+      case Decimal(number) => out.writeVal(number)
+      case Str(text)       => out.writeVal(text)
+      case Arr(values)     =>
         out.writeArrayStart()
         values.foreach(element => write(element, out))
         out.writeArrayEnd()
-      case Obj(fields) =>
+      case Obj(fields)     =>
         out.writeObjectStart()
         fields.foreach: (name, field) =>
           out.writeKey(name)

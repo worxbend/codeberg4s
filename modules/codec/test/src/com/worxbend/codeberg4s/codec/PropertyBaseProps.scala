@@ -92,12 +92,22 @@ object PropertyBase:
     */
   val key: Gen[String] = Gen.nonEmptyListOf(Gen.oneOf(('a' to 'z') ++ ('0' to '9'))).map(_.mkString)
 
-  /** A JSON value that is not a container. */
+  /** A JSON value that is not a container.
+    *
+    * Three number generators rather than one, because [[JsonValue]] represents a number two ways — a `Long` for a whole
+    * one that fits, a `BigDecimal` for everything else — and the round-trip property is what holds the two apart. A
+    * generator that only ever produced whole numbers would never build the second case and would pass whatever
+    * rendering did to it. The divisor is eight so that the quotient is exact in decimal, which keeps the generated
+    * value a fact about the model rather than about `BigDecimal`'s rounding; the multiplier is 2^70 so the value is
+    * past what a `Long` can hold.
+    */
   val scalar: Gen[JsonValue] =
     Gen.oneOf(
       Gen.const[JsonValue](JsonValue.Null),
       Gen.oneOf(true, false).map(flag        => JsonValue.Bool(flag)),
       Gen.choose(-100000, 100000).map(number => JsonValue.Num(number.toDouble)),
+      Gen.choose(-100000, 100000).map(number => JsonValue.Num(BigDecimal(number) / 8)),
+      Gen.choose(-100000, 100000).map(number => JsonValue.Num(BigDecimal(BigInt(number) * BigInt(2).pow(70)))),
       text.map(value                         => JsonValue.Str(value)),
     )
 

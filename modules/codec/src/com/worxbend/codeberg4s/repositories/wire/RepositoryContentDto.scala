@@ -83,6 +83,6 @@ object RepositoryContentDto:
   private def describe(value: JsonValue): String =
     if value.isNull then "null"
     else if value.strOpt.isDefined then "a string"
-    else if value.numOpt.isDefined then "a number"
+    else if value.isNum then "a number"
     else if value.boolOpt.isDefined then "a boolean"
     else "a value of an unrecognised kind"

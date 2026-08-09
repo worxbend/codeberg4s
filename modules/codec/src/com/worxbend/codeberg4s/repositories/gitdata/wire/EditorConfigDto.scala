@@ -19,9 +19,10 @@ import com.worxbend.codeberg4s.repositories.gitdata.EditorConfigDefinitions
   * a value that is a structure — an array, an object, or `null` — is dropped, because those have no text form an
   * EditorConfig consumer could use.
   *
-  * A whole number renders without a fractional part: the document model parses every JSON number as a `Double`, so `4`
-  * arrives as `4.0` and would read as `"4.0"` if it were rendered naively. That is the one piece of arithmetic in this
-  * file and the reason it exists.
+  * A whole number renders without a fractional part. `4` arrives as a [[JsonValue.Int64]] and needs no help, but an
+  * instance that sends `4.0` — legal JSON for the same quantity — arrives as a [[JsonValue.Decimal]] that would read as
+  * `"4.0"` if it were rendered naively, and `indent_size = 4.0` is not a setting any EditorConfig consumer honours.
+  * Dropping the fractional part when there is nothing in it is the one piece of arithmetic in this file.
   *
   * @param values
   *   the properties, keyed as the instance named them
@@ -46,9 +47,17 @@ object EditorConfigDto:
 
   /** The text an EditorConfig consumer would have read, or `None` for a value that has none. */
   private def rendered(value: JsonValue): Option[String] =
-    value.strOpt
-      .orElse(value.numOpt.map(number))
-      .orElse(value.boolOpt.map(_.toString))
+    value match
+      case JsonValue.Str(text)       => Some(text)
+      case JsonValue.Int64(whole)    => Some(whole.toString)
+      case JsonValue.Decimal(number) => Some(decimal(number))
+      case JsonValue.Bool(flag)      => Some(flag.toString)
+      case _                         => None
 
-  private def number(value: BigDecimal): String =
-    if value.isWhole then value.toLong.toString else value.toString
+  /** A number written the way a `.editorconfig` file would have written it.
+    *
+    * `toBigInt` rather than `toLong` for the whole case: a `Long` silently wraps a value too large for it, and while no
+    * EditorConfig property is plausibly that large, a value arriving from a remote party decides its own size.
+    */
+  private def decimal(value: BigDecimal): String =
+    if value.isWhole then value.toBigInt.toString else value.toString

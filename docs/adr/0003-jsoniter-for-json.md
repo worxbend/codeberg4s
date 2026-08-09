@@ -54,8 +54,12 @@ Good:
 - The style guide and the code agree again.
 - One fewer dependency: the unused sttp-jsoniter-scala integration is gone.
 - **Numbers are exact.** The previous document model parsed every JSON number as
-  a `Double`, which silently loses precision above 2^53. `JsonValue.Num` holds a
-  `BigDecimal`, and a test round-trips 2^53 + 1 to prove it.
+  a `Double`, which silently loses precision above 2^53. `JsonValue` holds a
+  whole number as a `Long` (`JsonValue.Int64`) and everything else as a
+  `BigDecimal` (`JsonValue.Decimal`), and tests round-trip both 2^53 + 1 and a
+  value past `Long.MaxValue` to prove it. That split replaced an earlier
+  all-`BigDecimal` model, which was equally exact and cost about thirty bytes
+  more per number; `scripts/alloc-bench.sh` has the measurement.
 - **No hex dump in a failure message.** jsoniter appends one to parse errors by
   default; that is response payload, and this library's failures are logged, so
   it is switched off and a test asserts the body does not leak into the message.

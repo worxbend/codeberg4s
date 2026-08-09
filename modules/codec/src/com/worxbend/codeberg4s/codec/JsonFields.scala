@@ -111,11 +111,12 @@ final case class JsonFields(entries: Vector[(String, JsonValue)]):
 
   /** The number at `name`, truncated to a `Long`.
     *
-    * [[JsonValue.Num]] holds a `BigDecimal`, so an identifier beyond 2^53 keeps its precision on the way through. The
-    * previous document model parsed every number as a `Double` and would have lost it silently.
+    * An identifier beyond 2^53 keeps its precision on the way through: the document model reads a whole number straight
+    * into a `Long` and anything else into a `BigDecimal`, neither of which rounds. The model before it parsed every
+    * number as a `Double` and would have lost the identifier silently.
     */
   def number(name: String): Option[Long] =
-    value(name).flatMap(_.numOpt).map(_.toLong)
+    value(name).flatMap(_.longOpt)
 
   /** The boolean at `name`. */
   def boolean(name: String): Option[Boolean] =

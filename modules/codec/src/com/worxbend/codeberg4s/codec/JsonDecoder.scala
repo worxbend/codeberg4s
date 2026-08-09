@@ -101,7 +101,13 @@ object JsonDecoder:
     case JsonValue.Bool(value) => Right(value)
     case other                 => Left(DecodeFailure(JsonPath.Root, s"expected a boolean but found ${other.kind}"))
 
-  /** A JSON number, truncated toward zero. */
+  /** A JSON number, truncated toward zero.
+    *
+    * The two number cases are named rather than matched through `JsonValue.Num`, whose extractor would build a
+    * `BigDecimal` for the [[JsonValue.Int64]] case that this decoder would then throw away — which is the cost the two
+    * cases exist to avoid.
+    */
   given long: JsonDecoder[Long] =
-    case JsonValue.Num(value) => Right(value.toLong)
-    case other                => Left(DecodeFailure(JsonPath.Root, s"expected a number but found ${other.kind}"))
+    case JsonValue.Int64(value)   => Right(value)
+    case JsonValue.Decimal(value) => Right(value.toLong)
+    case other                    => Left(DecodeFailure(JsonPath.Root, s"expected a number but found ${other.kind}"))

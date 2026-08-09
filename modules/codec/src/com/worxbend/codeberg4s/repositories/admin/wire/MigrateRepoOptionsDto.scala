@@ -95,7 +95,7 @@ private[codeberg4s] object TransferRepoOptionDto:
     List(
       Some(NewOwnerKey -> JsonValue.Str(command.newOwner.value)),
       Option.when(command.teamIds.nonEmpty)(
-        TeamIdsKey     -> JsonValue.Arr.from(command.teamIds.map(team => JsonValue.Num(team.value.toDouble)))
+        TeamIdsKey     -> JsonValue.Arr.from(command.teamIds.map(team => JsonValue.Num(team.value)))
       ),
     ).flatten
 

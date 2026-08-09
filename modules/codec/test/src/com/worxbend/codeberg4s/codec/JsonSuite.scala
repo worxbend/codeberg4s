@@ -168,3 +168,65 @@ final class JsonSuite extends FunSuite:
     val body = """{"id":9007199254740993}"""
 
     assertEquals(Json.parse(body).map(Json.render), Right(body))
+
+  test("a whole number parses into the Long case and nothing else does"):
+    // The split is what keeps a BigDecimal off the path every row id takes.
+    // Which case a number lands in follows the text on the wire, so that render
+    // can write back what it read.
+    assertEquals(Json.parse("7"), Right(JsonValue.Int64(7L)))
+    assertEquals(Json.parse("-7"), Right(JsonValue.Int64(-7L)))
+    assertEquals(Json.parse("9223372036854775807"), Right(JsonValue.Int64(Long.MaxValue)))
+    assertEquals(Json.parse("2.5"), Right(JsonValue.Decimal(BigDecimal("2.5"))))
+    assertEquals(Json.parse("7.0"), Right(JsonValue.Decimal(BigDecimal("7.0"))))
+    assertEquals(Json.parse("7e2"), Right(JsonValue.Decimal(BigDecimal("7E+2"))))
+
+  test("a whole number past the Long range is exact rather than rounded"):
+    // One past Long.MaxValue, so the Long case cannot hold it. jsoniter hands
+    // this back as a BigInteger; losing it to a Double or clamping it to
+    // Long.MaxValue are both silent corruptions of an identifier.
+    val body = """{"id":9223372036854775808}"""
+
+    assertEquals(Json.parse("9223372036854775808"), Right(JsonValue.Decimal(BigDecimal("9223372036854775808"))))
+    assertEquals(Json.parse(body).map(Json.render), Right(body))
+
+  test("both number cases say they are a number when a failure has to name a kind"):
+    assertEquals(JsonValue.Int64(7L).kind, "a number")
+    assertEquals(JsonValue.Decimal(BigDecimal("2.5")).kind, "a number")
+
+  test("Num builds whichever case renders the text back unchanged"):
+    // Forgejo's integer fields reject 102.0, so a whole value must never pick up
+    // a fractional part on its way to a request body — whichever of the four
+    // ways of writing it down the caller reached for.
+    assertEquals(Json.render(JsonValue.Num(102)), "102")
+    assertEquals(Json.render(JsonValue.Num(102L)), "102")
+    assertEquals(Json.render(JsonValue.Num(102.0)), "102")
+    assertEquals(Json.render(JsonValue.Num(BigDecimal(102))), "102")
+    assertEquals(Json.render(JsonValue.Num(102.5)), "102.5")
+    assertEquals(Json.render(JsonValue.Num(BigDecimal("102.0"))), "102.0")
+
+  test("a number Num built parses back to the same value"):
+    // The two cases are only telling apart if one constructor decides between
+    // them: Decimal(BigDecimal(102)) would render 102 and then not equal the
+    // Int64(102) that parsing 102 produces. Num is that constructor.
+    val built = Vector(JsonValue.Num(102), JsonValue.Num(102.0), JsonValue.Num(BigDecimal(102)))
+
+    built.foreach(number => assertEquals(Json.parse(Json.render(number)), Right(number)))
+
+  test("Num matches either case and hands back an exact decimal"):
+    // Kept so that a call site written when Num was one case class holding a
+    // BigDecimal still compiles and still means the same thing.
+    assertEquals(JsonValue.Int64(7L).numOpt, Some(BigDecimal(7)))
+    assertEquals(JsonValue.Decimal(BigDecimal("2.5")).numOpt, Some(BigDecimal("2.5")))
+    assertEquals(JsonValue.Str("7").numOpt, None)
+
+    val matched = Json.parse("""[7,2.5,"7"]""").map(_.arrOpt.toVector.flatten.collect { case JsonValue.Num(n) => n })
+
+    assertEquals(matched, Right(Vector(BigDecimal(7), BigDecimal("2.5"))))
+
+  test("a number read as a Long truncates toward zero, whichever case it is in"):
+    assertEquals(Json.decode[Long]("7"), Right(7L))
+    assertEquals(Json.decode[Long]("2.9"), Right(2L))
+    assertEquals(Json.decode[Long]("-2.9"), Right(-2L))
+    assertEquals(JsonValue.Int64(7L).longOpt, Some(7L))
+    assertEquals(JsonValue.Decimal(BigDecimal("2.9")).longOpt, Some(2L))
+    assertEquals(JsonValue.Bool(true).longOpt, None)
