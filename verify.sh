@@ -55,23 +55,30 @@ readonly COVERED_MODULES=(modules.domain modules.core modules.codec)
 #
 # MEASURED, NOT RECALLED: `scripts/cpd.sh --report` on 2026-08-09 against
 # modules/{domain,core,codec,transport,client}/src with PMD 7.26.0 at 40
-# tokens — 378 groups over 1360 locations (764 in codec, 541 in client, 45 in
-# domain, 8 in core, 2 in transport).
+# tokens — 373 groups over 1350 locations (762 in codec, 541 in client, 39 in
+# domain, 6 in core, 2 in transport).
 #
-# The previous baseline recorded here was 323 groups over 1195 locations,
+# The baseline recorded before that was 323 groups over 1195 locations,
 # measured on 2026-08-02. Everything between the two numbers is codec: the
 # upickle-to-jsoniter rewrite (commit 48f64fe) replaced hand-written readers
 # and writers with per-DTO codec definitions that repeat the same shape once
 # per field, so codec's share of the reported locations went from 599 to 764
-# while every other module stayed where it was. Raising the baseline records
-# that debt; it does not forgive it, and it is not a licence to add more.
+# while every other module stayed where it was. Recording the higher number
+# registered that debt; it did not forgive it, and it was not a licence to
+# add more.
+#
+# The five groups between 378 and 373 were then paid off rather than
+# tolerated: four copies of the same element-decoding fold became one shared
+# helper, and the four inline copies of the path-segment security rule became
+# one call to PathSegment. Both are why this number is a recorded measurement
+# and not a threshold — a threshold would have absorbed the win silently.
 #
 # The number is specific to PMD 7.26.0 at 40 tokens. Change either and remeasure
 # rather than guessing which way the count moved.
 #
 # Deliberately not overridable from the environment: moving the baseline has to
 # appear in a diff, with a commit message saying why.
-readonly CPD_BASELINE_GROUPS=378
+readonly CPD_BASELINE_GROUPS=373
 
 with_slow=false
 nightly=false
