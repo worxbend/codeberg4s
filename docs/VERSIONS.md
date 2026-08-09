@@ -123,20 +123,26 @@ test sweep.
 
 | Tool | Pinned | Pinned in | Latest stable | Status |
 | --- | --- | --- | --- | --- |
-| scoverage | `2.3.0` | `build.mill` → `Versions.scoverage` | `2.5.2` | **behind — see below** |
+| scoverage | `2.5.2` | `build.mill` → `Versions.scoverage` | `2.5.2` | current |
 | Scalafmt | `3.11.4` | `.scalafmt.conf` → `version` | `3.11.5` | **one patch behind — see below** |
 | Scalafix | via Mill's `__.fix` | `.scalafix.conf` (rules only, no version) | `scalafix-core` `0.14.7` | resolved transitively by Mill |
 | Stryker4s | not yet wired | — | — | scaffold only when the task calls for it (CLAUDE.md § Quality analysis) |
 
-### scoverage `2.3.0` vs `2.5.2`
+### scoverage `2.5.2`
 
 For Scala 3.4+ the coverage instrumentation lives in the compiler itself; Mill's
-`ScoverageModule` resolves `org.scoverage::scalac-scoverage-serializer` at
-`scoverageVersion`. `2.3.0` is a real published version of that artifact
-(confirmed against `maven-metadata.xml`), so the build is valid — it is simply
-not the newest. Bumping to `2.5.2` is a one-line `build.mill` change and belongs
-in its own `build(deps):` commit per CLAUDE.md's granularity rule. **Not changed
-by this lane**, which owns only `spec/` and `docs/`.
+`ScoverageModule` resolves `org.scoverage::scalac-scoverage-reporter` (and its
+`-serializer` / `-domain` siblings) at `scoverageVersion`. Those artifacts read
+the compiler's output and turn it into the XML and HTML reports, so a bump here
+changes reporting, not instrumentation.
+
+Taken from `2.3.0` on 2026-08-09. `2.4.0` is the only release in that range with
+a breaking change, and it does not touch this build: it drops support for Scala
+2.13.15-and-earlier and 2.12.16, and this project is Scala 3 only. `2.4.1` fixes
+instrumentation of pattern-matching assignments, `2.4.2` and `2.5.1` add Scala 2
+versions, `2.5.0` is dependency updates, and `2.5.2` adds incremental coverage.
+The measured line and branch percentages in `verify.sh`'s coverage gate were
+identical before and after the bump.
 
 ### Scalafmt `3.11.4` vs `3.11.5`
 

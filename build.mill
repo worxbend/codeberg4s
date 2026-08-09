@@ -22,7 +22,7 @@ object Versions:
   val munitScalcheck = "1.3.0"
   val scalacheck     = "1.19.0"
   val testcontainers = "0.44.1"
-  val scoverage      = "2.3.0"
+  val scoverage      = "2.5.2"
 
 /** Everything the published POMs say about this project.
   *
