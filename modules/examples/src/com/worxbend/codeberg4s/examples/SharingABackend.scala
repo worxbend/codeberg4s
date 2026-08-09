@@ -5,10 +5,9 @@ import com.worxbend.codeberg4s.CodebergClient
 import com.worxbend.codeberg4s.CodebergConfig
 import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.syntax.discard
+import com.worxbend.codeberg4s.transport.SttpHttpPort
 
 import sttp.client4.Backend
-import sttp.client4.BackendOptions
-import sttp.client4.httpclient.HttpClientFutureBackend
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
@@ -44,8 +43,8 @@ import scala.concurrent.duration.FiniteDuration
   *
   * sttp models the connect timeout as a property of the backend, not of a request, so
   * [[com.worxbend.codeberg4s.CodebergConfig.connectTimeout]] is '''ignored''' by `usingBackend` — configure it on the
-  * backend, as the `BackendOptions` below do. [[com.worxbend.codeberg4s.CodebergConfig.readTimeout]] is applied per
-  * request and is honoured either way.
+  * backend, as the `defaultBackend` call below does. [[com.worxbend.codeberg4s.CodebergConfig.readTimeout]] is applied
+  * per request and is honoured either way.
   *
   * ==Why share one==
   *
@@ -64,13 +63,17 @@ object SharingABackend:
   private val ConnectTimeout: FiniteDuration = 10.seconds
 
   def main(args: Array[String]): Unit =
-    given ExecutionContext = ExecutionContext.global
+    given executionContext: ExecutionContext = ExecutionContext.global
 
     // This program creates the backend, so this program closes it. The connect
-    // timeout is set here because usingBackend cannot apply the one in the
+    // timeout is passed here because usingBackend cannot apply the one in the
     // config — see the class comment.
+    //
+    // SttpHttpPort.defaultBackend rather than sttp's own HttpClientFutureBackend
+    // because closing the latter does not release the JDK HTTP client under it,
+    // so the pool this program is careful to close would outlive it anyway.
     val backend: Backend[Future] =
-      HttpClientFutureBackend(BackendOptions.Default.connectionTimeout(ConnectTimeout))
+      SttpHttpPort.defaultBackend(ConnectTimeout, executionContext)
 
     // Two clients, one pool. They differ in configuration, not in transport.
     val codeberg: CodebergClient         = CodebergClient.usingBackend(CodebergConfig(Auth.Anonymous), backend)
@@ -94,9 +97,10 @@ object SharingABackend:
       codeberg.close()
       mirrored.foreach(client => client.close())
 
-      // Then the thing this program owns. sttp's shutdown is asynchronous, so
-      // this returns a Future; nothing here observes it, and `discard` says so
-      // at the call site rather than letting -Wvalue-discard be switched off.
+      // Then the thing this program owns. Closing a backend returns a Future
+      // because sttp models it as an effect; the shutdown it starts does not
+      // block, nothing here observes the Future, and `discard` says so at the
+      // call site rather than letting -Wvalue-discard be switched off.
       backend.close().discard
 
   /** An optional second instance to talk to, so the example has a reason to share a pool.
