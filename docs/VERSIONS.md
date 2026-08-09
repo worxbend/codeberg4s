@@ -96,12 +96,31 @@ about a megabyte of dead weight on every consumer's classpath.
 hexagonal boundary is enforced by the build graph, not by convention
 (PLAN.md §3.1).
 
-**JSON library:** PLAN.md §3.3 originally selected upickle; the project now uses **jsoniter-scala**, and
-`build.mill` pins it. SCALA_CODE_STYLE.md's "JSON Codecs" section shows
-jsoniter-scala examples; those examples do not apply to this repository. The rule
-they illustrate — *derive the codec on the DTO, next to the DTO, and provide a
-codec for the list type as well as the element type* — does apply, translated to
-jsoniter-scala `ReadWriter`s.
+**JSON library:** PLAN.md ADR-3 originally selected upickle. The project now
+uses **jsoniter-scala**, and `build.mill` pins it; upickle and its `ujson`
+document model are gone from the build and from the sources. Nothing in this
+repository has a `ReadWriter` — that is upickle's codec type, and the
+jsoniter-scala equivalent is `JsonValueCodec[A]`, from
+`com.github.plokhotnyuk.jsoniter_scala.core`.
+
+SCALA_CODE_STYLE.md's "JSON Codecs" section is written for the same library, so
+its vocabulary is this repository's vocabulary. Its *mechanism* is not: the
+examples there call `JsonCodecMaker.make` to derive a `JsonValueCodec` per DTO
+at compile time, and that macro lives in `jsoniter-scala-macros`, which this
+build deliberately does not depend on (see the paragraph above). The reason is
+in `docs/HAZARDS.md` §1 — no response definition in the pinned spec declares
+`required`, `nullable` never appears, and live payloads send JSON `null` where
+the spec promises an array or an object. A derived codec answers a payload like
+that by failing.
+
+What `modules/codec` does instead is parse once into a document model,
+`JsonValue`, whose single hand-written `JsonValueCodec[JsonValue]` is the only
+codec in the build, and then assemble each DTO from that document. So the rule
+SCALA_CODE_STYLE.md's example illustrates — *a top-level JSON array needs a
+codec too, not only its element type* — is satisfied structurally rather than
+per type: `JsonValue.Arr` is a case of the same model, so a list body and an
+object body are decoded by the one codec and there is no per-DTO codec that
+could be forgotten.
 
 ## 4. Test dependencies (not published)
 
@@ -169,8 +188,10 @@ moved and the reformat would not have been a no-op.
 | Candidate | Decision | Reason |
 | --- | --- | --- |
 | Ox | **not a dependency** | Public API is `Future`-based (PLAN.md §3.2). Overrides SCALA_CODE_STYLE.md's Ox chapter for this repo. |
-| cats-effect / ZIO | rejected | PLAN.md ADR-2 — hand-rolled `Exec[F]` keeps the published dependency footprint at four artifacts. |
-| circe / jsoniter-scala | rejected | PLAN.md ADR-3 — jsoniter-scala, first-class sttp integration, tiny footprint. |
+| cats-effect / ZIO | rejected | PLAN.md ADR-2 (docs/adr/0002) — hand-rolled `Exec[F]` keeps the published dependency footprint at the three artifacts in §3. |
+| circe | rejected | docs/adr/0003 — a larger dependency, and its optics would not change the shape of the problem the document model in `modules/codec` solves. |
+| upickle / ujson | **removed** | PLAN.md ADR-3 chose it and the first docs/adr/0003 confirmed it; the current docs/adr/0003 supersedes both and the code moved to jsoniter-scala. No `upickle` or `ujson` import remains anywhere under `modules/`. |
+| jsoniter-scala-macros | rejected | docs/adr/0003 — `JsonCodecMaker` derives a codec per DTO, and this build derives none. Mill's `mvnDeps` is runtime scope too, so declaring it would put roughly a megabyte of derivation machinery on every consumer's classpath. |
 | softwaremill/retry | **undecided** | PLAN.md ADR-4 evaluates it at Phase 2; not pinned in `build.mill` yet. If its `odelay` dependency or maintenance status disqualifies it, `RetryPolicy` is implemented in `core` with no new dependency. Decide before Phase 2 Track A, and record the outcome here. |
 | quicklens | not pinned | PLAN.md §0 mentions it as a candidate SoftwareMill utility; no module needs it yet. |
 
