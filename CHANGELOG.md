@@ -75,8 +75,12 @@ this entry is the release note that tag will carry.
   reach. Runners exist for mutation testing (Stryker4s), duplication (PMD CPD)
   and CRAP, but `docs/CONSTITUTION_MAPPING.md` is the authority on which of
   them are actually proven against Mill and Scala 3.
-- No binary-compatibility baseline. 0.1.0 is that baseline; MIMA gets wired
-  against it for 0.1.1.
+- No binary-compatibility baseline — 0.1.0 *is* that baseline. MIMA is wired
+  in `build.mill` and covers all five artifacts, but it has nothing to compare
+  against until 0.1.0 is on Maven Central, so it reports nothing until 0.1.1.
+  `RELEASING.md` § "Binary compatibility is checked by MIMA" is the procedure,
+  and measures what MIMA does and does not see through the response models'
+  `private[codeberg4s]` constructors.
 - Out of scope by design: OAuth2 token acquisition, ActivityPub federation,
   admin endpoints, attachment streaming above 50 MB, and Scala.js / Native.
 

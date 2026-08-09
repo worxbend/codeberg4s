@@ -114,11 +114,14 @@ Two things this exemption does **not** cover:
 
 - **Removing, renaming or retyping an existing field is still breaking**, on
   both source and binary compatibility. The exemption is for growth only.
-- **A qualified-private constructor is still public in the bytecode.** MIMA,
-  once wired, will keep reporting the synthetic members. Those reports are
-  filters to write, not releases to renumber, because no external caller can
-  have compiled against them — but somebody has to write the filter, and the
-  reasoning belongs in the commit that adds it.
+- **A qualified-private constructor is still public in the bytecode**, so a
+  binary-compatibility checker can still complain about one. It complains far
+  less than expected, and only about one member — see
+  ["What MIMA reports for a response model"](#what-mima-reports-for-a-response-model)
+  below, which measures it. The short version: put a new field **last**, and
+  the whole cost is one filter line for that model. Those filters are lines to
+  write, not releases to renumber, because no external caller can have
+  compiled against the member being filtered.
 - **Adding a case to a closed `enum`.** `CodebergError` has exactly five
   cases — `Transport`, `Api`, `DecodingFailed`, `Validation`,
   `RetriesExhausted` — and every consumer that matches on it exhaustively
@@ -142,37 +145,210 @@ Two things this exemption does **not** cover:
   now a `ValidationError`. Compatible at link time, breaking at run time,
   which is worse.
 
-### Binary compatibility is not currently enforced
+### Binary compatibility is checked by MIMA
 
-**MIMA is not wired, because there is no baseline to check against.** No
-version of this library has ever been published, so there is nothing for a
-compatibility checker to compare a build to; adding it now would be a plugin
-that runs and reports on the empty set.
+MIMA — the Migration Manager — is the tool that turns the policy above from a
+promise into a check. It reads the class files this build produces, reads the
+class files of an already-released version, and reports every difference that
+would stop a program compiled against the old jar from linking against the new
+one. It works on bytecode, so it catches the changes that are invisible from
+the source side: a `copy` overload that quietly changed arity, an opaque type
+whose representation moved.
 
-**This is the first task after `0.1.0` ships.** The work is:
+It is wired. `build.mill`'s header declares the plugin
 
-```scala
-//| mvnDeps:
+```
 //| - com.github.lolgab::mill-mima::0.2.2
-
-import com.github.lolgab.mill.mima.Mima
-
-trait Codeberg4sPublishModule extends Codeberg4sModule with PublishModule with Mima:
-  def mimaPreviousVersions = Seq("0.1.0")
 ```
 
-on the shared publish trait, so all five artifacts are covered by one
-declaration, plus a `./mill modules.__.mimaReportBinaryIssues` step in
-`verify.sh`. `com.github.lolgab::mill-mima::0.2.2` is published for Mill 1.x
-(`mill-mima_mill1_3`), which is the Mill in `.mill-version`; the trait is
-`com.github.lolgab.mill.mima.Mima` and the task is `mimaPreviousVersions`.
-That coordinate and those names were read off the published artifact, not
-recalled — but the plugin has not been run against this build, so treat the
-snippet as the starting point of that task and not as a verified
-configuration.
+and `Codeberg4sPublishModule` mixes in `com.github.lolgab.mill.mima.Mima`.
+The two colons before the version are Mill's "add the Mill platform suffix"
+spelling: Mill resolves that coordinate to `mill-mima_mill1_3`, the build for
+the Mill 1.x line that `.mill-version` pins at `1.1.7`. `0.2.2` was the latest
+stable version in
+`repo1.maven.org/maven2/com/github/lolgab/mill-mima_mill1_3/maven-metadata.xml`
+when this was written.
 
-Until then, the policy above is enforced by review alone. Say so in the pull
-request when a change touches a public signature.
+Mixing it into the shared trait is what makes one declaration cover all five
+artifacts. The plugin builds each coordinate to download out of
+`pomSettings().organization`, `artifactId()` and `mimaPreviousVersions`, so
+`modules.codec` is checked against `com.worxbend:codeberg4s-codec_3` without
+that string appearing anywhere.
+
+Run it across all five, or one module at a time:
+
+```bash
+./mill modules.__.mimaReportBinaryIssues
+./mill modules.domain.mimaReportBinaryIssues
+```
+
+#### It cannot pass yet, and that is the intended state
+
+Nothing has been published, so there is no jar to compare against.
+`Publish.binaryCompatibleWith` in `build.mill` is therefore `Seq.empty`, and
+the command stops with the plugin's own message:
+
+```
+[error] modules.domain.mimaPreviousArtifacts No previous artifacts configured.
+Please override mimaPreviousVersions or mimaPreviousArtifacts.
+```
+
+That is the honest answer to "is this build compatible with nothing?", and it
+costs nothing, because no other task depends on that command. `compile`,
+`test` and `verify.sh` do not reach it, so the empty list cannot fail the
+gate.
+
+**It is deliberately not in `verify.sh`.** The check downloads the previous
+artifacts from Maven Central, and the fast gate has to run offline and in
+seconds. It belongs in the release procedure instead, which is where the
+checklist at the bottom of this document puts it.
+
+#### Turning it on, after `0.1.0` is published
+
+In the follow-up commit that moves `main` on to the next `-SNAPSHOT`, change
+one line in `build.mill`:
+
+```scala
+val binaryCompatibleWith: Seq[String] = Seq("0.1.0")
+```
+
+From then on the list holds every release inside the current compatibility
+window. Under Early SemVer that is every `0.1.x` while the minor is still
+`1`; when a deliberate break bumps the minor to `0.2.0`, the list resets to
+just `0.2.0` and grows again from there.
+
+One trap is worth naming before somebody hits it. Because
+`mimaPreviousVersions` lives on the shared trait, **every module that will
+ever extend that trait inherits the claim that each listed version of it
+exists on Central**. A sixth artifact first published in, say, `0.3.0` would
+send MIMA looking for a `codeberg4s-newthing_3:0.1.0` that was never uploaded,
+and the run would fail on a download error that says nothing at all about
+compatibility. Such a module overrides the list with the releases that really
+exist for it; the scaladoc on `Codeberg4sPublishModule.mimaPreviousVersions`
+carries the snippet.
+
+#### What MIMA reports for a response model
+
+The policy above lets a `0.x.0` add a field to a response model, on the
+grounds that its constructor is `private[codeberg4s]` and no outside caller
+can be calling it. Scala erases qualified private to plain `public` bytecode,
+so the obvious worry is that MIMA sees `<init>`, `apply` and `copy` on all
+131 of those classes and objects to a field being added to any of them.
+
+**MEASURED, NOT RECALLED.** On 2026-08-09, against mill-mima `0.2.2` and
+Scala `3.8.4`, the worry turns out to be mostly unfounded, and the part that
+survives is one line per model:
+
+| Change | Problems reported |
+| --- | --- |
+| Field appended to `HeatmapEntry` (2 fields, `private[codeberg4s]`) | 1 |
+| Field appended to `User` (21 fields, `private[codeberg4s]`) | 1 |
+| Field inserted at position 1 of `User` | 6 |
+| Field inserted at position 1 of `CreateIssue` (public constructor) | 14 |
+
+The single problem in the first two rows is always the same shape:
+
+```
+* static method apply(...)com.worxbend.codeberg4s.users.User
+  in class com.worxbend.codeberg4s.users.User
+  does not have a correspondent in current version
+  filter with: ProblemFilter.exclude[DirectMissingMethodProblem](
+    "com.worxbend.codeberg4s.users.User.apply")
+```
+
+Read the words `static method … in class`. That is not the companion object's
+`apply`; it is the **static forwarder** Scala 3 emits on the class so Java
+callers can reach the companion's method. MIMA does read Scala 3's own
+signature and does honour `private[codeberg4s]` — the constructor (`this`),
+`copy`, every `copy$default$N` and the companion object's real `apply` are all
+correctly treated as inaccessible and never reported. The forwarder is the one
+member that carries no Scala-side access information, so it leaks, and it
+leaks exactly once per model.
+
+Two consequences, both practical:
+
+- **Append new fields; never insert them.** The `_1`, `_2`, … accessors that
+  `Product` requires are genuinely public and genuinely change result type
+  when a field is inserted ahead of them. Row three above is the same
+  one-field change as row two, moved to the front, and it costs five extra
+  reports that are not synthetic noise. Appending keeps the bill at one line.
+- **The exemption really is about response models.** Row four is the same
+  insertion into a command model, whose constructor is public: `this`, `copy`,
+  every `copy$default$N`, both `apply`s and the `_N` accessors are all
+  reported. That is the check doing its job, and it is why the filter written
+  below names one class at a time.
+
+##### The filter, and how to write it
+
+`mill-mima` accepts filters through `mimaBinaryIssueFilters`. The name is
+matched against the fully qualified member name and `*` is a wildcard that
+spans package dots — both spellings below were confirmed to clear the report
+in the measurement above. **Use the exact one.** A wildcard such as
+`"com.worxbend.codeberg4s.users.*"` also works, and that is the problem: it
+would silence a genuinely breaking change to a command model in the same
+package just as effectively.
+
+So the filter is written **when a field is actually added**, one line for the
+model that gained it, in the same commit — not as a standing 131-line blanket
+that hides nothing today and something real tomorrow. There is no
+`mimaBinaryIssueFilters` in `build.mill` right now for exactly that reason.
+
+When the day comes, widen the import in `build.mill` and add the override to
+`Codeberg4sPublishModule`:
+
+```scala
+import com.github.lolgab.mill.mima.{DirectMissingMethodProblem, Mima, ProblemFilter}
+
+// …inside trait Codeberg4sPublishModule…
+
+  /** One line per response model that gained a field since the versions in
+    * `Publish.binaryCompatibleWith`. Each entry filters the static `apply`
+    * forwarder Scala 3 emits for a `private[codeberg4s]` constructor, which no
+    * caller outside this library can have compiled against.
+    */
+  def mimaBinaryIssueFilters = Task {
+    Seq(
+      // 0.2.0: Forgejo added `pronouns` to the user payload.
+      ProblemFilter.exclude[DirectMissingMethodProblem]("com.worxbend.codeberg4s.users.User.apply")
+    )
+  }
+```
+
+Note it is `ProblemFilter.exclude`, singular — sbt-mima spells the same thing
+`ProblemFilters.exclude`, and the plural does not compile here.
+
+Every entry carries a comment naming the release and the field, so the list
+can be pruned when the compatibility window resets at the next minor bump.
+Anything MIMA reports that is *not* that one forwarder shape is a real
+finding: read it against the policy above and renumber the release rather than
+filtering it.
+
+##### Reproducing the measurement
+
+The numbers above are worth re-taking whenever Scala or mill-mima moves,
+because they are a fact about a compiler's code generation, not about this
+library. The procedure, which touches nothing outside the worktree except a
+local Ivy directory it then deletes:
+
+```bash
+# 1. Give MIMA something to compare against. `publishLocal` writes to
+#    ~/.ivy2/local, which Coursier searches by default, so the plugin can
+#    resolve it with no network and no Central involved.
+sed -i 's/0.1.0-SNAPSHOT/0.1.0/' build.mill      # temporarily
+./mill modules.domain.publishLocal
+
+# 2. Point the check at it, and make the change being measured.
+#    Set `binaryCompatibleWith` to Seq("0.1.0") and edit a model.
+./mill modules.domain.mimaReportBinaryIssues
+
+# 3. Put everything back. Leaving a fake 0.1.0 in the local Ivy cache would
+#    make a later run check against a jar nobody released.
+git checkout -- build.mill modules/domain/src
+rm -rf ~/.ivy2/local/com.worxbend/codeberg4s-domain_3
+```
+
+Until `0.1.0` exists on Central, the policy in this section is enforced by
+review. Say so in the pull request when a change touches a public signature.
 
 ---
 
@@ -267,7 +443,21 @@ an artifact becomes immutable.
    ./verify.sh --with-slow      # duplication against its baseline, and CRAP
    ```
 
-5. **Prove the artifacts assemble** before asking a public repository to
+5. **Check binary compatibility**, which the gate deliberately leaves out
+   because it needs the network:
+
+   ```bash
+   ./mill modules.__.mimaReportBinaryIssues
+   ```
+
+   Skip this one for `0.1.0` only — `Publish.binaryCompatibleWith` is empty
+   until `0.1.0` is on Central, so there is nothing to compare against and the
+   command says so. From `0.1.1` onwards it must be green, or every report it
+   makes must be either a filter written per
+   ["The filter, and how to write it"](#the-filter-and-how-to-write-it) or a
+   reason to renumber the release.
+
+6. **Prove the artifacts assemble** before asking a public repository to
    accept them:
 
    ```bash
@@ -279,13 +469,13 @@ an artifact becomes immutable.
    try. This catches a broken POM, a missing transitive dependency and a
    `docJar` that failed, none of which the test suite can see.
 
-6. **Commit, on a branch, with the version bump as its own change.**
+7. **Commit, on a branch, with the version bump as its own change.**
 
    ```
    chore(build): release 0.1.0
    ```
 
-7. **Tag the merge commit** and push the tag.
+8. **Tag the merge commit** and push the tag.
 
    ```bash
    git tag -a v0.1.0 -m "codeberg4s 0.1.0"
@@ -296,11 +486,11 @@ an artifact becomes immutable.
    The workflow refuses to publish when the two disagree, and refuses a tag
    whose version still ends in `-SNAPSHOT`.
 
-8. **Watch the workflow.** It re-runs `./verify.sh` from a clean checkout
+9. **Watch the workflow.** It re-runs `./verify.sh` from a clean checkout
    before publishing anything. A release is not exempt from the gate; it is
    the build that most needs it.
 
-9. **Verify it landed** — see below — and only then announce it.
+10. **Verify it landed** — see below — and only then announce it.
 
 ### What `publishAll` actually does
 
@@ -366,7 +556,10 @@ Publication to Central is asynchronous. Do all four:
 
 Then push a follow-up commit setting `Publish.version` to the next
 `-SNAPSHOT`, so `main` is never sitting on a version that has already been
-published.
+published. The same commit adds the version just released to
+`Publish.binaryCompatibleWith`, which is what arms MIMA for the next release —
+the artifacts are on Central by now, so there is finally something to compare
+against.
 
 ---
 
@@ -408,6 +601,8 @@ Copy this into the release pull request.
 - [ ] `CHANGELOG.md` entry written, breaking changes first
 - [ ] `Publish.version` set, `-SNAPSHOT` dropped
 - [ ] `./verify.sh` and `./verify.sh --with-slow` green
+- [ ] `./mill modules.__.mimaReportBinaryIssues` green, or every report
+      filtered with a reason (not applicable to `0.1.0`)
 - [ ] `./mill modules.__.publishLocal`, then something compiled against it
 - [ ] Public signature changes reviewed against the versioning policy above
 - [ ] Version bump committed on its own, `chore(build): release X.Y.Z`
@@ -415,3 +610,5 @@ Copy this into the release pull request.
 - [ ] Release workflow green
 - [ ] All four verification steps done
 - [ ] `main` moved on to the next `-SNAPSHOT`
+- [ ] `Publish.binaryCompatibleWith` extended with the version just released,
+      in that same follow-up commit
