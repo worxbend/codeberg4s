@@ -89,6 +89,42 @@ final class SttpHttpPortSuite extends FunSuite:
     send(port, awkwardRequest).map: _ =>
       assertEquals(headerOf(backend, "authorization"), None)
 
+  test("a caller's Authorization header cannot override the configured credential"):
+    val backend = recording(respondingOk)
+    val port    = SttpHttpPort(backend, configFor(Auth.Token(token(Secret))))
+    val request = awkwardRequest.copy(headers = List("Authorization" -> "token someone-elses-token"))
+
+    send(port, request).map: _ =>
+      assertEquals(valuesOf(backend, "authorization"), List(s"token $Secret"))
+
+  test("a caller's Authorization header is dropped whatever case it spells the name in"):
+    val backend = recording(respondingOk)
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val request = awkwardRequest.copy(headers = List("authorization" -> "token someone-elses-token"))
+
+    send(port, request).map: _ =>
+      assertEquals(valuesOf(backend, "authorization"), Nil)
+
+  test("a caller's Proxy-Authorization header never reaches the wire"):
+    val backend = recording(respondingOk)
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val request = awkwardRequest.copy(headers = List("Proxy-Authorization" -> "Basic c29tZTpvbmU="))
+
+    send(port, request).map: _ =>
+      assertEquals(valuesOf(backend, "proxy-authorization"), Nil)
+
+  test("a caller's Content-Type still overrides the one the body implies"):
+    val backend = recording(respondingOk)
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val request = awkwardRequest.copy(
+      method  = HttpMethod.Post,
+      headers = List("Content-Type" -> "text/plain; charset=utf-8"),
+      body    = Some(RequestBody.Json("# Title")),
+    )
+
+    send(port, request).map: _ =>
+      assertEquals(valuesOf(backend, "content-type"), List("text/plain; charset=utf-8"))
+
   test("the configured user agent is sent"):
     val agent  = orFail(UserAgent.from("codeberg4s-test/1.0"))
     val config = configFor(Auth.Anonymous).copy(userAgent = agent)
@@ -292,6 +328,15 @@ final class SttpHttpPortSuite extends FunSuite:
 
   private def headerOf(backend: RecordingBackend, name: String): Option[String] =
     sent(backend).headers.find(_.is(name)).map(_.value)
+
+  /** Every value sent under `name`, in order.
+    *
+    * [[headerOf]] reports the first match and so cannot tell "sent once" from "sent twice with different values", which
+    * is exactly the difference the credential tests are about. `Header.is` compares the name case-insensitively, the
+    * way HTTP does.
+    */
+  private def valuesOf(backend: RecordingBackend, name: String): List[String] =
+    sent(backend).headers.filter(_.is(name)).map(_.value).toList
 
   // --- validated fixtures ---------------------------------------------------
 

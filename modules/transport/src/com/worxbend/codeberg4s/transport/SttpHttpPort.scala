@@ -67,7 +67,9 @@ import java.util.concurrent.Executor
   * '''Security contract.''' Nothing here logs, and nothing here renders a credential: the `Authorization` header is
   * built and handed straight to sttp, `toString` is deliberately opaque, and a [[TransportFailure]] carries only the
   * message of the exception that caused it. Credentials never reach the request URI, so the URI in an sttp exception
-  * message is safe.
+  * message is safe. The configured credential is also the only one that can be sent: a per-request header map naming
+  * `Authorization` or `Proxy-Authorization` has that entry dropped, and the configured credential is applied after
+  * every remaining header, so no request can carry two credentials or a caller-chosen one.
   *
   * '''Resource ownership.''' `backend` belongs to whoever created it. This class never closes it, not even on failure.
   * A backend built by [[SttpHttpPort.defaultBackend]] owns a JDK `java.net.http.HttpClient` and releases it when it is
@@ -107,6 +109,23 @@ final class SttpHttpPort(
       .parse(config.baseUri.value)
       .left
       .map(_ => TransportFailure(TransportCause.Unknown(SttpHttpPort.UnparseableBaseUri)))
+
+  /** The part of an sttp request that is the same for every request this port will ever send.
+    *
+    * An sttp request is an immutable value, so each builder call allocates a new one. The user agent and the read
+    * timeout are read straight off [[com.worxbend.codeberg4s.CodebergConfig]], which cannot change once the port
+    * exists, so applying them per request rebuilt the identical pair of values on every call. They are applied once
+    * here instead and [[build]] starts from the result.
+    *
+    * The user agent sits here even though configuration has to win over a caller who sets `User-Agent` — normally that
+    * would mean applying it last, since sttp's `header` replaces by default. It does not need to: `User-Agent` is one
+    * of the names [[SttpHttpPort.callerHeaders]] drops, so by the time the caller's headers are applied there is
+    * nothing left that could overwrite this one.
+    */
+  private val template: PartialRequest[Either[String, String]] =
+    basicRequest
+      .header(HeaderNames.UserAgent, config.userAgent.value)
+      .readTimeout(config.readTimeout)
 
   /** Sends `request`, never throwing and never logging.
     *
@@ -176,6 +195,13 @@ final class SttpHttpPort(
     *
     * The `Left` comes from [[SttpHttpPort.withBody]], which refuses a body whose media type cannot be written as a
     * header.
+    *
+    * '''The order the headers go on is the security-relevant part.''' sttp's `header` defaults to
+    * `DuplicateHeaderBehavior.Replace`, so a name written twice keeps the value written last. The order below is
+    * therefore, from first to last: the user agent, from [[template]]; the body's own `Content-Type`, from
+    * [[SttpHttpPort.withBody]]; the caller's headers, which is what lets `POST /markdown/raw` send a `text/plain`
+    * content type over a body core models as JSON; and finally the credential, which nothing after it can overwrite
+    * because there is nothing after it.
     */
   private def build(
       request: CodebergRequest,
@@ -183,12 +209,9 @@ final class SttpHttpPort(
       maxBodyBytes: Long,
   ): Either[TransportFailure, Request[Array[Byte]]] =
     SttpHttpPort
-      .withBody(request.body, basicRequest)
+      .withBody(request.body, template)
       .map: carrying =>
-        withAuth(carrying)
-          .headers(request.headers.map((name, value) => Header(name, value))*)
-          .header(HeaderNames.UserAgent, config.userAgent.value)
-          .readTimeout(config.readTimeout)
+        withAuth(carrying.headers(SttpHttpPort.callerHeaders(request.headers)*))
           .maxResponseBodyLength(maxBodyBytes)
           .method(Method(request.method.wireName), SttpHttpPort.target(uri, request))
           .response(asByteArrayAlways)
@@ -197,7 +220,7 @@ final class SttpHttpPort(
     *
     * `Auth.Token` becomes `Authorization: token <value>`, which is the spec's `AuthorizationHeaderToken` scheme — a
     * `Bearer` prefix is rejected by Forgejo. The header is applied after the caller's own headers so configuration
-    * always wins.
+    * always wins; see [[build]] for why "after" is what decides that with sttp's replace-by-default semantics.
     */
   private def withAuth(request: PartialRequest[Either[String, String]]): PartialRequest[Either[String, String]] =
     config.auth match
@@ -342,6 +365,36 @@ object SttpHttpPort:
 
   private def target(uri: Uri, request: CodebergRequest): Uri =
     uri.addPath(request.path).addParams(request.query*)
+
+  /** The header names this port owns, lowercased so a lookup can be case-insensitive the way HTTP is.
+    *
+    * A header name is case-insensitive on the wire, so `authorization` and `Authorization` are one header and a set
+    * membership test has to see them as one. `Locale.ROOT` rather than the default locale because the default one may
+    * be Turkish, where lowercasing `I` produces a dotless `ı` and the comparison silently stops matching.
+    */
+  private val PortOwnedHeaders: Set[String] =
+    Set(HeaderNames.Authorization, HeaderNames.ProxyAuthorization, HeaderNames.UserAgent)
+      .map(_.toLowerCase(Locale.ROOT))
+
+  /** The caller's headers with the ones this port owns removed, ready to hand to sttp.
+    *
+    * '''Why a credential header is dropped and not merely overwritten.'''
+    * [[com.worxbend.codeberg4s.core.CodebergRequest]] documents that its `headers` never carry a credential, and every
+    * one of those maps is built inside this library, so today none of them does. Nothing structural stops one: a new
+    * endpoint is an ordinary `List[(String, String)]` away from putting `Authorization` there, and the result would be
+    * a request authenticated as something other than what [[com.worxbend.codeberg4s.auth.Auth]] configured — or, with a
+    * different spelling of the name, two credentials on one request. Removing the entry here makes that outcome
+    * unreachable rather than unlikely, and costs nothing, because no endpoint has a reason to set these names.
+    *
+    * `User-Agent` is in the same set for a plainer reason: it is configuration too, and dropping it here is what lets
+    * [[SttpHttpPort.template]] apply the configured one first and still win.
+    *
+    * Every other name is passed through untouched, which is the point — a per-request `Content-Type` is a legitimate
+    * override and `POST /markdown/raw` depends on it.
+    */
+  private def callerHeaders(headers: List[(String, String)]): List[Header] =
+    headers.collect:
+      case (name, value) if !PortOwnedHeaders.contains(name.toLowerCase(Locale.ROOT)) => Header(name, value)
 
   /** Attaches the body, unless the body carries a media type that must not become a header.
     *
