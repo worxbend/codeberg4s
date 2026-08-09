@@ -26,4 +26,4 @@ import java.time.Instant
   *   how many contributions fell in it. Forgejo counts commits, issues, pull requests and reviews; which of those it
   *   counts on a given release is not specified
   */
-final case class HeatmapEntry(at: Instant, contributions: Long)
+final case class HeatmapEntry private[codeberg4s] (at: Instant, contributions: Long)

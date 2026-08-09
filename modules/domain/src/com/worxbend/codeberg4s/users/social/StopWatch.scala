@@ -40,7 +40,7 @@ import java.time.Instant
   * @param createdAt
   *   when the stopwatch was started
   */
-final case class StopWatch(
+final case class StopWatch private[codeberg4s] (
     issueIndex: Long,
     issueTitle: Option[String],
     repository: Option[RepoSlug],

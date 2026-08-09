@@ -101,7 +101,7 @@ enum AccessTokenRef:
   * @param createdAt
   *   when the token was issued
   */
-final case class AccessToken(
+final case class AccessToken private[codeberg4s] (
     id: AccessTokenId,
     name: Option[AccessTokenName],
     scopes: Vector[TokenScope],
@@ -137,7 +137,7 @@ final case class AccessToken(
   * @param details
   *   everything a listing would also have shown: the identifier, the name, the scopes and the repository restriction
   */
-final case class CreatedAccessToken(token: ApiToken, details: AccessToken)
+final case class CreatedAccessToken private[codeberg4s] (token: ApiToken, details: AccessToken)
 
 /** What `POST /users/{username}/tokens` needs to mint a token.
   *

@@ -59,7 +59,7 @@ object OpenPgpKeyId:
   *   whether the instance has confirmed the address belongs to the account. Absent on the wire reads as `false`, the
   *   answer that claims the least
   */
-final case class GpgKeyEmail(email: String, isVerified: Boolean)
+final case class GpgKeyEmail private[codeberg4s] (email: String, isVerified: Boolean)
 
 /** A GPG key an account has registered, used to verify commit and tag signatures.
   *
@@ -109,7 +109,7 @@ final case class GpgKeyEmail(email: String, isVerified: Boolean)
   *   when the key expires, absent for a key that does not — Forgejo spells "never" as the Go zero time, which
   *   `com.worxbend.codeberg4s.codec.Timestamps` folds into absence
   */
-final case class GpgKey(
+final case class GpgKey private[codeberg4s] (
     id: GpgKeyId,
     keyId: Option[OpenPgpKeyId],
     primaryKeyId: Option[OpenPgpKeyId],

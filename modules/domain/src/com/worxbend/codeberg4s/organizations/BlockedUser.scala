@@ -53,4 +53,4 @@ object BlockId:
   * @param createdAt
   *   when the block was recorded, absent when the instance sent no timestamp or the Go zero-time sentinel
   */
-final case class BlockedUser(blockId: BlockId, createdAt: Option[Instant])
+final case class BlockedUser private[codeberg4s] (blockId: BlockId, createdAt: Option[Instant])

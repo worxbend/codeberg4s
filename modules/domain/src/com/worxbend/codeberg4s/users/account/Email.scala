@@ -27,7 +27,7 @@ package com.worxbend.codeberg4s.users.account
   * @param username
   *   the account's login, on the same terms as [[userId]]
   */
-final case class Email(
+final case class Email private[codeberg4s] (
     address: EmailAddress,
     isPrimary: Boolean,
     isVerified: Boolean,

@@ -27,7 +27,7 @@ package com.worxbend.codeberg4s.organizations
   * @param used
   *   what the organisation has consumed; [[QuotaUsage.Empty]] when the payload said nothing
   */
-final case class QuotaInfo(groups: Vector[QuotaGroup], used: QuotaUsage)
+final case class QuotaInfo private[codeberg4s] (groups: Vector[QuotaGroup], used: QuotaUsage)
 
 /** One quota group — a named bundle of rules Forgejo applies together.
   *
@@ -37,7 +37,7 @@ final case class QuotaInfo(groups: Vector[QuotaGroup], used: QuotaUsage)
   * @param rules
   *   the rules in the group, empty when none came back
   */
-final case class QuotaGroup(name: Option[String], rules: Vector[QuotaRule])
+final case class QuotaGroup private[codeberg4s] (name: Option[String], rules: Vector[QuotaRule])
 
 /** One quota rule — a limit, and the subjects it counts towards.
   *
@@ -53,10 +53,10 @@ final case class QuotaGroup(name: Option[String], rules: Vector[QuotaRule])
   *   newer Forgejo emits must not cost the caller the whole rule. Converting one for use as a query argument is the
   *   caller's explicit step through [[QuotaSubject.from]]
   */
-final case class QuotaRule(name: Option[String], limit: Option[Long], subjects: Vector[String])
+final case class QuotaRule private[codeberg4s] (name: Option[String], limit: Option[Long], subjects: Vector[String])
 
 /** What an organisation has consumed. One field today, because `QuotaUsed` declares one property. */
-final case class QuotaUsage(size: QuotaSizes)
+final case class QuotaUsage private[codeberg4s] (size: QuotaSizes)
 
 object QuotaUsage:
 
@@ -72,7 +72,11 @@ object QuotaUsage:
   * @param git
   *   Git object storage that is billed separately, which today means LFS
   */
-final case class QuotaSizes(repositories: QuotaRepositorySizes, assets: QuotaAssetSizes, git: QuotaGitSizes)
+final case class QuotaSizes private[codeberg4s] (
+    repositories: QuotaRepositorySizes,
+    assets: QuotaAssetSizes,
+    git: QuotaGitSizes,
+)
 
 object QuotaSizes:
 
@@ -86,7 +90,7 @@ object QuotaSizes:
   * @param privateBytes
   *   storage used by private repositories
   */
-final case class QuotaRepositorySizes(publicBytes: Option[Long], privateBytes: Option[Long])
+final case class QuotaRepositorySizes private[codeberg4s] (publicBytes: Option[Long], privateBytes: Option[Long])
 
 object QuotaRepositorySizes:
 
@@ -102,7 +106,7 @@ object QuotaRepositorySizes:
   * @param packageBytes
   *   storage used by packages — the spec's `packages.all`, which is the only property that object has
   */
-final case class QuotaAssetSizes(
+final case class QuotaAssetSizes private[codeberg4s] (
     artifactBytes: Option[Long],
     attachments: QuotaAttachmentSizes,
     packageBytes: Option[Long],
@@ -120,7 +124,7 @@ object QuotaAssetSizes:
   * @param releaseBytes
   *   storage used by attachments on releases
   */
-final case class QuotaAttachmentSizes(issueBytes: Option[Long], releaseBytes: Option[Long])
+final case class QuotaAttachmentSizes private[codeberg4s] (issueBytes: Option[Long], releaseBytes: Option[Long])
 
 object QuotaAttachmentSizes:
 
@@ -133,7 +137,7 @@ object QuotaAttachmentSizes:
   *   storage used by Git LFS objects. The wire key is `LFS`, in capitals — the one upper-case key in this whole model,
   *   because Go's field is `LFS` and the spec's generator left it alone
   */
-final case class QuotaGitSizes(lfsBytes: Option[Long])
+final case class QuotaGitSizes private[codeberg4s] (lfsBytes: Option[Long])
 
 object QuotaGitSizes:
 

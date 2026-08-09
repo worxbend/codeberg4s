@@ -44,7 +44,7 @@ package com.worxbend.codeberg4s.organizations
   * @param includesAllRepositories
   *   whether the team reaches every repository of the organisation, present and future, rather than an explicit list
   */
-final case class Team(
+final case class Team private[codeberg4s] (
     id: TeamId,
     name: String,
     description: Option[String],
