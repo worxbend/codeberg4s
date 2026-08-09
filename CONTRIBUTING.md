@@ -13,9 +13,18 @@ is the source of truth for style; this document does not repeat it.
 
 ## Getting set up
 
-You need a JDK — CI uses **Temurin 21** — and nothing else. Mill bootstraps
+You need a JDK — CI uses **Temurin 25** — and nothing else. Mill bootstraps
 itself from the committed `./mill` script and `.mill-version`, and downloads
 everything into a Coursier cache.
+
+You do not have to install Java 25 yourself to compile: `.mill-jvm-version`
+pins **`temurin:25`**, and Mill downloads that JDK into the Coursier cache and
+runs on it whatever your `java -version` says. That pin is load-bearing rather
+than tidiness — `build.mill` sets `-java-output-version:25`, which is Scala 3's
+name for `javac --release`, and a compiler running on an older JDK rejects it
+outright with `25 is not a valid choice for -java-output-version`. A JDK 25 on
+your PATH is still worth having, because `./verify.sh` shells out to scala-cli
+scripts that Mill does not run.
 
 ```bash
 git clone https://codeberg.org/worxbend/codeberg4s

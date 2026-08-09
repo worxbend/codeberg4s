@@ -40,6 +40,22 @@ def mvnDeps = Seq(mvn"com.worxbend::codeberg4s-client:0.1.0")
 libraryDependencies += "com.worxbend" %% "codeberg4s-client" % "0.1.0"
 ```
 
+### Requires a Java 25 runtime
+
+**The jars are compiled for Java 25** (class-file major version 69), the current
+long-term-support release. A Java 21 or Java 17 JVM cannot load them: it fails
+at class-load time with an `UnsupportedClassVersionError` naming "class file
+version 69.0", which says nothing about which library caused it. Check what you
+are on with `java -version` before adding the dependency.
+
+This is deliberate, and it does narrow who can adopt the library — see
+[`CONTRIBUTING.md`](CONTRIBUTING.md#getting-set-up) for the same requirement on
+the build side. Java 25 is a policy floor, not a technical one: the lowest
+release the source actually compiles against is Java 21, because
+`SttpHttpPort` calls `java.net.http.HttpClient.shutdown()` and that method was
+added in Java 21. If a Java 21 baseline would unblock you, open an issue and
+say so — moving the floor down is a one-line change to `build.mill`.
+
 `codeberg4s-client` pulls in `-transport`, `-codec`, `-core` and `-domain`
 transitively. Depend on a narrower one if you want less: `codeberg4s-domain` is
 the models and the error ADT with no dependencies at all, which is enough to

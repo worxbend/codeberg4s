@@ -1,6 +1,6 @@
 name: Scala toolchain
 description: >
-  JDK 21 (Temurin), a workspace-local Coursier cache and scala-cli — everything
+  JDK 25 (Temurin), a workspace-local Coursier cache and scala-cli — everything
   ./verify.sh needs and nothing it does not.
 
 # Every workflow in this repository sets its toolchain up through this one
@@ -14,9 +14,16 @@ description: >
 
 inputs:
   java-version:
-    description: JDK feature release to install. Change it in one place, here.
+    description: >
+      JDK feature release to install. Change it in one place, here. Keep it in
+      step with `.mill-jvm-version`: that file decides which JDK Mill compiles
+      with, and `-java-output-version:25` in build.mill fails on anything older
+      than 25. This input governs what the *rest* of the job sees — scala-cli
+      scripts, `javap`, anything invoked outside Mill — so letting the two drift
+      apart means CI silently checks a different toolchain from the one that
+      produces the jars.
     required: false
-    default: "21"
+    default: "25"
   cache-prefix:
     description: >
       Cache key prefix. Give a job its own prefix when its Coursier footprint
@@ -47,10 +54,11 @@ runs:
       uses: actions/cache@v6
       with:
         path: .cache/coursier
-        # build.mill names every dependency; .mill-version names Mill's own.
-        # Nothing else changes what Coursier downloads, so nothing else belongs
-        # in the key.
-        key: ${{ inputs.cache-prefix }}-${{ runner.os }}-${{ hashFiles('build.mill', '.mill-version') }}
+        # build.mill names every dependency; .mill-version names Mill's own;
+        # .mill-jvm-version names the JDK Coursier provisions and unpacks into
+        # this same cache. Nothing else changes what Coursier downloads, so
+        # nothing else belongs in the key.
+        key: ${{ inputs.cache-prefix }}-${{ runner.os }}-${{ hashFiles('build.mill', '.mill-version', '.mill-jvm-version') }}
         restore-keys: |
           ${{ inputs.cache-prefix }}-${{ runner.os }}-
 

@@ -62,7 +62,14 @@ trait Codeberg4sModule extends ScalaModule with ScalafmtModule with ScoverageMod
   def scalaVersion     = Versions.scala
   def scoverageVersion = Versions.scoverage
 
+  /** `-java-output-version` is Scala 3's spelling of `javac --release`: it both stamps the class-file version and hides
+    * any JDK API newer than the named release, so a call that would not exist on a Java 25 runtime fails here rather
+    * than at a consumer's link time. Without it the compiler emits its own default — Java 17 bytecode for Scala 3.8.4 —
+    * no matter which JDK ran the build, which is a promise nobody made on purpose. `.mill-jvm-version` pins the JDK
+    * that has to understand `25`.
+    */
   def scalacOptions = Seq(
+    "-java-output-version:25",
     "-deprecation",
     "-feature",
     "-explain",

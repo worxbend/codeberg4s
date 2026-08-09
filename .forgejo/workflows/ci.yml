@@ -29,7 +29,11 @@ jobs:
   verify:
     runs-on: docker
     container:
-      image: docker.io/eclipse-temurin:21-jdk
+      # Must not be older than the `-java-output-version:25` in build.mill.
+      # Mill provisions its own JDK from .mill-jvm-version, so the image's JDK
+      # is what scala-cli and any non-Mill step run on; an older image would
+      # let those two disagree without failing anything.
+      image: docker.io/eclipse-temurin:25-jdk
     steps:
       - uses: actions/checkout@v4
 
@@ -37,7 +41,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .cache/coursier
-          key: coursier-${{ hashFiles('build.mill', '.mill-version') }}
+          key: coursier-${{ hashFiles('build.mill', '.mill-version', '.mill-jvm-version') }}
           restore-keys: coursier-
 
       # verify.sh runs scripts/coverage-gate.sc through scala-cli, so the image
