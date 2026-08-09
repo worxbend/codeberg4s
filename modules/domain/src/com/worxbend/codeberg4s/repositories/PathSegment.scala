@@ -43,10 +43,11 @@ private[repositories] object PathSegment:
     else if trimmed.exists(_.isControl) then Left(ValidationError(field, "must not contain a control character"))
     else if trimmed.startsWith("/") || trimmed.endsWith("/") then
       Left(ValidationError(field, "must not start or end with a slash"))
-    else if trimmed.split('/').exists(_.isEmpty) then Left(ValidationError(field, "must not contain an empty segment"))
-    else if trimmed.split('/').exists(isTraversal) then
-      Left(ValidationError(field, "must not contain a '.' or '..' segment"))
-    else Right(trimmed)
+    else
+      val parts = trimmed.split('/')
+      if parts.exists(_.isEmpty) then Left(ValidationError(field, "must not contain an empty segment"))
+      else if parts.exists(isTraversal) then Left(ValidationError(field, "must not contain a '.' or '..' segment"))
+      else Right(trimmed)
 
   private def isTraversal(segment: String): Boolean =
     segment match
