@@ -107,12 +107,12 @@ jsoniter-scala `ReadWriter`s.
 
 | Dependency | Coordinate | Pinned | Latest stable | Status |
 | --- | --- | --- | --- | --- |
-| munit | `org.scalameta::munit` | `1.3.4` | `1.3.4` | current |
+| munit | `org.scalameta::munit` | `1.3.5` | `1.3.5` | current |
 | munit-scalacheck | `org.scalameta::munit-scalacheck` | `1.3.0` | `1.3.0` | current |
 | ScalaCheck | `org.scalacheck::scalacheck` | `1.19.0` | `1.19.0` | current |
 | testcontainers-scala-munit | `com.dimafeng::testcontainers-scala-munit` | `0.44.1` | `0.44.1` | current |
 
-`munit` and `munit-scalacheck` version independently — `1.3.4` and `1.3.0` are
+`munit` and `munit-scalacheck` version independently — `1.3.5` and `1.3.0` are
 both the newest stable of their own artifact, not a mismatch.
 
 testcontainers-scala is confined to `modules/it`, the environmentally unsuitable
