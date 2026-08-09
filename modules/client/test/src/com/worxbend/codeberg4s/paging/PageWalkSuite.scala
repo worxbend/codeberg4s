@@ -1,5 +1,8 @@
 package com.worxbend.codeberg4s.paging
 
+import com.worxbend.codeberg4s.CodebergError
+import com.worxbend.codeberg4s.CodebergException
+
 import munit.FunSuite
 
 import scala.collection.mutable.ListBuffer
@@ -155,9 +158,55 @@ final class PageWalkSuite extends FunSuite:
       visited.append(params.page.value)
       Future.successful(Page(Vector(1), params, None, PageNumber.from(params.page.value + 1).toOption, None))
 
+    val result = PageWalk.fold(PageParams.First, 0)(fetch)((count, page) => count + page.items.size)
+
+    assertEquals(visited.size, PageWalk.MaxPages)
+    assert(result.value.exists(_.isFailure), "the walk should not have returned a value")
+
+  test("hitting the page cap fails rather than returning the pages gathered so far"):
+    // The defect this replaced: the cap returned the accumulated state, which is
+    // the same shape a complete walk returns. A caller could not tell a listing
+    // of ten thousand pages from one of ten thousand and one.
+    def fetch(params: PageParams): Future[Page[Int]] =
+      Future.successful(Page(Vector(1), params, None, PageNumber.from(params.page.value + 1).toOption, None))
+
+    val result              = PageWalk.fold(PageParams.First, 0)(fetch)((count, page) => count + page.items.size)
+    val expected: Throwable =
+      CodebergException(CodebergError.WalkTruncated(PageWalk.MaxPages, PageParams(cappedPage, PageSize.Default)))
+
+    assertEquals(result.value.flatMap(_.failed.toOption), Some(expected))
+
+  test("the truncation error resumes at the page the walk refused, keeping the caller's page size"):
+    val size  = PageSize.from(7).toOption.getOrElse(PageSize.Default)
+    val start = PageParams(PageNumber.First, size)
+
+    def fetch(params: PageParams): Future[Page[Int]] =
+      Future.successful(Page(Vector.empty, params, None, PageNumber.from(params.page.value + 1).toOption, None))
+
+    val result = PageWalk.fold(start, 0)(fetch)((count, _) => count)
+
+    result.value.flatMap(_.failed.toOption) match
+      case Some(CodebergException(CodebergError.WalkTruncated(pagesVisited, resumeFrom))) =>
+        assertEquals(pagesVisited, PageWalk.MaxPages)
+        assertEquals(resumeFrom.page, cappedPage)
+        assertEquals(resumeFrom.size, size)
+      case other                                                                          =>
+        fail(s"expected a truncated walk, got $other")
+
+  test("a listing that ends on the last page the cap allows is complete, not truncated"):
+    // The boundary the cap must not get wrong. Exactly MaxPages pages arrive and
+    // the last one offers nothing further, so the walk saw the whole collection
+    // and there is nothing to report.
+    def fetch(params: PageParams): Future[Page[Int]] =
+      val next = if params.page.value < PageWalk.MaxPages then PageNumber.from(params.page.value + 1).toOption else None
+      Future.successful(Page(Vector(1), params, None, next, None))
+
     val counted = await(PageWalk.fold(PageParams.First, 0)(fetch)((count, page) => count + page.items.size))
 
     assertEquals(counted, PageWalk.MaxPages)
-    assertEquals(visited.size, PageWalk.MaxPages)
+
+  /** The page a capped walk is offered and declines: one past the last it fetched. */
+  private val cappedPage: PageNumber =
+    PageNumber.from(PageWalk.MaxPages + 1).toOption.getOrElse(PageNumber.First)
 
   extension [A](value: A) private def discard: Unit = ()

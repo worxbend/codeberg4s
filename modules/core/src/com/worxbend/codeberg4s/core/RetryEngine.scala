@@ -167,6 +167,10 @@ object RetryEngine:
       case CodebergError.DecodingFailed(_, _, _, _) => false
       case CodebergError.Validation(_)              => false
       case CodebergError.RetriesExhausted(_, _, _)  => false
+      // Never reaches this engine — a page walk is assembled above it — and
+      // repeating the walk would stop at the same cap, so it is not retryable
+      // even in principle.
+      case CodebergError.WalkTruncated(_, _)        => false
 
   /** A TLS failure does not heal by itself, an interruption was asked for, and an oversized body would arrive oversized
     * again — repeating that one would download the body the bound exists to refuse once per attempt. Everything else
@@ -189,6 +193,7 @@ object RetryEngine:
       case CodebergError.DecodingFailed(ctx, _, _, _) => ctx
       case CodebergError.RetriesExhausted(ctx, _, _)  => ctx
       case CodebergError.Validation(_)                => CallContext(operation, method, UnknownUri, None, 0L)
+      case CodebergError.WalkTruncated(_, _)          => CallContext(operation, method, UnknownUri, None, 0L)
 
   /** `value` doubled `times` over, stopping at `cap`. Written as a fold rather than a shift so that a large attempt
     * count cannot overflow the exponent.

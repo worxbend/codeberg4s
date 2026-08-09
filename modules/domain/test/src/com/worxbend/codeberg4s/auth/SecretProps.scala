@@ -9,6 +9,7 @@ import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.PropertyBase
 import com.worxbend.codeberg4s.TransportCause
 import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.paging.PageParams
 
 import org.scalacheck.Gen
 import org.scalacheck.Prop
@@ -84,6 +85,12 @@ final class SecretProps extends PropertyBase:
         3,
         CodebergError.Transport(context, TransportCause.Timeout(s"$token")),
       ),
+      // The one case with no free-form position and no CallContext: its
+      // rendering is built from two numbers. Listed anyway, so that the claim
+      // "every case of the error ADT" stays a claim about the whole ADT and a
+      // later case that does carry text is added beside a neighbour rather
+      // than into a gap nobody notices.
+      "WalkTruncated"    -> CodebergError.WalkTruncated(3, PageParams.First),
     )
 
   /** Every way this library can turn a credential into text, named so a failure says which path leaked. */

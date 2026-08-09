@@ -1,5 +1,8 @@
 package com.worxbend.codeberg4s.paging
 
+import com.worxbend.codeberg4s.CodebergError
+import com.worxbend.codeberg4s.CodebergException
+
 import scala.collection.immutable.VectorBuilder
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -33,6 +36,12 @@ import scala.concurrent.Future
   * [[com.worxbend.codeberg4s.CodebergException]] on the convenience rail. A failure part-way through a walk discards
   * the pages already gathered; use [[fold]] if partial progress needs to be kept somewhere.
   *
+  * '''The page cap is a failure, not a quiet stop.''' A walk visits at most [[MaxPages]] pages. Reaching that cap with
+  * the server still offering another page fails the `Future` with
+  * [[com.worxbend.codeberg4s.CodebergError.WalkTruncated]] rather than returning what was gathered so far, because a
+  * short answer that looks exactly like a complete one is the worse of the two outcomes. The error carries the window
+  * to resume from, so a caller who genuinely wants more than half a million items can continue from there.
+  *
   * '''Memory.''' [[all]] holds every item. A repository can have tens of thousands of issues, so prefer [[fold]] or
   * [[foreach]] when the result does not need to exist all at once — that is the whole reason no operation in this
   * library returns an unbounded collection by default.
@@ -41,6 +50,10 @@ object PageWalk:
 
   /** The most pages any bounded walk visits before giving up, so a server that always offers a next page cannot spin
     * forever. Deliberately generous: 10 000 pages of 50 is half a million items.
+    *
+    * A walk that reaches this many pages and is offered another fails with
+    * [[com.worxbend.codeberg4s.CodebergError.WalkTruncated]]. A walk whose last page happens to be the ten-thousandth
+    * and offers nothing further has reached the natural end of the listing and succeeds.
     */
   val MaxPages: Int = 10_000
 
@@ -69,18 +82,25 @@ object PageWalk:
     *   the listing operation, applied once per page
     * @param step
     *   combines the state so far with the page just fetched
+    * @return
+    *   the folded state, or a `Future` failed with [[com.worxbend.codeberg4s.CodebergException]] wrapping
+    *   [[com.worxbend.codeberg4s.CodebergError.WalkTruncated]] when [[MaxPages]] was reached with pages still to come
     */
   def fold[A, B](first: PageParams, zero: B)(fetch: PageParams => Future[Page[A]])(
       step: (B, Page[A]) => B
   )(using ExecutionContext): Future[B] =
     def loop(params: PageParams, state: B, visited: Int): Future[B] =
-      if visited >= MaxPages then Future.successful(state)
-      else
-        fetch(params).flatMap: page =>
-          val next = step(state, page)
-          page.nextPage match
-            case Some(number) => loop(params.at(number), next, visited + 1)
-            case None         => Future.successful(next)
+      fetch(params).flatMap: page =>
+        val next    = step(state, page)
+        val fetched = visited + 1
+        page.nextPage match
+          // The cap is tested against a page the server actually offered, so a
+          // listing that ends on the last page the cap allows is complete and
+          // succeeds. Only an offer this walk refuses to follow is truncation.
+          case Some(number) if fetched >= MaxPages =>
+            Future.failed(CodebergException(CodebergError.WalkTruncated(fetched, params.at(number))))
+          case Some(number)                        => loop(params.at(number), next, fetched)
+          case None                                => Future.successful(next)
 
     loop(first, zero, 0)
 

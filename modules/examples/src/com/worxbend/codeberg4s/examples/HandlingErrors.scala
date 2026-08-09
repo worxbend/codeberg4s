@@ -40,13 +40,14 @@ import scala.concurrent.duration.FiniteDuration
   * ==There is no `NotFound` case==
   *
   * This is the single most common wrong assumption about the library, so the program prints the proof. The ADT has
-  * exactly five cases:
+  * exactly six cases:
   *
   *   - `Transport` — nothing reached the server;
   *   - `Api` — the server answered, and `status` is the HTTP status;
   *   - `DecodingFailed` — a 2xx body did not match the model;
   *   - `Validation` — an argument was rejected before a request was built;
-  *   - `RetriesExhausted` — the retry engine gave up, wrapping the failure that ended it.
+  *   - `RetriesExhausted` — the retry engine gave up, wrapping the failure that ended it;
+  *   - `WalkTruncated` — a walk over every page hit its page cap with pages still to come.
   *
   * A `404` is `Api(ctx, 404, body)`. A `429` is `Api(ctx, 429, body)`, or a `RetriesExhausted` wrapping one once the
   * policy has run out of attempts. Nothing else exists to match on.
@@ -143,3 +144,12 @@ object HandlingErrors:
         // `last` is never discarded, so a 429 that outlived the policy is still
         // an Api(429) once this case is unwrapped.
         s"${ctx.operation} gave up after $attempts attempts; the last failure was: ${classify(last)}"
+
+      case CodebergError.WalkTruncated(pagesVisited, resumeFrom) =>
+        // The only case with no CallContext, because nothing went wrong on the
+        // wire: every one of those pages arrived. What failed is the walk's
+        // promise to cover the whole collection, so the partial answer is
+        // refused rather than returned, and `resumeFrom` is where a caller who
+        // wants the rest starts the next walk.
+        s"the page walk covered $pagesVisited pages and the collection was still going; " +
+          s"resume at page ${resumeFrom.page.value}"

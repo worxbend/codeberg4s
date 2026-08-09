@@ -28,12 +28,13 @@ this entry is the release note that tag will carry.
   convenience rail fails the `Future` with `CodebergException`, and
   `.attempt` returns `Future[Either[CodebergError, A]]` and never fails. Both
   are projections of the same `Exec[F]` pipeline, so they cannot drift.
-- **A closed error ADT with call context.** `CodebergError` has five cases —
-  `Transport`, `Api`, `DecodingFailed`, `Validation`, `RetriesExhausted`. Every
-  remote case carries a `CallContext` (a stable operation id, the HTTP method,
-  the redacted URI, the server's `x-request-id`, the attempt duration), so a
-  caller can tell *which* call failed without correlating logs. Forgejo's error
-  payloads are parsed into `ApiErrorBody` against captured samples.
+- **A closed error ADT with call context.** `CodebergError` has six cases —
+  `Transport`, `Api`, `DecodingFailed`, `Validation`, `RetriesExhausted`,
+  `WalkTruncated`. Every remote case carries a `CallContext` (a stable operation
+  id, the HTTP method, the redacted URI, the server's `x-request-id`, the
+  attempt duration), so a caller can tell *which* call failed without
+  correlating logs. Forgejo's error payloads are parsed into `ApiErrorBody`
+  against captured samples.
 - **Link-header pagination.** List operations return `Page[A]` with the items,
   the total count and the next page parsed from the RFC 8288 `Link` header
   rather than guessed from a page counter. `core.Pagination` provides the

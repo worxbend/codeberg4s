@@ -412,7 +412,7 @@ val attempted: Future[Either[CodebergError, Repository]] =
 Pick one per call site. `.attempt` is the convenience rail with its failure
 channel materialised, so the two cannot drift.
 
-`CodebergError` is a closed family of five:
+`CodebergError` is a closed family of six:
 
 | Case                | Means                                                           | Reaction |
 | ------------------- | ---------------------------------------------------------------- | -------- |
@@ -421,6 +421,7 @@ channel materialised, so the two cannot drift.
 | `DecodingFailed`    | a 2xx payload did not match the model                            | retrying will not help; `path` and `snippet` are what a bug report needs |
 | `Validation`        | a smart constructor rejected an argument                         | fix the argument |
 | `RetriesExhausted`  | the retry engine gave up; `last` is preserved                    | surface `last` |
+| `WalkTruncated`     | a `PageWalk` hit its page cap with pages still to come            | walk again from `resumeFrom`, or narrow the query |
 
 There is **no** `RateLimited` case. Forgejo reports rate limiting as an
 ordinary `429`, so it arrives as `Api(ctx, 429, body)` — and the retry engine
@@ -430,6 +431,8 @@ which arrives as `RetriesExhausted` wrapping that `Api`.
 Every remote case carries a `CallContext` — operation id, method, redacted URI,
 optional request id, elapsed milliseconds — so you can tell *which* call failed
 without correlating logs. `error.describe` renders it, bounded and secret-free.
+`Validation` and `WalkTruncated` carry none, because neither of them is a
+request that reached a server.
 
 ## Pagination
 
@@ -512,6 +515,16 @@ PageWalk.all(PageParams.First): params =>
 
 `PageWalk.fold` and `PageWalk.foreach` are the bounded-memory forms — reach for
 those on a repository with tens of thousands of issues.
+
+A walk visits at most `PageWalk.MaxPages` (10 000) pages, so an instance that
+offers a next page forever cannot hang your process. Reaching that cap with the
+server still offering another page **fails** the `Future` with
+`WalkTruncated(pagesVisited, resumeFrom)` rather than handing back what it had
+gathered: a short answer shaped exactly like a complete one is the failure mode
+this whole section exists to prevent. `resumeFrom` is the window the walk was
+about to request, page size included, so continuing is `PageWalk.all(resumeFrom)`.
+A listing whose last page happens to be the ten-thousandth and offers nothing
+further has ended naturally and succeeds.
 
 ## Configuration
 

@@ -54,3 +54,4 @@ object RecordingTelemetry:
       case CodebergError.DecodingFailed(_, _, _, _) => "DecodingFailed"
       case CodebergError.Validation(_)              => "Validation"
       case CodebergError.RetriesExhausted(_, _, _)  => "RetriesExhausted"
+      case CodebergError.WalkTruncated(_, _)        => "WalkTruncated"
