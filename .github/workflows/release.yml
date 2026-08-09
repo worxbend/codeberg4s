@@ -16,7 +16,9 @@ name: Release
 # like `v7` is a mutable pointer: whoever controls the action's repository can
 # move it to different code at any time, and this job would fetch and run that
 # code with MILL_PGP_SECRET_BASE64 — the signing key — in its environment.
-# A commit SHA cannot be moved.
+# A commit SHA cannot be moved. `.github/dependabot.yml` opens a pull request
+# when a pinned action publishes a new release, so the pins are reviewed and
+# moved forward deliberately instead of quietly ageing.
 #
 # `./.github/actions/scala-toolchain` is exempt because it is not fetched from
 # anywhere: a `uses:` beginning with `./` runs the copy in this repository at

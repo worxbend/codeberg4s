@@ -26,7 +26,7 @@ repo rather than against intentions.
 
 ## Nice to have — not blocking 0.1.0
 
-- Dependency update automation (Renovate; Codeberg supports it).
+- Dependency update automation for the Scala and Mill side (Renovate; Codeberg supports it, Dependabot does not, and Dependabot has no Mill support). The GitHub Actions pins are already covered by `.github/dependabot.yml`.
 - A spec-drift issue opener rather than a warning in a log.
 - Stryker4s producing an actual mutation score (the engine is proven on Scala 3.8.4; a real run has never completed).
 - Scala.js / Native cross-builds, which `PLAN.md` §0 explicitly defers.

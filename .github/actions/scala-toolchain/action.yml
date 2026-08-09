@@ -13,7 +13,9 @@ description: >
 # A major-version tag is a mutable pointer the action's maintainers — or anyone
 # who compromises them — can repoint at other code, and this action runs inside
 # the job that holds the artifact signing key. The trailing comment names the
-# release each SHA belongs to, so the line stays readable.
+# release each SHA belongs to, so the line stays readable, and
+# .github/dependabot.yml lists this directory explicitly so the two pins are
+# proposed for update alongside the workflow-level ones.
 #
 # scala-cli is not optional decoration: verify.sh runs scripts/coverage-gate.sc
 # on every invocation and scripts/crap.sc under --with-slow, and both are
