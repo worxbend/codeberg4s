@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin
 
+import com.worxbend.codeberg4s.PathSegment
 import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.repositories.PathSegment
 
 /** Validation shared by every identifier in this group that Forgejo expresses as a positive integer.
   *

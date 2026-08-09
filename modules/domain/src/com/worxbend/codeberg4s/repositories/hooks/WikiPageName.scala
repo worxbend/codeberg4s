@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
+import com.worxbend.codeberg4s.PathSegment
 import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.repositories.PathSegment
 
 /** The name of a wiki page, as `GET /repos/{owner}/{repo}/wiki/page/{pageName}` spells it.
   *

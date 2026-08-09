@@ -1,19 +1,26 @@
-package com.worxbend.codeberg4s.repositories
-
-import com.worxbend.codeberg4s.ValidationError
+package com.worxbend.codeberg4s
 
 /** Validation shared by every identifier that becomes part of a URI path.
   *
-  * This is a security boundary, not a convenience: [[Owner]] and [[RepoName]] are interpolated into request paths, so a
-  * value containing `/` would let a caller reach an endpoint the API surface never offered, and a control character
-  * would corrupt the request line. Both are rejected here, once, rather than at each call site.
+  * This is a security boundary, not a convenience: an identifier such as [[com.worxbend.codeberg4s.repositories.Owner]]
+  * or [[com.worxbend.codeberg4s.users.Username]] is interpolated into a request path, so a value containing `/` would
+  * let a caller reach an endpoint the API surface never offered, and a control character would corrupt the request
+  * line. Both are rejected here, once, rather than at each call site.
+  *
+  * '''It lives in the root package so that "once" is true.''' The rule used to sit in
+  * `com.worxbend.codeberg4s.repositories` and be visible only there, which meant the three identifiers outside that
+  * package — [[com.worxbend.codeberg4s.users.Username]], [[com.worxbend.codeberg4s.organizations.OrgName]] and
+  * [[com.worxbend.codeberg4s.users.social.AccessTokenName]] — spelled the same four checks out inline. Four copies of a
+  * security rule is four places to forget the next clause, which is exactly what happened: the traversal check reached
+  * `segmented` and not the copies. A rule that every package can reach cannot drift that way.
   *
   * [[from]] is for an identifier that must occupy exactly one segment. [[segmented]] is for the two that legitimately
-  * span several — [[BranchName]] and [[ContentPath]], whose routes Forgejo matches with a wildcard. Both reject the
+  * span several — [[com.worxbend.codeberg4s.repositories.BranchName]] and
+  * [[com.worxbend.codeberg4s.repositories.ContentPath]], whose routes Forgejo matches with a wildcard. Both reject the
   * traversal segments `.` and `..`: they carry no slash, so a slash rule alone never sees them, and they survive
   * percent-encoding untouched, so one would reach the request path as a dot segment rather than as a name.
   */
-private[repositories] object PathSegment:
+private[codeberg4s] object PathSegment:
 
   /** Trims `value` and accepts it only if it can stand alone as one path segment.
     *

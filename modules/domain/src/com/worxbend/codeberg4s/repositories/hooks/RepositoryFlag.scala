@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
+import com.worxbend.codeberg4s.PathSegment
 import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.repositories.PathSegment
 
 /** One administrative flag attached to a repository — the `{flag}` of `/repos/{owner}/{repo}/flags/{flag}`.
   *

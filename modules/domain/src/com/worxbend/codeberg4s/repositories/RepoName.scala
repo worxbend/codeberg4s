@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories
 
+import com.worxbend.codeberg4s.PathSegment
 import com.worxbend.codeberg4s.ValidationError
 
 /** The repository half of `owner/name`.

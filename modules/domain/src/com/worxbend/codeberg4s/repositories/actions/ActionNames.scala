@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions
 
+import com.worxbend.codeberg4s.PathSegment
 import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.repositories.PathSegment
 
 /** The identifier of a registered runner, as the runner endpoints take it in a path.
   *

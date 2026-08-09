@@ -112,6 +112,12 @@ final class SocialDomainSuite extends FunSuite:
     assert(AccessTokenName.from("ci\tdeploy").isLeft, "a control character was accepted")
     assert(AccessTokenName.from(" ").isLeft, "a blank name was accepted")
 
+  test("a bare dot segment is refused, since no slash rule would ever see it"):
+    assert(AccessTokenName.from(".").isLeft, "'.' was accepted into a path segment")
+    assert(AccessTokenName.from("..").isLeft, "'..' was accepted into a path segment")
+    assertEquals(fieldOf(AccessTokenName.from("..")), "accessTokenName")
+    assertEquals(orFail(AccessTokenName.from(".ci")).value, ".ci")
+
   test("a token reference renders whichever spelling it carries"):
     val byId   = AccessTokenRef.ById(orFail(AccessTokenId.from(42L)))
     val byName = AccessTokenRef.ByName(orFail(AccessTokenName.from("ci")))

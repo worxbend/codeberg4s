@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.publishing
 
+import com.worxbend.codeberg4s.PathSegment
 import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.repositories.PathSegment
 
 /** One repository topic — `forge`, `forgejo`, `git`, `self-hosted` on `golden/repository/topics.json`.
   *

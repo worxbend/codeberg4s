@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access
 
+import com.worxbend.codeberg4s.PathSegment
 import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.repositories.PathSegment
 
 /** The name that addresses one branch protection rule — the `{name}` of
   * `/repos/{owner}/{repo}/branch_protections/{name}`, and the `rule_name` a rule reports.

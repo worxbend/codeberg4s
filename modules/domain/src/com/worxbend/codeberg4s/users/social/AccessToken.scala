@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.users.social
 
+import com.worxbend.codeberg4s.PathSegment
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.auth.ApiToken
 import com.worxbend.codeberg4s.repositories.RepoSlug
@@ -34,13 +35,7 @@ object AccessTokenName:
     *   the trimmed name, or a [[ValidationError]] on the `"accessTokenName"` field
     */
   def from(value: String): Either[ValidationError, AccessTokenName] =
-    val trimmed = value.trim
-
-    if trimmed.isEmpty then Left(ValidationError(Field, "must not be blank"))
-    else if trimmed.contains('/') then Left(ValidationError(Field, "must not contain a slash"))
-    else if trimmed.exists(_.isControl) then Left(ValidationError(Field, "must not contain a control character"))
-    else if trimmed.equals(".") || trimmed.equals("..") then Left(ValidationError(Field, "must not be '.' or '..'"))
-    else Right(trimmed)
+    PathSegment.from(Field, value)
 
   extension (name: AccessTokenName)
 

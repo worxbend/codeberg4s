@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.organizations
 
+import com.worxbend.codeberg4s.PathSegment
 import com.worxbend.codeberg4s.ValidationError
 
 /** The handle that names an organisation — the `{org}` of `/orgs/{org}`.
@@ -43,12 +44,7 @@ object OrgName:
     *   the trimmed name, or a [[ValidationError]] on the `"orgName"` field
     */
   def from(value: String): Either[ValidationError, OrgName] =
-    val trimmed = value.trim
-    if trimmed.isEmpty then Left(ValidationError(Field, "must not be blank"))
-    else if trimmed.contains('/') then Left(ValidationError(Field, "must not contain a slash"))
-    else if trimmed.exists(_.isControl) then Left(ValidationError(Field, "must not contain a control character"))
-    else if trimmed.equals(".") || trimmed.equals("..") then Left(ValidationError(Field, "must not be '.' or '..'"))
-    else Right(trimmed)
+    PathSegment.from(Field, value)
 
   extension (name: OrgName)
 
