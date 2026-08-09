@@ -25,9 +25,9 @@ import java.nio.charset.StandardCharsets
   * '''Order of events for one attempt.''' [[Telemetry.onRequest]], the send, then [[Telemetry.onResponse]] if a
   * response arrived, then [[Telemetry.onError]] if the attempt failed. The retry engine repeats that whole sequence, so
   * a retried call produces one triple per attempt, and [[Telemetry.onError]] is called once more with the failure the
-  * caller finally receives — which is [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] when more than one
-  * attempt was made. A telemetry callback that fails is swallowed: observation must not decide whether a request
-  * succeeded.
+  * caller finally receives — which is [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] when the retry policy
+  * ran out of attempts on a failure it was repeating, and the last failure unwrapped otherwise. A telemetry callback
+  * that fails is swallowed: observation must not decide whether a request succeeded.
   *
   * '''Failure contract.''' `Left`/raised values are always a [[com.worxbend.codeberg4s.CodebergError]]:
   *   - no response at all becomes [[com.worxbend.codeberg4s.CodebergError.Transport]];

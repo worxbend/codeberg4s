@@ -55,6 +55,19 @@ final class RetryEngineSuite extends FunSuite:
     assertEquals(result, Left(CodebergError.RetriesExhausted(context, 3, last)))
     assertEquals(attempts.toList, List(1, 2, 3))
 
+  test("a terminal failure after a retryable one is reported unwrapped"):
+    val timer    = FakeTimer(0L)
+    val attempts = ListBuffer.empty[Int]
+    val terminal = apiFailure(404)
+
+    val result = engine(RetryPolicy.Default, timer, JitterSource.Deterministic).run("issues.list"): number =>
+      attempts.append(number).discard
+      if number < 2 then Right(Left(apiFailure(503))) else Right(Left(terminal))
+
+    assertEquals(result, Left(terminal))
+    assertEquals(attempts.toList, List(1, 2))
+    assertEquals(timer.sleeps, Vector(250.millis))
+
   test("the backoff doubles after every failed attempt"):
     val timer = FakeTimer(0L)
 
