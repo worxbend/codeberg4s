@@ -1,0 +1,50 @@
+# SHA-256 digests of the Mill distributions this repository is allowed to run.
+#
+# WHY THIS FILE EXISTS
+#
+# `./mill` downloads a ~60 MB executable over the network and then runs it.
+# Every other command in this project — compile, test, publish, sign — goes
+# through that executable. If the download were ever swapped for something
+# else, nothing downstream would notice. `scripts/cpd.sh` pins PMD by digest
+# and `.github/actions/scala-toolchain/action.yml` pins scala-cli by digest for
+# exactly the same reason; the launcher was the one fetch left unpinned.
+#
+# FORMAT
+#
+#   <distribution id>   <sha256 digest, lowercase hex>
+#
+# The distribution id is what `./mill` names the cached file: the Mill version,
+# followed by the platform suffix when a native launcher is used (an empty
+# suffix means the portable JVM launcher). Blank lines and lines whose first
+# word starts with `#` are ignored.
+#
+# HOW TO ADD A VERSION
+#
+# All five entries below are the artifacts published to Maven Central at
+# https://repo1.maven.org/maven2/com/lihaoyi/mill-dist<suffix>/<version>/ .
+# To add a new version, download each artifact and hash it:
+#
+#   v=1.1.8
+#   for s in "" -native-linux-amd64 -native-linux-aarch64 \
+#            -native-mac-amd64 -native-mac-aarch64 ; do
+#     url="https://repo1.maven.org/maven2/com/lihaoyi/mill-dist$s/$v/mill-dist$s-$v.exe"
+#     curl -fsSL "$url" -o /tmp/mill-dist
+#     # Maven Central publishes a .sha1 sidecar; check the download against it
+#     # before trusting the sha256 you are about to record.
+#     [ "$(curl -fsSL "$url.sha1")" = "$(sha1sum /tmp/mill-dist | cut -d' ' -f1)" ] \
+#       || { echo "sha1 mismatch for $s" ; continue ; }
+#     printf '%s%s  %s\n' "$v" "$s" "$(sha256sum /tmp/mill-dist | cut -d' ' -f1)"
+#   done
+#
+# Only versions listed here can be launched. Pointing `MILL_VERSION` or
+# `.mill-version` at a version with no entry fails with an explicit message
+# rather than running an unverified binary.
+#
+# Recorded 2026-08-09: every digest below was produced by the loop above, and
+# each download was checked against its Maven Central `.sha1` sidecar first.
+
+1.1.7                            49c1c575ad44efba1b9103ca1d6042624ef341aad9d8f4cb58fbfc56cf930e0d
+1.1.7-native-linux-amd64         d8648b12f453947f503f3906339dac622261e8ea974339ff574b0f43e480dfdb
+1.1.7-native-linux-aarch64       96ad26474945865ec4498f8133a915463c88ddba59392c23f9b4a8dfb74091a2
+1.1.7-native-mac-amd64           b003acea0aa81fa4d65391ade3c1113bb99b2c7c43571c39b7bc1a5657341875
+1.1.7-native-mac-aarch64         b50a55d06a1ef4eab5eab9b5e266af4b910b97bcf806cbbb24155b6c581ab8f1

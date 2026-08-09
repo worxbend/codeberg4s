@@ -50,9 +50,19 @@ against the pin in `build.mill`.
 | Mill | `1.1.7` | `.mill-version` (committed) | `1.1.7` (`com.lihaoyi:mill-dist`) | current |
 | `mill-contrib-scoverage` | `1.1.7` | `build.mill` header `//| mvnDeps:` | `1.1.7` | current — must track the Mill version exactly |
 
-The `./mill` launcher script carries `DEFAULT_MILL_VERSION="1.1.6-104-5bbe1e"`,
-but `.mill-version` is present and overrides it, so the effective version is
-`1.1.7`. The launcher default is a bootstrap fallback only.
+The `./mill` launcher script carries `DEFAULT_MILL_VERSION="1.1.7"`, matching
+`.mill-version`, which overrides it anyway. The launcher default only applies to
+a checkout with no `.mill-version` at all; it used to name `1.1.6-104-5bbe1e`,
+an untagged snapshot 104 commits past the `1.1.6` tag, which is not a version
+anyone can reason about.
+
+`.mill-checksums` records the SHA-256 of every Mill distribution the launcher is
+allowed to run — one line per platform, because the launcher picks a different
+native binary per OS and architecture. `./mill` checks the file it is about to
+execute against that digest on every run, whether it was downloaded a moment ago
+or cached months ago, and refuses to run anything unlisted. Bumping Mill
+therefore means editing two files: `.mill-version` and `.mill-checksums`. The
+header of `.mill-checksums` carries the exact commands for regenerating it.
 
 **Deviation from SCALA_CODE_STYLE.md.** That guide's pinned-versions table names
 Mill `0.12.x` and Ox `1.0.6`. Both are superseded here by decisions recorded in
