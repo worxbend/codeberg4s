@@ -46,5 +46,25 @@ final case class BinaryResponse(
   /** How large the body is. Cheaper to read than to render, and the thing worth logging. */
   def size: Int = bytes.length
 
+  /** Structural, on the status, the headers and then the bytes.
+    *
+    * Written out because the array's own `equals` in Scala is '''identity''': the equality a case class generates would
+    * compare [[bytes]] by reference, so two responses carrying byte-identical archives would compare unequal and hash
+    * differently. That is a wrong answer with no warning attached — in an assertion, or in a `Set` — which is why the
+    * bytes are compared with `java.util.Arrays.equals` here. The status and the headers are compared first because they
+    * are the cheap half; the archive may be megabytes.
+    *
+    * The class is `final`, so no subclass can exist and the type test below is the whole of the compiler-generated
+    * `canEqual`; calling `canEqual` as well would add nothing. Removing `final` would change that.
+    */
+  override def equals(other: Any): Boolean =
+    other match
+      case that: BinaryResponse =>
+        status.equals(that.status) && headers.equals(that.headers) && java.util.Arrays.equals(bytes, that.bytes)
+      case _                    => false
+
+  override def hashCode(): Int =
+    31 * (31 * status + headers.hashCode) + java.util.Arrays.hashCode(bytes)
+
   /** Deliberately does not render the body: a ZIP in a log line helps nobody. */
   override def toString: String = s"BinaryResponse(status=$status, size=$size)"

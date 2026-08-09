@@ -247,9 +247,9 @@ object SttpHttpPort:
     * [[com.worxbend.codeberg4s.issues.UploadAttachment.as]] and
     * [[com.worxbend.codeberg4s.repositories.publishing.UploadAsset.as]] refuse such a value at construction, and that
     * is the check a caller should ever see, because it names the field and happens before a request exists. This one
-    * exists because [[com.worxbend.codeberg4s.core.RequestBody.Multipart]] is a plain case of an enum that any code
-    * inside the library can build with a bare `String`, and this method is the last point at which that string is still
-    * a Scala value rather than wire bytes.
+    * exists because [[com.worxbend.codeberg4s.core.RequestBody.Multipart]] is a plain case class that any code inside
+    * the library can build with a bare `String`, and this method is the last point at which that string is still a
+    * Scala value rather than wire bytes.
     *
     * A refusal is a [[TransportFailure]] and not an exception: a request that was never sent is exactly what
     * [[com.worxbend.codeberg4s.TransportCause]] describes, and the pipeline above already knows how to report one.
