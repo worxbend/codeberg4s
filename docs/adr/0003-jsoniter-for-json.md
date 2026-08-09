@@ -2,13 +2,13 @@
 
 - Status: accepted
 - Date: 2026-08-02
-- Supersedes: the original ADR-0003, which chose jsoniter-scala
+- Supersedes: the original ADR-0003, which chose upickle
 
 ## Context
 
 `SCALA_CODE_STYLE.md` §"JSON Codecs" specifies jsoniter-scala. `PLAN.md` §3.3
-specified jsoniter-scala. The first version of this ADR chose jsoniter-scala, on two grounds:
-that sttp client4 ships a first-party jsoniter-scala integration, and that jsoniter-scala's
+specified upickle. The first version of this ADR chose upickle, on two grounds:
+that sttp client4 ships a first-party upickle integration, and that upickle's
 transitive footprint is small.
 
 Both grounds turned out to be weaker than they looked.
@@ -61,7 +61,7 @@ swapping the engine changed the two files underneath and left the DTOs alone.
 Good:
 
 - The style guide and the code agree again.
-- One fewer dependency: the unused sttp-jsoniter-scala integration is gone.
+- One fewer dependency: the unused sttp-upickle integration is gone.
 - **And one fewer again: `jsoniter-scala-macros` is not declared.** Its whole
   purpose is `JsonCodecMaker.make`, which derives a `JsonValueCodec[A]` from a
   case class at compile time. The two-step boundary above derives nothing, so
@@ -83,8 +83,8 @@ Good:
 - **Depth is bounded.** The document reader is recursive, so a deeply nested body
   is remote input that could exhaust a caller's stack. `JsonValue.MaxDepth`
   rejects it, with a test.
-- Decoders are stricter where jsoniter-scala was lenient: `JsonDecoder[String]` requires
-  a JSON string, where jsoniter-scala coerced `{"name": 7}` into `"7"`. Nothing wanted
+- Decoders are stricter where upickle was lenient: `JsonDecoder[String]` requires
+  a JSON string, where upickle coerced `{"name": 7}` into `"7"`. Nothing wanted
   that coercion, and a silent one at the boundary is how a wrong field reaches
   the domain looking right.
 
@@ -92,7 +92,7 @@ Bad:
 
 - The document model and its codec are ours to maintain: about 190 lines,
   covered by `JsonSuite` and the codec property suites.
-- Per-field JSON paths on a *parse* failure are gone. jsoniter-scala's tracing visitor
+- Per-field JSON paths on a *parse* failure are gone. upickle's tracing visitor
   could say `$.owner.login`; jsoniter reports an offset. In practice this costs
   nothing: parse failures are now always document-level (the model is total), and
   the field-level paths callers actually see come from each DTO's `toDomain`,
@@ -102,6 +102,6 @@ Bad:
 
 | Alternative | Why rejected |
 | --- | --- |
-| Keep jsoniter-scala | The style guide says jsoniter, the sttp integration that justified it was unused, and the `Double` numeric model was a latent precision defect. |
+| Keep upickle | The style guide says jsoniter, the sttp integration that justified it was unused, and `ujson`'s `Double` numeric model was a latent precision defect. |
 | jsoniter with derived codecs per DTO | Cannot express "every field optional, `null` and absent identical, unknown kinds tolerated" without a per-field knob; `docs/HAZARDS.md` §1 shows the API requires exactly that. |
 | circe | A larger dependency, and its optics would not change the shape of the problem above. |
