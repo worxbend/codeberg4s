@@ -3,6 +3,7 @@ package com.worxbend.codeberg4s.organizations
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.organizations.wire.OrganizationQueries
@@ -207,19 +208,19 @@ object OrganizationQuotaApi:
       exec.attempt(rail.packages(org, params))
 
   private def getRequest(org: OrgName): CodebergRequest =
-    OrganizationRequests.read(GetOperation, quotaPath(org), Nil)
+    read(GetOperation, quotaPath(org), Nil)
 
   private def checkRequest(org: OrgName, subject: QuotaSubject): CodebergRequest =
-    OrganizationRequests.read(CheckOperation, quotaPath(org) :+ "check", OrganizationQueries.quotaCheck(subject))
+    read(CheckOperation, quotaPath(org) :+ "check", OrganizationQueries.quotaCheck(subject))
 
   private def artifactsRequest(org: OrgName, params: PageParams): CodebergRequest =
-    OrganizationRequests.read(ArtifactsOperation, quotaPath(org) :+ "artifacts", OrganizationQueries.paging(params))
+    read(ArtifactsOperation, quotaPath(org) :+ "artifacts", OrganizationQueries.paging(params))
 
   private def attachmentsRequest(org: OrgName, params: PageParams): CodebergRequest =
-    OrganizationRequests.read(AttachmentsOperation, quotaPath(org) :+ "attachments", OrganizationQueries.paging(params))
+    read(AttachmentsOperation, quotaPath(org) :+ "attachments", OrganizationQueries.paging(params))
 
   private def packagesRequest(org: OrgName, params: PageParams): CodebergRequest =
-    OrganizationRequests.read(PackagesOperation, quotaPath(org) :+ "packages", OrganizationQueries.paging(params))
+    read(PackagesOperation, quotaPath(org) :+ "packages", OrganizationQueries.paging(params))
 
   private def quotaPath(org: OrgName): List[String] =
     OrganizationRequests.organizationPath(org) :+ QuotaSegment
