@@ -79,12 +79,42 @@ changed deliberately *before* the freeze, and anyone who built against a
   statement and 100.00 % branch coverage, `core` 96.59 % / 92.48 %, `codec`
   95.20 % / 91.47 %, and the CRAP gate reports a worst method of 28.0 over
   2,217 methods against a limit of 30.
+- **Compile-time constructors for the path identifiers.** Each identifier that
+  is validated as a URI path segment — `Owner`, `RepoName`, `BranchName`,
+  `TagName`, `Username`, `OrgName` and the rest — now takes a string literal
+  directly. `Owner("forgejo")` is checked while the code compiles and *is* the
+  `Owner`, with no `Either` to unwrap, and an invalid literal is a compile
+  error naming the field: `not a valid owner: "forgejo/forgejo"`. `from` is
+  unchanged and remains the way in for a value known only at run time; handing
+  one to the literal constructor is itself a compile error. The check is
+  `inline` and folds away, so it reaches no bytecode. One deliberate
+  difference between the two: the literal form refuses surrounding whitespace
+  where `from` trims it.
+- **A single import for the everyday surface.** `Auth`, `Page`, `PageParams`
+  and `PageSize` are re-exported from the package root, so
+  `import com.worxbend.codeberg4s.*` covers building an `Auth`, constructing a
+  client, calling an operation and paging through a listing. The quick start
+  needed six import lines before.
 
 ### Changed
 
 Every item here is a breaking change against the `0.1.0-SNAPSHOT` builds, taken
 now because the tag is what freezes the surface.
 
+- **`Owner` and `RepoName` moved to the package root.** They were in
+  `com.worxbend.codeberg4s.repositories`, which meant the two types needed
+  before *any* request could be made lived in a sub-package a caller had no
+  other reason to know about. Import them from `com.worxbend.codeberg4s`, or
+  use the single wildcard import above.
+- **Every `PageParams` parameter is named `params`, not `pageParams`.** The old
+  name restated the type instead of saying anything. Only call sites that pass
+  the argument by name need an edit.
+- **`RepositoryApi`'s sub-resource listings are bare nouns.** `listBranches`,
+  `listTags`, `listCommits`, `listReleases`, `listTopics` and `listForks`
+  became `branches`, `tags`, `commits`, `releases`, `topics` and `forks`: the
+  `list` prefix repeated what `client.repos.` had already established. The
+  `list…` names on `IssueApi`, `RepositoryAccessApi` and `PullRequestApi` are
+  unchanged, because there the prefix still distinguishes the operation.
 - **Response models cannot be constructed from outside the library.** All 131
   response types — `Repository`, `Issue`, `PullRequest`, `User`,
   `Organization`, `NotificationThread`, `ServerVersion`, `ApiErrorBody` and the
