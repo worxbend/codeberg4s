@@ -55,9 +55,14 @@ close the backend, because you own it.
 
 ## Your first request
 
-Identifiers are opaque types with `Either`-returning smart constructors.
-`Owner("forgejo")` does not compile. This is not ceremony: a string containing
-a `/` would otherwise forge a request path.
+Identifiers are opaque types that validate what goes into them. This is not
+ceremony: a string containing a `/` would otherwise forge a request path.
+
+When you write the value down yourself, `Owner("forgejo")` is checked while the
+code compiles and hands you the `Owner` directly — `Owner("forgejo/forgejo")` is
+a compile error. When the value is only known at run time, `Owner.from(raw)`
+returns `Either[ValidationError, Owner]`, which is what the snippet below
+shows.
 
 ```scala mdoc:compile-only
 import com.worxbend.codeberg4s.{CodebergClient, Owner, RepoName, ValidationError}

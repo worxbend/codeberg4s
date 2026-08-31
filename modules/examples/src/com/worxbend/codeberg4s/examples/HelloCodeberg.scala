@@ -50,8 +50,9 @@ object HelloCodeberg:
   /** The repository this program reads: Forgejo's own, on Codeberg.
     *
     * `Owner.from` and `RepoName.from` return `Either` rather than the value, because a string containing `/` would
-    * forge a request path. `Owner("forgejo")` does not compile — the types are opaque and have no public apply. The two
-    * are combined in a `for`-comprehension, which is how validated values are usually assembled.
+    * forge a request path. Both names here are literals, so `Owner("forgejo")` would also do and would skip the
+    * `Either` entirely; `from` is shown because it is the shape a value read from a config file or an argument needs.
+    * The two are combined in a `for`-comprehension, which is how validated values are usually assembled.
     */
   private val target: Either[ValidationError, (Owner, RepoName)] =
     for

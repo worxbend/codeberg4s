@@ -116,8 +116,10 @@ object CreatingAnIssue:
   /** Turns three strings into validated domain values and a command.
     *
     * Every smart constructor here returns `Either[ValidationError, _]`, so they compose in one `for`-comprehension and
-    * the first failure short-circuits with a stable field name — `"apiToken"`, `"owner"`, `"repoName"`, `"title"`. Note
-    * that `Owner("…")` does not compile: the identifier types are opaque and `from` is the only way in.
+    * the first failure short-circuits with a stable field name — `"apiToken"`, `"owner"`, `"repoName"`, `"title"`.
+    * `from` is the right constructor here precisely because these three values come from the environment: the
+    * compile-time form `Owner("forgejo")` only accepts a literal, and handing it a run-time `String` is itself a
+    * compile error.
     *
     * The optional base URI is folded in afterwards rather than in the comprehension, because "absent" and "invalid" are
     * different answers and only the second is an error.

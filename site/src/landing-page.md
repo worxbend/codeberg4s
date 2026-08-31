@@ -23,9 +23,11 @@ first with its failure channel materialised, so the two cannot drift apart.
 Pick one per call site, not per project.
 
 **Illegal requests are unrepresentable.** Owners, repository names, branches,
-labels, tokens, base URIs and page sizes are opaque types whose only
-constructors return `Either`. `Owner("forgejo")` does not compile;
-`Owner.from("forgejo")` gives you an `Either[ValidationError, Owner]`. A string
+labels, tokens, base URIs and page sizes are opaque types that validate what
+goes into them. `Owner("forgejo")` is checked while the code compiles and *is*
+the `Owner`; an invalid literal is a compile error pointing at the literal.
+`Owner.from(raw)` is the way in for a value known only at run time, and gives
+you an `Either[ValidationError, Owner]`. A string
 that would forge a request path is rejected before a client is involved, and a
 malformed token never reaches a request header.
 
