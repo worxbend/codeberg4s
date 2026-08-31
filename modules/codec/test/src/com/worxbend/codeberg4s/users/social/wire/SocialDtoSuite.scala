@@ -50,6 +50,26 @@ final class SocialDtoSuite extends FunSuite:
       case Left(problem) => assertEquals(problem.path.render, "$[1].block_id")
       case Right(items)  => fail(s"expected the second element to fail, got $items")
 
+  // Ported from OrganizationAdminDtoSuite when `/orgs/{org}/list_blocked` and
+  // `/user/list_blocked` were collapsed onto this one DTO: the org copy tested
+  // these three and this one did not, so they moved rather than being deleted.
+
+  test("the Go zero-time sentinel is absence, not a timestamp in the year one"):
+    assertEquals(blocked("""{"block_id": 99, "created_at": "0001-01-01T00:00:00Z"}""").createdAt, None)
+
+  test("a non-positive block_id is refused during conversion, and the failure explains the bound"):
+    val problem = blockedFailure("""{"block_id": 0}""")
+
+    assertEquals(problem.path.render, "$.block_id")
+    assert(problem.message.contains("at least 1"), s"the failure did not explain the bound: ${problem.message}")
+
+  test("an empty block listing is an empty vector, not a failure"):
+    val outcome = Json
+      .decode[Vector[BlockedUserDto]]("[]")
+      .flatMap(BlockedUserDto.toDomainAll(JsonPath.Root, _))
+
+    assertEquals(outcome, Right(Vector.empty[BlockedUser]))
+
   // --- stopwatches ----------------------------------------------------------
 
   test("a stopwatch decodes and converts field for field"):

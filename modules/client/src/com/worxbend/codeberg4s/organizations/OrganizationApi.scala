@@ -9,6 +9,7 @@ import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.admin.wire.RepositoryOptionDto
 import com.worxbend.codeberg4s.repositories.admin.{CreateRepository, RepositoryActivity}
 import com.worxbend.codeberg4s.users.account.AvatarImage
+import com.worxbend.codeberg4s.users.social.BlockedUser
 import com.worxbend.codeberg4s.users.{User, Username}
 import com.worxbend.codeberg4s.{CodebergError, HttpMethod}
 

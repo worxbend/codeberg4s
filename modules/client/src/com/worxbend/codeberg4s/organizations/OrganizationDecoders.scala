@@ -7,7 +7,6 @@ import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.issues.Label
 import com.worxbend.codeberg4s.issues.wire.LabelDto
 import com.worxbend.codeberg4s.organizations.wire.{
-  BlockedUserDto,
   OrganizationDto,
   OrganizationPermissionsDto,
   QuotaArtifactDto,
@@ -23,6 +22,8 @@ import com.worxbend.codeberg4s.repositories.hooks.Webhook
 import com.worxbend.codeberg4s.repositories.hooks.wire.WebhookDto
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 import com.worxbend.codeberg4s.users.User
+import com.worxbend.codeberg4s.users.social.BlockedUser
+import com.worxbend.codeberg4s.users.social.wire.BlockedUserDto
 import com.worxbend.codeberg4s.users.wire.UserDto
 import com.worxbend.codeberg4s.wire.SearchEnvelopeDto
 
