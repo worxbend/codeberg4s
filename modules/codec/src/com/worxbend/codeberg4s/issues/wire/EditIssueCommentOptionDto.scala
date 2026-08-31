@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.issues.EditComment
 
 /** Forgejo's `EditIssueCommentOption` request model — the body of `PATCH /repos/{owner}/{repo}/issues/comments/{id}`
@@ -25,5 +26,5 @@ private[codeberg4s] object EditIssueCommentOptionDto:
   private def fields(command: EditComment): List[(String, JsonValue)] =
     List(
       Some("body" -> JsonValue.Str(command.body)),
-      command.updatedAt.map(moment => "updated_at" -> JsonValue.Str(WireInstant.render(moment))),
+      command.updatedAt.map(moment => "updated_at" -> JsonValue.Str(Timestamps.render(moment))),
     ).flatten

@@ -173,10 +173,17 @@ announce "Unit tests (excluding the Property tag and modules/it)"
 # suite reports "1 ignored, 0 total" and the run still exits 0. That is a
 # false-green gate, so the separator is load-bearing and the assertion below
 # exists to make sure a future edit cannot reintroduce it.
+#
+# --exclude-tags is repeated per module for the same reason it is not written
+# once at the end: Mill scopes the arguments after a target to THAT target only,
+# so a single trailing `--exclude-tags=Property` reached the last module in the
+# chain and no other. Every earlier module then ran its ScalaCheck suites inside
+# the routine gate — slow, and precisely the separation docs/CONSTITUTION_MAPPING.md
+# requires. The check after the run asserts the exclusion actually took effect.
 test_targets=()
 for target in "${UNIT_MODULES[@]}"; do
   [[ ${#test_targets[@]} -eq 0 ]] || test_targets+=("+")
-  test_targets+=("$target")
+  test_targets+=("$target" --exclude-tags=Property)
 done
 
 test_log="$work_dir/tests.log"
@@ -190,7 +197,7 @@ test_log="$work_dir/tests.log"
 # skipped exactly the suites that failed — undercounting the total AND reading
 # zero failures. Strip first, then count.
 set -o pipefail
-"$MILL" "${test_targets[@]}" --exclude-tags=Property 2>&1 |
+"$MILL" "${test_targets[@]}" 2>&1 |
   sed 's/\x1b\[[0-9;]*m//g' | tee "$test_log"
 test_status=${PIPESTATUS[0]}
 set +o pipefail
@@ -205,6 +212,21 @@ if [[ "$executed" -lt 100 ]]; then
   fail "only $executed tests executed — the suite is not actually running"
 fi
 echo "  $executed tests executed"
+
+# An excluded suite still reports a line, with everything ignored and a total of
+# zero. So a `*Props` suite with a non-zero total is a property suite that ran
+# inside the routine gate — which is what a mis-scoped --exclude-tags looks like
+# from the outside, and it is silent otherwise because the properties pass.
+leaked=$(grep -oE 'Test run [A-Za-z0-9_.]*Props finished: [0-9]+ failed, [0-9]+ ignored, [0-9]+ total' "$test_log" |
+  awk '$(NF - 1) != 0 { print $3 }' | sort -u)
+if [[ -n "$leaked" ]]; then
+  printf '\033[31m  property suites ran inside the unit gate:\033[0m\n' >&2
+  printf '    %s\n' "$leaked" >&2
+  printf '  Each module in the chain needs its own --exclude-tags=Property; Mill\n' >&2
+  printf '  applies a trailing one to the last target only.\n' >&2
+  fail "the Property exclusion did not take effect"
+fi
+echo "  no property suite ran inside the gate"
 
 # ---------------------------------------------------------------------------
 announce "Architecture boundary check"

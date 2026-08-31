@@ -1,7 +1,4 @@
-package com.worxbend.codeberg4s.repositories
-
-import com.worxbend.codeberg4s.PathSegment
-import com.worxbend.codeberg4s.ValidationError
+package com.worxbend.codeberg4s
 
 /** The repository half of `owner/name`.
   *
@@ -21,6 +18,15 @@ object RepoName:
     */
   def from(value: String): Either[ValidationError, RepoName] =
     PathSegment.from("repoName", value)
+
+  /** Builds a repository name from a string literal, checked while the code compiles.
+    *
+    * `RepoName("forgejo")` '''is''' the name, with no `Either` to unwrap: an invalid literal is a compile error
+    * pointing at the literal itself. The rules are [[from]]'s, minus the trim. See [[SegmentLiteral]], and use [[from]]
+    * for a value known only at run time.
+    */
+  inline def apply[V <: String & Singleton](inline value: V): RepoName =
+    SegmentLiteral.plain("repoName", value)
 
   extension (name: RepoName)
 

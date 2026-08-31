@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
@@ -9,7 +10,6 @@ import com.worxbend.codeberg4s.repositories.actions.ActionRunJob
 import com.worxbend.codeberg4s.repositories.actions.JobAttempt
 import com.worxbend.codeberg4s.repositories.actions.JobId
 import com.worxbend.codeberg4s.repositories.actions.RunId
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 /** Forgejo's `ActionRunJob` model, field for field.
   *
@@ -92,4 +92,4 @@ object ActionRunJobDto:
 
   /** Converts a decoded array of jobs, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[ActionRunJobDto]): Either[DecodeFailure, Vector[ActionRunJob]] =
-    Elements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

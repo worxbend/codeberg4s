@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
@@ -9,7 +10,6 @@ import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.actions.ActionArtifact
 import com.worxbend.codeberg4s.repositories.actions.ArtifactId
 import com.worxbend.codeberg4s.repositories.actions.RunId
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 /** Forgejo's `ActionArtifact` model, field for field.
   *
@@ -91,4 +91,4 @@ object ActionArtifactDto:
 
   /** Converts a decoded array of artifacts, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[ActionArtifactDto]): Either[DecodeFailure, Vector[ActionArtifact]] =
-    Elements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

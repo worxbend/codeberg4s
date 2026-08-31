@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.GoldenFixtures
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.repositories.Commit
@@ -77,7 +78,7 @@ final class CommitDtoSuite extends FunSuite with GoldenFixtures:
   test("a listing failure is reported at the element's index"):
     val dtos = Vector(empty.copy(sha = Some(HeadSha)), empty)
 
-    val failure = Elements.convert(JsonPath.Root, dtos)((dto, at) => dto.toDomainAt(at)).swap.toOption
+    val failure = ArrayElements.convert(JsonPath.Root, dtos)((dto, at) => dto.toDomainAt(at)).swap.toOption
 
     assertEquals(failure.map(_.path.render), Some("$[1].sha"))
 
@@ -90,6 +91,6 @@ final class CommitDtoSuite extends FunSuite with GoldenFixtures:
       case Left(failure) => fail(s"$fixture did not decode: ${failure.path.render} ${failure.message}")
 
   private def domain(fixture: String): Vector[Commit] =
-    Elements.convert(JsonPath.Root, decodeList(fixture))((dto, at) => dto.toDomainAt(at)) match
+    ArrayElements.convert(JsonPath.Root, decodeList(fixture))((dto, at) => dto.toDomainAt(at)) match
       case Right(commits) => commits
       case Left(failure)  => fail(s"$fixture did not convert: ${failure.path.render} ${failure.message}")

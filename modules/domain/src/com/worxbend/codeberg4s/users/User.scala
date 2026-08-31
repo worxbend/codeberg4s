@@ -20,7 +20,7 @@ import java.time.Instant
   * @param id
   *   the instance-local numeric identifier
   * @param login
-  *   the handle in URLs — the value that becomes a [[com.worxbend.codeberg4s.repositories.Owner]]
+  *   the handle in URLs — the value that becomes a [[com.worxbend.codeberg4s.Owner]]
   * @param fullName
   *   the display name, absent when the account left it blank
   * @param email

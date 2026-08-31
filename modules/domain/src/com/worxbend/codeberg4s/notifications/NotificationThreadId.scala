@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.notifications
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
 
 /** The instance-wide identifier of a [[NotificationThread]] — the `{id}` of `/notifications/threads/{id}`.
@@ -20,8 +21,6 @@ opaque type NotificationThreadId = Long
 
 object NotificationThreadId:
 
-  private val MinValue: Long = 1L
-
   /** Parses a notification thread id.
     *
     * Rejects anything below `1`.
@@ -30,8 +29,7 @@ object NotificationThreadId:
     *   the id, or a [[ValidationError]] on the `"notificationThreadId"` field
     */
   def from(value: Long): Either[ValidationError, NotificationThreadId] =
-    if value < MinValue then Left(ValidationError("notificationThreadId", s"must be at least $MinValue"))
-    else Right(value)
+    PositiveId.from("notificationThreadId", value)
 
   extension (id: NotificationThreadId)
 

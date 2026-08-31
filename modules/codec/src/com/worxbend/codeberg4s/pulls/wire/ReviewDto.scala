@@ -1,17 +1,16 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.issues.wire.WireElements
 import com.worxbend.codeberg4s.pulls.Review
 import com.worxbend.codeberg4s.pulls.ReviewId
 import com.worxbend.codeberg4s.pulls.ReviewState
 import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 
 /** Forgejo's `PullReview` model, field for field.
@@ -51,7 +50,7 @@ final case class ReviewDto(
     *
     * Only `id` is required, and it goes through [[com.worxbend.codeberg4s.pulls.ReviewId.from]] because it is the only
     * way to address a review. `commit_id` is strict when present — a non-hexadecimal object id is reported at
-    * `$.commit_id` rather than dropped — for the reason [[PullWire]] gives.
+    * `$.commit_id` rather than dropped — for the reason [[com.worxbend.codeberg4s.codec.Wire.optional]] gives.
     *
     * `state` is the deliberately '''lenient''' field: a spelling [[com.worxbend.codeberg4s.pulls.ReviewState.parse]]
     * does not recognise becomes `None` instead of failing the review, which is also what happens to the `""` Forgejo
@@ -61,8 +60,8 @@ final case class ReviewDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, Review] =
     for
       identifier <- Wire.validated(at, "id", id)(ReviewId.from)
-      reviewer   <- authorAt(at)
-      pinned     <- PullWire.optional(at, "commit_id", commitId)(CommitSha.from)
+      reviewer   <- Wire.nested(at, "user", user)(_.toDomainAt(_))
+      pinned     <- Wire.optional(at, "commit_id", commitId)(CommitSha.from)
     yield Review(
       id             = identifier,
       state          = state.flatMap(ReviewState.parse),
@@ -82,9 +81,6 @@ final case class ReviewDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, Review] =
     toDomainAt(JsonPath.Root)
-
-  private def authorAt(at: JsonPath): Either[DecodeFailure, Option[User]] =
-    user.fold(Right(None))(dto => dto.toDomainAt(at.field("user")).map(Some.apply))
 
 object ReviewDto:
 
@@ -117,4 +113,4 @@ object ReviewDto:
 
   /** Converts a decoded array of reviews, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[ReviewDto]): Either[DecodeFailure, Vector[Review]] =
-    WireElements.at(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.JsonValue
@@ -46,7 +47,7 @@ enum RepositoryContentDto:
       case Single(entry)     =>
         entry.toDomainAt(JsonPath.Root).map(RepositoryContent.File.apply)
       case Listing(entries)  =>
-        Elements
+        ArrayElements
           .convert(JsonPath.Root, entries)((dto, path) => dto.toDomainAt(path))
           .map(RepositoryContent.Directory.apply)
       case Unexpected(shape) =>

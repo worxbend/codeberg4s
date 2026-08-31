@@ -1,16 +1,15 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.CommitRef
 import com.worxbend.codeberg4s.repositories.CommitSha
 import com.worxbend.codeberg4s.repositories.gitdata.FileCommit
 import com.worxbend.codeberg4s.repositories.wire.CommitMetaDto
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.GitIdentityDto
 
 /** Forgejo's `FileCommitResponse` — the commit an editing endpoint reports it wrote.
@@ -58,8 +57,8 @@ final case class FileCommitDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, FileCommit] =
     for
       identifier <- Wire.validated(at, "sha", sha)(CommitSha.from)
-      root       <- treeAt(at)
-      ancestors  <- Elements.convert(at.field("parents"), parents)((dto, path) => dto.toDomainAt(path))
+      root       <- Wire.nested(at, "tree", tree)(_.toDomainAt(_))
+      ancestors  <- ArrayElements.convert(at.field("parents"), parents)((dto, path) => dto.toDomainAt(path))
     yield FileCommit(
       sha       = identifier,
       message   = message,
@@ -71,9 +70,6 @@ final case class FileCommitDto(
       url       = url,
       htmlUrl   = htmlUrl,
     )
-
-  private def treeAt(at: JsonPath): Either[DecodeFailure, Option[CommitRef]] =
-    tree.fold(Right(None))(dto => dto.toDomainAt(at.field("tree")).map(Some.apply))
 
 object FileCommitDto:
 

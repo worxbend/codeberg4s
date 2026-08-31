@@ -8,7 +8,6 @@ import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.gitdata.CommitStatus
 import com.worxbend.codeberg4s.repositories.gitdata.CommitStatusState
-import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 
 /** Forgejo's `CommitStatus` model, field for field.
@@ -58,7 +57,7 @@ final case class CommitStatusDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, CommitStatus] =
     for
       identifier <- Wire.required(at, "id", id)
-      author     <- creatorAt(at)
+      author     <- Wire.nested(at, "creator", creator)(_.toDomainAt(_))
     yield CommitStatus(
       id          = identifier,
       state       = status.flatMap(CommitStatusState.parse),
@@ -74,9 +73,6 @@ final case class CommitStatusDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, CommitStatus] =
     toDomainAt(JsonPath.Root)
-
-  private def creatorAt(at: JsonPath): Either[DecodeFailure, Option[User]] =
-    creator.fold(Right(None))(dto => dto.toDomainAt(at.field("creator")).map(Some.apply))
 
 object CommitStatusDto:
 

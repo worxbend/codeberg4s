@@ -20,5 +20,10 @@ final case class PageParams(page: PageNumber, size: PageSize):
 
 object PageParams:
 
-  /** The first page at [[PageSize.Default]] — where a fold over all pages starts. */
+  /** The first page at [[PageSize.Default]] — where a fold over all pages starts.
+    *
+    * This constant is deliberately config-free: the domain module knows nothing about any particular client. A
+    * `CodebergClient` exposes `firstPage`, the same window at the client's configured `defaultPageSize` — prefer that
+    * when a client is in hand.
+    */
   val First: PageParams = PageParams(PageNumber.First, PageSize.Default)

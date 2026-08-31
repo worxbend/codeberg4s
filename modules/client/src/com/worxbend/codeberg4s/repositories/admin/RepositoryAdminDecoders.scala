@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.repositories.admin
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -27,7 +28,6 @@ import com.worxbend.codeberg4s.repositories.gitdata.FileChange
 import com.worxbend.codeberg4s.repositories.gitdata.wire.FileResponseDto
 import com.worxbend.codeberg4s.repositories.wire.BranchDto
 import com.worxbend.codeberg4s.repositories.wire.ContentEntryDto
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
@@ -60,11 +60,11 @@ private[admin] object RepositoryAdminDecoders:
 
   /** A repository object, as create, edit, migrate, transfer and convert all answer. */
   val repository: Decode[Repository] =
-    WireDecode.of(Json.decoder[RepositoryDto])(_.toDomain)
+    WireDecode.single(Json.decoder[RepositoryDto])(_.toDomain)
 
   /** One branch object, as the branch create answers. */
   val branch: Decode[Branch] =
-    WireDecode.of(Json.decoder[BranchDto])(_.toDomain)
+    WireDecode.single(Json.decoder[BranchDto])(_.toDomain)
 
   /** A bare array of user objects, as the assignee, reviewer, stargazer and subscriber listings all return. */
   val users: Decode[Vector[User]] =
@@ -88,7 +88,7 @@ private[admin] object RepositoryAdminDecoders:
 
   /** One push-mirror object. */
   val pushMirror: Decode[PushMirror] =
-    WireDecode.of(Json.decoder[PushMirrorDto])(_.toDomain)
+    WireDecode.single(Json.decoder[PushMirrorDto])(_.toDomain)
 
   /** A bare array of push-mirror objects. */
   val pushMirrors: Decode[Vector[PushMirror]] =
@@ -96,32 +96,32 @@ private[admin] object RepositoryAdminDecoders:
 
   /** The subscription object, which only a watcher ever receives — a non-watcher gets a `404`. */
   val watchStatus: Decode[WatchStatus] =
-    WireDecode.of(Json.decoder[WatchInfoDto])(dto => Right(dto.toDomain))
+    WireDecode.single(Json.decoder[WatchInfoDto])(dto => Right(dto.toDomain))
 
   /** The fork-sync description both `sync_fork` reads answer. */
   val forkSyncInfo: Decode[ForkSyncInfo] =
-    WireDecode.of(Json.decoder[SyncForkInfoDto])(dto => Right(dto.toDomain))
+    WireDecode.single(Json.decoder[SyncForkInfoDto])(dto => Right(dto.toDomain))
 
   /** The two-flag object the pin-allowance read answers. */
   val issuePinsAllowed: Decode[IssuePinsAllowed] =
-    WireDecode.of(Json.decoder[IssuePinsAllowedDto])(dto => Right(dto.toDomain))
+    WireDecode.single(Json.decoder[IssuePinsAllowedDto])(dto => Right(dto.toDomain))
 
   /** The bare `{"language": bytes}` object the language statistics answer; see its DTO for why it is special. */
   val languages: Decode[LanguageBreakdown] =
-    WireDecode.of(Json.decoder[LanguageStatisticsDto])(dto => Right(dto.toDomain))
+    WireDecode.single(Json.decoder[LanguageStatisticsDto])(dto => Right(dto.toDomain))
 
   /** The `{"topics": [...]}` envelope the topic search returns, unwrapped to the topics it carries. */
   val topics: Decode[Vector[TopicSummary]] =
-    WireDecode.of(Json.decoder[TopicSearchEnvelopeDto]): envelope =>
+    WireDecode.single(Json.decoder[TopicSearchEnvelopeDto]): envelope =>
       TopicSummaryDto.toDomainAll(RepositoryAdminDecoders.TopicEntriesPath, envelope.entries)
 
   /** The single-file write response, shared with `POST /repos/{owner}/{repo}/diffpatch`. */
   val fileChange: Decode[FileChange] =
-    WireDecode.of(Json.decoder[FileResponseDto])(_.toDomain)
+    WireDecode.single(Json.decoder[FileResponseDto])(_.toDomain)
 
   /** The batch write response. */
   val fileChangeSet: Decode[FileChangeSet] =
-    WireDecode.of(Json.decoder[FilesResponseDto])(_.toDomain)
+    WireDecode.single(Json.decoder[FilesResponseDto])(_.toDomain)
 
   /** The repository's signing key, exactly as the instance sent it.
     *
@@ -136,4 +136,4 @@ private[admin] object RepositoryAdminDecoders:
   private def listOf[D, A](wire: Decode[Vector[D]])(
       one: (D, JsonPath) => Either[DecodeFailure, A]
   ): Decode[Vector[A]] =
-    WireDecode.of(wire)(dtos => Elements.convert(JsonPath.Root, dtos)(one))
+    WireDecode.single(wire)(dtos => ArrayElements.convert(JsonPath.Root, dtos)(one))

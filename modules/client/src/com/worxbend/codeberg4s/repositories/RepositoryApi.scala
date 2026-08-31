@@ -1,9 +1,12 @@
 package com.worxbend.codeberg4s.repositories
 
 import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.paging.Page
@@ -124,7 +127,7 @@ final class RepositoryApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     * @param params
     *   the page to fetch and how many branches it may hold
     */
-  def listBranches(owner: Owner, name: RepoName, params: PageParams): Future[Page[Branch]] =
+  def branches(owner: Owner, name: RepoName, params: PageParams): Future[Page[Branch]] =
     pipeline.callPage(RepositoryApi.branchesRequest(owner, name, params), params)(using RepositoryDecoders.branches)
 
   /** Reads one branch — `GET /repos/{owner}/{repo}/branches/{branch}`.
@@ -161,7 +164,7 @@ final class RepositoryApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     * @param params
     *   the page to fetch and how many tags it may hold
     */
-  def listTags(owner: Owner, name: RepoName, params: PageParams): Future[Page[Tag]] =
+  def tags(owner: Owner, name: RepoName, params: PageParams): Future[Page[Tag]] =
     pipeline.callPage(RepositoryApi.tagsRequest(owner, name, params), params)(using RepositoryDecoders.tags)
 
   /** Lists commits on the repository's default branch — `GET /repos/{owner}/{repo}/commits`.
@@ -181,7 +184,7 @@ final class RepositoryApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     * @param params
     *   the page to fetch and how many commits it may hold
     */
-  def listCommits(owner: Owner, name: RepoName, params: PageParams): Future[Page[Commit]] =
+  def commits(owner: Owner, name: RepoName, params: PageParams): Future[Page[Commit]] =
     pipeline.callPage(RepositoryApi.commitsRequest(owner, name, params), params)(using RepositoryDecoders.commits)
 
   /** Lists a repository's releases — `GET /repos/{owner}/{repo}/releases`.
@@ -199,7 +202,7 @@ final class RepositoryApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     * @param params
     *   the page to fetch and how many releases it may hold
     */
-  def listReleases(owner: Owner, name: RepoName, params: PageParams): Future[Page[Release]] =
+  def releases(owner: Owner, name: RepoName, params: PageParams): Future[Page[Release]] =
     pipeline.callPage(RepositoryApi.releasesRequest(owner, name, params), params)(using RepositoryDecoders.releases)
 
   /** Reads one release by its identifier — `GET /repos/{owner}/{repo}/releases/{id}`.
@@ -238,7 +241,7 @@ final class RepositoryApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     * @param params
     *   the page to fetch and how many topics it may hold
     */
-  def listTopics(owner: Owner, name: RepoName, params: PageParams): Future[Page[String]] =
+  def topics(owner: Owner, name: RepoName, params: PageParams): Future[Page[String]] =
     pipeline.callPage(RepositoryApi.topicsRequest(owner, name, params), params)(using RepositoryDecoders.topics)
 
   /** Reads a file or a directory — `GET /repos/{owner}/{repo}/contents/{filepath}`.
@@ -281,7 +284,7 @@ final class RepositoryApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     * @param params
     *   the page to fetch and how many forks it may hold
     */
-  def listForks(owner: Owner, name: RepoName, params: PageParams): Future[Page[Repository]] =
+  def forks(owner: Owner, name: RepoName, params: PageParams): Future[Page[Repository]] =
     pipeline.callPage(RepositoryApi.forksRequest(owner, name, params), params)(using RepositoryDecoders.repositories)
 
 /** The requests this group issues, and its typed rail. */
@@ -295,31 +298,31 @@ object RepositoryApi:
   /** The stable operation id of [[RepositoryApi.search]]. */
   val SearchOperation: String = "repos.search"
 
-  /** The stable operation id of [[RepositoryApi.listBranches]]. */
+  /** The stable operation id of [[RepositoryApi.branches]]. */
   val ListBranchesOperation: String = "repos.branches.list"
 
   /** The stable operation id of [[RepositoryApi.getBranch]]. */
   val GetBranchOperation: String = "repos.branches.get"
 
-  /** The stable operation id of [[RepositoryApi.listTags]]. */
+  /** The stable operation id of [[RepositoryApi.tags]]. */
   val ListTagsOperation: String = "repos.tags.list"
 
-  /** The stable operation id of [[RepositoryApi.listCommits]]. */
+  /** The stable operation id of [[RepositoryApi.commits]]. */
   val ListCommitsOperation: String = "repos.commits.list"
 
-  /** The stable operation id of [[RepositoryApi.listReleases]]. */
+  /** The stable operation id of [[RepositoryApi.releases]]. */
   val ListReleasesOperation: String = "repos.releases.list"
 
   /** The stable operation id of [[RepositoryApi.getRelease]]. */
   val GetReleaseOperation: String = "repos.releases.get"
 
-  /** The stable operation id of [[RepositoryApi.listTopics]]. */
+  /** The stable operation id of [[RepositoryApi.topics]]. */
   val ListTopicsOperation: String = "repos.topics.list"
 
   /** The stable operation id of [[RepositoryApi.getContents]]. */
   val GetContentsOperation: String = "repos.contents.get"
 
-  /** The stable operation id of [[RepositoryApi.listForks]]. */
+  /** The stable operation id of [[RepositoryApi.forks]]. */
   val ListForksOperation: String = "repos.forks.list"
 
   /** The typed rail of [[RepositoryApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a value.
@@ -339,33 +342,33 @@ object RepositoryApi:
     def search(term: String, params: PageParams): Future[Either[CodebergError, Page[Repository]]] =
       exec.attempt(rail.search(term, params))
 
-    /** [[RepositoryApi.listBranches]] with its failure as a value. */
-    def listBranches(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Branch]]] =
-      exec.attempt(rail.listBranches(owner, name, params))
+    /** [[RepositoryApi.branches]] with its failure as a value. */
+    def branches(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Branch]]] =
+      exec.attempt(rail.branches(owner, name, params))
 
     /** [[RepositoryApi.getBranch]] with its failure as a value. */
     def getBranch(owner: Owner, name: RepoName, branch: BranchName): Future[Either[CodebergError, Branch]] =
       exec.attempt(rail.getBranch(owner, name, branch))
 
-    /** [[RepositoryApi.listTags]] with its failure as a value. */
-    def listTags(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Tag]]] =
-      exec.attempt(rail.listTags(owner, name, params))
+    /** [[RepositoryApi.tags]] with its failure as a value. */
+    def tags(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Tag]]] =
+      exec.attempt(rail.tags(owner, name, params))
 
-    /** [[RepositoryApi.listCommits]] with its failure as a value. */
-    def listCommits(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Commit]]] =
-      exec.attempt(rail.listCommits(owner, name, params))
+    /** [[RepositoryApi.commits]] with its failure as a value. */
+    def commits(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Commit]]] =
+      exec.attempt(rail.commits(owner, name, params))
 
-    /** [[RepositoryApi.listReleases]] with its failure as a value. */
-    def listReleases(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Release]]] =
-      exec.attempt(rail.listReleases(owner, name, params))
+    /** [[RepositoryApi.releases]] with its failure as a value. */
+    def releases(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Release]]] =
+      exec.attempt(rail.releases(owner, name, params))
 
     /** [[RepositoryApi.getRelease]] with its failure as a value. */
     def getRelease(owner: Owner, name: RepoName, id: ReleaseId): Future[Either[CodebergError, Release]] =
       exec.attempt(rail.getRelease(owner, name, id))
 
-    /** [[RepositoryApi.listTopics]] with its failure as a value. */
-    def listTopics(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[String]]] =
-      exec.attempt(rail.listTopics(owner, name, params))
+    /** [[RepositoryApi.topics]] with its failure as a value. */
+    def topics(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[String]]] =
+      exec.attempt(rail.topics(owner, name, params))
 
     /** [[RepositoryApi.getContents]] with its failure as a value. */
     def getContents(
@@ -375,9 +378,9 @@ object RepositoryApi:
     ): Future[Either[CodebergError, RepositoryContent]] =
       exec.attempt(rail.getContents(owner, name, path))
 
-    /** [[RepositoryApi.listForks]] with its failure as a value. */
-    def listForks(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Repository]]] =
-      exec.attempt(rail.listForks(owner, name, params))
+    /** [[RepositoryApi.forks]] with its failure as a value. */
+    def forks(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Repository]]] =
+      exec.attempt(rail.forks(owner, name, params))
 
   private def getRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(GetOperation, List("repos", owner.value, name.value), Nil)
@@ -413,16 +416,6 @@ object RepositoryApi:
     read(ListForksOperation, List("repos", owner.value, name.value, "forks"), window(params))
 
   /** Every operation in this group is a `GET` that carries no body and adds no header of its own. */
-  private def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = None,
-    )
-
-  /** The `page` and `limit` parameters, in the order Forgejo's own `Link` header writes them. */
+  /** The `page` and `limit` window, rendered by [[com.worxbend.codeberg4s.codec.PagingQuery.window]]. */
   private def window(params: PageParams): List[(String, String)] =
-    List("page" -> params.page.value.toString, "limit" -> params.size.value.toString)
+    PagingQuery.window(params)

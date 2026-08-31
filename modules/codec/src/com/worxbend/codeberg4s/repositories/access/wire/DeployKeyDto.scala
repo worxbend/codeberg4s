@@ -1,15 +1,14 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.access.DeployKey
 import com.worxbend.codeberg4s.repositories.access.DeployKeyId
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 
 /** The wire spelling of every property a deploy key has, written down exactly once.
@@ -85,7 +84,7 @@ final case class DeployKeyDto(
     for
       identifier <- Wire.validated(at, DeployKeyWire.Id, id)(DeployKeyId.from)
       material   <- Wire.required(at, DeployKeyWire.Key, key)
-      repo       <- repositoryAt(at)
+      repo       <- Wire.nested(at, DeployKeyWire.Repository, repository)(_.toDomainAt(_))
     yield DeployKey(
       id          = identifier,
       key         = material,
@@ -101,9 +100,6 @@ final case class DeployKeyDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, DeployKey] =
     toDomainAt(JsonPath.Root)
-
-  private def repositoryAt(at: JsonPath): Either[DecodeFailure, Option[Repository]] =
-    repository.fold(Right(None))(dto => dto.toDomainAt(at.field(DeployKeyWire.Repository)).map(Some.apply))
 
 object DeployKeyDto:
 
@@ -131,4 +127,4 @@ object DeployKeyDto:
 
   /** Converts a decoded array of deploy keys, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[DeployKeyDto]): Either[DecodeFailure, Vector[DeployKey]] =
-    Elements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

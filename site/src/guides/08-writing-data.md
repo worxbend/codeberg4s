@@ -19,8 +19,8 @@ import com.worxbend.codeberg4s.CodebergClient
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.issues.CreateIssue
 import com.worxbend.codeberg4s.issues.Issue
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 
 import scala.concurrent.Future
 
@@ -63,8 +63,8 @@ import com.worxbend.codeberg4s.pulls.CreatePullRequest
 import com.worxbend.codeberg4s.pulls.PullRequest
 import com.worxbend.codeberg4s.pulls.PullRequestHead
 import com.worxbend.codeberg4s.repositories.BranchName
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 
 import scala.concurrent.Future
 
@@ -92,8 +92,8 @@ import com.worxbend.codeberg4s.pulls.MergePullRequest
 import com.worxbend.codeberg4s.pulls.MergeStyle
 import com.worxbend.codeberg4s.pulls.PullRequestNumber
 import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 
 import scala.concurrent.Future
 
@@ -228,8 +228,8 @@ between.
 import com.worxbend.codeberg4s.CodebergClient
 import com.worxbend.codeberg4s.repositories.ContentEntry
 import com.worxbend.codeberg4s.repositories.ContentPath
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.repositories.RepositoryContent
 import com.worxbend.codeberg4s.repositories.admin.CommitOptions
 import com.worxbend.codeberg4s.repositories.admin.FileBytes
@@ -310,8 +310,8 @@ whole or does not land at all:
 import com.worxbend.codeberg4s.CodebergClient
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.repositories.ContentPath
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.repositories.admin.ChangeFiles
 import com.worxbend.codeberg4s.repositories.admin.CommitOptions
 import com.worxbend.codeberg4s.repositories.admin.FileBytes

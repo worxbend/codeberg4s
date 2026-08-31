@@ -1,13 +1,14 @@
 package com.worxbend.codeberg4s.repositories.publishing
 
 import com.worxbend.codeberg4s.PathSegment
+import com.worxbend.codeberg4s.SegmentLiteral
 import com.worxbend.codeberg4s.ValidationError
 
 /** One repository topic — `forge`, `forgejo`, `git`, `self-hosted` on `golden/repository/topics.json`.
   *
   * A topic is put in a request path by `PUT` and `DELETE /repos/{owner}/{repo}/topics/{topic}`, so a raw `String` would
-  * be a path-forging hazard exactly as it is for [[com.worxbend.codeberg4s.repositories.Owner]]. That, and only that,
-  * is what this type guarantees: the value is one safe URI path segment.
+  * be a path-forging hazard exactly as it is for [[com.worxbend.codeberg4s.Owner]]. That, and only that, is what this
+  * type guarantees: the value is one safe URI path segment.
   *
   * '''It deliberately does not encode Forgejo's own topic grammar.''' The pinned spec declares no `pattern` and no
   * `maxLength` for a topic name anywhere — neither on `RepoTopicOptions.topics` nor on the `topic` path parameter — so
@@ -34,6 +35,16 @@ object Topic:
     */
   def from(value: String): Either[ValidationError, Topic] =
     PathSegment.from("topic", value)
+
+  /** Builds a topic name from a string literal, checked while the code compiles.
+    *
+    * `Topic("...")` '''is''' the topic name, with no `Either` to unwrap: a literal is either valid or it is not, and an
+    * invalid one is a compile error pointing at the literal itself. The rules are [[from]]'s, minus the trim —
+    * surrounding whitespace is refused rather than removed. See [[com.worxbend.codeberg4s.SegmentLiteral]], and use
+    * [[from]] for a value known only at run time.
+    */
+  inline def apply[V <: String & Singleton](inline value: V): Topic =
+    SegmentLiteral.plain("topic", value)
 
   extension (topic: Topic)
 

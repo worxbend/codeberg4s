@@ -51,8 +51,8 @@ Take the client as a parameter rather than constructing one:
 
 ```scala mdoc:compile-only
 import com.worxbend.codeberg4s.CodebergClient
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -62,7 +62,7 @@ final class ReleaseChecker(client: CodebergClient)(using ExecutionContext):
 
   def latestTag(owner: Owner, name: RepoName): Future[Option[String]] =
     client.repos
-      .listReleases(owner, name, com.worxbend.codeberg4s.paging.PageParams.First)
+      .releases(owner, name, com.worxbend.codeberg4s.paging.PageParams.First)
       .map(page => page.items.headOption.map(_.tagName.value))
 ```
 
@@ -120,8 +120,8 @@ import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.auth.Auth
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.retry.RetryPolicy
 
 import sttp.client4.Backend

@@ -1,32 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
-
-/** Validation shared by the two identifiers in this group that Forgejo expresses as a positive integer.
-  *
-  * [[TagProtectionId]] and [[DeployKeyId]] are both `int64` on the wire and both end up interpolated into a request
-  * path. A number cannot forge a path, so the point is confusion rather than escaping: a tag protection's id, a deploy
-  * key's id and the `key_id` of the SSH key behind that deploy key are all `Long`, all plausible values for one
-  * another, and all reachable from the same response. Passing one where another belongs gets a `404` that reads like a
-  * missing resource rather than like a caller bug — and on an access-control surface, a `404` a caller shrugs at is how
-  * a rule nobody deleted is believed to be gone.
-  *
-  * This duplicates `com.worxbend.codeberg4s.repositories.actions.ActionIds`, `com.worxbend.codeberg4s.issues.NumericId`
-  * and `com.worxbend.codeberg4s.pulls.PullIds`, each of which is private to its own group and therefore unreachable
-  * from here. `docs/LEDGER.md` already lists that kind of helper under "helpers awaiting promotion"; the right fix is
-  * one shared validator in the domain module root, not a widened internal.
-  */
-private[access] object AccessIds:
-
-  private val MinValue: Long = 1L
-
-  /** Accepts `value` only if it is a positive identifier.
-    *
-    * @param field
-    *   the field name to report in a [[ValidationError]]
-    */
-  def from(field: String, value: Long): Either[ValidationError, Long] =
-    if value < MinValue then Left(ValidationError(field, s"must be at least $MinValue")) else Right(value)
 
 /** The identifier of one tag protection rule — the `{id}` of `/repos/{owner}/{repo}/tag_protections/{id}`.
   *
@@ -45,7 +20,7 @@ object TagProtectionId:
     *   the identifier, or a [[ValidationError]] on the `"tagProtectionId"` field
     */
   def from(value: Long): Either[ValidationError, TagProtectionId] =
-    AccessIds.from("tagProtectionId", value)
+    PositiveId.from("tagProtectionId", value)
 
   extension (id: TagProtectionId)
 
@@ -70,7 +45,7 @@ object DeployKeyId:
     *   the identifier, or a [[ValidationError]] on the `"deployKeyId"` field
     */
   def from(value: Long): Either[ValidationError, DeployKeyId] =
-    AccessIds.from("deployKeyId", value)
+    PositiveId.from("deployKeyId", value)
 
   extension (id: DeployKeyId)
 

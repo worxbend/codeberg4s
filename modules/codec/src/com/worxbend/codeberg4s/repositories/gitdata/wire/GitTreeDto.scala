@@ -1,11 +1,11 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.gitdata.GitTreeEntry
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 /** Forgejo's `GitTreeResponse` — the envelope `GET /repos/{owner}/{repo}/git/trees/{sha}` wraps its entries in.
   *
@@ -47,7 +47,7 @@ final case class GitTreeDto(
     * instance omitted is still a usable list of entries.
     */
   def toDomain: Either[DecodeFailure, Vector[GitTreeEntry]] =
-    Elements.convert(JsonPath.Root.field("tree"), entries)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(JsonPath.Root.field("tree"), entries)((dto, path) => dto.toDomainAt(path))
 
 object GitTreeDto:
 

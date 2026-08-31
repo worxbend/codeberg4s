@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
 
 /** The instance-local identifier of a release, as `GET /repos/{owner}/{repo}/releases/{id}` takes it.
@@ -11,8 +12,6 @@ opaque type ReleaseId = Long
 
 object ReleaseId:
 
-  private val MinValue: Long = 1L
-
   /** Parses a release identifier.
     *
     * Rejects zero and negatives: Forgejo's identifiers are database row ids and start at one.
@@ -21,7 +20,7 @@ object ReleaseId:
     *   the identifier, or a [[ValidationError]] on the `"releaseId"` field
     */
   def from(value: Long): Either[ValidationError, ReleaseId] =
-    if value < MinValue then Left(ValidationError("releaseId", s"must be at least $MinValue")) else Right(value)
+    PositiveId.from("releaseId", value)
 
   extension (id: ReleaseId)
 

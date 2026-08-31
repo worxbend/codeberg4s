@@ -1,15 +1,14 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.gitdata.CombinedCommitStatus
 import com.worxbend.codeberg4s.repositories.gitdata.CommitStatusState
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 
 /** Forgejo's `CombinedStatus` model, field for field.
@@ -52,8 +51,8 @@ final case class CombinedStatusDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, CombinedCommitStatus] =
     for
       commit   <- Wire.validated(at, "sha", sha)(CommitSha.from)
-      reported <- Elements.convert(at.field("statuses"), statuses)((dto, path) => dto.toDomainAt(path))
-      repo     <- repositoryAt(at)
+      reported <- ArrayElements.convert(at.field("statuses"), statuses)((dto, path) => dto.toDomainAt(path))
+      repo     <- Wire.nested(at, "repository", repository)(_.toDomainAt(_))
     yield CombinedCommitStatus(
       sha        = commit,
       state      = state.flatMap(CommitStatusState.parse),
@@ -67,9 +66,6 @@ final case class CombinedStatusDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, CombinedCommitStatus] =
     toDomainAt(JsonPath.Root)
-
-  private def repositoryAt(at: JsonPath): Either[DecodeFailure, Option[Repository]] =
-    repository.fold(Right(None))(dto => dto.toDomainAt(at.field("repository")).map(Some.apply))
 
 object CombinedStatusDto:
 

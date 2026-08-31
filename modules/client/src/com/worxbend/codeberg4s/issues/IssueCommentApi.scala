@@ -2,16 +2,19 @@ package com.worxbend.codeberg4s.issues
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.issues.wire.EditIssueCommentOptionDto
 import com.worxbend.codeberg4s.issues.wire.IssueQueries
 import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 
 import scala.concurrent.Future
 
@@ -84,9 +87,9 @@ final class IssueCommentApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
       owner: Owner,
       name: RepoName,
       query: CommentQuery,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[Comment]] =
-    pipeline.callPage(IssueCommentApi.listForRepositoryRequest(owner, name, query, page), page)(using
+    pipeline.callPage(IssueCommentApi.listForRepositoryRequest(owner, name, query, params), params)(using
       IssueDecoders.comments)
 
   /** Reads one comment — `GET /repos/{owner}/{repo}/issues/comments/{id}`.
@@ -207,9 +210,9 @@ object IssueCommentApi:
         owner: Owner,
         name: RepoName,
         query: CommentQuery,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[Comment]]] =
-      exec.attempt(rail.listForRepository(owner, name, query, page))
+      exec.attempt(rail.listForRepository(owner, name, query, params))
 
     /** The single-comment read on [[IssueCommentApi]], with its failure as a value. */
     def get(owner: Owner, name: RepoName, id: CommentId): Future[Either[CodebergError, Option[Comment]]] =
@@ -251,16 +254,16 @@ object IssueCommentApi:
       owner: Owner,
       name: RepoName,
       query: CommentQuery,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    IssueRequests.read(
+    read(
       ListForRepositoryOperation,
       IssueRequests.issuesPath(owner, name) :+ "comments",
-      IssueQueries.comments(query) ++ IssueQueries.paging(page),
+      IssueQueries.comments(query) ++ IssueQueries.paging(params),
     )
 
   private def getRequest(owner: Owner, name: RepoName, id: CommentId): CodebergRequest =
-    IssueRequests.read(GetOperation, IssueRequests.commentPath(owner, name, id), Nil)
+    read(GetOperation, IssueRequests.commentPath(owner, name, id), Nil)
 
   private def editRequest(
       owner: Owner,
@@ -268,7 +271,7 @@ object IssueCommentApi:
       id: CommentId,
       command: EditComment,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       EditOperation,
       HttpMethod.Patch,
       IssueRequests.commentPath(owner, name, id),
@@ -276,7 +279,7 @@ object IssueCommentApi:
     )
 
   private def deleteRequest(owner: Owner, name: RepoName, id: CommentId): CodebergRequest =
-    IssueRequests.remove(DeleteOperation, IssueRequests.commentPath(owner, name, id))
+    remove(DeleteOperation, IssueRequests.commentPath(owner, name, id))
 
   private def editDeprecatedRequest(
       owner: Owner,
@@ -285,7 +288,7 @@ object IssueCommentApi:
       id: CommentId,
       command: EditComment,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       EditDeprecatedOperation,
       HttpMethod.Patch,
       deprecatedPath(owner, name, number, id),
@@ -298,7 +301,7 @@ object IssueCommentApi:
       number: IssueNumber,
       id: CommentId,
   ): CodebergRequest =
-    IssueRequests.remove(DeleteDeprecatedOperation, deprecatedPath(owner, name, number, id))
+    remove(DeleteDeprecatedOperation, deprecatedPath(owner, name, number, id))
 
   private def deprecatedPath(
       owner: Owner,

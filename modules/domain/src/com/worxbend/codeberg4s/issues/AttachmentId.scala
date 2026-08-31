@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.issues
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
 
 /** The instance-wide identifier of an [[IssueAttachment]] — the `{attachment_id}` of
@@ -8,7 +9,7 @@ import com.worxbend.codeberg4s.ValidationError
   * Distinct from [[CommentId]] and from [[IssueNumber]] even though all three are `int64` and all three land in the
   * same request path: `/issues/12/assets/12` is a perfectly well-formed URL whichever way round the two numbers go, so
   * a transposition is a `404` at best and a successful read of the wrong attachment at worst. That is the confusion
-  * this type exists to prevent, exactly as [[NumericId]] describes.
+  * this type exists to prevent, exactly as [[com.worxbend.codeberg4s.PositiveId]] describes.
   *
   * ==Error contract==
   *
@@ -26,7 +27,7 @@ object AttachmentId:
     *   the identifier, or a [[ValidationError]] on the `"attachmentId"` field
     */
   def from(value: Long): Either[ValidationError, AttachmentId] =
-    NumericId.from("attachmentId", value)
+    PositiveId.from("attachmentId", value)
 
   extension (id: AttachmentId)
 

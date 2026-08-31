@@ -15,7 +15,7 @@ import scala.concurrent.Future
   *
   * {{{
   * val all: Future[Vector[Issue]] =
-  *   PageWalk.all(PageParams.First): params =>
+  *   PageWalk.all(client.firstPage): params =>
   *     client.issues.list(owner, name, IssueQuery.Empty, params)
   * }}}
   *
@@ -62,7 +62,7 @@ object PageWalk:
     * Convenient and bounded only by the data: read the memory note above before using it on a large repository.
     *
     * @param first
-    *   the page to start from, usually [[PageParams.First]]
+    *   the page to start from, usually `client.firstPage` (or [[PageParams.First]] when no client is in hand)
     * @param fetch
     *   the listing operation, applied once per page
     */

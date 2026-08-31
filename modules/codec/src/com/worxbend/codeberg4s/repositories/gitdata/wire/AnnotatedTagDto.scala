@@ -8,7 +8,6 @@ import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.CommitSha
 import com.worxbend.codeberg4s.repositories.TagName
 import com.worxbend.codeberg4s.repositories.gitdata.AnnotatedTag
-import com.worxbend.codeberg4s.repositories.gitdata.GitObjectRef
 import com.worxbend.codeberg4s.repositories.wire.ArchiveDownloadCountDto
 import com.worxbend.codeberg4s.repositories.wire.GitIdentityDto
 import com.worxbend.codeberg4s.repositories.wire.VerificationDto
@@ -58,7 +57,7 @@ final case class AnnotatedTagDto(
     for
       name     <- Wire.validated(at, "tag", tag)(TagName.from)
       objectId <- Wire.validated(at, "sha", sha)(CommitSha.from)
-      target   <- objectAt(at)
+      target   <- Wire.nested(at, "object", obj)(_.toDomainAt(_))
     yield AnnotatedTag(
       name             = name,
       sha              = objectId,
@@ -73,9 +72,6 @@ final case class AnnotatedTagDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, AnnotatedTag] =
     toDomainAt(JsonPath.Root)
-
-  private def objectAt(at: JsonPath): Either[DecodeFailure, Option[GitObjectRef]] =
-    obj.fold(Right(None))(dto => dto.toDomainAt(at.field("object")).map(Some.apply))
 
 object AnnotatedTagDto:
 

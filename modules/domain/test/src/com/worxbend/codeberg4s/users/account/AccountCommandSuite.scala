@@ -1,8 +1,8 @@
 package com.worxbend.codeberg4s.users.account
 
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.repositories.BranchName
-import com.worxbend.codeberg4s.repositories.RepoName
 
 import munit.FunSuite
 

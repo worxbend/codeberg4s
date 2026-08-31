@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues
 
-import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.ResponseBody
@@ -15,16 +15,14 @@ import com.worxbend.codeberg4s.issues.wire.MilestoneDto
 import com.worxbend.codeberg4s.issues.wire.ReactionDto
 import com.worxbend.codeberg4s.issues.wire.TimelineCommentDto
 import com.worxbend.codeberg4s.issues.wire.TrackedTimeDto
-import com.worxbend.codeberg4s.issues.wire.WireElements
 import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 
 /** Every response shape the issue group's sub-APIs can receive, decoded once and shared.
   *
   * The instances are stateless and immutable, so they are built as `val`s rather than per call, exactly as
-  * [[com.worxbend.codeberg4s.repositories.actions.RepositoryActionDecoders]] does. [[IssueApi]] itself predates this
-  * object and keeps its own private copies of the four decoders it was written with; nothing here changes what those
-  * do.
+  * [[com.worxbend.codeberg4s.repositories.actions.RepositoryActionDecoders]] does. [[IssueApi]] and every sub-API read
+  * their decoders from here, so a change to how one shape is decoded lands everywhere at once.
   *
   * ==Every listing in this group is a bare array==
   *
@@ -37,13 +35,21 @@ private[issues] object IssueDecoders:
 
   /** One issue object, as the blocking and dependency writes return it. */
   val issue: Decode[Issue] =
-    WireDecode.of(Json.decoder[IssueDto])(_.toDomain)
+    WireDecode.single(Json.decoder[IssueDto])(_.toDomain)
 
   /** A bare array of issue objects — the cross-repository search, the blocks listing and the dependency listing. */
   val issues: Decode[Vector[Issue]] =
-    WireDecode.of(Json.decoder[Vector[IssueDto]])(dtos => IssueDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[IssueDto]])(IssueDto.toDomainAll)
 
-  /** One comment object.
+  /** One comment object on an endpoint that always sends a body — posting a comment, where `201` is the only success.
+    *
+    * The difference from [[comment]] is only what an empty body means: nothing on those endpoints declares `204`, so a
+    * blank body is a malformed response and is reported as one rather than being read as "no comment".
+    */
+  val presentComment: Decode[Comment] =
+    WireDecode.single(Json.decoder[CommentDto])(_.toDomain)
+
+  /** One comment object, on the endpoints where an empty body is also a success.
     *
     * '''An empty body is a success here, not a decoding failure.''' Both the single-comment read and the comment edit
     * declare `204` alongside `200` in `spec/swagger.v1.json`, and Forgejo answers `204` when the row behind the id is
@@ -54,49 +60,51 @@ private[issues] object IssueDecoders:
     * fails. See [[com.worxbend.codeberg4s.repositories.actions.RepositoryActionDecoders]] for the same shape.
     */
   val comment: Decode[Option[Comment]] =
-    val present = WireDecode.of(Json.decoder[CommentDto])(_.toDomain)
-
-    (body: ResponseBody) => if body.isBlank then Right(None) else present(body).map(Some.apply)
+    (body: ResponseBody) => if body.isBlank then Right(None) else presentComment(body).map(Some.apply)
 
   /** A bare array of comment objects, as the repository-wide comment listing returns it. */
   val comments: Decode[Vector[Comment]] =
-    WireDecode.of(Json.decoder[Vector[CommentDto]])(dtos => CommentDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[CommentDto]])(CommentDto.toDomainAll)
 
   /** One label object. */
   val label: Decode[Label] =
-    WireDecode.of(Json.decoder[LabelDto])(_.toDomain)
+    WireDecode.single(Json.decoder[LabelDto])(_.toDomain)
 
   /** A bare array of label objects, as the per-issue label calls return it. */
   val labels: Decode[Vector[Label]] =
-    WireDecode.of(Json.decoder[Vector[LabelDto]])(dtos => LabelDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[LabelDto]])(LabelDto.toDomainAll)
 
   /** One milestone object. */
   val milestone: Decode[Milestone] =
-    WireDecode.of(Json.decoder[MilestoneDto])(_.toDomain)
+    WireDecode.single(Json.decoder[MilestoneDto])(_.toDomain)
+
+  /** A bare array of milestone objects, as the repository's milestone listing returns it. */
+  val milestones: Decode[Vector[Milestone]] =
+    WireDecode.vector(Json.decoder[Vector[MilestoneDto]])(MilestoneDto.toDomainAll)
 
   /** One attachment object. */
   val attachment: Decode[IssueAttachment] =
-    WireDecode.of(Json.decoder[AttachmentDto])(_.toDomain)
+    WireDecode.single(Json.decoder[AttachmentDto])(_.toDomain)
 
   /** A bare array of attachment objects. */
   val attachments: Decode[Vector[IssueAttachment]] =
-    WireDecode.of(Json.decoder[Vector[AttachmentDto]])(dtos => AttachmentDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[AttachmentDto]])(AttachmentDto.toDomainAll)
 
   /** One reaction object, as adding a reaction returns it. */
   val reaction: Decode[Reaction] =
-    WireDecode.of(Json.decoder[ReactionDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ReactionDto])(_.toDomain)
 
   /** A bare array of reaction objects — one element per account per emoji, never a tally. */
   val reactions: Decode[Vector[Reaction]] =
-    WireDecode.of(Json.decoder[Vector[ReactionDto]])(dtos => ReactionDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ReactionDto]])(ReactionDto.toDomainAll)
 
   /** The one-key object the deadline endpoint answers. */
   val deadline: Decode[IssueDeadline] =
-    WireDecode.of(Json.decoder[IssueDeadlineDto])(_.toDomain)
+    WireDecode.single(Json.decoder[IssueDeadlineDto])(_.toDomain)
 
   /** The `WatchInfo` object the subscription check answers. */
   val subscription: Decode[IssueSubscription] =
-    WireDecode.of(Json.decoder[IssueSubscriptionDto])(_.toDomain)
+    WireDecode.single(Json.decoder[IssueSubscriptionDto])(_.toDomain)
 
   /** A bare array of user objects, as the subscriber listing returns it.
     *
@@ -105,18 +113,17 @@ private[issues] object IssueDecoders:
     * listings. One bad element still fails the page, and reports its position.
     */
   val users: Decode[Vector[User]] =
-    WireDecode.of(Json.decoder[Vector[UserDto]]): dtos =>
-      WireElements.at(JsonPath.Root, dtos)((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[UserDto]]): (at, dtos) =>
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** One tracked-time entry, as adding time returns it. */
   val trackedTime: Decode[TrackedTime] =
-    WireDecode.of(Json.decoder[TrackedTimeDto])(_.toDomain)
+    WireDecode.single(Json.decoder[TrackedTimeDto])(_.toDomain)
 
   /** A bare array of tracked-time entries. */
   val trackedTimes: Decode[Vector[TrackedTime]] =
-    WireDecode.of(Json.decoder[Vector[TrackedTimeDto]])(dtos => TrackedTimeDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[TrackedTimeDto]])(TrackedTimeDto.toDomainAll)
 
   /** A bare array of timeline entries. */
   val timeline: Decode[Vector[TimelineEvent]] =
-    WireDecode.of(Json.decoder[Vector[TimelineCommentDto]]): dtos =>
-      TimelineCommentDto.toDomainAll(JsonPath.Root, dtos)
+    WireDecode.vector(Json.decoder[Vector[TimelineCommentDto]])(TimelineCommentDto.toDomainAll)

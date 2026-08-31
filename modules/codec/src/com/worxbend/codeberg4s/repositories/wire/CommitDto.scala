@@ -1,15 +1,14 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.Commit
-import com.worxbend.codeberg4s.repositories.CommitDetails
 import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 
 /** Forgejo's `Commit` model, field for field.
@@ -62,11 +61,11 @@ final case class CommitDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, Commit] =
     for
       identifier    <- Wire.validated(at, "sha", sha)(CommitSha.from)
-      details       <- detailsAt(at)
-      authorUser    <- userAt(at, "author", author)
-      committerUser <- userAt(at, "committer", committer)
-      parentRefs    <- Elements.convert(at.field("parents"), parents)((dto, path) => dto.toDomainAt(path))
-      changed       <- Elements.convert(at.field("files"), files)((dto, path) => dto.toDomainAt(path))
+      details       <- Wire.nested(at, "commit", commit)(_.toDomainAt(_))
+      authorUser    <- Wire.nested(at, "author", author)(_.toDomainAt(_))
+      committerUser <- Wire.nested(at, "committer", committer)(_.toDomainAt(_))
+      parentRefs    <- ArrayElements.convert(at.field("parents"), parents)((dto, path) => dto.toDomainAt(path))
+      changed       <- ArrayElements.convert(at.field("files"), files)((dto, path) => dto.toDomainAt(path))
     yield Commit(
       sha       = identifier,
       url       = url,
@@ -83,12 +82,6 @@ final case class CommitDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, Commit] =
     toDomainAt(JsonPath.Root)
-
-  private def detailsAt(at: JsonPath): Either[DecodeFailure, Option[CommitDetails]] =
-    commit.fold(Right(None))(dto => dto.toDomainAt(at.field("commit")).map(Some.apply))
-
-  private def userAt(at: JsonPath, field: String, dto: Option[UserDto]): Either[DecodeFailure, Option[User]] =
-    dto.fold(Right(None))(user => user.toDomainAt(at.field(field)).map(Some.apply))
 
 object CommitDto:
 

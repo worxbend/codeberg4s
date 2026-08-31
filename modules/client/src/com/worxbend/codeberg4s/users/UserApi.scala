@@ -1,12 +1,13 @@
 package com.worxbend.codeberg4s.users
 
 import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.core.Exec
@@ -313,40 +314,27 @@ object UserApi:
     read(KeysOperation, List("users", username.value, "keys"), pageQuery(params))
 
   /** A `GET` with no body and no extra headers, which is every operation in this group. */
-  private def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = None,
-    )
-
-  /** `page` and `limit`, always together.
-    *
-    * Sending `limit` alone is not a smaller version of this: the golden-fixture manifest records list endpoints that
-    * ignore a lone `limit` and return the entire collection — 862 forks, 5233 stargazers — which is the unbounded fetch
-    * this library exists to prevent.
+  /** The `page` and `limit` window every listing here sends, rendered by
+    * [[com.worxbend.codeberg4s.codec.PagingQuery.window]].
     */
   private def pageQuery(params: PageParams): List[(String, String)] =
-    List(("page", params.page.value.toString), ("limit", params.size.value.toString))
+    PagingQuery.window(params)
 
   private val UserDecoder: Decode[User] =
-    WireDecode.of(Json.decoder[UserDto])(_.toDomain)
+    WireDecode.single(Json.decoder[UserDto])(_.toDomain)
 
   private val UserListDecoder: Decode[Vector[User]] =
-    WireDecode.of(Json.decoder[Vector[UserDto]])(dtos => each(JsonPath.Root, dtos)(_.toDomainAt(_)))
+    WireDecode.vector(Json.decoder[Vector[UserDto]])(each(_, _)(_.toDomainAt(_)))
 
   private val UserSearchDecoder: Decode[Vector[User]] =
-    WireDecode.of(Json.decoder[SearchEnvelopeDto[UserDto]]): envelope =>
+    WireDecode.single(Json.decoder[SearchEnvelopeDto[UserDto]]): envelope =>
       each(JsonPath.Root.field("data"), envelope.data)(_.toDomainAt(_))
 
   private val RepositoryListDecoder: Decode[Vector[Repository]] =
-    WireDecode.of(Json.decoder[Vector[RepositoryDto]])(dtos => each(JsonPath.Root, dtos)(_.toDomainAt(_)))
+    WireDecode.vector(Json.decoder[Vector[RepositoryDto]])(each(_, _)(_.toDomainAt(_)))
 
   private val PublicKeyListDecoder: Decode[Vector[PublicKey]] =
-    WireDecode.of(Json.decoder[Vector[PublicKeyDto]])(dtos => each(JsonPath.Root, dtos)(_.toDomainAt(_)))
+    WireDecode.vector(Json.decoder[Vector[PublicKeyDto]])(each(_, _)(_.toDomainAt(_)))
 
   /** Converts every element of a decoded list, stopping at the first element that will not convert.
     *

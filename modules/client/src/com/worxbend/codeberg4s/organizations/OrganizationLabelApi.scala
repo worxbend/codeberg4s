@@ -4,6 +4,9 @@ import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.bodiless
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.issues.CreateLabel
@@ -233,13 +236,13 @@ object OrganizationLabelApi:
       exec.attempt(rail.delete(org, id))
 
   private def listRequest(org: OrgName, sort: Option[OrganizationLabelSort], params: PageParams): CodebergRequest =
-    OrganizationRequests.read(ListOperation, labelsPath(org), OrganizationQueries.labels(sort, params))
+    read(ListOperation, labelsPath(org), OrganizationQueries.labels(sort, params))
 
   private def getRequest(org: OrgName, id: LabelId): CodebergRequest =
-    OrganizationRequests.read(GetOperation, labelPath(org, id), Nil)
+    read(GetOperation, labelPath(org, id), Nil)
 
   private def createRequest(org: OrgName, command: CreateLabel): CodebergRequest =
-    OrganizationRequests.write(
+    write(
       CreateOperation,
       HttpMethod.Post,
       labelsPath(org),
@@ -247,7 +250,7 @@ object OrganizationLabelApi:
     )
 
   private def editRequest(org: OrgName, id: LabelId, command: EditLabel): CodebergRequest =
-    OrganizationRequests.write(
+    write(
       EditOperation,
       HttpMethod.Patch,
       labelPath(org, id),
@@ -255,7 +258,7 @@ object OrganizationLabelApi:
     )
 
   private def deleteRequest(org: OrgName, id: LabelId): CodebergRequest =
-    OrganizationRequests.bare(DeleteOperation, HttpMethod.Delete, labelPath(org, id))
+    bodiless(DeleteOperation, HttpMethod.Delete, labelPath(org, id))
 
   private def labelsPath(org: OrgName): List[String] =
     OrganizationRequests.organizationPath(org) :+ LabelsSegment

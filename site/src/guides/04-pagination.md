@@ -15,8 +15,8 @@ import com.worxbend.codeberg4s.issues.Issue
 import com.worxbend.codeberg4s.issues.IssueQuery
 import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 
 import scala.concurrent.Future
 
@@ -112,8 +112,8 @@ import com.worxbend.codeberg4s.CodebergClient
 import com.worxbend.codeberg4s.issues.Issue
 import com.worxbend.codeberg4s.issues.IssueQuery
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -170,8 +170,8 @@ import com.worxbend.codeberg4s.issues.Issue
 import com.worxbend.codeberg4s.issues.IssueQuery
 import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -202,8 +202,8 @@ Counting open issues without keeping any of them:
 import com.worxbend.codeberg4s.CodebergClient
 import com.worxbend.codeberg4s.issues.IssueQuery
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -262,8 +262,8 @@ import com.worxbend.codeberg4s.issues.Issue
 import com.worxbend.codeberg4s.issues.IssueQuery
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.paging.PageWalk
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -295,8 +295,8 @@ import com.worxbend.codeberg4s.CodebergClient
 import com.worxbend.codeberg4s.issues.IssueQuery
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.paging.PageWalk
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future

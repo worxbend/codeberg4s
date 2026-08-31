@@ -1,11 +1,11 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.issues.wire.WireElements
 import com.worxbend.codeberg4s.pulls.ChangedFile
 import com.worxbend.codeberg4s.repositories.CommitFileStatus
 
@@ -80,4 +80,4 @@ object ChangedFileDto:
 
   /** Converts a decoded array of changed files, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[ChangedFileDto]): Either[DecodeFailure, Vector[ChangedFile]] =
-    WireElements.at(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

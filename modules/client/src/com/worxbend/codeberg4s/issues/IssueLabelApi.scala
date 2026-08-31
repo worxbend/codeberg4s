@@ -2,14 +2,18 @@ package com.worxbend.codeberg4s.issues
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.removeWithBody
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.issues.wire.EditLabelOptionDto
 import com.worxbend.codeberg4s.issues.wire.IssueLabelsOptionDto
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 
 import scala.concurrent.Future
 
@@ -319,10 +323,10 @@ object IssueLabelApi:
       exec.attempt(rail.clearOnIssue(owner, name, number, command))
 
   private def getRequest(owner: Owner, name: RepoName, id: LabelId): CodebergRequest =
-    IssueRequests.read(GetOperation, IssueRequests.labelPath(owner, name, id), Nil)
+    read(GetOperation, IssueRequests.labelPath(owner, name, id), Nil)
 
   private def editRequest(owner: Owner, name: RepoName, id: LabelId, command: EditLabel): CodebergRequest =
-    IssueRequests.write(
+    write(
       EditOperation,
       HttpMethod.Patch,
       IssueRequests.labelPath(owner, name, id),
@@ -330,10 +334,10 @@ object IssueLabelApi:
     )
 
   private def deleteRequest(owner: Owner, name: RepoName, id: LabelId): CodebergRequest =
-    IssueRequests.remove(DeleteOperation, IssueRequests.labelPath(owner, name, id))
+    remove(DeleteOperation, IssueRequests.labelPath(owner, name, id))
 
   private def listOnIssueRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
-    IssueRequests.read(ListOnIssueOperation, issueLabelsPath(owner, name, number), Nil)
+    read(ListOnIssueOperation, issueLabelsPath(owner, name, number), Nil)
 
   private def addToIssueRequest(
       owner: Owner,
@@ -341,7 +345,7 @@ object IssueLabelApi:
       number: IssueNumber,
       command: LabelUpdate,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       AddToIssueOperation,
       HttpMethod.Post,
       issueLabelsPath(owner, name, number),
@@ -354,7 +358,7 @@ object IssueLabelApi:
       number: IssueNumber,
       command: LabelUpdate,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       ReplaceOnIssueOperation,
       HttpMethod.Put,
       issueLabelsPath(owner, name, number),
@@ -368,7 +372,7 @@ object IssueLabelApi:
       label: LabelRef,
       command: LabelRemoval,
   ): CodebergRequest =
-    IssueRequests.removeWithBody(
+    removeWithBody(
       RemoveFromIssueOperation,
       issueLabelsPath(owner, name, number) :+ label.pathSegment,
       IssueLabelsOptionDto.renderRemoval(command),
@@ -380,7 +384,7 @@ object IssueLabelApi:
       number: IssueNumber,
       command: LabelRemoval,
   ): CodebergRequest =
-    IssueRequests.removeWithBody(
+    removeWithBody(
       ClearOnIssueOperation,
       issueLabelsPath(owner, name, number),
       IssueLabelsOptionDto.renderRemoval(command),

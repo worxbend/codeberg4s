@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.issues.AddTrackedTime
 import com.worxbend.codeberg4s.issues.CreateMilestone
@@ -16,8 +18,6 @@ import com.worxbend.codeberg4s.issues.LabelRef
 import com.worxbend.codeberg4s.issues.LabelRemoval
 import com.worxbend.codeberg4s.issues.LabelUpdate
 import com.worxbend.codeberg4s.issues.ReactionContent
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 
 import munit.FunSuite
 

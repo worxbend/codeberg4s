@@ -1,16 +1,14 @@
 package com.worxbend.codeberg4s.notifications.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.notifications.NotificationSubject
 import com.worxbend.codeberg4s.notifications.NotificationThread
 import com.worxbend.codeberg4s.notifications.NotificationThreadId
-import com.worxbend.codeberg4s.repositories.Repository
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 
 /** Forgejo's `NotificationThread` model, field for field.
@@ -33,8 +31,8 @@ import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
   *
   * `repository` recurses into the repository group's own DTO rather than a reduced copy — `docs/LEDGER.md` gives
   * `Repository` to that group and calls a fork a review-blocking defect — and [[toDomainAll]] reuses that group's
-  * [[com.worxbend.codeberg4s.repositories.wire.Elements]] for the same reason. The dependency exists either way,
-  * because the embedded repository already brings it.
+  * [[com.worxbend.codeberg4s.codec.ArrayElements]] for the same reason. The dependency exists either way, because the
+  * embedded repository already brings it.
   */
 final case class NotificationThreadDto(
     id: Option[Long],
@@ -61,8 +59,8 @@ final case class NotificationThreadDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, NotificationThread] =
     for
       identifier <- Wire.validated(at, "id", id)(NotificationThreadId.from)
-      about      <- subjectAt(at)
-      repo       <- repositoryAt(at)
+      about      <- Wire.nested(at, "subject", subject)(_.toDomainAt(_))
+      repo       <- Wire.nested(at, "repository", repository)(_.toDomainAt(_))
     yield NotificationThread(
       id         = identifier,
       subject    = about,
@@ -76,12 +74,6 @@ final case class NotificationThreadDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, NotificationThread] =
     toDomainAt(JsonPath.Root)
-
-  private def subjectAt(at: JsonPath): Either[DecodeFailure, Option[NotificationSubject]] =
-    subject.fold(Right(None))(dto => dto.toDomainAt(at.field("subject")).map(Some.apply))
-
-  private def repositoryAt(at: JsonPath): Either[DecodeFailure, Option[Repository]] =
-    repository.fold(Right(None))(dto => dto.toDomainAt(at.field("repository")).map(Some.apply))
 
 object NotificationThreadDto:
 
@@ -114,4 +106,4 @@ object NotificationThreadDto:
       base: JsonPath,
       dtos: Vector[NotificationThreadDto],
   ): Either[DecodeFailure, Vector[NotificationThread]] =
-    Elements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

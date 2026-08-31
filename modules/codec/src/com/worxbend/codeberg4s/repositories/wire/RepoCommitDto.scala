@@ -3,9 +3,9 @@ package com.worxbend.codeberg4s.repositories.wire
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.CommitDetails
-import com.worxbend.codeberg4s.repositories.CommitRef
 
 /** Forgejo's `RepoCommit` — the `commit` object nested inside a [[CommitDto]].
   *
@@ -41,7 +41,7 @@ final case class RepoCommitDto(
     * is reported at `$.commit.tree.sha`.
     */
   def toDomainAt(at: JsonPath): Either[DecodeFailure, CommitDetails] =
-    treeAt(at).map: treeRef =>
+    Wire.nested(at, "tree", tree)(_.toDomainAt(_)).map: treeRef =>
       CommitDetails(
         message      = message,
         url          = url,
@@ -50,9 +50,6 @@ final case class RepoCommitDto(
         tree         = treeRef,
         verification = verification.map(_.toDomain),
       )
-
-  private def treeAt(at: JsonPath): Either[DecodeFailure, Option[CommitRef]] =
-    tree.fold(Right(None))(dto => dto.toDomainAt(at.field("tree")).map(Some.apply))
 
 object RepoCommitDto:
 

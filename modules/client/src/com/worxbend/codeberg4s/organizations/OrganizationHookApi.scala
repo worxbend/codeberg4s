@@ -4,6 +4,9 @@ import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.bodiless
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.organizations.wire.OrganizationQueries
@@ -239,19 +242,19 @@ object OrganizationHookApi:
       exec.attempt(rail.delete(org, id))
 
   private def listRequest(org: OrgName, params: PageParams): CodebergRequest =
-    OrganizationRequests.read(ListOperation, hooksPath(org), OrganizationQueries.paging(params))
+    read(ListOperation, hooksPath(org), OrganizationQueries.paging(params))
 
   private def getRequest(org: OrgName, id: HookId): CodebergRequest =
-    OrganizationRequests.read(GetOperation, hookPath(org, id), Nil)
+    read(GetOperation, hookPath(org, id), Nil)
 
   private def createRequest(org: OrgName, command: CreateHook): CodebergRequest =
-    OrganizationRequests.write(CreateOperation, HttpMethod.Post, hooksPath(org), HookOptionDto.renderCreate(command))
+    write(CreateOperation, HttpMethod.Post, hooksPath(org), HookOptionDto.renderCreate(command))
 
   private def editRequest(org: OrgName, id: HookId, command: EditHook): CodebergRequest =
-    OrganizationRequests.write(EditOperation, HttpMethod.Patch, hookPath(org, id), HookOptionDto.renderEdit(command))
+    write(EditOperation, HttpMethod.Patch, hookPath(org, id), HookOptionDto.renderEdit(command))
 
   private def deleteRequest(org: OrgName, id: HookId): CodebergRequest =
-    OrganizationRequests.bare(DeleteOperation, HttpMethod.Delete, hookPath(org, id))
+    bodiless(DeleteOperation, HttpMethod.Delete, hookPath(org, id))
 
   private def hooksPath(org: OrgName): List[String] =
     OrganizationRequests.organizationPath(org) :+ HooksSegment

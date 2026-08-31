@@ -2,6 +2,8 @@ package com.worxbend.codeberg4s.repositories.hooks
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
 import com.worxbend.codeberg4s.core.Exec
@@ -9,8 +11,6 @@ import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.hooks.wire.HookOptionDto
 import com.worxbend.codeberg4s.repositories.hooks.wire.HookQueries
 
@@ -94,8 +94,8 @@ final class RepositoryHookApi private[codeberg4s] (pipeline: ApiPipeline[Future]
     *
     * '''Failures.''' The group contract above.
     */
-  def list(owner: Owner, name: RepoName, page: PageParams): Future[Page[Webhook]] =
-    pipeline.callPage(RepositoryHookApi.listRequest(owner, name, page), page)(using RepositoryHookDecoders.webhooks)
+  def list(owner: Owner, name: RepoName, params: PageParams): Future[Page[Webhook]] =
+    pipeline.callPage(RepositoryHookApi.listRequest(owner, name, params), params)(using RepositoryHookDecoders.webhooks)
 
   /** Reads one webhook — `GET /repos/{owner}/{repo}/hooks/{id}`.
     *
@@ -275,8 +275,8 @@ object RepositoryHookApi:
   final class Attempt private[codeberg4s] (rail: RepositoryHookApi)(using exec: Exec[Future]):
 
     /** [[RepositoryHookApi.list]] with its failure as a value. */
-    def list(owner: Owner, name: RepoName, page: PageParams): Future[Either[CodebergError, Page[Webhook]]] =
-      exec.attempt(rail.list(owner, name, page))
+    def list(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Webhook]]] =
+      exec.attempt(rail.list(owner, name, params))
 
     /** The single-webhook read on [[RepositoryHookApi]], with its failure as a value. */
     def get(owner: Owner, name: RepoName, id: HookId): Future[Either[CodebergError, Webhook]] =
@@ -329,8 +329,8 @@ object RepositoryHookApi:
     def deleteGitHook(owner: Owner, name: RepoName, hook: GitHookName): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.deleteGitHook(owner, name, hook))
 
-  private def listRequest(owner: Owner, name: RepoName, page: PageParams): CodebergRequest =
-    HookRequests.read(ListOperation, hooksPath(owner, name), HookQueries.paging(page))
+  private def listRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
+    HookRequests.read(ListOperation, hooksPath(owner, name), HookQueries.paging(params))
 
   private def getRequest(owner: Owner, name: RepoName, id: HookId): CodebergRequest =
     HookRequests.read(GetOperation, hookPath(owner, name, id), Nil)

@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
+import com.worxbend.codeberg4s.codec.PagingQuery
+import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.issues.CommentQuery
 import com.worxbend.codeberg4s.issues.IssueQuery
 import com.worxbend.codeberg4s.issues.IssueSearchQuery
@@ -24,14 +26,14 @@ import com.worxbend.codeberg4s.paging.PageParams
   */
 private[codeberg4s] object IssueQueries:
 
-  /** The `page` and `limit` parameters for a paged listing.
+  /** The `page` and `limit` parameters of a paged listing.
     *
-    * '''Both, always.''' `golden/MANIFEST.md` records that `limit` alone is silently ignored on some Forgejo endpoints
-    * — `?limit=2` against `/forks` returned all 862 forks, and adding `page=1` made the limit take effect — so sending
-    * a limit without a page is how a client accidentally pulls an unbounded collection.
+    * Both are always sent, and the pair is rendered by [[com.worxbend.codeberg4s.codec.PagingQuery.window]], which
+    * carries the measurement behind that rule: a `limit` sent without a `page` is silently ignored by some Forgejo
+    * endpoints, which is how a client accidentally pulls an unbounded collection.
     */
   def paging(params: PageParams): List[(String, String)] =
-    List("page" -> params.page.value.toString, "limit" -> params.size.value.toString)
+    PagingQuery.window(params)
 
   /** The filters of `GET /repos/{owner}/{repo}/issues`, in the order the spec declares them.
     *
@@ -39,8 +41,8 @@ private[codeberg4s] object IssueQueries:
     * elements are [[com.worxbend.codeberg4s.issues.LabelName]] and [[com.worxbend.codeberg4s.issues.MilestoneTitle]],
     * which reject a comma at construction.
     *
-    * `since` and `before` are rendered by [[WireInstant]] in the RFC-3339 form Go parses — a malformed one comes back
-    * as a `422` carrying a raw Go parse error, per `docs/HAZARDS.md` §4.
+    * `since` and `before` are rendered by [[Timestamps.render]] in the RFC-3339 form Go parses — a malformed one comes
+    * back as a `422` carrying a raw Go parse error, per `docs/HAZARDS.md` §4.
     */
   def issues(query: IssueQuery): List[(String, String)] =
     List(
@@ -48,8 +50,8 @@ private[codeberg4s] object IssueQueries:
       Option.when(query.labels.nonEmpty)("labels" -> query.labels.map(_.value).mkString(",")),
       query.text.map(keywords => "q" -> keywords),
       Option.when(query.milestones.nonEmpty)("milestones" -> query.milestones.map(_.value).mkString(",")),
-      query.since.map(moment     => "since" -> WireInstant.render(moment)),
-      query.before.map(moment    => "before" -> WireInstant.render(moment)),
+      query.since.map(moment     => "since" -> Timestamps.render(moment)),
+      query.before.map(moment    => "before" -> Timestamps.render(moment)),
       query.createdBy.map(login  => "created_by" -> login),
       query.assignedBy.map(login => "assigned_by" -> login),
     ).flatten
@@ -70,8 +72,8 @@ private[codeberg4s] object IssueQueries:
     * only a `true` is emitted: sending `assigned=false` and omitting it ask the same question, and a query string
     * carrying five explicit falsehoods is harder to read for no gain.
     *
-    * `labels` and `milestones` are comma-joined, and `since` and `before` go through [[WireInstant]], exactly as in
-    * [[issues]].
+    * `labels` and `milestones` are comma-joined, and `since` and `before` go through [[Timestamps.render]], exactly as
+    * in [[issues]].
     */
   def search(query: IssueSearchQuery): List[(String, String)] =
     List(
@@ -81,8 +83,8 @@ private[codeberg4s] object IssueQueries:
       query.text.map(keywords     => "q" -> keywords),
       query.priorityRepoId.map(id => "priority_repo_id" -> id.toString),
       query.kind.map(which        => "type" -> which.wireValue),
-      query.since.map(moment      => "since" -> WireInstant.render(moment)),
-      query.before.map(moment     => "before" -> WireInstant.render(moment)),
+      query.since.map(moment      => "since" -> Timestamps.render(moment)),
+      query.before.map(moment     => "before" -> Timestamps.render(moment)),
       Option.when(query.assigned)("assigned"                -> "true"),
       Option.when(query.created)("created"                  -> "true"),
       Option.when(query.mentioned)("mentioned"              -> "true"),
@@ -100,16 +102,16 @@ private[codeberg4s] object IssueQueries:
     */
   def comments(query: CommentQuery): List[(String, String)] =
     List(
-      query.since.map(moment  => "since" -> WireInstant.render(moment)),
-      query.before.map(moment => "before" -> WireInstant.render(moment)),
+      query.since.map(moment  => "since" -> Timestamps.render(moment)),
+      query.before.map(moment => "before" -> Timestamps.render(moment)),
     ).flatten
 
   /** The filters of `GET /repos/{owner}/{repo}/issues/{index}/times`, in the order the spec declares them. */
   def trackedTimes(query: TrackedTimeQuery): List[(String, String)] =
     List(
       query.userName.map(login => "user" -> login),
-      query.since.map(moment   => "since" -> WireInstant.render(moment)),
-      query.before.map(moment  => "before" -> WireInstant.render(moment)),
+      query.since.map(moment   => "since" -> Timestamps.render(moment)),
+      query.before.map(moment  => "before" -> Timestamps.render(moment)),
     ).flatten
 
   /** The optional `name` and `updated_at` of an attachment upload.
@@ -121,5 +123,5 @@ private[codeberg4s] object IssueQueries:
   def attachmentUpload(upload: UploadAttachment): List[(String, String)] =
     List(
       upload.storedName.map(stored => "name" -> stored),
-      upload.updatedAt.map(moment  => "updated_at" -> WireInstant.render(moment)),
+      upload.updatedAt.map(moment  => "updated_at" -> Timestamps.render(moment)),
     ).flatten

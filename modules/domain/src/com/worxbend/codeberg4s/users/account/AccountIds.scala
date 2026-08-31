@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.users.account
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
 
 /** The instance-wide identifier of one OAuth2 application — the `{id}` of `/user/applications/oauth2/{id}`.
@@ -17,16 +18,13 @@ opaque type OAuth2ApplicationId = Long
 
 object OAuth2ApplicationId:
 
-  private val MinValue: Long = 1L
-
   /** Parses an application identifier. Rejects anything below `1`.
     *
     * @return
     *   the identifier, or a [[ValidationError]] on the `"oauth2ApplicationId"` field
     */
   def from(value: Long): Either[ValidationError, OAuth2ApplicationId] =
-    if value < MinValue then Left(ValidationError("oauth2ApplicationId", s"must be at least $MinValue"))
-    else Right(value)
+    PositiveId.from("oauth2ApplicationId", value)
 
   extension (id: OAuth2ApplicationId)
 

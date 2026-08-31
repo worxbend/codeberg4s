@@ -1,11 +1,11 @@
 package com.worxbend.codeberg4s.users.account.wire
 
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.paging.PageNumber
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.paging.PageSize
 import com.worxbend.codeberg4s.repositories.BranchName
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.users.account.AvatarImage
 import com.worxbend.codeberg4s.users.account.CreateRepository
 import com.worxbend.codeberg4s.users.account.EmailAddress

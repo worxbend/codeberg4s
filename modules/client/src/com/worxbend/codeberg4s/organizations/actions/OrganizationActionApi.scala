@@ -4,8 +4,10 @@ import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.organizations.OrgName
 import com.worxbend.codeberg4s.paging.Page
@@ -131,8 +133,8 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     *   is always sent, so what a listing contains is a property of the request rather than of the Forgejo version
     *   answering it
     */
-  def listRunners(org: OrgName, visibility: RunnerVisibility, page: PageParams): Future[Page[ActionRunner]] =
-    pipeline.callPage(OrganizationActionApi.listRunnersRequest(org, visibility, page), page)(using
+  def listRunners(org: OrgName, visibility: RunnerVisibility, params: PageParams): Future[Page[ActionRunner]] =
+    pipeline.callPage(OrganizationActionApi.listRunnersRequest(org, visibility, params), params)(using
       OrganizationActionDecoders.runners)
 
   /** Reads one of an organisation's runners — `GET /orgs/{org}/actions/runners/{runner_id}`.
@@ -229,8 +231,8 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     *
     * '''Failures.''' The group contract above.
     */
-  def listSecrets(org: OrgName, page: PageParams): Future[Page[ActionSecret]] =
-    pipeline.callPage(OrganizationActionApi.listSecretsRequest(org, page), page)(using
+  def listSecrets(org: OrgName, params: PageParams): Future[Page[ActionSecret]] =
+    pipeline.callPage(OrganizationActionApi.listSecretsRequest(org, params), params)(using
       OrganizationActionDecoders.secrets)
 
   /** Creates or replaces an organisation secret — `PUT /orgs/{org}/actions/secrets/{secretname}`.
@@ -288,8 +290,8 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     *
     * '''Failures.''' The group contract above.
     */
-  def listVariables(org: OrgName, page: PageParams): Future[Page[ActionVariable]] =
-    pipeline.callPage(OrganizationActionApi.listVariablesRequest(org, page), page)(using
+  def listVariables(org: OrgName, params: PageParams): Future[Page[ActionVariable]] =
+    pipeline.callPage(OrganizationActionApi.listVariablesRequest(org, params), params)(using
       OrganizationActionDecoders.variables)
 
   /** Reads one organisation variable — `GET /orgs/{org}/actions/variables/{variablename}`.
@@ -409,9 +411,9 @@ object OrganizationActionApi:
     def listRunners(
         org: OrgName,
         visibility: RunnerVisibility,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[ActionRunner]]] =
-      exec.attempt(rail.listRunners(org, visibility, page))
+      exec.attempt(rail.listRunners(org, visibility, params))
 
     /** The single-runner read on [[OrganizationActionApi]], with its failure as a value. */
     def runner(org: OrgName, id: RunnerId): Future[Either[CodebergError, ActionRunner]] =
@@ -437,8 +439,8 @@ object OrganizationActionApi:
       exec.attempt(rail.searchRunnerJobs(org, labels))
 
     /** [[OrganizationActionApi.listSecrets]] with its failure as a value. */
-    def listSecrets(org: OrgName, page: PageParams): Future[Either[CodebergError, Page[ActionSecret]]] =
-      exec.attempt(rail.listSecrets(org, page))
+    def listSecrets(org: OrgName, params: PageParams): Future[Either[CodebergError, Page[ActionSecret]]] =
+      exec.attempt(rail.listSecrets(org, params))
 
     /** [[OrganizationActionApi.setSecret]] with its failure as a value. */
     def setSecret(org: OrgName, secret: SecretName, value: SecretValue): Future[Either[CodebergError, Unit]] =
@@ -449,8 +451,8 @@ object OrganizationActionApi:
       exec.attempt(rail.deleteSecret(org, secret))
 
     /** [[OrganizationActionApi.listVariables]] with its failure as a value. */
-    def listVariables(org: OrgName, page: PageParams): Future[Either[CodebergError, Page[ActionVariable]]] =
-      exec.attempt(rail.listVariables(org, page))
+    def listVariables(org: OrgName, params: PageParams): Future[Either[CodebergError, Page[ActionVariable]]] =
+      exec.attempt(rail.listVariables(org, params))
 
     /** The single-variable read on [[OrganizationActionApi]], with its failure as a value. */
     def variable(org: OrgName, name: VariableName): Future[Either[CodebergError, ActionVariable]] =
@@ -485,8 +487,8 @@ object OrganizationActionApi:
   private[actions] def updateVariableEligibility(command: UpdateVariable): RetryEligibility =
     if command.renamedTo.isEmpty then RetryEligibility.AlwaysRetry else RetryEligibility.Never
 
-  private def listRunnersRequest(org: OrgName, visibility: RunnerVisibility, page: PageParams): CodebergRequest =
-    read(ListRunnersOperation, runnersPath(org), ActionQueries.runners(visibility) ++ ActionQueries.paging(page))
+  private def listRunnersRequest(org: OrgName, visibility: RunnerVisibility, params: PageParams): CodebergRequest =
+    read(ListRunnersOperation, runnersPath(org), ActionQueries.runners(visibility) ++ ActionQueries.paging(params))
 
   private def runnerRequest(org: OrgName, id: RunnerId): CodebergRequest =
     read(GetRunnerOperation, runnerPath(org, id), Nil)
@@ -503,8 +505,8 @@ object OrganizationActionApi:
   private def searchRunnerJobsRequest(org: OrgName, labels: Vector[RunnerLabel]): CodebergRequest =
     read(SearchRunnerJobsOperation, runnersPath(org) :+ "jobs", ActionQueries.runnerJobs(labels))
 
-  private def listSecretsRequest(org: OrgName, page: PageParams): CodebergRequest =
-    read(ListSecretsOperation, secretsPath(org), ActionQueries.paging(page))
+  private def listSecretsRequest(org: OrgName, params: PageParams): CodebergRequest =
+    read(ListSecretsOperation, secretsPath(org), ActionQueries.paging(params))
 
   private def setSecretRequest(org: OrgName, secret: SecretName, value: SecretValue): CodebergRequest =
     write(SetSecretOperation, HttpMethod.Put, secretPath(org, secret), SecretOptionDto.render(value))
@@ -512,8 +514,8 @@ object OrganizationActionApi:
   private def deleteSecretRequest(org: OrgName, secret: SecretName): CodebergRequest =
     remove(DeleteSecretOperation, secretPath(org, secret))
 
-  private def listVariablesRequest(org: OrgName, page: PageParams): CodebergRequest =
-    read(ListVariablesOperation, variablesPath(org), ActionQueries.paging(page))
+  private def listVariablesRequest(org: OrgName, params: PageParams): CodebergRequest =
+    read(ListVariablesOperation, variablesPath(org), ActionQueries.paging(params))
 
   private def variableRequest(org: OrgName, name: VariableName): CodebergRequest =
     read(GetVariableOperation, variablePath(org, name), Nil)
@@ -536,36 +538,6 @@ object OrganizationActionApi:
 
   private def deleteVariableRequest(org: OrgName, name: VariableName): CodebergRequest =
     remove(DeleteVariableOperation, variablePath(org, name))
-
-  private def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = None,
-    )
-
-  private def write(operation: String, method: HttpMethod, path: List[String], body: String): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Json(body)),
-    )
-
-  private def remove(operation: String, path: List[String]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Delete,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
-    )
 
   private def actionsPath(org: OrgName): List[String] =
     List("orgs", org.value, "actions")

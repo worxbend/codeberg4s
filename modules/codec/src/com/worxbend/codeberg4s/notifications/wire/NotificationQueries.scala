@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.notifications.wire
 
-import com.worxbend.codeberg4s.issues.wire.WireInstant
+import com.worxbend.codeberg4s.codec.PagingQuery
+import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.notifications.NotificationQuery
 import com.worxbend.codeberg4s.paging.PageParams
 
@@ -25,18 +26,18 @@ import com.worxbend.codeberg4s.paging.PageParams
   */
 private[codeberg4s] object NotificationQueries:
 
-  /** The `page` and `limit` parameters for a paged listing.
+  /** The `page` and `limit` parameters of a paged listing.
     *
-    * '''Both, always.''' `golden/MANIFEST.md` records that `limit` alone is silently ignored on some Forgejo endpoints
-    * — `?limit=2` against `/forks` returned all 862 forks, and adding `page=1` made the limit take effect — so sending
-    * a limit without a page is how a client accidentally pulls an unbounded collection.
+    * Both are always sent, and the pair is rendered by [[com.worxbend.codeberg4s.codec.PagingQuery.window]], which
+    * carries the measurement behind that rule: a `limit` sent without a `page` is silently ignored by some Forgejo
+    * endpoints, which is how a client accidentally pulls an unbounded collection.
     */
   def paging(params: PageParams): List[(String, String)] =
-    List("page" -> params.page.value.toString, "limit" -> params.size.value.toString)
+    PagingQuery.window(params)
 
   /** The filters of both notification listings, in the order the spec declares them.
     *
-    * `since` and `before` are rendered by [[com.worxbend.codeberg4s.issues.wire.WireInstant]] in the RFC-3339 form Go
+    * `since` and `before` are rendered by [[com.worxbend.codeberg4s.codec.Timestamps.render]] in the RFC-3339 form Go
     * parses — reused rather than copied, because a second timestamp renderer that drifted from the first would show up
     * as a `422` carrying a raw Go parse error, exactly as `docs/HAZARDS.md` §4 captured for `?since=notadate`.
     */
@@ -45,6 +46,6 @@ private[codeberg4s] object NotificationQueries:
       Option.when(query.includeRead)("all" -> "true").toList,
       query.statuses.map(status => "status-types" -> status.wireValue).toList,
       query.subjects.map(subject => "subject-type" -> subject.wireValue).toList,
-      query.since.map(moment => "since" -> WireInstant.render(moment)).toList,
-      query.before.map(moment => "before" -> WireInstant.render(moment)).toList,
+      query.since.map(moment => "since" -> Timestamps.render(moment)).toList,
+      query.before.map(moment => "before" -> Timestamps.render(moment)).toList,
     ).flatten

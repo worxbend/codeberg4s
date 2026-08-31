@@ -1,17 +1,16 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.issues.wire.WireElements
 import com.worxbend.codeberg4s.pulls.ReviewComment
 import com.worxbend.codeberg4s.pulls.ReviewCommentId
 import com.worxbend.codeberg4s.pulls.ReviewId
 import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 
 /** Forgejo's `PullReviewComment` model, field for field.
@@ -27,9 +26,9 @@ import com.worxbend.codeberg4s.users.wire.UserDto
   *
   * ==The two commit ids are strict, the review id is not==
   *
-  * `commit_id` and `original_commit_id` go through [[PullWire.optional]]: legitimately absent, and a
-  * present-but-unparseable object id is reported at its own path rather than dropped, for the reason [[PullWire]]
-  * gives.
+  * `commit_id` and `original_commit_id` go through [[com.worxbend.codeberg4s.codec.Wire.optional]]: legitimately
+  * absent, and a present-but-unparseable object id is reported at its own path rather than dropped, for the reason
+  * [[com.worxbend.codeberg4s.codec.Wire.optional]] gives.
   *
   * `pull_request_review_id` is deliberately treated differently. Forgejo's Go struct types it as a plain `int64` with
   * no `omitempty`, so a comment that is not yet attached to a submitted review serialises it as `0` — which
@@ -64,11 +63,11 @@ final case class ReviewCommentDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, ReviewComment] =
     for
       identifier <- Wire.validated(at, "id", id)(ReviewCommentId.from)
-      review     <- PullWire.optional(at, "pull_request_review_id", pullRequestReviewId.filter(_ > 0L))(ReviewId.from)
-      pinned     <- PullWire.optional(at, "commit_id", commitId)(CommitSha.from)
-      original   <- PullWire.optional(at, "original_commit_id", originalCommitId)(CommitSha.from)
-      author     <- userAt(at, "user", user)
-      resolvedBy <- userAt(at, "resolver", resolver)
+      review     <- Wire.optional(at, "pull_request_review_id", pullRequestReviewId.filter(_ > 0L))(ReviewId.from)
+      pinned     <- Wire.optional(at, "commit_id", commitId)(CommitSha.from)
+      original   <- Wire.optional(at, "original_commit_id", originalCommitId)(CommitSha.from)
+      author     <- Wire.nested(at, "user", user)(_.toDomainAt(_))
+      resolvedBy <- Wire.nested(at, "resolver", resolver)(_.toDomainAt(_))
     yield ReviewComment(
       id               = identifier,
       reviewId         = review,
@@ -91,9 +90,6 @@ final case class ReviewCommentDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, ReviewComment] =
     toDomainAt(JsonPath.Root)
-
-  private def userAt(at: JsonPath, field: String, dto: Option[UserDto]): Either[DecodeFailure, Option[User]] =
-    dto.fold(Right(None))(present => present.toDomainAt(at.field(field)).map(Some.apply))
 
 object ReviewCommentDto:
 
@@ -131,4 +127,4 @@ object ReviewCommentDto:
 
   /** Converts a decoded array of review comments, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[ReviewCommentDto]): Either[DecodeFailure, Vector[ReviewComment]] =
-    WireElements.at(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

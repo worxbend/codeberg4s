@@ -4,11 +4,11 @@ import com.worxbend.codeberg4s.CallContext
 import com.worxbend.codeberg4s.CodebergClient
 import com.worxbend.codeberg4s.CodebergConfig
 import com.worxbend.codeberg4s.CodebergError
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.core.Telemetry
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext

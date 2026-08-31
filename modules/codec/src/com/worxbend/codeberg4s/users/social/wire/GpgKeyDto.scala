@@ -1,12 +1,12 @@
 package com.worxbend.codeberg4s.users.social.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.users.social.GpgKey
 import com.worxbend.codeberg4s.users.social.GpgKeyEmail
 import com.worxbend.codeberg4s.users.social.GpgKeyId
@@ -131,15 +131,15 @@ final case class GpgKeyDto(
     *
     * '''`emails` and `subkeys` are not lenient.''' Each element is converted at its own path, so a failure says
     * `$.emails[1].email` or `$.subkeys[0].id`, and one bad element fails the key — the contract every list in this
-    * library has, for the reason [[com.worxbend.codeberg4s.repositories.wire.Elements]] states.
+    * library has, for the reason [[com.worxbend.codeberg4s.codec.ArrayElements]] states.
     *
     * Every flag absent reads as `false`, which grants the fewest capabilities.
     */
   def toDomainAt(at: JsonPath): Either[DecodeFailure, GpgKey] =
     for
       identifier <- Wire.validated(at, "id", id)(GpgKeyId.from)
-      addresses  <- Elements.convert(at.field("emails"), emails)((dto, path) => dto.toDomainAt(path))
-      children   <- Elements.convert(at.field("subkeys"), subkeys)((dto, path) => dto.toDomainAt(path))
+      addresses  <- ArrayElements.convert(at.field("emails"), emails)((dto, path) => dto.toDomainAt(path))
+      children   <- ArrayElements.convert(at.field("subkeys"), subkeys)((dto, path) => dto.toDomainAt(path))
     yield GpgKey(
       id                = identifier,
       keyId             = keyId.flatMap(value => OpenPgpKeyId.from(value).toOption),
@@ -191,4 +191,4 @@ object GpgKeyDto:
 
   /** Converts a decoded array of keys, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[GpgKeyDto]): Either[DecodeFailure, Vector[GpgKey]] =
-    Elements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

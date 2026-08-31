@@ -2,16 +2,19 @@ package com.worxbend.codeberg4s.issues
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.issues.wire.AddTimeOptionDto
 import com.worxbend.codeberg4s.issues.wire.IssueQueries
 import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 
 import scala.concurrent.Future
 
@@ -145,9 +148,10 @@ final class IssueTimeApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usi
       name: RepoName,
       number: IssueNumber,
       query: TrackedTimeQuery,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[TrackedTime]] =
-    pipeline.callPage(IssueTimeApi.listRequest(owner, name, number, query, page), page)(using IssueDecoders.trackedTimes)
+    pipeline.callPage(IssueTimeApi.listRequest(owner, name, number, query, params), params)(using
+      IssueDecoders.trackedTimes)
 
   /** Files worked time against an issue — `POST /repos/{owner}/{repo}/issues/{index}/times`.
     *
@@ -249,9 +253,9 @@ object IssueTimeApi:
         name: RepoName,
         number: IssueNumber,
         query: TrackedTimeQuery,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[TrackedTime]]] =
-      exec.attempt(rail.list(owner, name, number, query, page))
+      exec.attempt(rail.list(owner, name, number, query, params))
 
     /** [[IssueTimeApi.add]] with its failure as a value. */
     def add(
@@ -309,12 +313,12 @@ object IssueTimeApi:
       name: RepoName,
       number: IssueNumber,
       query: TrackedTimeQuery,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    IssueRequests.read(
+    read(
       ListOperation,
       timesPath(owner, name, number),
-      IssueQueries.trackedTimes(query) ++ IssueQueries.paging(page),
+      IssueQueries.trackedTimes(query) ++ IssueQueries.paging(params),
     )
 
   private def addRequest(
@@ -323,7 +327,7 @@ object IssueTimeApi:
       number: IssueNumber,
       command: AddTrackedTime,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       AddOperation,
       HttpMethod.Post,
       timesPath(owner, name, number),
@@ -336,10 +340,10 @@ object IssueTimeApi:
       number: IssueNumber,
       id: TrackedTimeId,
   ): CodebergRequest =
-    IssueRequests.remove(DeleteOperation, timesPath(owner, name, number) :+ id.value.toString)
+    remove(DeleteOperation, timesPath(owner, name, number) :+ id.value.toString)
 
   private def resetRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
-    IssueRequests.remove(ResetOperation, timesPath(owner, name, number))
+    remove(ResetOperation, timesPath(owner, name, number))
 
   private def timesPath(owner: Owner, name: RepoName, number: IssueNumber): List[String] =
     IssueRequests.issuePath(owner, name, number) :+ "times"

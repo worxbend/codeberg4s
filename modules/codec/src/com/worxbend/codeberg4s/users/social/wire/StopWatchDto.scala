@@ -1,15 +1,15 @@
 package com.worxbend.codeberg4s.users.social.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.RepoSlug
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.users.social.StopWatch
 
 import scala.concurrent.duration.DurationLong
@@ -69,8 +69,8 @@ final case class StopWatchDto(
     * it is what keeps a page of stopwatches from failing over a field the spec never promised.
     *
     * '''The repository is lenient.''' `repo_owner_name` and `repo_name` go through
-    * [[com.worxbend.codeberg4s.repositories.Owner.from]] and [[com.worxbend.codeberg4s.repositories.RepoName.from]],
-    * and a pair either of them rejects becomes `None` rather than failing the entry — the same trade
+    * [[com.worxbend.codeberg4s.Owner.from]] and [[com.worxbend.codeberg4s.RepoName.from]], and a pair either of them
+    * rejects becomes `None` rather than failing the entry — the same trade
     * [[com.worxbend.codeberg4s.issues.wire.RepositoryMetaDto.toSlug]] makes. The issue number survives, which is the
     * part a caller acts on.
     */
@@ -119,7 +119,7 @@ object StopWatchDto:
 
   /** Converts a decoded array of stopwatches, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[StopWatchDto]): Either[DecodeFailure, Vector[StopWatch]] =
-    Elements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
 
   /** The wire's seconds as a duration. One line, in one place, so the unit is never re-derived. */
   def asDuration(seconds: Long): FiniteDuration =

@@ -2,18 +2,22 @@ package com.worxbend.codeberg4s.repositories.publishing
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Owner
 import com.worxbend.codeberg4s.repositories.Release
 import com.worxbend.codeberg4s.repositories.ReleaseAsset
 import com.worxbend.codeberg4s.repositories.ReleaseId
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.RepositoryDecoders
 import com.worxbend.codeberg4s.repositories.Tag
@@ -59,9 +63,9 @@ import scala.concurrent.Future
   *   - [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] when a retryable failure outlived the policy.
   *
   * [[com.worxbend.codeberg4s.CodebergError.Validation]] is '''not''' produced by any operation here. Every argument is
-  * an already-validated type — [[com.worxbend.codeberg4s.repositories.Owner]],
-  * [[com.worxbend.codeberg4s.repositories.TagName]], [[Topic]], [[AssetId]] — so a value that would forge a path is
-  * rejected by its own smart constructor before a client is ever involved.
+  * an already-validated type — [[com.worxbend.codeberg4s.Owner]], [[com.worxbend.codeberg4s.repositories.TagName]],
+  * [[Topic]], [[AssetId]] — so a value that would forge a path is rejected by its own smart constructor before a client
+  * is ever involved.
   *
   * ==Retries==
   *
@@ -113,7 +117,7 @@ final class RepositoryPublishingApi private[codeberg4s] (pipeline: ApiPipeline[F
   /** Reads the newest published release — `GET /repos/{owner}/{repo}/releases/latest`.
     *
     * '''"Latest" is Forgejo's answer, not this library's.''' It excludes drafts and prereleases, so a repository whose
-    * only releases are prereleases answers `404` here while `client.repos.listReleases` returns them. That is the
+    * only releases are prereleases answers `404` here while `client.repos.releases` returns them. That is the
     * endpoint's own contract and is not worked around.
     *
     * '''Failures.''' The group contract above; `404` additionally covers "the repository exists and has no release that
@@ -200,8 +204,8 @@ final class RepositoryPublishingApi private[codeberg4s] (pipeline: ApiPipeline[F
     *
     * '''Failures.''' The group contract above.
     */
-  def listAssets(owner: Owner, name: RepoName, id: ReleaseId, page: PageParams): Future[Page[ReleaseAsset]] =
-    pipeline.callPage(RepositoryPublishingApi.listAssetsRequest(owner, name, id, page), page)(using
+  def listAssets(owner: Owner, name: RepoName, id: ReleaseId, params: PageParams): Future[Page[ReleaseAsset]] =
+    pipeline.callPage(RepositoryPublishingApi.listAssetsRequest(owner, name, id, params), params)(using
       PublishingDecoders.assets)
 
   /** Uploads a file and attaches it to a release — `POST /repos/{owner}/{repo}/releases/{id}/assets`.
@@ -289,8 +293,8 @@ final class RepositoryPublishingApi private[codeberg4s] (pipeline: ApiPipeline[F
 
   /** Reads one tag — `GET /repos/{owner}/{repo}/tags/{tag}`.
     *
-    * The same `Tag` model `client.repos.listTags` returns, one at a time. The tag reaches the wire as several path
-    * segments when it contains `/`, as in [[releaseByTag]].
+    * The same `Tag` model `client.repos.tags` returns, one at a time. The tag reaches the wire as several path segments
+    * when it contains `/`, as in [[releaseByTag]].
     *
     * '''Failures.''' The group contract above.
     */
@@ -505,9 +509,9 @@ object RepositoryPublishingApi:
         owner: Owner,
         name: RepoName,
         id: ReleaseId,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[ReleaseAsset]]] =
-      exec.attempt(rail.listAssets(owner, name, id, page))
+      exec.attempt(rail.listAssets(owner, name, id, params))
 
     /** [[RepositoryPublishingApi.uploadAsset]] with its failure as a value. */
     def uploadAsset(
@@ -611,9 +615,9 @@ object RepositoryPublishingApi:
       owner: Owner,
       name: RepoName,
       id: ReleaseId,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    read(ListAssetsOperation, assetsPath(owner, name, id), window(page))
+    read(ListAssetsOperation, assetsPath(owner, name, id), window(params))
 
   private def uploadAssetRequest(
       owner: Owner,
@@ -695,40 +699,10 @@ object RepositoryPublishingApi:
       GenerateRepoOptionDto.render(command),
     )
 
-  private def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = None,
-    )
-
-  private def write(operation: String, method: HttpMethod, path: List[String], body: String): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Json(body)),
-    )
-
   /** A `DELETE` with no body at all, which is what every deletion in this group is. */
-  private def remove(operation: String, path: List[String]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Delete,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
-    )
-
-  /** `page` and `limit`, always both — `limit` alone is silently ignored by some Forgejo endpoints. */
+  /** The `page` and `limit` window, rendered by [[com.worxbend.codeberg4s.codec.PagingQuery.window]]. */
   private def window(params: PageParams): List[(String, String)] =
-    List("page" -> params.page.value.toString, "limit" -> params.size.value.toString)
+    PagingQuery.window(params)
 
   private def releasesPath(owner: Owner, name: RepoName): List[String] =
     List("repos", owner.value, name.value, "releases")

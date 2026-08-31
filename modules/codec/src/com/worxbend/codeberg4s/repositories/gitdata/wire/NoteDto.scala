@@ -3,8 +3,8 @@ package com.worxbend.codeberg4s.repositories.gitdata.wire
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.Commit
 import com.worxbend.codeberg4s.repositories.gitdata.GitNote
 import com.worxbend.codeberg4s.repositories.wire.CommitDto
 
@@ -27,14 +27,11 @@ final case class NoteDto(message: Option[String], commit: Option[CommitDto]):
     * `commit`'s own path and does fail the conversion, because a commit that cannot be identified is not a commit.
     */
   def toDomainAt(at: JsonPath): Either[DecodeFailure, GitNote] =
-    commitAt(at).map(target => GitNote(message = message, commit = target))
+    Wire.nested(at, "commit", commit)(_.toDomainAt(_)).map(target => GitNote(message = message, commit = target))
 
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, GitNote] =
     toDomainAt(JsonPath.Root)
-
-  private def commitAt(at: JsonPath): Either[DecodeFailure, Option[Commit]] =
-    commit.fold(Right(None))(dto => dto.toDomainAt(at.field("commit")).map(Some.apply))
 
 object NoteDto:
 

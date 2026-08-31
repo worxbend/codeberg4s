@@ -1,6 +1,5 @@
 package com.worxbend.codeberg4s.organizations.actions
 
-import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
@@ -44,11 +43,11 @@ private[actions] object OrganizationActionDecoders:
 
   /** One runner object. */
   val runner: Decode[ActionRunner] =
-    WireDecode.of(Json.decoder[ActionRunnerDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ActionRunnerDto])(_.toDomain)
 
   /** A bare array of runner objects, as the organisation's runner listing returns it. */
   val runners: Decode[Vector[ActionRunner]] =
-    WireDecode.of(Json.decoder[Vector[ActionRunnerDto]])(dtos => ActionRunnerDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionRunnerDto]])(ActionRunnerDto.toDomainAll)
 
   /** The `{id, uuid, token}` object a runner registration returns, whose `token` is a live credential.
     *
@@ -57,26 +56,26 @@ private[actions] object OrganizationActionDecoders:
     * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]].
     */
   val registeredRunner: Decode[RegisteredRunner] =
-    Decode.sensitive(WireDecode.of(Json.decoder[RegisteredRunnerDto])(_.toDomain))
+    Decode.sensitive(WireDecode.single(Json.decoder[RegisteredRunnerDto])(_.toDomain))
 
   /** The one-key object the registration-token endpoint returns — the same credential with nothing around it, and
     * [[com.worxbend.codeberg4s.core.Decode.sensitive]] for the same reason as [[registeredRunner]].
     */
   val registrationToken: Decode[RunnerRegistrationToken] =
-    Decode.sensitive(WireDecode.of(Json.decoder[RegistrationTokenDto])(_.toDomain))
+    Decode.sensitive(WireDecode.single(Json.decoder[RegistrationTokenDto])(_.toDomain))
 
   /** A bare array of job objects, as the runner job search returns it. */
   val jobs: Decode[Vector[ActionRunJob]] =
-    WireDecode.of(Json.decoder[Vector[ActionRunJobDto]])(dtos => ActionRunJobDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionRunJobDto]])(ActionRunJobDto.toDomainAll)
 
   /** A bare array of secret objects — names and timestamps, never values. */
   val secrets: Decode[Vector[ActionSecret]] =
-    WireDecode.of(Json.decoder[Vector[ActionSecretDto]])(dtos => ActionSecretDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionSecretDto]])(ActionSecretDto.toDomainAll)
 
   /** One variable object. */
   val variable: Decode[ActionVariable] =
-    WireDecode.of(Json.decoder[ActionVariableDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ActionVariableDto])(_.toDomain)
 
   /** A bare array of variable objects. */
   val variables: Decode[Vector[ActionVariable]] =
-    WireDecode.of(Json.decoder[Vector[ActionVariableDto]])(dtos => ActionVariableDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionVariableDto]])(ActionVariableDto.toDomainAll)

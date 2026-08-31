@@ -2,11 +2,11 @@ package com.worxbend.codeberg4s.miscellaneous
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
-import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RequestBody
@@ -545,34 +545,34 @@ object MiscellaneousApi:
     settingsRequest(UiSettingsOperation, "ui")
 
   private val SigningKeyRequest: CodebergRequest =
-    read(SigningKeyOperation, List("signing-key.gpg"))
+    read(SigningKeyOperation, List("signing-key.gpg"), Nil)
 
   private val SshSigningKeyRequest: CodebergRequest =
-    read(SshSigningKeyOperation, List("signing-key.ssh"))
+    read(SshSigningKeyOperation, List("signing-key.ssh"), Nil)
 
   private val GitignoreTemplatesRequest: CodebergRequest =
-    read(GitignoreTemplatesOperation, GitignoreTemplatesPath)
+    read(GitignoreTemplatesOperation, GitignoreTemplatesPath, Nil)
 
   private val LabelTemplatesRequest: CodebergRequest =
-    read(LabelTemplatesOperation, LabelTemplatesPath)
+    read(LabelTemplatesOperation, LabelTemplatesPath, Nil)
 
   private val LicenseTemplatesRequest: CodebergRequest =
-    read(LicenseTemplatesOperation, LicensesPath)
+    read(LicenseTemplatesOperation, LicensesPath, Nil)
 
   private val NodeInfoRequest: CodebergRequest =
-    read(NodeInfoOperation, List("nodeinfo"))
+    read(NodeInfoOperation, List("nodeinfo"), Nil)
 
   private val ActionsRunRequest: CodebergRequest =
-    read(ActionsRunOperation, List("actions", "run"))
+    read(ActionsRunOperation, List("actions", "run"), Nil)
 
   private val ApiSettingsDecoder: Decode[ServerApiSettings] =
-    WireDecode.of(Json.decoder[ServerApiSettingsDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ServerApiSettingsDto])(_.toDomain)
 
   private val RepositorySettingsDecoder: Decode[ServerRepositorySettings] =
-    WireDecode.of(Json.decoder[ServerRepositorySettingsDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ServerRepositorySettingsDto])(_.toDomain)
 
   private val AttachmentSettingsDecoder: Decode[ServerAttachmentSettings] =
-    WireDecode.of(Json.decoder[ServerAttachmentSettingsDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ServerAttachmentSettingsDto])(_.toDomain)
 
   private val SigningKeyDecoder: Decode[Option[SigningKey]] =
     PlainText.decodedAs(SigningKey.from)
@@ -581,7 +581,7 @@ object MiscellaneousApi:
     PlainText.decodedAs(RenderedMarkdown.apply)
 
   private val UiSettingsDecoder: Decode[ServerUiSettings] =
-    WireDecode.of(Json.decoder[ServerUiSettingsDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ServerUiSettingsDto])(_.toDomain)
 
   private val SshSigningKeyDecoder: Decode[Option[SshSigningKey]] =
     PlainText.decodedAs(SshSigningKey.from)
@@ -590,41 +590,39 @@ object MiscellaneousApi:
     * [[com.worxbend.codeberg4s.miscellaneous.wire.TemplateNamesDto]].
     */
   private val TemplateNamesDecoder: Decode[Vector[TemplateName]] =
-    WireDecode.of(Json.decoder[Vector[String]])(names => TemplateNamesDto.toDomainAll(JsonPath.Root, names))
+    WireDecode.vector(Json.decoder[Vector[String]])(TemplateNamesDto.toDomainAll)
 
   private val GitignoreTemplateDecoder: Decode[GitignoreTemplate] =
-    WireDecode.of(Json.decoder[GitignoreTemplateDto])(_.toDomain)
+    WireDecode.single(Json.decoder[GitignoreTemplateDto])(_.toDomain)
 
   private val TemplateLabelsDecoder: Decode[Vector[TemplateLabel]] =
-    WireDecode.of(Json.decoder[Vector[TemplateLabelDto]])(dtos => TemplateLabelDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[TemplateLabelDto]])(TemplateLabelDto.toDomainAll)
 
   private val LicenseTemplatesDecoder: Decode[Vector[LicenseTemplateSummary]] =
-    WireDecode.of(Json.decoder[Vector[LicenseTemplateSummaryDto]]): dtos =>
-      LicenseTemplateSummaryDto.toDomainAll(JsonPath.Root, dtos)
-
-  private val LicenseTemplateDecoder: Decode[LicenseTemplate] =
-    WireDecode.of(Json.decoder[LicenseTemplateDto])(_.toDomain)
+    WireDecode.vector(Json.decoder[Vector[LicenseTemplateSummaryDto]])(LicenseTemplateSummaryDto.toDomainAll)
+  private val LicenseTemplateDecoder: Decode[LicenseTemplate]                 =
+    WireDecode.single(Json.decoder[LicenseTemplateDto])(_.toDomain)
 
   private val NodeInfoDecoder: Decode[NodeInfo] =
-    WireDecode.of(Json.decoder[NodeInfoDto])(_.toDomain)
+    WireDecode.single(Json.decoder[NodeInfoDto])(_.toDomain)
 
   /** The run model the repository Actions group owns, reused verbatim: `GET /actions/run` answers the same `ActionRun`
     * object, so it is read by the same DTO rather than by a second copy of it.
     */
   private val ActionsRunDecoder: Decode[ActionRun] =
-    WireDecode.of(Json.decoder[ActionRunDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ActionRunDto])(_.toDomain)
 
   private def settingsRequest(operation: String, area: String): CodebergRequest =
-    read(operation, List("settings", area))
+    read(operation, List("settings", area), Nil)
 
   private def gitignoreTemplateRequest(name: TemplateName): CodebergRequest =
-    read(GitignoreTemplateOperation, GitignoreTemplatesPath :+ name.value)
+    read(GitignoreTemplateOperation, GitignoreTemplatesPath :+ name.value, Nil)
 
   private def labelTemplateRequest(name: TemplateName): CodebergRequest =
-    read(LabelTemplateOperation, LabelTemplatesPath :+ name.value)
+    read(LabelTemplateOperation, LabelTemplatesPath :+ name.value, Nil)
 
   private def licenseTemplateRequest(name: TemplateName): CodebergRequest =
-    read(LicenseTemplateOperation, LicensesPath :+ name.value)
+    read(LicenseTemplateOperation, LicensesPath :+ name.value, Nil)
 
   private def markupRequest(request: MarkupRenderRequest): CodebergRequest =
     CodebergRequest(
@@ -634,17 +632,6 @@ object MiscellaneousApi:
       query     = Nil,
       headers   = Nil,
       body      = Some(RequestBody.Json(MarkupOptionDto.fromDomain(request).toJson)),
-    )
-
-  /** A `GET` with no query, no headers and no body — which is every read in this group. */
-  private def read(operation: String, path: List[String]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
     )
 
   private def markdownRequest(request: MarkdownRenderRequest): CodebergRequest =

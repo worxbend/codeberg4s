@@ -9,9 +9,9 @@ import com.worxbend.codeberg4s.repositories.RepoSlug
   * `![](img.png)` only become useful markup when it is supplied. Without one they are rendered as literal text.
   *
   * The value travels in the JSON '''body''', never in the request path, so nothing here is defending against a forged
-  * path the way [[com.worxbend.codeberg4s.repositories.Owner]] does. What it does defend against is a value that would
-  * corrupt the request itself: a control character or a line break in a JSON string is the kind of input that turns a
-  * render call into a puzzle, and it is rejected at construction instead.
+  * path the way [[com.worxbend.codeberg4s.Owner]] does. What it does defend against is a value that would corrupt the
+  * request itself: a control character or a line break in a JSON string is the kind of input that turns a render call
+  * into a puzzle, and it is rejected at construction instead.
   */
 opaque type MarkdownContext = String
 

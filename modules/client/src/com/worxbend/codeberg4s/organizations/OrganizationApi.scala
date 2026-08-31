@@ -4,6 +4,9 @@ import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.bodiless
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.organizations.actions.OrganizationActionApi
@@ -1006,13 +1009,13 @@ object OrganizationApi:
       case Left(error)                               => exec.raise(error)
 
   private def getRequest(org: OrgName): CodebergRequest =
-    OrganizationRequests.read(GetOperation, OrganizationRequests.organizationPath(org), Nil)
+    read(GetOperation, OrganizationRequests.organizationPath(org), Nil)
 
   private def listRequest(params: PageParams): CodebergRequest =
-    OrganizationRequests.read(ListOperation, List(OrganizationRequests.OrgsSegment), window(params))
+    read(ListOperation, List(OrganizationRequests.OrgsSegment), window(params))
 
   private def createRequest(command: CreateOrganization): CodebergRequest =
-    OrganizationRequests.write(
+    write(
       CreateOperation,
       HttpMethod.Post,
       List(OrganizationRequests.OrgsSegment),
@@ -1020,7 +1023,7 @@ object OrganizationApi:
     )
 
   private def editRequest(org: OrgName, command: EditOrganization): CodebergRequest =
-    OrganizationRequests.write(
+    write(
       EditOperation,
       HttpMethod.Patch,
       OrganizationRequests.organizationPath(org),
@@ -1028,10 +1031,10 @@ object OrganizationApi:
     )
 
   private def deleteRequest(org: OrgName): CodebergRequest =
-    OrganizationRequests.bare(DeleteOperation, HttpMethod.Delete, OrganizationRequests.organizationPath(org))
+    bodiless(DeleteOperation, HttpMethod.Delete, OrganizationRequests.organizationPath(org))
 
   private def renameRequest(org: OrgName, newName: OrgName): CodebergRequest =
-    OrganizationRequests.write(
+    write(
       RenameOperation,
       HttpMethod.Post,
       OrganizationRequests.organizationPath(org) :+ "rename",
@@ -1039,7 +1042,7 @@ object OrganizationApi:
     )
 
   private def updateAvatarRequest(org: OrgName, image: AvatarImage): CodebergRequest =
-    OrganizationRequests.write(
+    write(
       UpdateAvatarOperation,
       HttpMethod.Post,
       avatarPath(org),
@@ -1047,13 +1050,13 @@ object OrganizationApi:
     )
 
   private def deleteAvatarRequest(org: OrgName): CodebergRequest =
-    OrganizationRequests.bare(DeleteAvatarOperation, HttpMethod.Delete, avatarPath(org))
+    bodiless(DeleteAvatarOperation, HttpMethod.Delete, avatarPath(org))
 
   private def repositoriesRequest(org: OrgName, params: PageParams): CodebergRequest =
-    OrganizationRequests.read(RepositoriesOperation, reposPath(org), window(params))
+    read(RepositoriesOperation, reposPath(org), window(params))
 
   private def createRepositoryRequest(org: OrgName, command: CreateRepository): CodebergRequest =
-    OrganizationRequests.write(
+    write(
       CreateRepositoryOperation,
       HttpMethod.Post,
       reposPath(org),
@@ -1064,7 +1067,7 @@ object OrganizationApi:
     * [[OrganizationRequests.organizationPath]].
     */
   private def createRepositoryDeprecatedRequest(org: OrgName, command: CreateRepository): CodebergRequest =
-    OrganizationRequests.write(
+    write(
       CreateRepositoryDeprecatedOperation,
       HttpMethod.Post,
       List("org", org.value, "repos"),
@@ -1072,86 +1075,86 @@ object OrganizationApi:
     )
 
   private def membersRequest(org: OrgName, params: PageParams): CodebergRequest =
-    OrganizationRequests.read(MembersOperation, membersPath(org), window(params))
+    read(MembersOperation, membersPath(org), window(params))
 
   private def isMemberRequest(org: OrgName, username: Username): CodebergRequest =
-    OrganizationRequests.read(IsMemberOperation, memberPath(org, username), Nil)
+    read(IsMemberOperation, memberPath(org, username), Nil)
 
   private def removeMemberRequest(org: OrgName, username: Username): CodebergRequest =
-    OrganizationRequests.bare(RemoveMemberOperation, HttpMethod.Delete, memberPath(org, username))
+    bodiless(RemoveMemberOperation, HttpMethod.Delete, memberPath(org, username))
 
   private def publicMembersRequest(org: OrgName, params: PageParams): CodebergRequest =
-    OrganizationRequests.read(PublicMembersOperation, publicMembersPath(org), window(params))
+    read(PublicMembersOperation, publicMembersPath(org), window(params))
 
   private def isPublicMemberRequest(org: OrgName, username: Username): CodebergRequest =
-    OrganizationRequests.read(IsPublicMemberOperation, publicMemberPath(org, username), Nil)
+    read(IsPublicMemberOperation, publicMemberPath(org, username), Nil)
 
   private def publicizeMemberRequest(org: OrgName, username: Username): CodebergRequest =
-    OrganizationRequests.bare(PublicizeMemberOperation, HttpMethod.Put, publicMemberPath(org, username))
+    bodiless(PublicizeMemberOperation, HttpMethod.Put, publicMemberPath(org, username))
 
   private def concealMemberRequest(org: OrgName, username: Username): CodebergRequest =
-    OrganizationRequests.bare(ConcealMemberOperation, HttpMethod.Delete, publicMemberPath(org, username))
+    bodiless(ConcealMemberOperation, HttpMethod.Delete, publicMemberPath(org, username))
 
   private def blockedUsersRequest(org: OrgName, params: PageParams): CodebergRequest =
-    OrganizationRequests.read(
+    read(
       BlockedUsersOperation,
       OrganizationRequests.organizationPath(org) :+ "list_blocked",
       window(params),
     )
 
   private def blockUserRequest(org: OrgName, username: Username): CodebergRequest =
-    OrganizationRequests.bare(
+    bodiless(
       BlockUserOperation,
       HttpMethod.Put,
       OrganizationRequests.organizationPath(org) ++ List("block", username.value),
     )
 
   private def unblockUserRequest(org: OrgName, username: Username): CodebergRequest =
-    OrganizationRequests.bare(
+    bodiless(
       UnblockUserOperation,
       HttpMethod.Put,
       OrganizationRequests.organizationPath(org) ++ List("unblock", username.value),
     )
 
   private def teamsRequest(org: OrgName, params: PageParams): CodebergRequest =
-    OrganizationRequests.read(
+    read(
       TeamsOperation,
       OrganizationRequests.organizationPath(org) :+ OrganizationRequests.TeamsSegment,
       window(params),
     )
 
   private def getTeamRequest(id: TeamId): CodebergRequest =
-    OrganizationRequests.read(GetTeamOperation, OrganizationRequests.teamPath(id), Nil)
+    read(GetTeamOperation, OrganizationRequests.teamPath(id), Nil)
 
   private def teamMembersRequest(id: TeamId, params: PageParams): CodebergRequest =
-    OrganizationRequests.read(TeamMembersOperation, OrganizationRequests.teamPath(id) :+ "members", window(params))
+    read(TeamMembersOperation, OrganizationRequests.teamPath(id) :+ "members", window(params))
 
   private def teamRepositoriesRequest(id: TeamId, params: PageParams): CodebergRequest =
-    OrganizationRequests.read(TeamRepositoriesOperation, OrganizationRequests.teamPath(id) :+ "repos", window(params))
+    read(TeamRepositoriesOperation, OrganizationRequests.teamPath(id) :+ "repos", window(params))
 
   private def activitiesRequest(org: OrgName, date: Option[LocalDate], params: PageParams): CodebergRequest =
-    OrganizationRequests.read(
+    read(
       ActivitiesOperation,
       OrganizationRequests.organizationPath(org) ++ List("activities", "feeds"),
       OrganizationQueries.activities(date, params),
     )
 
   private def userOrganizationsRequest(username: Username, params: PageParams): CodebergRequest =
-    OrganizationRequests.read(
+    read(
       UserOrganizationsOperation,
       OrganizationRequests.userPath(username) :+ OrganizationRequests.OrgsSegment,
       window(params),
     )
 
   private def currentUserOrganizationsRequest(params: PageParams): CodebergRequest =
-    OrganizationRequests.read(
+    read(
       CurrentUserOrganizationsOperation,
       List("user", OrganizationRequests.OrgsSegment),
       window(params),
     )
 
   private def userPermissionsRequest(username: Username, org: OrgName): CodebergRequest =
-    OrganizationRequests.read(
+    read(
       UserPermissionsOperation,
       OrganizationRequests.userPath(username) ++ List(OrganizationRequests.OrgsSegment, org.value, "permissions"),
       Nil,

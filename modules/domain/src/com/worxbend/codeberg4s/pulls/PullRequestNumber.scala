@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.pulls
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
 
 /** The number a repository gives a pull request — the `{index}` of `/repos/{owner}/{repo}/pulls/{index}`.
@@ -32,7 +33,7 @@ object PullRequestNumber:
     *   the number, or a [[ValidationError]] on the `"pullRequestNumber"` field
     */
   def from(value: Long): Either[ValidationError, PullRequestNumber] =
-    PullIds.from("pullRequestNumber", value)
+    PositiveId.from("pullRequestNumber", value)
 
   extension (number: PullRequestNumber)
 

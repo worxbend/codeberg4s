@@ -2,8 +2,8 @@ package com.worxbend.codeberg4s.organizations
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.admin.ActivityOperation
 import com.worxbend.codeberg4s.repositories.admin.CreateRepository
 import com.worxbend.codeberg4s.users.UserVisibility
@@ -45,7 +45,7 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
     onApi(backend): api =>
       api.attempt
         .create(CreateOrganization.named(Org))
-        .map(_ => assertEquals(callCount(backend), 1, "the create was repeated"))
+        .map(_ => assertEquals(attemptsOn(backend), 1, "the create was repeated"))
 
   test("orgs.edit patches the organisation and never sends a name"):
     val backend = RecordingBackend(responding(200, OrganizationAdminApiSuite.OrgBody))
@@ -64,7 +64,7 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
     onApi(backend): api =>
       api.attempt
         .edit(Org, EditOrganization.Empty.describedAs("we forge"))
-        .map(_ => assertEquals(callCount(backend), 1, "the edit was repeated"))
+        .map(_ => assertEquals(attemptsOn(backend), 1, "the edit was repeated"))
 
   test("orgs.delete sends a bodiless DELETE"):
     val backend = RecordingBackend(responding(204, ""))
@@ -81,7 +81,7 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
     val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
-      api.attempt.delete(Org).map(_ => assertEquals(callCount(backend), 1, "the delete was repeated"))
+      api.attempt.delete(Org).map(_ => assertEquals(attemptsOn(backend), 1, "the delete was repeated"))
 
   // --- rename ---------------------------------------------------------------
 
@@ -102,7 +102,7 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
     onApi(backend): api =>
       api.attempt
         .rename(Org, orFail(OrgName.from("forgejo-forge")))
-        .map(_ => assertEquals(callCount(backend), 1, "the rename was repeated"))
+        .map(_ => assertEquals(attemptsOn(backend), 1, "the rename was repeated"))
 
   // --- avatar ---------------------------------------------------------------
 
@@ -126,7 +126,7 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
         .map: _ =>
           assertEquals(methodOf(backend), "DELETE")
           assertEquals(pathOf(backend), "https://forge.example/api/v1/orgs/forgejo/avatar")
-          assertEquals(callCount(backend), 1, "the avatar delete was repeated")
+          assertEquals(attemptsOn(backend), 1, "the avatar delete was repeated")
 
   // --- repositories ---------------------------------------------------------
 
@@ -237,7 +237,7 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
     onApi(backend): api =>
       api.attempt
         .publicizeMember(Org, Account)
-        .map(_ => assertEquals(callCount(backend), 1, "a membership write was repeated"))
+        .map(_ => assertEquals(attemptsOn(backend), 1, "a membership write was repeated"))
 
   // --- blocks ---------------------------------------------------------------
 

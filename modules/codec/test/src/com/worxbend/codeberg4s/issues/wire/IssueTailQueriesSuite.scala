@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.issues.wire
 
+import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.issues.CommentQuery
 import com.worxbend.codeberg4s.issues.IssueKind
@@ -10,7 +11,6 @@ import com.worxbend.codeberg4s.issues.MilestoneTitle
 import com.worxbend.codeberg4s.issues.StateFilter
 import com.worxbend.codeberg4s.issues.TrackedTimeQuery
 import com.worxbend.codeberg4s.issues.UploadAttachment
-import com.worxbend.codeberg4s.repositories.Owner
 
 import munit.FunSuite
 

@@ -2,8 +2,8 @@ package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.issues.wire.WireInstant
-import com.worxbend.codeberg4s.issues.wire.WireNumbers
+import com.worxbend.codeberg4s.codec.Timestamps
+import com.worxbend.codeberg4s.codec.WireValues
 import com.worxbend.codeberg4s.pulls.EditPullRequest
 
 /** Forgejo's `EditPullRequestOption` request model — the body of `PATCH /repos/{owner}/{repo}/pulls/{index}`.
@@ -36,12 +36,12 @@ private[codeberg4s] object EditPullRequestOptionDto:
     List(
       command.title.map(text       => "title" -> JsonValue.Str(text)),
       command.body.map(text        => "body" -> JsonValue.Str(text)),
-      command.assignees.map(logins => "assignees" -> WireNumbers.strings(logins)),
-      command.labels.map(ids       => "labels" -> WireNumbers.identifiers(ids.map(_.value))),
-      command.milestone.map(id     => "milestone" -> WireNumbers.identifier(id.value)),
+      command.assignees.map(logins => "assignees" -> WireValues.strings(logins)),
+      command.labels.map(ids       => "labels" -> WireValues.identifiers(ids.map(_.value))),
+      command.milestone.map(id     => "milestone" -> WireValues.identifier(id.value)),
       command.state.map(change     => "state" -> JsonValue.Str(change.wireValue)),
       command.base.map(branch      => "base" -> JsonValue.Str(branch.value)),
-      command.dueDate.map(moment   => "due_date" -> JsonValue.Str(WireInstant.render(moment))),
+      command.dueDate.map(moment   => "due_date" -> JsonValue.Str(Timestamps.render(moment))),
       Option.when(command.unsetDueDate)("unset_due_date" -> JsonValue.Bool(true)),
       command.allowMaintainerEdit.map(allowed => "allow_maintainer_edit" -> JsonValue.Bool(allowed)),
     ).flatten

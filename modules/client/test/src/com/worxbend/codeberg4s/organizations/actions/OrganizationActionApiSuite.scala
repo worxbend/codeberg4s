@@ -1,23 +1,11 @@
 package com.worxbend.codeberg4s.organizations.actions
 
-import com.worxbend.codeberg4s.BaseUri
-import com.worxbend.codeberg4s.CodebergConfig
+import com.worxbend.codeberg4s.ClientSuiteHarness
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
-import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.auth.Auth
-import com.worxbend.codeberg4s.client.FutureExec
-import com.worxbend.codeberg4s.client.FutureTimer
-import com.worxbend.codeberg4s.codec.ApiErrorBodyCodec
 import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.JitterSource
-import com.worxbend.codeberg4s.core.Telemetry
 import com.worxbend.codeberg4s.organizations.OrgName
 import com.worxbend.codeberg4s.paging.PageNumber
-import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.paging.PageSize
 import com.worxbend.codeberg4s.repositories.actions.CreateVariable
 import com.worxbend.codeberg4s.repositories.actions.RegisterRunner
 import com.worxbend.codeberg4s.repositories.actions.RunnerId
@@ -28,9 +16,6 @@ import com.worxbend.codeberg4s.repositories.actions.SecretName
 import com.worxbend.codeberg4s.repositories.actions.SecretValue
 import com.worxbend.codeberg4s.repositories.actions.UpdateVariable
 import com.worxbend.codeberg4s.repositories.actions.VariableName
-import com.worxbend.codeberg4s.retry.Jitter
-import com.worxbend.codeberg4s.retry.RetryPolicy
-import com.worxbend.codeberg4s.transport.SttpHttpPort
 
 import sttp.client4.Backend
 import sttp.client4.testing.BackendStub
@@ -41,9 +26,7 @@ import sttp.model.StatusCode
 
 import munit.FunSuite
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
 
 /** [[OrganizationActionApi]] over a `BackendStub`: nothing in this suite opens a socket.
   *
@@ -58,11 +41,7 @@ import scala.concurrent.duration.DurationInt
   * `RepositoryActionApi` on two `DELETE`s, and a difference that is only written in a Scaladoc is a difference that
   * drifts — so it is pinned here by counting interactions against a backend that fails once and then succeeds.
   */
-final class OrganizationActionApiSuite extends FunSuite:
-
-  private given ExecutionContext = munitExecutionContext
-
-  private given JitterSource = JitterSource.Deterministic
+final class OrganizationActionApiSuite extends FunSuite with ClientSuiteHarness:
 
   private val Org: OrgName = orFail(OrgName.from("forgejo"))
 
@@ -72,18 +51,16 @@ final class OrganizationActionApiSuite extends FunSuite:
 
   private val Variable: VariableName = orFail(VariableName.from("ENVIRONMENT"))
 
-  private val Instance: BaseUri = orFail(BaseUri.from("https://forge.example/api/v1"))
-
-  private val Root: String = "https://forge.example/api/v1/orgs/forgejo/actions"
+  private val Endpoint: String = s"$Root/orgs/forgejo/actions"
 
   // --- runners --------------------------------------------------------------
 
   test("orgs.actions.runners.list dials the organisation's runners and always states the visibility it wants"):
     val backend = RecordingBackend(responding(200, "[]"))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.listRunners(Org, RunnerVisibility.OwnedOnly, window(2, 25)).map: _ =>
-        assertEquals(pathOf(backend), s"$Root/runners")
+        assertEquals(pathOf(backend), s"$Endpoint/runners")
         assertEquals(queryOf(backend).sorted, List("limit" -> "25", "page" -> "2", "visible" -> "false"))
 
   test("orgs.actions.runners.list pages from the Link header and not from how many runners came back"):
@@ -91,7 +68,7 @@ final class OrganizationActionApiSuite extends FunSuite:
       responding(200, OrganizationActionApiSuite.RunnerListBody, OrganizationActionApiSuite.PagedHeaders)
     )
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.listRunners(Org, RunnerVisibility.AllVisible, window(1, 30)).map: page =>
         assertEquals(page.size, 1)
         assertEquals(page.totalCount, Some(97))
@@ -101,9 +78,9 @@ final class OrganizationActionApiSuite extends FunSuite:
   test("the single-runner read dials one runner and decodes its status"):
     val backend = RecordingBackend(responding(200, OrganizationActionApiSuite.RunnerBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.runner(Org, Runner).map: runner =>
-        assertEquals(pathOf(backend), s"$Root/runners/37")
+        assertEquals(pathOf(backend), s"$Endpoint/runners/37")
         assertEquals(runner.status, Some(RunnerStatus.Idle))
 
   test("orgs.actions.runners.register POSTs the option body and is never repeated"):
@@ -111,17 +88,17 @@ final class OrganizationActionApiSuite extends FunSuite:
       cycling(503, "", 201, OrganizationActionApiSuite.RegisteredBody)
     )
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.attempt.registerRunner(Org, orFail(RegisterRunner.named("build-box-3")).ephemeral).map: outcome =>
         assertEquals(methodOf(backend), "POST")
-        assertEquals(pathOf(backend), s"$Root/runners")
+        assertEquals(pathOf(backend), s"$Endpoint/runners")
         assertEquals(Json.parse(bodyOf(backend)).toOption.flatMap(_.field("name")).flatMap(_.strOpt), Some("build-box-3"))
         assertEquals(Json.parse(bodyOf(backend)).toOption.flatMap(_.field("ephemeral")).flatMap(_.boolOpt), Some(true))
         assertEquals(backend.allInteractions.size, 1, "a POST was repeated")
         assert(outcome.isLeft, "the 503 should have reached the caller")
 
   test("orgs.actions.runners.register hands back a token that renders as a mask"):
-    onBackend(responding(201, OrganizationActionApiSuite.RegisteredBody)): api =>
+    onApi(responding(201, OrganizationActionApiSuite.RegisteredBody)): api =>
       api.registerRunner(Org, orFail(RegisterRunner.named("build-box-3"))).map: registered =>
         assertEquals(registered.token.reveal, "QWERTY123")
         assertEquals(registered.token.toString, "***")
@@ -129,36 +106,36 @@ final class OrganizationActionApiSuite extends FunSuite:
   test("orgs.actions.runners.delete is repeated, because a runner id is never reused"):
     val backend = RecordingBackend(cycling(503, "", 204, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.deleteRunner(Org, Runner).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
-        assertEquals(pathOf(backend), s"$Root/runners/37")
+        assertEquals(pathOf(backend), s"$Endpoint/runners/37")
         assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
 
   test("orgs.actions.runners.registrationToken dials the deprecated endpoint and masks what it returns"):
     val backend = RecordingBackend(responding(200, """{"token": "REG-TOKEN"}"""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.runnerRegistrationToken(Org).map: token =>
-        assertEquals(pathOf(backend), s"$Root/runners/registration-token")
+        assertEquals(pathOf(backend), s"$Endpoint/runners/registration-token")
         assertEquals(token.reveal, "REG-TOKEN")
         assertEquals(token.toString, "***")
 
   test("orgs.actions.runners.jobs.search comma-joins the labels into the one parameter Forgejo declares"):
     val backend = RecordingBackend(responding(200, OrganizationActionApiSuite.JobListBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       val labels = Vector(orFail(RunnerLabel.from("docker")), orFail(RunnerLabel.from("self-hosted")))
 
       api.searchRunnerJobs(Org, labels).map: jobs =>
-        assertEquals(pathOf(backend), s"$Root/runners/jobs")
+        assertEquals(pathOf(backend), s"$Endpoint/runners/jobs")
         assertEquals(queryOf(backend), List("labels" -> "docker,self-hosted"))
         assertEquals(jobs.size, 1)
 
   test("orgs.actions.runners.jobs.search with no labels asks for every job rather than for none"):
     val backend = RecordingBackend(responding(200, "[]"))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.searchRunnerJobs(Org, Vector.empty).map(_ => assertEquals(queryOf(backend), List.empty[(String, String)]))
 
   // --- secrets --------------------------------------------------------------
@@ -166,29 +143,29 @@ final class OrganizationActionApiSuite extends FunSuite:
   test("orgs.actions.secrets.list pages the organisation's secrets and reports no values"):
     val backend = RecordingBackend(responding(200, OrganizationActionApiSuite.SecretListBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.listSecrets(Org, window(1, 50)).map: page =>
-        assertEquals(pathOf(backend), s"$Root/secrets")
+        assertEquals(pathOf(backend), s"$Endpoint/secrets")
         assertEquals(queryOf(backend).sorted, List("limit" -> "50", "page" -> "1"))
         assertEquals(page.items.map(_.name.value), Vector("DEPLOY_KEY"))
 
   test("orgs.actions.secrets.set PUTs the material under 'data' and is repeated, because it sets a stated value"):
     val backend = RecordingBackend(cycling(503, "", 204, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.setSecret(Org, Secret, orFail(SecretValue.from("s3cr3t"))).map: _ =>
         assertEquals(methodOf(backend), "PUT")
-        assertEquals(pathOf(backend), s"$Root/secrets/DEPLOY_KEY")
+        assertEquals(pathOf(backend), s"$Endpoint/secrets/DEPLOY_KEY")
         assertEquals(Json.parse(bodyOf(backend)).toOption.flatMap(_.field("data")).flatMap(_.strOpt), Some("s3cr3t"))
         assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
 
   test("orgs.actions.secrets.delete is NOT repeated, unlike the repository call of the same name"):
     val backend = RecordingBackend(cycling(503, "", 204, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.attempt.deleteSecret(Org, Secret).map: outcome =>
         assertEquals(methodOf(backend), "DELETE")
-        assertEquals(pathOf(backend), s"$Root/secrets/DEPLOY_KEY")
+        assertEquals(pathOf(backend), s"$Endpoint/secrets/DEPLOY_KEY")
         assertEquals(backend.allInteractions.size, 1, "a delete addressed by a reusable name was retried")
         assert(outcome.isLeft, "the 503 should have reached the caller")
 
@@ -197,27 +174,27 @@ final class OrganizationActionApiSuite extends FunSuite:
   test("orgs.actions.variables.list pages the organisation's variables, values and all"):
     val backend = RecordingBackend(responding(200, OrganizationActionApiSuite.VariableListBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.listVariables(Org, window(3, 10)).map: page =>
-        assertEquals(pathOf(backend), s"$Root/variables")
+        assertEquals(pathOf(backend), s"$Endpoint/variables")
         assertEquals(queryOf(backend).sorted, List("limit" -> "10", "page" -> "3"))
         assertEquals(page.items.map(_.value), Vector("staging"))
 
   test("the single-variable read dials one variable by name"):
     val backend = RecordingBackend(responding(200, OrganizationActionApiSuite.VariableBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.variable(Org, Variable).map: variable =>
-        assertEquals(pathOf(backend), s"$Root/variables/ENVIRONMENT")
+        assertEquals(pathOf(backend), s"$Endpoint/variables/ENVIRONMENT")
         assertEquals(variable.name.value, "ENVIRONMENT")
 
   test("orgs.actions.variables.create POSTs only the value and is never repeated"):
     val backend = RecordingBackend(cycling(503, "", 201, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.attempt.createVariable(Org, Variable, CreateVariable.of("staging")).map: outcome =>
         assertEquals(methodOf(backend), "POST")
-        assertEquals(pathOf(backend), s"$Root/variables/ENVIRONMENT")
+        assertEquals(pathOf(backend), s"$Endpoint/variables/ENVIRONMENT")
         assertEquals(Json.parse(bodyOf(backend)).toOption.map(_.keys.toList), Some(List("value")))
         assertEquals(backend.allInteractions.size, 1, "a POST was repeated")
         assert(outcome.isLeft, "the 503 should have reached the caller")
@@ -225,7 +202,7 @@ final class OrganizationActionApiSuite extends FunSuite:
   test("orgs.actions.variables.update without a rename is repeated"):
     val backend = RecordingBackend(cycling(503, "", 204, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.updateVariable(Org, Variable, UpdateVariable.of("production")).map: _ =>
         assertEquals(methodOf(backend), "PUT")
         assertEquals(Json.parse(bodyOf(backend)).toOption.flatMap(_.field("value")).flatMap(_.strOpt), Some("production"))
@@ -234,7 +211,7 @@ final class OrganizationActionApiSuite extends FunSuite:
   test("orgs.actions.variables.update carrying a rename is not repeated, because the old name stops existing"):
     val backend = RecordingBackend(cycling(503, "", 204, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       val command = UpdateVariable.of("production").movedTo(orFail(VariableName.from("STAGE")))
 
       api.attempt.updateVariable(Org, Variable, command).map: outcome =>
@@ -245,7 +222,7 @@ final class OrganizationActionApiSuite extends FunSuite:
   test("orgs.actions.variables.delete is NOT repeated, for the reason the secret delete is not"):
     val backend = RecordingBackend(cycling(503, "", 204, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.attempt.deleteVariable(Org, Variable).map: outcome =>
         assertEquals(methodOf(backend), "DELETE")
         assertEquals(backend.allInteractions.size, 1, "a delete addressed by a reusable name was retried")
@@ -254,14 +231,14 @@ final class OrganizationActionApiSuite extends FunSuite:
   // --- both rails -----------------------------------------------------------
 
   test("a 404 fails the convenience rail with a CodebergException carrying the Api failure"):
-    onBackend(responding(404, OrganizationActionApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, OrganizationActionApiSuite.NotFoundBody)): api =>
       api.listSecrets(Org, window(1, 30)).failed.map:
         case CodebergException(error) =>
           assertEquals(summary(error), (OrganizationActionApi.ListSecretsOperation, 404, Some("GetOrgSecrets")))
         case other                    => fail(s"expected a CodebergException, got $other")
 
   test("a 404 reaches the typed rail as a Left reporting the very same failure"):
-    onBackend(responding(404, OrganizationActionApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, OrganizationActionApiSuite.NotFoundBody)): api =>
       for
         raised <- api.listSecrets(Org, window(1, 30)).failed
         typed  <- api.attempt.listSecrets(Org, window(1, 30))
@@ -272,7 +249,7 @@ final class OrganizationActionApiSuite extends FunSuite:
           fail(s"the rails disagreed: $convenience versus $materialised")
 
   test("a 400 on a rejected secret name reaches both rails as the same Api failure"):
-    onBackend(responding(400, OrganizationActionApiSuite.BadRequestBody)): api =>
+    onApi(responding(400, OrganizationActionApiSuite.BadRequestBody)): api =>
       val value = orFail(SecretValue.from("s3cr3t"))
 
       for
@@ -286,32 +263,22 @@ final class OrganizationActionApiSuite extends FunSuite:
           fail(s"the rails disagreed: $convenience versus $materialised")
 
   test("a 200 whose variable payload names nothing becomes DecodingFailed, never an exception"):
-    onBackend(responding(200, """{"data": "staging"}""")): api =>
+    onApi(responding(200, """{"data": "staging"}""")): api =>
       api.attempt.variable(Org, Variable).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$.name")
         case other                                             => fail(s"expected a decoding failure, got $other")
 
   test("a bad element of a runner listing is reported at its own index"):
-    onBackend(responding(200, """[{"id": 37}, {"name": "no id here"}]""")): api =>
+    onApi(responding(200, """[{"id": 37}, {"name": "no id here"}]""")): api =>
       api.attempt.listRunners(Org, RunnerVisibility.AllVisible, window(1, 30)).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$[1].id")
         case other                                             => fail(s"expected a decoding failure, got $other")
 
-  // --- assertions -----------------------------------------------------------
-
-  /** An `Api` failure projected onto the parts that do not depend on wall-clock time, so two calls are comparable. */
-  private def summary(error: CodebergError): (String, Int, Option[String]) =
-    error match
-      case CodebergError.Api(ctx, status, body) => (ctx.operation, status, body.message)
-      case other                                => fail(s"expected an Api failure, got ${other.describe}")
-
   // --- fixtures -------------------------------------------------------------
 
-  private def responding(status: Int, body: String): BackendStub[Future] =
-    responding(status, body, Nil)
-
-  private def responding(status: Int, body: String, headers: List[Header]): BackendStub[Future] =
-    BackendStub.asynchronousFuture.whenAnyRequest.thenRespond(ResponseStub.adjust(body, StatusCode(status), headers))
+  /** Builds the API under test on a pipeline over `backend`, releasing the timer whatever happens. */
+  private def onApi[A](backend: Backend[Future])(use: OrganizationActionApi => Future[A]): Future[A] =
+    onPipeline(backend)(pipeline => use(OrganizationActionApi(pipeline)))
 
   /** A backend that answers the first pair once and the second from then on — how a retry is made observable. */
   private def cycling(firstStatus: Int, firstBody: String, thenStatus: Int, thenBody: String): BackendStub[Future] =
@@ -319,61 +286,6 @@ final class OrganizationActionApiSuite extends FunSuite:
       ResponseStub.adjust(firstBody, StatusCode(firstStatus)),
       ResponseStub.adjust(thenBody, StatusCode(thenStatus)),
     )
-
-  private def dialled(backend: RecordingBackend): String =
-    backend.allInteractions.headOption match
-      case Some((request, _)) => request.uri.toString
-      case None               => fail("no request reached the backend")
-
-  /** The dialled URI without its query string, written with `indexOf` because universal equality is banned. */
-  private def pathOf(backend: RecordingBackend): String =
-    val uri   = dialled(backend)
-    val query = uri.indexOf('?')
-
-    if query < 0 then uri else uri.take(query)
-
-  private def queryOf(backend: RecordingBackend): List[(String, String)] =
-    backend.allInteractions.headOption match
-      case Some((request, _)) => request.uri.params.toSeq.toList
-      case None               => fail("no request reached the backend")
-
-  private def methodOf(backend: RecordingBackend): String =
-    backend.allInteractions.headOption match
-      case Some((request, _)) => request.method.method
-      case None               => fail("no request reached the backend")
-
-  private def bodyOf(backend: RecordingBackend): String =
-    backend.allInteractions.headOption match
-      case Some((request, _)) => request.body.show.stripPrefix("string: ")
-      case None               => fail("no request reached the backend")
-
-  private def window(page: Int, size: Int): PageParams =
-    PageParams(orFail(PageNumber.from(page)), orFail(PageSize.from(size)))
-
-  /** Builds the pipeline this group's API sits on, and releases the timer whatever the outcome. */
-  private def onBackend[A](backend: Backend[Future])(use: OrganizationActionApi => Future[A]): Future[A] =
-    given Exec[Future] = FutureExec()
-
-    val config =
-      CodebergConfig(Auth.Anonymous).copy(baseUri = Instance, retry = OrganizationActionApiSuite.PromptRetry)
-    val timer  = FutureTimer()
-
-    val pipeline = ApiPipeline[Future](
-      SttpHttpPort(backend, config),
-      config,
-      timer,
-      Telemetry.noOp[Future],
-      ApiErrorBodyCodec.parse,
-    )
-
-    use(OrganizationActionApi(pipeline)).transform: outcome =>
-      timer.close()
-      outcome
-
-  private def orFail[A](result: Either[ValidationError, A]): A =
-    result match
-      case Right(value) => value
-      case Left(error)  => fail(s"invalid fixture: ${error.field} ${error.message}")
 
 /** The response bodies this suite stubs, kept out of the test bodies so each test reads as one behaviour.
   *
@@ -413,12 +325,3 @@ object OrganizationActionApiSuite:
 
   private val BadRequestBody: String =
     """{"message":"secret name is invalid","url":"https://codeberg.org/api/swagger"}"""
-
-  /** Retries promptly and predictably: the default policy would make the retry tests take a quarter of a second. */
-  private val PromptRetry: RetryPolicy = RetryPolicy(
-    maxAttempts       = 3,
-    baseDelay         = 1.milli,
-    maxDelay          = 5.millis,
-    jitter            = Jitter.None,
-    respectRetryAfter = false,
-  )

@@ -2,30 +2,26 @@ package com.worxbend.codeberg4s.issues
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
-import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
-import com.worxbend.codeberg4s.core.Decode
+import com.worxbend.codeberg4s.core.CodebergRequest.bodiless
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.removeWithBody
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.RetryEligibility
-import com.worxbend.codeberg4s.issues.wire.CommentDto
 import com.worxbend.codeberg4s.issues.wire.CreateIssueCommentOptionDto
 import com.worxbend.codeberg4s.issues.wire.CreateIssueOptionDto
 import com.worxbend.codeberg4s.issues.wire.CreateLabelOptionDto
 import com.worxbend.codeberg4s.issues.wire.EditDeadlineOptionDto
 import com.worxbend.codeberg4s.issues.wire.EditIssueOptionDto
-import com.worxbend.codeberg4s.issues.wire.IssueDto
 import com.worxbend.codeberg4s.issues.wire.IssueMetaDto
 import com.worxbend.codeberg4s.issues.wire.IssueQueries
-import com.worxbend.codeberg4s.issues.wire.LabelDto
-import com.worxbend.codeberg4s.issues.wire.MilestoneDto
 import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 
 import scala.concurrent.Future
 
@@ -54,9 +50,8 @@ import java.time.Instant
   *   - [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] when a retryable failure outlived the policy.
   *
   * [[com.worxbend.codeberg4s.CodebergError.Validation]] is '''not''' produced by any operation here. Every argument is
-  * an already-validated type — [[com.worxbend.codeberg4s.repositories.Owner]], [[IssueNumber]], [[LabelName]] — so a
-  * value that would forge a path or a query parameter is rejected by its own smart constructor before a client is ever
-  * involved.
+  * an already-validated type — [[com.worxbend.codeberg4s.Owner]], [[IssueNumber]], [[LabelName]] — so a value that
+  * would forge a path or a query parameter is rejected by its own smart constructor before a client is ever involved.
   *
   * ==Retries==
   *
@@ -122,8 +117,8 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     * @param page
     *   which window to fetch, and how large
     */
-  def list(owner: Owner, name: RepoName, query: IssueQuery, page: PageParams): Future[Page[Issue]] =
-    pipeline.callPage(IssueApi.listRequest(owner, name, query, page), page)(using IssueApi.IssuesDecoder)
+  def list(owner: Owner, name: RepoName, query: IssueQuery, params: PageParams): Future[Page[Issue]] =
+    pipeline.callPage(IssueApi.listRequest(owner, name, query, params), params)(using IssueDecoders.issues)
 
   /** Reads one issue — `GET /repos/{owner}/{repo}/issues/{index}`.
     *
@@ -137,7 +132,7 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
   def get(owner: Owner, name: RepoName, number: IssueNumber): Future[Issue] =
     val request = IssueApi.getRequest(owner, name, number)
 
-    pipeline.call(request, RetryEligibility.IdempotentOnly)(using IssueApi.IssueDecoder)
+    pipeline.call(request, RetryEligibility.IdempotentOnly)(using IssueDecoders.issue)
 
   /** Opens an issue — `POST /repos/{owner}/{repo}/issues`.
     *
@@ -153,7 +148,7 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     *   what to create; built from [[CreateIssue.of]], which has already rejected a blank title
     */
   def create(owner: Owner, name: RepoName, command: CreateIssue): Future[Issue] =
-    pipeline.call(IssueApi.createRequest(owner, name, command), RetryEligibility.Never)(using IssueApi.IssueDecoder)
+    pipeline.call(IssueApi.createRequest(owner, name, command), RetryEligibility.Never)(using IssueDecoders.issue)
 
   /** Edits an issue — `PATCH /repos/{owner}/{repo}/issues/{index}`.
     *
@@ -169,8 +164,7 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     * success as far as [[com.worxbend.codeberg4s.core.StatusMapping]] is concerned.
     */
   def edit(owner: Owner, name: RepoName, number: IssueNumber, command: EditIssue): Future[Issue] =
-    pipeline.call(IssueApi.editRequest(owner, name, number, command), RetryEligibility.Never)(using
-      IssueApi.IssueDecoder)
+    pipeline.call(IssueApi.editRequest(owner, name, number, command), RetryEligibility.Never)(using IssueDecoders.issue)
 
   /** Lists an issue's comments — `GET /repos/{owner}/{repo}/issues/{index}/comments`.
     *
@@ -189,8 +183,8 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     * '''Failures.''' The group contract above, plus `500`, which the spec declares for this operation and which arrives
     * as [[com.worxbend.codeberg4s.CodebergError.Api]] like any other status.
     */
-  def listComments(owner: Owner, name: RepoName, number: IssueNumber, page: PageParams): Future[Page[Comment]] =
-    pipeline.callPage(IssueApi.listCommentsRequest(owner, name, number, page), page)(using IssueApi.CommentsDecoder)
+  def listComments(owner: Owner, name: RepoName, number: IssueNumber, params: PageParams): Future[Page[Comment]] =
+    pipeline.callPage(IssueApi.listCommentsRequest(owner, name, number, params), params)(using IssueDecoders.comments)
 
   /** Comments on an issue — `POST /repos/{owner}/{repo}/issues/{index}/comments`.
     *
@@ -206,7 +200,7 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
       command: CreateComment,
   ): Future[Comment] =
     pipeline.call(IssueApi.createCommentRequest(owner, name, number, command), RetryEligibility.Never)(using
-      IssueApi.CommentDecoder)
+      IssueDecoders.presentComment)
 
   /** Lists a repository's labels — `GET /repos/{owner}/{repo}/labels`.
     *
@@ -220,8 +214,8 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     *
     * '''Failures.''' The group contract above.
     */
-  def listLabels(owner: Owner, name: RepoName, page: PageParams): Future[Page[Label]] =
-    pipeline.callPage(IssueApi.listLabelsRequest(owner, name, page), page)(using IssueApi.LabelsDecoder)
+  def listLabels(owner: Owner, name: RepoName, params: PageParams): Future[Page[Label]] =
+    pipeline.callPage(IssueApi.listLabelsRequest(owner, name, params), params)(using IssueDecoders.labels)
 
   /** Creates a label on a repository — `POST /repos/{owner}/{repo}/labels`.
     *
@@ -234,7 +228,7 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
   def createLabel(owner: Owner, name: RepoName, command: CreateLabel): Future[Label] =
     val request = IssueApi.createLabelRequest(owner, name, command)
 
-    pipeline.call(request, RetryEligibility.Never)(using IssueApi.LabelDecoder)
+    pipeline.call(request, RetryEligibility.Never)(using IssueDecoders.label)
 
   /** Lists a repository's milestones — `GET /repos/{owner}/{repo}/milestones`.
     *
@@ -247,8 +241,8 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     *   which milestones to include. Explicit rather than optional here, unlike [[IssueQuery.state]], because the
     *   endpoint has no other filter worth naming and Forgejo's silent default of open-only surprises callers
     */
-  def listMilestones(owner: Owner, name: RepoName, state: StateFilter, page: PageParams): Future[Page[Milestone]] =
-    pipeline.callPage(IssueApi.listMilestonesRequest(owner, name, state, page), page)(using IssueApi.MilestonesDecoder)
+  def listMilestones(owner: Owner, name: RepoName, state: StateFilter, params: PageParams): Future[Page[Milestone]] =
+    pipeline.callPage(IssueApi.listMilestonesRequest(owner, name, state, params), params)(using IssueDecoders.milestones)
 
   /** Reads one milestone — `GET /repos/{owner}/{repo}/milestones/{id}`.
     *
@@ -257,7 +251,7 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     */
   def getMilestone(owner: Owner, name: RepoName, id: MilestoneId): Future[Milestone] =
     pipeline.call(IssueApi.getMilestoneRequest(owner, name, id), RetryEligibility.IdempotentOnly)(using
-      IssueApi.MilestoneDecoder)
+      IssueDecoders.milestone)
 
   /** Searches issues across every repository the caller can see — `GET /repos/issues/search`.
     *
@@ -283,8 +277,8 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     * @param query
     *   the filters to apply; [[IssueSearchQuery.Empty]] asks for the instance's default, which is open issues
     */
-  def search(query: IssueSearchQuery, page: PageParams): Future[Page[Issue]] =
-    pipeline.callPage(IssueApi.searchRequest(query, page), page)(using IssueDecoders.issues)
+  def search(query: IssueSearchQuery, params: PageParams): Future[Page[Issue]] =
+    pipeline.callPage(IssueApi.searchRequest(query, params), params)(using IssueDecoders.issues)
 
   /** Deletes an issue — `DELETE /repos/{owner}/{repo}/issues/{index}`.
     *
@@ -323,7 +317,7 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     * '''Answers `201`''' with the deadline the instance now holds; see [[IssueDeadline]].
     *
     * '''Failures.''' The group contract above. A `422` carrying a raw Go parse error is what a timestamp Forgejo cannot
-    * read produces (`docs/HAZARDS.md` §4), though [[com.worxbend.codeberg4s.issues.wire.WireInstant]] renders one it
+    * read produces (`docs/HAZARDS.md` §4), though [[com.worxbend.codeberg4s.codec.Timestamps.render]] renders one it
     * can.
     */
   def setDeadline(owner: Owner, name: RepoName, number: IssueNumber, dueDate: Instant): Future[IssueDeadline] =
@@ -391,9 +385,9 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[Issue]] =
-    pipeline.callPage(IssueApi.listBlocksRequest(owner, name, number, page), page)(using IssueDecoders.issues)
+    pipeline.callPage(IssueApi.listBlocksRequest(owner, name, number, params), params)(using IssueDecoders.issues)
 
   /** Declares that this issue blocks another — `POST /repos/{owner}/{repo}/issues/{index}/blocks`.
     *
@@ -453,9 +447,9 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[Issue]] =
-    pipeline.callPage(IssueApi.listDependenciesRequest(owner, name, number, page), page)(using IssueDecoders.issues)
+    pipeline.callPage(IssueApi.listDependenciesRequest(owner, name, number, params), params)(using IssueDecoders.issues)
 
   /** Declares that this issue depends on another — `POST /repos/{owner}/{repo}/issues/{index}/dependencies`.
     *
@@ -515,9 +509,9 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
       name: RepoName,
       number: IssueNumber,
       query: CommentQuery,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[TimelineEvent]] =
-    pipeline.callPage(IssueApi.timelineRequest(owner, name, number, query, page), page)(using IssueDecoders.timeline)
+    pipeline.callPage(IssueApi.timelineRequest(owner, name, number, query, params), params)(using IssueDecoders.timeline)
 
 /** The requests this group issues, its operation ids, and its typed rail. */
 object IssueApi:
@@ -605,9 +599,9 @@ object IssueApi:
         owner: Owner,
         name: RepoName,
         query: IssueQuery,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[Issue]]] =
-      exec.attempt(rail.list(owner, name, query, page))
+      exec.attempt(rail.list(owner, name, query, params))
 
     /** The single-issue read on [[IssueApi]], with its failure as a value. */
     def get(owner: Owner, name: RepoName, number: IssueNumber): Future[Either[CodebergError, Issue]] =
@@ -631,9 +625,9 @@ object IssueApi:
         owner: Owner,
         name: RepoName,
         number: IssueNumber,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[Comment]]] =
-      exec.attempt(rail.listComments(owner, name, number, page))
+      exec.attempt(rail.listComments(owner, name, number, params))
 
     /** [[IssueApi.createComment]] with its failure as a value. */
     def createComment(
@@ -645,8 +639,8 @@ object IssueApi:
       exec.attempt(rail.createComment(owner, name, number, command))
 
     /** [[IssueApi.listLabels]] with its failure as a value. */
-    def listLabels(owner: Owner, name: RepoName, page: PageParams): Future[Either[CodebergError, Page[Label]]] =
-      exec.attempt(rail.listLabels(owner, name, page))
+    def listLabels(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Label]]] =
+      exec.attempt(rail.listLabels(owner, name, params))
 
     /** [[IssueApi.createLabel]] with its failure as a value. */
     def createLabel(owner: Owner, name: RepoName, command: CreateLabel): Future[Either[CodebergError, Label]] =
@@ -657,17 +651,17 @@ object IssueApi:
         owner: Owner,
         name: RepoName,
         state: StateFilter,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[Milestone]]] =
-      exec.attempt(rail.listMilestones(owner, name, state, page))
+      exec.attempt(rail.listMilestones(owner, name, state, params))
 
     /** [[IssueApi.getMilestone]] with its failure as a value. */
     def getMilestone(owner: Owner, name: RepoName, id: MilestoneId): Future[Either[CodebergError, Milestone]] =
       exec.attempt(rail.getMilestone(owner, name, id))
 
     /** [[IssueApi.search]] with its failure as a value. */
-    def search(query: IssueSearchQuery, page: PageParams): Future[Either[CodebergError, Page[Issue]]] =
-      exec.attempt(rail.search(query, page))
+    def search(query: IssueSearchQuery, params: PageParams): Future[Either[CodebergError, Page[Issue]]] =
+      exec.attempt(rail.search(query, params))
 
     /** [[IssueApi.delete]] with its failure as a value. */
     def delete(owner: Owner, name: RepoName, number: IssueNumber): Future[Either[CodebergError, Unit]] =
@@ -704,9 +698,9 @@ object IssueApi:
         owner: Owner,
         name: RepoName,
         number: IssueNumber,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[Issue]]] =
-      exec.attempt(rail.listBlocks(owner, name, number, page))
+      exec.attempt(rail.listBlocks(owner, name, number, params))
 
     /** [[IssueApi.addBlock]] with its failure as a value. */
     def addBlock(
@@ -731,9 +725,9 @@ object IssueApi:
         owner: Owner,
         name: RepoName,
         number: IssueNumber,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[Issue]]] =
-      exec.attempt(rail.listDependencies(owner, name, number, page))
+      exec.attempt(rail.listDependencies(owner, name, number, params))
 
     /** [[IssueApi.addDependency]] with its failure as a value. */
     def addDependency(
@@ -759,19 +753,19 @@ object IssueApi:
         name: RepoName,
         number: IssueNumber,
         query: CommentQuery,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[TimelineEvent]]] =
-      exec.attempt(rail.timeline(owner, name, number, query, page))
+      exec.attempt(rail.timeline(owner, name, number, query, params))
 
-  private def searchRequest(query: IssueSearchQuery, page: PageParams): CodebergRequest =
-    IssueRequests.read(
+  private def searchRequest(query: IssueSearchQuery, params: PageParams): CodebergRequest =
+    read(
       SearchOperation,
       List("repos", "issues", "search"),
-      IssueQueries.search(query) ++ IssueQueries.paging(page),
+      IssueQueries.search(query) ++ IssueQueries.paging(params),
     )
 
   private def deleteRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
-    IssueRequests.remove(DeleteOperation, issuePath(owner, name, number))
+    remove(DeleteOperation, IssueRequests.issuePath(owner, name, number))
 
   private def setDeadlineRequest(
       owner: Owner,
@@ -779,10 +773,10 @@ object IssueApi:
       number: IssueNumber,
       dueDate: Instant,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       SetDeadlineOperation,
       HttpMethod.Post,
-      issuePath(owner, name, number) :+ "deadline",
+      IssueRequests.issuePath(owner, name, number) :+ "deadline",
       EditDeadlineOptionDto.render(dueDate),
     )
 
@@ -790,7 +784,7 @@ object IssueApi:
     bodiless(PinOperation, HttpMethod.Post, pinPath(owner, name, number))
 
   private def unpinRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
-    IssueRequests.remove(UnpinOperation, pinPath(owner, name, number))
+    remove(UnpinOperation, pinPath(owner, name, number))
 
   private def movePinRequest(
       owner: Owner,
@@ -804,9 +798,9 @@ object IssueApi:
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    IssueRequests.read(ListBlocksOperation, blocksPath(owner, name, number), IssueQueries.paging(page))
+    read(ListBlocksOperation, blocksPath(owner, name, number), IssueQueries.paging(params))
 
   private def addBlockRequest(
       owner: Owner,
@@ -814,7 +808,7 @@ object IssueApi:
       number: IssueNumber,
       blocked: IssueRef,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       AddBlockOperation,
       HttpMethod.Post,
       blocksPath(owner, name, number),
@@ -827,7 +821,7 @@ object IssueApi:
       number: IssueNumber,
       blocked: IssueRef,
   ): CodebergRequest =
-    IssueRequests.removeWithBody(
+    removeWithBody(
       RemoveBlockOperation,
       blocksPath(owner, name, number),
       IssueMetaDto.render(blocked),
@@ -837,9 +831,9 @@ object IssueApi:
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    IssueRequests.read(ListDependenciesOperation, dependenciesPath(owner, name, number), IssueQueries.paging(page))
+    read(ListDependenciesOperation, dependenciesPath(owner, name, number), IssueQueries.paging(params))
 
   private def addDependencyRequest(
       owner: Owner,
@@ -847,7 +841,7 @@ object IssueApi:
       number: IssueNumber,
       blocker: IssueRef,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       AddDependencyOperation,
       HttpMethod.Post,
       dependenciesPath(owner, name, number),
@@ -860,7 +854,7 @@ object IssueApi:
       number: IssueNumber,
       blocker: IssueRef,
   ): CodebergRequest =
-    IssueRequests.removeWithBody(
+    removeWithBody(
       RemoveDependencyOperation,
       dependenciesPath(owner, name, number),
       IssueMetaDto.render(blocker),
@@ -871,42 +865,31 @@ object IssueApi:
       name: RepoName,
       number: IssueNumber,
       query: CommentQuery,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    IssueRequests.read(
+    read(
       TimelineOperation,
-      issuePath(owner, name, number) :+ "timeline",
-      IssueQueries.comments(query) ++ IssueQueries.paging(page),
-    )
-
-  /** A mutating call with no payload at all, which pinning and moving a pin both are. */
-  private def bodiless(operation: String, method: HttpMethod, path: List[String]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
+      IssueRequests.issuePath(owner, name, number) :+ "timeline",
+      IssueQueries.comments(query) ++ IssueQueries.paging(params),
     )
 
   private def pinPath(owner: Owner, name: RepoName, number: IssueNumber): List[String] =
-    issuePath(owner, name, number) :+ "pin"
+    IssueRequests.issuePath(owner, name, number) :+ "pin"
 
   private def blocksPath(owner: Owner, name: RepoName, number: IssueNumber): List[String] =
-    issuePath(owner, name, number) :+ "blocks"
+    IssueRequests.issuePath(owner, name, number) :+ "blocks"
 
   private def dependenciesPath(owner: Owner, name: RepoName, number: IssueNumber): List[String] =
-    issuePath(owner, name, number) :+ "dependencies"
+    IssueRequests.issuePath(owner, name, number) :+ "dependencies"
 
-  private def listRequest(owner: Owner, name: RepoName, query: IssueQuery, page: PageParams): CodebergRequest =
-    read(ListOperation, issuesPath(owner, name), IssueQueries.issues(query) ++ IssueQueries.paging(page))
+  private def listRequest(owner: Owner, name: RepoName, query: IssueQuery, params: PageParams): CodebergRequest =
+    read(ListOperation, IssueRequests.issuesPath(owner, name), IssueQueries.issues(query) ++ IssueQueries.paging(params))
 
   private def getRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
-    read(GetOperation, issuePath(owner, name, number), Nil)
+    read(GetOperation, IssueRequests.issuePath(owner, name, number), Nil)
 
   private def createRequest(owner: Owner, name: RepoName, command: CreateIssue): CodebergRequest =
-    write(CreateOperation, HttpMethod.Post, issuesPath(owner, name), CreateIssueOptionDto.render(command))
+    write(CreateOperation, HttpMethod.Post, IssueRequests.issuesPath(owner, name), CreateIssueOptionDto.render(command))
 
   private def editRequest(
       owner: Owner,
@@ -914,15 +897,20 @@ object IssueApi:
       number: IssueNumber,
       command: EditIssue,
   ): CodebergRequest =
-    write(EditOperation, HttpMethod.Patch, issuePath(owner, name, number), EditIssueOptionDto.render(command))
+    write(
+      EditOperation,
+      HttpMethod.Patch,
+      IssueRequests.issuePath(owner, name, number),
+      EditIssueOptionDto.render(command),
+    )
 
   private def listCommentsRequest(
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    read(ListCommentsOperation, issuePath(owner, name, number) :+ "comments", IssueQueries.paging(page))
+    read(ListCommentsOperation, IssueRequests.issuePath(owner, name, number) :+ "comments", IssueQueries.paging(params))
 
   private def createCommentRequest(
       owner: Owner,
@@ -933,83 +921,32 @@ object IssueApi:
     write(
       CreateCommentOperation,
       HttpMethod.Post,
-      issuePath(owner, name, number) :+ "comments",
+      IssueRequests.issuePath(owner, name, number) :+ "comments",
       CreateIssueCommentOptionDto.render(command),
     )
 
-  private def listLabelsRequest(owner: Owner, name: RepoName, page: PageParams): CodebergRequest =
-    read(ListLabelsOperation, labelsPath(owner, name), IssueQueries.paging(page))
+  private def listLabelsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
+    read(ListLabelsOperation, IssueRequests.labelsPath(owner, name), IssueQueries.paging(params))
 
   private def createLabelRequest(owner: Owner, name: RepoName, command: CreateLabel): CodebergRequest =
-    write(CreateLabelOperation, HttpMethod.Post, labelsPath(owner, name), CreateLabelOptionDto.render(command))
+    write(
+      CreateLabelOperation,
+      HttpMethod.Post,
+      IssueRequests.labelsPath(owner, name),
+      CreateLabelOptionDto.render(command),
+    )
 
   private def listMilestonesRequest(
       owner: Owner,
       name: RepoName,
       state: StateFilter,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
     read(
       ListMilestonesOperation,
-      milestonesPath(owner, name),
-      IssueQueries.milestones(state) ++ IssueQueries.paging(page),
+      IssueRequests.milestonesPath(owner, name),
+      IssueQueries.milestones(state) ++ IssueQueries.paging(params),
     )
 
   private def getMilestoneRequest(owner: Owner, name: RepoName, id: MilestoneId): CodebergRequest =
-    read(GetMilestoneOperation, milestonesPath(owner, name) :+ id.value.toString, Nil)
-
-  private def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = None,
-    )
-
-  private def write(operation: String, method: HttpMethod, path: List[String], body: String): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Json(body)),
-    )
-
-  private def issuesPath(owner: Owner, name: RepoName): List[String] =
-    List("repos", owner.value, name.value, "issues")
-
-  private def issuePath(owner: Owner, name: RepoName, number: IssueNumber): List[String] =
-    issuesPath(owner, name) :+ number.value.toString
-
-  private def labelsPath(owner: Owner, name: RepoName): List[String] =
-    List("repos", owner.value, name.value, "labels")
-
-  private def milestonesPath(owner: Owner, name: RepoName): List[String] =
-    List("repos", owner.value, name.value, "milestones")
-
-  private val IssueDecoder: Decode[Issue] =
-    WireDecode.of(Json.decoder[IssueDto])(_.toDomain)
-
-  private val IssuesDecoder: Decode[Vector[Issue]] =
-    WireDecode.of(Json.decoder[Vector[IssueDto]])(dtos => IssueDto.toDomainAll(JsonPath.Root, dtos))
-
-  private val CommentDecoder: Decode[Comment] =
-    WireDecode.of(Json.decoder[CommentDto])(_.toDomain)
-
-  private val CommentsDecoder: Decode[Vector[Comment]] =
-    WireDecode.of(Json.decoder[Vector[CommentDto]])(dtos => CommentDto.toDomainAll(JsonPath.Root, dtos))
-
-  private val LabelDecoder: Decode[Label] =
-    WireDecode.of(Json.decoder[LabelDto])(_.toDomain)
-
-  private val LabelsDecoder: Decode[Vector[Label]] =
-    WireDecode.of(Json.decoder[Vector[LabelDto]])(dtos => LabelDto.toDomainAll(JsonPath.Root, dtos))
-
-  private val MilestoneDecoder: Decode[Milestone] =
-    WireDecode.of(Json.decoder[MilestoneDto])(_.toDomain)
-
-  private val MilestonesDecoder: Decode[Vector[Milestone]] =
-    WireDecode.of(Json.decoder[Vector[MilestoneDto]])(dtos => MilestoneDto.toDomainAll(JsonPath.Root, dtos))
+    read(GetMilestoneOperation, IssueRequests.milestonesPath(owner, name) :+ id.value.toString, Nil)

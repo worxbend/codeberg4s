@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
@@ -8,7 +9,6 @@ import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.actions.ActionTask
 import com.worxbend.codeberg4s.repositories.actions.TaskId
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 /** Forgejo's `ActionTask` model, field for field.
   *
@@ -89,4 +89,4 @@ object ActionTaskDto:
 
   /** Converts a decoded array of tasks, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[ActionTaskDto]): Either[DecodeFailure, Vector[ActionTask]] =
-    Elements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

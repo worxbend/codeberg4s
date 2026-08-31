@@ -1,5 +1,8 @@
 package com.worxbend.codeberg4s.repositories
 
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
+
 import munit.FunSuite
 
 final class RepoSlugSuite extends FunSuite:

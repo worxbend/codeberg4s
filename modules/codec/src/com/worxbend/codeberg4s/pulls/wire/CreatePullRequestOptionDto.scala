@@ -2,8 +2,8 @@ package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.issues.wire.WireInstant
-import com.worxbend.codeberg4s.issues.wire.WireNumbers
+import com.worxbend.codeberg4s.codec.Timestamps
+import com.worxbend.codeberg4s.codec.WireValues
 import com.worxbend.codeberg4s.pulls.CreatePullRequest
 
 /** Forgejo's `CreatePullRequestOption` request model — the body of `POST /repos/{owner}/{repo}/pulls`.
@@ -21,9 +21,9 @@ import com.worxbend.codeberg4s.pulls.CreatePullRequest
   * `assignees` and `labels` are emitted only when non-empty, for the same reason: an explicit `[]` is a statement, and
   * a caller who never called [[com.worxbend.codeberg4s.pulls.CreatePullRequest.labelled]] made no statement.
   *
-  * [[com.worxbend.codeberg4s.issues.wire.WireInstant]] and [[com.worxbend.codeberg4s.issues.wire.WireNumbers]] are the
-  * issue wave's, reused rather than copied per `docs/LEDGER.md`; both are `private[codeberg4s]` and both are listed
-  * there as candidates for promotion into `codec`.
+  * [[com.worxbend.codeberg4s.codec.Timestamps.render]] and [[com.worxbend.codeberg4s.codec.WireValues]] are the issue
+  * wave's, reused rather than copied per `docs/LEDGER.md`; both are `private[codeberg4s]` and both are listed there as
+  * candidates for promotion into `codec`.
   */
 private[codeberg4s] object CreatePullRequestOptionDto:
 
@@ -37,8 +37,8 @@ private[codeberg4s] object CreatePullRequestOptionDto:
       Some("head"  -> JsonValue.Str(command.head.value)),
       Some("base"  -> JsonValue.Str(command.base.value)),
       command.body.map(text => "body" -> JsonValue.Str(text)),
-      Option.when(command.assignees.nonEmpty)("assignees" -> WireNumbers.strings(command.assignees)),
-      Option.when(command.labels.nonEmpty)("labels"       -> WireNumbers.identifiers(command.labels.map(_.value))),
-      command.milestone.map(id   => "milestone" -> WireNumbers.identifier(id.value)),
-      command.dueDate.map(moment => "due_date" -> JsonValue.Str(WireInstant.render(moment))),
+      Option.when(command.assignees.nonEmpty)("assignees" -> WireValues.strings(command.assignees)),
+      Option.when(command.labels.nonEmpty)("labels"       -> WireValues.identifiers(command.labels.map(_.value))),
+      command.milestone.map(id   => "milestone" -> WireValues.identifier(id.value)),
+      command.dueDate.map(moment => "due_date" -> JsonValue.Str(Timestamps.render(moment))),
     ).flatten

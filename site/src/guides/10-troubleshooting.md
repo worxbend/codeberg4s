@@ -28,8 +28,8 @@ and the elapsed time:
 import com.worxbend.codeberg4s.CodebergClient
 import com.worxbend.codeberg4s.issues.IssueQuery
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -152,7 +152,7 @@ is a security boundary, not a formality: it is the one thing that would let a
 crafted name climb out of the branch route.
 
 If the name is accepted and the call still `404`s, the branch genuinely is not
-there under that spelling. Confirm with `client.repos.listBranches`.
+there under that spelling. Confirm with `client.repos.branches`.
 
 ## Decode failures
 

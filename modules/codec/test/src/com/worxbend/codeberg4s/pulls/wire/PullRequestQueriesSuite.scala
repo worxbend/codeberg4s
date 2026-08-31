@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.pulls.wire
 
+import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.issues.LabelId
 import com.worxbend.codeberg4s.issues.MilestoneId
@@ -11,7 +12,6 @@ import com.worxbend.codeberg4s.pulls.PullRequestHead
 import com.worxbend.codeberg4s.pulls.PullRequestQuery
 import com.worxbend.codeberg4s.pulls.PullRequestSort
 import com.worxbend.codeberg4s.repositories.BranchName
-import com.worxbend.codeberg4s.repositories.Owner
 
 import munit.FunSuite
 

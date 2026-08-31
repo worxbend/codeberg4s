@@ -1,10 +1,5 @@
-package com.worxbend.codeberg4s.users.social
+package com.worxbend.codeberg4s
 
-import com.worxbend.codeberg4s.BaseUri
-import com.worxbend.codeberg4s.CodebergConfig
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.CodebergException
-import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.client.FutureExec
 import com.worxbend.codeberg4s.client.FutureTimer
@@ -20,6 +15,7 @@ import com.worxbend.codeberg4s.retry.RetryPolicy
 import com.worxbend.codeberg4s.transport.SttpHttpPort
 
 import sttp.client4.Backend
+import sttp.client4.GenericRequest
 import sttp.client4.Response
 import sttp.client4.testing.BackendStub
 import sttp.client4.testing.RecordingBackend
@@ -34,30 +30,36 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
-/** The stub backend, the pipeline and the assertions the three suites of this group share.
+/** The stub backend, the pipeline and the request assertions every API suite in this module shares.
   *
-  * Three API classes sit on one pipeline and one retry policy, and each of them needs the same six questions asked of a
-  * recorded request — which method, which path, which query, which body, how many attempts, and do the two rails agree.
-  * Writing that once is what stops the three suites from drifting into three slightly different notions of "the request
-  * that was sent"; the alternative was copying sixty lines of harness three times, which is how one copy quietly stops
-  * asserting the query string.
+  * Each API class is exercised the same way: answer it from a [[sttp.client4.testing.BackendStub]], record what it
+  * dialled, and ask the same handful of questions of the recording — which method, which path, which query parameters,
+  * which body, how many attempts, and whether the two rails (the convenience one that raises and the `attempt` one that
+  * returns an `Either`) describe a failure identically. Before this trait existed each suite carried its own copy of
+  * that sixty-line preamble, which is how one copy quietly stops asserting the query string while the others still do.
   *
-  * Nothing here opens a socket. [[onBackend]] builds the whole pipeline over a [[sttp.client4.testing.BackendStub]] and
-  * releases the timer whatever the outcome.
+  * '''Nothing here opens a socket.''' The subject of every suite mixing this in is the wiring, never the network.
+  *
+  * A suite mixes it in and adds only what is specific to its own surface — its fixtures, its response bodies, and a
+  * one-line `onApi` that builds its API class on the pipeline [[onPipeline]] hands it.
   */
-trait SocialApiHarness:
+trait ClientSuiteHarness:
   self: FunSuite =>
 
-  /** The pool munit already runs the suite's futures on; declared here so the three suites do not each declare one. */
+  /** The execution context every suite's futures run on — munit's own, so a hung assertion fails the test rather than
+    * the JVM.
+    */
   given executionContext: ExecutionContext = munitExecutionContext
 
-  /** The effect instance every API class in this group is constructed with. */
+  /** The effect the APIs are built with. Exposed rather than kept inside [[onPipeline]] because a suite constructs its
+    * own API instance at the call site, where the context parameter has to be resolvable.
+    */
   given exec: Exec[Future] = FutureExec()
 
-  /** The instance every suite in this group pretends to talk to. */
+  /** The instance every suite pretends to talk to. */
   val Instance: BaseUri = orFail(BaseUri.from("https://forge.example/api/v1"))
 
-  /** The prefix every asserted path starts with. */
+  /** The prefix every asserted path starts with — [[Instance]] as the plain string an assertion interpolates. */
   val Root: String = "https://forge.example/api/v1"
 
   /** How sttp renders a request that carries no body at all, which is what [[bodyOf]] answers for one.
@@ -75,45 +77,64 @@ trait SocialApiHarness:
   def responding(status: Int, body: String, headers: List[Header]): BackendStub[Future] =
     BackendStub.asynchronousFuture.whenAnyRequest.thenRespond(ResponseStub.adjust(body, StatusCode(status), headers))
 
-  /** A backend that answers `first` once and `rest` from then on — how a retry is made observable. */
+  /** A backend that answers one `503` and then `status` with `body` — how a retry is made observable. */
+  def flakyThen(status: Int, body: String): BackendStub[Future] =
+    cycling(stub(503, ""), stub(status, body))
+
+  /** A backend that answers `first` once and `rest` from then on. */
   def cycling(first: Response[StubBody], rest: Response[StubBody]): BackendStub[Future] =
     BackendStub.asynchronousFuture.whenAnyRequest.thenRespondCyclic(first, rest)
 
-  /** A response with a status and a body, for [[cycling]]. */
+  /** A single canned response with a status and a body, for [[cycling]]. */
   def stub(status: Int, body: String): Response[StubBody] =
     ResponseStub.adjust(body, StatusCode(status))
 
-  /** The dialled URI without its query string, written with `indexOf` because universal equality is banned. */
+  /** The URI the first recorded request dialled, query string and all. */
+  def dialled(backend: RecordingBackend): String =
+    firstRequest(backend).uri.toString
+
+  /** The dialled URI without its query string. Written with `indexOf` rather than a character comparison because
+    * `.scalafix.conf` bans universal equality outright.
+    */
   def pathOf(backend: RecordingBackend): String =
     val uri   = dialled(backend)
     val query = uri.indexOf('?')
 
     if query < 0 then uri else uri.take(query)
 
-  /** The query parameters of the first request that reached `backend`, in wire order. */
+  /** The query parameters of the first recorded request, in the order they were sent. */
   def queryOf(backend: RecordingBackend): List[(String, String)] =
     firstRequest(backend).uri.params.toSeq.toList
 
-  /** The method of the first request that reached `backend`. */
+  /** The HTTP method of the first recorded request. */
   def methodOf(backend: RecordingBackend): String =
     firstRequest(backend).method.method
 
-  /** The body of the first request that reached `backend`, as the string it was rendered to. */
+  /** The body of the first recorded request, as sttp renders it for display. */
   def bodyOf(backend: RecordingBackend): String =
     firstRequest(backend).body.show.stripPrefix("string: ")
 
-  /** How many requests reached `backend` — one more than zero retries. */
+  /** The `Content-Type` the first recorded request declared, if it declared one. */
+  def contentTypeOf(backend: RecordingBackend): Option[String] =
+    firstRequest(backend).header("Content-Type")
+
+  /** How many requests reached `backend` — one more than the number of retries. */
   def attemptsOn(backend: RecordingBackend): Int =
     backend.allInteractions.size
 
-  /** A window of `size` items starting at page `page`. */
+  /** The first request recorded by `backend`, for an assertion no named accessor above covers. */
+  def firstRequest(backend: RecordingBackend): GenericRequest[?, ?] =
+    backend.allInteractions.headOption match
+      case Some((request, _)) => request
+      case None               => fail("no request reached the backend")
+
+  /** A pagination window of `size` items starting at page `page`. */
   def window(page: Int, size: Int): PageParams =
     PageParams(orFail(PageNumber.from(page)), orFail(PageSize.from(size)))
 
-  /** Builds `api` on a pipeline over `backend`, and releases the timer whatever the outcome. */
-  def onBackend[A, B](backend: Backend[Future])(build: ApiPipeline[Future] => B)(use: B => Future[A]): Future[A] =
-    val config = CodebergConfig(Auth.Anonymous)
-      .copy(baseUri = Instance, retry = SocialApiHarness.PromptRetry)
+  /** Builds the pipeline an API sits on over `backend`, and releases the timer whatever the outcome. */
+  def onPipeline[A](backend: Backend[Future])(use: ApiPipeline[Future] => Future[A]): Future[A] =
+    val config = CodebergConfig(Auth.Anonymous).copy(baseUri = Instance, retry = ClientSuiteHarness.PromptRetry)
     val timer  = FutureTimer()
 
     val pipeline = ApiPipeline[Future](
@@ -124,7 +145,7 @@ trait SocialApiHarness:
       ApiErrorBodyCodec.parse,
     )
 
-    use(build(pipeline)).transform: outcome =>
+    use(pipeline).transform: outcome =>
       timer.close()
       outcome
 
@@ -148,22 +169,20 @@ trait SocialApiHarness:
       case Left(CodebergError.Api(ctx, _, _)) => ctx.operation
       case other                              => fail(s"expected an Api failure, got $other")
 
+  /** The per-field messages a failed call carried back from the forge. */
+  def detailsOf[A](result: Either[CodebergError, A]): List[String] =
+    result match
+      case Left(CodebergError.Api(_, _, body)) => body.errors
+      case other                               => fail(s"expected an Api failure, got $other")
+
   /** Unwraps a smart constructor in a fixture, failing the test rather than the call under test. */
   def orFail[A](result: Either[ValidationError, A]): A =
     result match
       case Right(value) => value
       case Left(error)  => fail(s"invalid fixture: ${error.field} ${error.message}")
 
-  private def dialled(backend: RecordingBackend): String =
-    firstRequest(backend).uri.toString
-
-  private def firstRequest(backend: RecordingBackend): sttp.client4.GenericRequest[?, ?] =
-    backend.allInteractions.headOption match
-      case Some((request, _)) => request
-      case None               => fail("no request reached the backend")
-
-/** The retry policy the group's suites run under. */
-object SocialApiHarness:
+/** The retry policy every suite mixing [[ClientSuiteHarness]] in runs under. */
+object ClientSuiteHarness:
 
   /** Retries promptly and predictably: the default policy would make the retry tests take a quarter of a second. */
   val PromptRetry: RetryPolicy = RetryPolicy(

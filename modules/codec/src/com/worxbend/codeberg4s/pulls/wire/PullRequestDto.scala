@@ -1,17 +1,15 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.issues.Milestone
 import com.worxbend.codeberg4s.issues.wire.LabelDto
 import com.worxbend.codeberg4s.issues.wire.MilestoneDto
-import com.worxbend.codeberg4s.issues.wire.WireElements
 import com.worxbend.codeberg4s.pulls.PullRequest
-import com.worxbend.codeberg4s.pulls.PullRequestBranch
 import com.worxbend.codeberg4s.pulls.PullRequestNumber
 import com.worxbend.codeberg4s.pulls.PullRequestState
 import com.worxbend.codeberg4s.repositories.CommitSha
@@ -103,10 +101,10 @@ final case class PullRequestDto(
       identifier <- Wire.required(at, "id", id)
       index      <- Wire.validated(at, "number", number)(PullRequestNumber.from)
       headline   <- Wire.required(at, "title", title)
-      author     <- userAt(at, "user", user)
-      merger     <- userAt(at, "merged_by", mergedBy)
-      mergeSha   <- PullWire.optional(at, "merge_commit_sha", mergeCommitSha)(CommitSha.from)
-      ancestor   <- PullWire.optional(at, "merge_base", mergeBase)(CommitSha.from)
+      author     <- Wire.nested(at, "user", user)(_.toDomainAt(_))
+      merger     <- Wire.nested(at, "merged_by", mergedBy)(_.toDomainAt(_))
+      mergeSha   <- Wire.optional(at, "merge_commit_sha", mergeCommitSha)(CommitSha.from)
+      ancestor   <- Wire.optional(at, "merge_base", mergeBase)(CommitSha.from)
       lifecycle  <- Wire.validated(at, "state", state)(value =>
                       PullRequestState.from(
                         state       = value,
@@ -120,9 +118,9 @@ final case class PullRequestDto(
       assigned   <- usersAt(at, "assignees", assignees)
       reviewers  <- usersAt(at, "requested_reviewers", requestedReviewers)
       attached   <- LabelDto.toDomainAll(at.field("labels"), labels)
-      target     <- milestoneAt(at)
-      into       <- branchAt(at, "base", base)
-      from       <- branchAt(at, "head", head)
+      target     <- Wire.nested(at, "milestone", milestone)(_.toDomainAt(_))
+      into       <- Wire.nested(at, "base", base)(_.toDomainAt(_))
+      from       <- Wire.nested(at, "head", head)(_.toDomainAt(_))
     yield PullRequest(
       id                   = identifier,
       number               = index,
@@ -159,21 +157,8 @@ final case class PullRequestDto(
   def toDomain: Either[DecodeFailure, PullRequest] =
     toDomainAt(JsonPath.Root)
 
-  private def userAt(at: JsonPath, field: String, dto: Option[UserDto]): Either[DecodeFailure, Option[User]] =
-    dto.fold(Right(None))(value => value.toDomainAt(at.field(field)).map(Some.apply))
-
   private def usersAt(at: JsonPath, field: String, dtos: Vector[UserDto]): Either[DecodeFailure, Vector[User]] =
-    WireElements.at(at.field(field), dtos)((dto, path) => dto.toDomainAt(path))
-
-  private def milestoneAt(at: JsonPath): Either[DecodeFailure, Option[Milestone]] =
-    milestone.fold(Right(None))(dto => dto.toDomainAt(at.field("milestone")).map(Some.apply))
-
-  private def branchAt(
-      at: JsonPath,
-      field: String,
-      dto: Option[PullRequestBranchDto],
-  ): Either[DecodeFailure, Option[PullRequestBranch]] =
-    dto.fold(Right(None))(value => value.toDomainAt(at.field(field)).map(Some.apply))
+    ArrayElements.convert(at.field(field), dtos)((dto, path) => dto.toDomainAt(path))
 
 object PullRequestDto:
 
@@ -229,4 +214,4 @@ object PullRequestDto:
 
   /** Converts a decoded array of pull requests, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[PullRequestDto]): Either[DecodeFailure, Vector[PullRequest]] =
-    WireElements.at(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

@@ -2,11 +2,14 @@ package com.worxbend.codeberg4s.notifications
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
-import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.bodiless
+import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
@@ -15,8 +18,6 @@ import com.worxbend.codeberg4s.notifications.wire.NotificationQueries
 import com.worxbend.codeberg4s.notifications.wire.NotificationThreadDto
 import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 
 import scala.concurrent.Future
 
@@ -63,9 +64,8 @@ import scala.concurrent.Future
   *   - [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] when a retryable failure outlived the policy.
   *
   * [[com.worxbend.codeberg4s.CodebergError.Validation]] is '''not''' produced by any operation here. Every argument is
-  * an already-validated type — [[com.worxbend.codeberg4s.repositories.Owner]], [[NotificationThreadId]] — so a value
-  * that would forge a path or a query parameter is rejected by its own smart constructor before a client is ever
-  * involved.
+  * an already-validated type — [[com.worxbend.codeberg4s.Owner]], [[NotificationThreadId]] — so a value that would
+  * forge a path or a query parameter is rejected by its own smart constructor before a client is ever involved.
   *
   * ==Retries==
   *
@@ -106,8 +106,8 @@ final class NotificationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
     * @param page
     *   which window to fetch, and how large
     */
-  def list(query: NotificationQuery, page: PageParams): Future[Page[NotificationThread]] =
-    pipeline.callPage(NotificationApi.listRequest(query, page), page)(using NotificationApi.ThreadsDecoder)
+  def list(query: NotificationQuery, params: PageParams): Future[Page[NotificationThread]] =
+    pipeline.callPage(NotificationApi.listRequest(query, params), params)(using NotificationApi.ThreadsDecoder)
 
   /** Marks the authenticated user's notification threads read — `PUT /notifications`.
     *
@@ -185,9 +185,9 @@ final class NotificationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
       owner: Owner,
       name: RepoName,
       query: NotificationQuery,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[NotificationThread]] =
-    pipeline.callPage(NotificationApi.listRepositoryRequest(owner, name, query, page), page)(using
+    pipeline.callPage(NotificationApi.listRepositoryRequest(owner, name, query, params), params)(using
       NotificationApi.ThreadsDecoder)
 
   /** Marks the authenticated user's threads for one repository read — `PUT /repos/{owner}/{repo}/notifications`.
@@ -236,9 +236,9 @@ object NotificationApi:
     /** [[NotificationApi.list]] with its failure as a value. */
     def list(
         query: NotificationQuery,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[NotificationThread]]] =
-      exec.attempt(rail.list(query, page))
+      exec.attempt(rail.list(query, params))
 
     /** [[NotificationApi.markAllRead]] with its failure as a value. */
     def markAllRead(): Future[Either[CodebergError, Unit]] =
@@ -261,9 +261,9 @@ object NotificationApi:
         owner: Owner,
         name: RepoName,
         query: NotificationQuery,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[NotificationThread]]] =
-      exec.attempt(rail.listRepository(owner, name, query, page))
+      exec.attempt(rail.listRepository(owner, name, query, params))
 
     /** [[NotificationApi.markRepositoryRead]] with its failure as a value. */
     def markRepositoryRead(owner: Owner, name: RepoName): Future[Either[CodebergError, Unit]] =
@@ -274,15 +274,15 @@ object NotificationApi:
     */
   private val NotificationsPath: List[String] = List("notifications")
 
-  private def listRequest(query: NotificationQuery, page: PageParams): CodebergRequest =
+  private def listRequest(query: NotificationQuery, params: PageParams): CodebergRequest =
     read(
       ListOperation,
       NotificationsPath,
-      NotificationQueries.notifications(query) ++ NotificationQueries.paging(page),
+      NotificationQueries.notifications(query) ++ NotificationQueries.paging(params),
     )
 
   private val markAllReadRequest: CodebergRequest =
-    mutate(MarkAllReadOperation, HttpMethod.Put, NotificationsPath)
+    bodiless(MarkAllReadOperation, HttpMethod.Put, NotificationsPath)
 
   private val unreadCountRequest: CodebergRequest =
     read(UnreadCountOperation, NotificationsPath :+ "new", Nil)
@@ -291,45 +291,22 @@ object NotificationApi:
     read(GetThreadOperation, threadPath(id), Nil)
 
   private def markThreadReadRequest(id: NotificationThreadId): CodebergRequest =
-    mutate(MarkThreadReadOperation, HttpMethod.Patch, threadPath(id))
+    bodiless(MarkThreadReadOperation, HttpMethod.Patch, threadPath(id))
 
   private def listRepositoryRequest(
       owner: Owner,
       name: RepoName,
       query: NotificationQuery,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
     read(
       ListRepositoryOperation,
       repositoryNotificationsPath(owner, name),
-      NotificationQueries.notifications(query) ++ NotificationQueries.paging(page),
+      NotificationQueries.notifications(query) ++ NotificationQueries.paging(params),
     )
 
   private def markRepositoryReadRequest(owner: Owner, name: RepoName): CodebergRequest =
-    mutate(MarkRepositoryReadOperation, HttpMethod.Put, repositoryNotificationsPath(owner, name))
-
-  private def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = None,
-    )
-
-  /** A mark-read call: no query parameters and no body, which is what makes repeating it harmless. See the retry note
-    * on [[NotificationApi]].
-    */
-  private def mutate(operation: String, method: HttpMethod, path: List[String]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
-    )
+    bodiless(MarkRepositoryReadOperation, HttpMethod.Put, repositoryNotificationsPath(owner, name))
 
   private def threadPath(id: NotificationThreadId): List[String] =
     NotificationsPath ++ List("threads", id.value.toString)
@@ -338,12 +315,10 @@ object NotificationApi:
     List("repos", owner.value, name.value, "notifications")
 
   private val ThreadDecoder: Decode[NotificationThread] =
-    WireDecode.of(Json.decoder[NotificationThreadDto])(_.toDomain)
+    WireDecode.single(Json.decoder[NotificationThreadDto])(_.toDomain)
 
   private val ThreadsDecoder: Decode[Vector[NotificationThread]] =
-    WireDecode.of(Json.decoder[Vector[NotificationThreadDto]])(dtos =>
-      NotificationThreadDto.toDomainAll(JsonPath.Root, dtos)
-    )
+    WireDecode.vector(Json.decoder[Vector[NotificationThreadDto]])(NotificationThreadDto.toDomainAll)
 
   private val CountDecoder: Decode[UnreadCount] =
-    WireDecode.of(Json.decoder[NotificationCountDto])(_.toDomain)
+    WireDecode.single(Json.decoder[NotificationCountDto])(_.toDomain)

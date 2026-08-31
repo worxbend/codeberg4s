@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
-import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.miscellaneous.PlainText
@@ -19,7 +19,6 @@ import com.worxbend.codeberg4s.repositories.gitdata.wire.GitTreeDto
 import com.worxbend.codeberg4s.repositories.gitdata.wire.NoteDto
 import com.worxbend.codeberg4s.repositories.gitdata.wire.ReferenceDto
 import com.worxbend.codeberg4s.repositories.wire.CommitDto
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 /** Every response shape [[RepositoryGitApi]] can receive, decoded once and shared.
   *
@@ -41,58 +40,58 @@ private[gitdata] object GitDataDecoders:
 
   /** One `GitBlob` object. */
   val blob: Decode[GitBlob] =
-    WireDecode.of(Json.decoder[GitBlobDto])(_.toDomain)
+    WireDecode.single(Json.decoder[GitBlobDto])(_.toDomain)
 
   /** A bare array of `GitBlob` objects, as the multi-blob read returns it. */
   val blobs: Decode[Vector[GitBlob]] =
-    WireDecode.of(Json.decoder[Vector[GitBlobDto]]): dtos =>
-      Elements.convert(JsonPath.Root, dtos)((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[GitBlobDto]]): (at, dtos) =>
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** The `{"sha", "tree", …}` envelope, unwrapped to the entries it carries. */
   val treeEntries: Decode[Vector[GitTreeEntry]] =
-    WireDecode.of(Json.decoder[GitTreeDto])(_.toDomain)
+    WireDecode.single(Json.decoder[GitTreeDto])(_.toDomain)
 
   /** One `Commit` object, as the single-commit read returns it. */
   val commit: Decode[Commit] =
-    WireDecode.of(Json.decoder[CommitDto])(_.toDomain)
+    WireDecode.single(Json.decoder[CommitDto])(_.toDomain)
 
   /** One `Note` object. */
   val note: Decode[GitNote] =
-    WireDecode.of(Json.decoder[NoteDto])(_.toDomain)
+    WireDecode.single(Json.decoder[NoteDto])(_.toDomain)
 
   /** A bare array of `Reference` objects. */
   val references: Decode[Vector[GitReference]] =
-    WireDecode.of(Json.decoder[Vector[ReferenceDto]]): dtos =>
-      Elements.convert(JsonPath.Root, dtos)((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[ReferenceDto]]): (at, dtos) =>
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** One `AnnotatedTag` object. */
   val annotatedTag: Decode[AnnotatedTag] =
-    WireDecode.of(Json.decoder[AnnotatedTagDto])(_.toDomain)
+    WireDecode.single(Json.decoder[AnnotatedTagDto])(_.toDomain)
 
   /** One `CombinedStatus` object, kept whole — see this object's own note. */
   val combinedStatus: Decode[CombinedCommitStatus] =
-    WireDecode.of(Json.decoder[CombinedStatusDto])(_.toDomain)
+    WireDecode.single(Json.decoder[CombinedStatusDto])(_.toDomain)
 
   /** A bare array of `CommitStatus` objects. */
   val commitStatuses: Decode[Vector[CommitStatus]] =
-    WireDecode.of(Json.decoder[Vector[CommitStatusDto]]): dtos =>
-      Elements.convert(JsonPath.Root, dtos)((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[CommitStatusDto]]): (at, dtos) =>
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** One `PullRequest` object, reusing the pull-request wave's model rather than a reduced copy of it. */
   val pullRequest: Decode[PullRequest] =
-    WireDecode.of(Json.decoder[PullRequestDto])(_.toDomain)
+    WireDecode.single(Json.decoder[PullRequestDto])(_.toDomain)
 
   /** One `Compare` object. */
   val comparison: Decode[CommitComparison] =
-    WireDecode.of(Json.decoder[CompareDto])(_.toDomain)
+    WireDecode.single(Json.decoder[CompareDto])(_.toDomain)
 
   /** One `FileResponse` object, as the diffpatch write answers with. */
   val fileChange: Decode[FileChange] =
-    WireDecode.of(Json.decoder[FileResponseDto])(_.toDomain)
+    WireDecode.single(Json.decoder[FileResponseDto])(_.toDomain)
 
   /** The EditorConfig definitions object, whose property names are not known in advance. */
   val editorConfig: Decode[EditorConfigDefinitions] =
-    WireDecode.of(Json.decoder[EditorConfigDto])(dto => Right(dto.toDomain))
+    WireDecode.single(Json.decoder[EditorConfigDto])(dto => Right(dto.toDomain))
 
   /** A body that is not JSON: a diff, a patch, or a file this transport could only decode as text.
     *

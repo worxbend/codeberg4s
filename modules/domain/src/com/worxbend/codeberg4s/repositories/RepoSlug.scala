@@ -1,5 +1,8 @@
 package com.worxbend.codeberg4s.repositories
 
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
+
 /** The `owner/name` pair that identifies a repository.
   *
   * A composite identifier deserves a real type: two loose strings let a caller swap them silently, and every repository

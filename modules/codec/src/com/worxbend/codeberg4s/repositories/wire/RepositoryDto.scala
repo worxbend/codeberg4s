@@ -1,13 +1,13 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.RepoSlug
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.users.wire.UserDto
@@ -121,7 +121,7 @@ final case class RepositoryDto(
       ownerDto    <- Wire.required(at, "owner", owner)
       ownerModel  <- ownerDto.toDomainAt(at.field("owner"))
       ownerHandle <- Wire.validated(at.field("owner"), "login", ownerDto.login)(Owner.from)
-      parentModel <- parentAt(at)
+      parentModel <- Wire.nested(at, "parent", parent)(_.toDomainAt(_))
     yield Repository(
       id                   = identifier,
       slug                 = RepoSlug(ownerHandle, repoName),
@@ -168,9 +168,6 @@ final case class RepositoryDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, Repository] =
     toDomainAt(JsonPath.Root)
-
-  private def parentAt(at: JsonPath): Either[DecodeFailure, Option[Repository]] =
-    parent.fold(Right(None))(dto => dto.toDomainAt(at.field("parent")).map(Some.apply))
 
 object RepositoryDto:
 

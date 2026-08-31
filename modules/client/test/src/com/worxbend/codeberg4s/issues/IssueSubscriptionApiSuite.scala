@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues
 
 import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.repositories.Owner
+import com.worxbend.codeberg4s.Owner
 
 import sttp.client4.Backend
 import sttp.client4.testing.RecordingBackend

@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.issues
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
 
 /** The number a repository gives an issue — the `{index}` of `/repos/{owner}/{repo}/issues/{index}`.
@@ -26,7 +27,7 @@ object IssueNumber:
     *   the number, or a [[ValidationError]] on the `"issueNumber"` field
     */
   def from(value: Long): Either[ValidationError, IssueNumber] =
-    NumericId.from("issueNumber", value)
+    PositiveId.from("issueNumber", value)
 
   extension (number: IssueNumber)
 

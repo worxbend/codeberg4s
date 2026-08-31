@@ -2,16 +2,19 @@ package com.worxbend.codeberg4s.issues
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.removeWithBody
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.issues.wire.EditReactionOptionDto
 import com.worxbend.codeberg4s.issues.wire.IssueQueries
 import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 
 import scala.concurrent.Future
 
@@ -88,9 +91,9 @@ final class IssueReactionApi private[codeberg4s] (pipeline: ApiPipeline[Future])
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[Reaction]] =
-    pipeline.callPage(IssueReactionApi.listOnIssueRequest(owner, name, number, page), page)(using
+    pipeline.callPage(IssueReactionApi.listOnIssueRequest(owner, name, number, params), params)(using
       IssueDecoders.reactions)
 
   /** Reacts to an issue — `POST /repos/{owner}/{repo}/issues/{index}/reactions`.
@@ -218,9 +221,9 @@ object IssueReactionApi:
         owner: Owner,
         name: RepoName,
         number: IssueNumber,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[Reaction]]] =
-      exec.attempt(rail.listOnIssue(owner, name, number, page))
+      exec.attempt(rail.listOnIssue(owner, name, number, params))
 
     /** [[IssueReactionApi.addToIssue]] with its failure as a value. */
     def addToIssue(
@@ -270,9 +273,9 @@ object IssueReactionApi:
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    IssueRequests.read(ListOnIssueOperation, issueReactionsPath(owner, name, number), IssueQueries.paging(page))
+    read(ListOnIssueOperation, issueReactionsPath(owner, name, number), IssueQueries.paging(params))
 
   private def addToIssueRequest(
       owner: Owner,
@@ -280,7 +283,7 @@ object IssueReactionApi:
       number: IssueNumber,
       content: ReactionContent,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       AddToIssueOperation,
       HttpMethod.Post,
       issueReactionsPath(owner, name, number),
@@ -293,14 +296,14 @@ object IssueReactionApi:
       number: IssueNumber,
       content: ReactionContent,
   ): CodebergRequest =
-    IssueRequests.removeWithBody(
+    removeWithBody(
       RemoveFromIssueOperation,
       issueReactionsPath(owner, name, number),
       EditReactionOptionDto.render(content),
     )
 
   private def listOnCommentRequest(owner: Owner, name: RepoName, comment: CommentId): CodebergRequest =
-    IssueRequests.read(ListOnCommentOperation, commentReactionsPath(owner, name, comment), Nil)
+    read(ListOnCommentOperation, commentReactionsPath(owner, name, comment), Nil)
 
   private def addToCommentRequest(
       owner: Owner,
@@ -308,7 +311,7 @@ object IssueReactionApi:
       comment: CommentId,
       content: ReactionContent,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       AddToCommentOperation,
       HttpMethod.Post,
       commentReactionsPath(owner, name, comment),
@@ -321,7 +324,7 @@ object IssueReactionApi:
       comment: CommentId,
       content: ReactionContent,
   ): CodebergRequest =
-    IssueRequests.removeWithBody(
+    removeWithBody(
       RemoveFromCommentOperation,
       commentReactionsPath(owner, name, comment),
       EditReactionOptionDto.render(content),

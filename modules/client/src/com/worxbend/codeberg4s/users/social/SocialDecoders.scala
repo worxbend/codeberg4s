@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.users.social
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -12,7 +13,6 @@ import com.worxbend.codeberg4s.miscellaneous.PlainText
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.admin.RepositoryActivity
 import com.worxbend.codeberg4s.repositories.admin.wire.ActivityDto
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 import com.worxbend.codeberg4s.users.PublicKey
 import com.worxbend.codeberg4s.users.User
@@ -49,21 +49,21 @@ private[social] object SocialDecoders:
 
   /** A bare array of user objects, as every follower and following listing returns it. */
   val users: Decode[Vector[User]] =
-    WireDecode.of(Json.decoder[Vector[UserDto]]): dtos =>
-      Elements.convert(JsonPath.Root, dtos)((dto, path) => dto.toDomainAt(path))
+    WireDecode.vector(Json.decoder[Vector[UserDto]]): (at, dtos) =>
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** A bare array of repository objects, as the starred and watched listings return them. */
   val repositories: Decode[Vector[Repository]] =
-    WireDecode.of(Json.decoder[Vector[RepositoryDto]]): dtos =>
-      Elements.convert(JsonPath.Root, dtos)((dto, path) => dto.toDomainAt(path))
+    WireDecode.vector(Json.decoder[Vector[RepositoryDto]]): (at, dtos) =>
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** A bare array of block entries. */
   val blockedUsers: Decode[Vector[BlockedUser]] =
-    WireDecode.of(Json.decoder[Vector[BlockedUserDto]])(dtos => BlockedUserDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[BlockedUserDto]])(BlockedUserDto.toDomainAll)
 
   /** A bare array of running stopwatches. */
   val stopWatches: Decode[Vector[StopWatch]] =
-    WireDecode.of(Json.decoder[Vector[StopWatchDto]])(dtos => StopWatchDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[StopWatchDto]])(StopWatchDto.toDomainAll)
 
   /** A bare array of tracked-time entries, read by the model `client.issues` already uses.
     *
@@ -72,7 +72,7 @@ private[social] object SocialDecoders:
     * a second endpoint the mistake to avoid.
     */
   val trackedTimes: Decode[Vector[TrackedTime]] =
-    WireDecode.of(Json.decoder[Vector[TrackedTimeDto]])(dtos => TrackedTimeDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[TrackedTimeDto]])(TrackedTimeDto.toDomainAll)
 
   /** A bare array of activity entries, read by the model `client.repos.admin` already uses.
     *
@@ -82,27 +82,27 @@ private[social] object SocialDecoders:
     * second copy of thirteen fields.
     */
   val activities: Decode[Vector[RepositoryActivity]] =
-    WireDecode.of(Json.decoder[Vector[ActivityDto]])(dtos => ActivityDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActivityDto]])(ActivityDto.toDomainAll)
 
   /** A bare array of heatmap buckets. Not paged — the endpoint takes no `page` or `limit`. */
   val heatmap: Decode[Vector[HeatmapEntry]] =
-    WireDecode.of(Json.decoder[Vector[HeatmapEntryDto]])(dtos => HeatmapEntryDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[HeatmapEntryDto]])(HeatmapEntryDto.toDomainAll)
 
   /** One GPG key object. */
   val gpgKey: Decode[GpgKey] =
-    WireDecode.of(Json.decoder[GpgKeyDto])(_.toDomain)
+    WireDecode.single(Json.decoder[GpgKeyDto])(_.toDomain)
 
   /** A bare array of GPG key objects. */
   val gpgKeys: Decode[Vector[GpgKey]] =
-    WireDecode.of(Json.decoder[Vector[GpgKeyDto]])(dtos => GpgKeyDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[GpgKeyDto]])(GpgKeyDto.toDomainAll)
 
   /** One SSH public key object, as `POST /user/keys` and `GET /user/keys/{id}` return it. */
   val publicKey: Decode[PublicKey] =
-    WireDecode.of(Json.decoder[PublicKeyDto])(_.toDomain)
+    WireDecode.single(Json.decoder[PublicKeyDto])(_.toDomain)
 
   /** A bare array of access-token objects, with the credential field dropped unconditionally. */
   val accessTokens: Decode[Vector[AccessToken]] =
-    WireDecode.of(Json.decoder[Vector[AccessTokenDto]])(dtos => AccessTokenDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[AccessTokenDto]])(AccessTokenDto.toDomainAll)
 
   /** The `201` of a token creation — the one decoder in this library that yields a usable personal access token.
     *
@@ -112,7 +112,7 @@ private[social] object SocialDecoders:
     * [[com.worxbend.codeberg4s.core.ApiPipeline.redactedSnippet]] for what the excerpt becomes instead.
     */
   val createdAccessToken: Decode[CreatedAccessToken] =
-    Decode.sensitive(WireDecode.of(Json.decoder[AccessTokenDto])(_.toCreated))
+    Decode.sensitive(WireDecode.single(Json.decoder[AccessTokenDto])(_.toCreated))
 
   /** The plain-text challenge `GET /user/gpg_key_token` answers.
     *

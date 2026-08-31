@@ -2,6 +2,8 @@ package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.Timestamps
+import com.worxbend.codeberg4s.codec.WireValues
 import com.worxbend.codeberg4s.issues.LabelRef
 import com.worxbend.codeberg4s.issues.LabelRemoval
 import com.worxbend.codeberg4s.issues.LabelUpdate
@@ -35,18 +37,18 @@ private[codeberg4s] object IssueLabelsOptionDto:
     val labels = JsonValue.Arr.from(command.labels.map(reference))
     val fields = List(
       Some("labels" -> (labels: JsonValue)),
-      command.updatedAt.map(moment => "updated_at" -> JsonValue.Str(WireInstant.render(moment))),
+      command.updatedAt.map(moment => "updated_at" -> JsonValue.Str(Timestamps.render(moment))),
     ).flatten
 
     Json.render(JsonValue.Obj.from(fields))
 
   /** Renders `command` as the JSON body of the label clear or single removal; `{}` when it says nothing. */
   def renderRemoval(command: LabelRemoval): String =
-    val fields = command.updatedAt.map(moment => "updated_at" -> JsonValue.Str(WireInstant.render(moment))).toList
+    val fields = command.updatedAt.map(moment => "updated_at" -> JsonValue.Str(Timestamps.render(moment))).toList
 
     Json.render(JsonValue.Obj.from(fields))
 
   private def reference(label: LabelRef): JsonValue =
     label match
-      case LabelRef.ById(id)     => WireNumbers.identifier(id.value)
+      case LabelRef.ById(id)     => WireValues.identifier(id.value)
       case LabelRef.ByName(name) => JsonValue.Str(name.value)

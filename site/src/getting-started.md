@@ -60,8 +60,8 @@ Identifiers are opaque types with `Either`-returning smart constructors.
 a `/` would otherwise forge a request path.
 
 ```scala mdoc:compile-only
-import com.worxbend.codeberg4s.{CodebergClient, ValidationError}
-import com.worxbend.codeberg4s.repositories.{Owner, RepoName, Repository}
+import com.worxbend.codeberg4s.{CodebergClient, Owner, RepoName, ValidationError}
+import com.worxbend.codeberg4s.repositories.Repository
 
 import scala.concurrent.Future
 
@@ -118,8 +118,8 @@ The convenience rail fails the `Future` with a `CodebergException`, which
 carries the full `CodebergError`, so nothing is lost by using it:
 
 ```scala mdoc:compile-only
-import com.worxbend.codeberg4s.{CodebergClient, CodebergError, CodebergException}
-import com.worxbend.codeberg4s.repositories.{Owner, RepoName, Repository}
+import com.worxbend.codeberg4s.{CodebergClient, CodebergError, CodebergException, Owner, RepoName}
+import com.worxbend.codeberg4s.repositories.Repository
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -138,8 +138,8 @@ Any case you do not handle stays a failed `Future`, carrying the same value.
 The typed rail never fails the `Future`:
 
 ```scala mdoc:compile-only
-import com.worxbend.codeberg4s.{CodebergClient, CodebergError}
-import com.worxbend.codeberg4s.repositories.{Owner, RepoName, Repository}
+import com.worxbend.codeberg4s.{CodebergClient, CodebergError, Owner, RepoName}
+import com.worxbend.codeberg4s.repositories.Repository
 
 import scala.concurrent.Future
 
@@ -163,10 +163,9 @@ mistake made against this library.
 Listings take a `PageParams` and return one `Page[A]`:
 
 ```scala mdoc:compile-only
-import com.worxbend.codeberg4s.CodebergClient
+import com.worxbend.codeberg4s.{CodebergClient, Owner, RepoName}
 import com.worxbend.codeberg4s.issues.{Issue, IssueQuery}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
-import com.worxbend.codeberg4s.repositories.{Owner, RepoName}
 
 import scala.concurrent.Future
 
@@ -189,10 +188,9 @@ A `Page[A]` carries `items`, the `params` that produced it, an optional
 `modules/core`, so a caller writes the walk by hand. Nine lines:
 
 ```scala mdoc:compile-only
-import com.worxbend.codeberg4s.CodebergClient
+import com.worxbend.codeberg4s.{CodebergClient, Owner, RepoName}
 import com.worxbend.codeberg4s.issues.{Issue, IssueQuery}
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.{Owner, RepoName}
 
 import scala.concurrent.{ExecutionContext, Future}
 

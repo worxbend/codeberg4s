@@ -2,11 +2,11 @@ package com.worxbend.codeberg4s.repositories.publishing
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.repositories.ReleaseAsset
 import com.worxbend.codeberg4s.repositories.Tag
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.ReleaseAssetDto
 import com.worxbend.codeberg4s.repositories.wire.TagDto
 
@@ -31,7 +31,7 @@ private[publishing] object PublishingDecoders:
     * the elements of that capture are exactly what these endpoints send one of.
     */
   val tag: Decode[Tag] =
-    WireDecode.of(Json.decoder[TagDto])(_.toDomain)
+    WireDecode.single(Json.decoder[TagDto])(_.toDomain)
 
   /** One attachment object, as the three single-asset endpoints return it.
     *
@@ -39,7 +39,7 @@ private[publishing] object PublishingDecoders:
     * and its failures had to be reported at `$.assets[n]`. Here it '''is''' the body, so the path is the root.
     */
   val asset: Decode[ReleaseAsset] =
-    WireDecode.of(Json.decoder[ReleaseAssetDto])(_.toDomainAt(JsonPath.Root))
+    WireDecode.single(Json.decoder[ReleaseAssetDto])(_.toDomainAt(JsonPath.Root))
 
   /** A bare array of attachment objects, as `GET /releases/{id}/assets` returns it.
     *
@@ -47,5 +47,5 @@ private[publishing] object PublishingDecoders:
     * at `$[3].name` rather than at `$`.
     */
   val assets: Decode[Vector[ReleaseAsset]] =
-    WireDecode.of(Json.decoder[Vector[ReleaseAssetDto]]): dtos =>
-      Elements.convert(JsonPath.Root, dtos)((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[ReleaseAssetDto]]): (at, dtos) =>
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))

@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.pulls.wire
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.pulls.DiffRequest
 import com.worxbend.codeberg4s.pulls.PullRequestQuery
@@ -21,14 +22,14 @@ import com.worxbend.codeberg4s.pulls.UpdateStyle
   */
 private[codeberg4s] object PullRequestQueries:
 
-  /** The `page` and `limit` parameters for a paged listing.
+  /** The `page` and `limit` parameters of a paged listing.
     *
-    * '''Both, always.''' `golden/MANIFEST.md` records that `limit` alone is silently ignored on some Forgejo endpoints
-    * — `?limit=2` against `/forks` returned all 862 forks, and adding `page=1` made the limit take effect — so sending
-    * a limit without a page is how a client accidentally pulls an unbounded collection.
+    * Both are always sent, and the pair is rendered by [[com.worxbend.codeberg4s.codec.PagingQuery.window]], which
+    * carries the measurement behind that rule: a `limit` sent without a `page` is silently ignored by some Forgejo
+    * endpoints, which is how a client accidentally pulls an unbounded collection.
     */
   def paging(params: PageParams): List[(String, String)] =
-    List("page" -> params.page.value.toString, "limit" -> params.size.value.toString)
+    PagingQuery.window(params)
 
   /** The filters of `GET /repos/{owner}/{repo}/pulls`.
     *

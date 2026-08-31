@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
@@ -8,7 +9,6 @@ import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.Reaction
 import com.worxbend.codeberg4s.issues.ReactionContent
-import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 
 /** Forgejo's `Reaction` model, field for field.
@@ -32,15 +32,12 @@ final case class ReactionDto(content: Option[String], user: Option[UserDto], cre
   def toDomainAt(at: JsonPath): Either[DecodeFailure, Reaction] =
     for
       emoji   <- Wire.validated(at, "content", content)(ReactionContent.from)
-      reactor <- reactorAt(at)
+      reactor <- Wire.nested(at, "user", user)(_.toDomainAt(_))
     yield Reaction(content = emoji, user = reactor, createdAt = Timestamps.parseOptional(createdAt))
 
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, Reaction] =
     toDomainAt(JsonPath.Root)
-
-  private def reactorAt(at: JsonPath): Either[DecodeFailure, Option[User]] =
-    user.fold(Right(None))(dto => dto.toDomainAt(at.field("user")).map(Some.apply))
 
 object ReactionDto:
 
@@ -60,4 +57,4 @@ object ReactionDto:
 
   /** Converts a decoded array of reactions, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[ReactionDto]): Either[DecodeFailure, Vector[Reaction]] =
-    WireElements.at(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

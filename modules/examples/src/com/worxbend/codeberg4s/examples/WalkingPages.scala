@@ -2,6 +2,8 @@ package com.worxbend.codeberg4s.examples
 
 import com.worxbend.codeberg4s.CodebergClient
 import com.worxbend.codeberg4s.CodebergConfig
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.issues.Issue
@@ -10,8 +12,6 @@ import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageNumber
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.paging.PageSize
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext

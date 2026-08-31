@@ -12,8 +12,8 @@ import com.worxbend.codeberg4s.ValidationError
   *
   * ==What is allowed, and why it is wider than every other path type here==
   *
-  * [[com.worxbend.codeberg4s.repositories.Owner]] and [[com.worxbend.codeberg4s.organizations.OrgName]] name accounts,
-  * whose spelling Forgejo restricts. This names a file the distribution ships, and those file names are prose:
+  * [[com.worxbend.codeberg4s.Owner]] and [[com.worxbend.codeberg4s.organizations.OrgName]] name accounts, whose
+  * spelling Forgejo restricts. This names a file the distribution ships, and those file names are prose:
   * `Academic Free License v3.0` is a license template, so a validator that rejected a space would refuse a name the
   * `/licenses` listing itself hands back. Spaces are therefore accepted and percent-encoded on the wire.
   *
@@ -27,8 +27,7 @@ import com.worxbend.codeberg4s.ValidationError
   *
   * A blank value, a control character, and any `.` or `..` part. The last is the one that matters: `.` and `..` survive
   * percent-encoding untouched in some routers, so a name carrying one could walk out of the route it was meant for.
-  * That is a security boundary and not a convenience, exactly as [[com.worxbend.codeberg4s.repositories.Owner]]'s slash
-  * rule is.
+  * That is a security boundary and not a convenience, exactly as [[com.worxbend.codeberg4s.Owner]]'s slash rule is.
   */
 opaque type TemplateName = String
 

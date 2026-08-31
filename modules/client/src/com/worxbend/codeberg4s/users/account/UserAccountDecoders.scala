@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.users.account
 
-import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.organizations.Team
@@ -19,7 +19,6 @@ import com.worxbend.codeberg4s.repositories.actions.wire.RegisteredRunnerDto
 import com.worxbend.codeberg4s.repositories.actions.wire.RegistrationTokenDto
 import com.worxbend.codeberg4s.repositories.hooks.Webhook
 import com.worxbend.codeberg4s.repositories.hooks.wire.WebhookDto
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 import com.worxbend.codeberg4s.users.account.wire.EmailDto
 import com.worxbend.codeberg4s.users.account.wire.OAuth2ApplicationDto
@@ -55,7 +54,7 @@ private[account] object UserAccountDecoders:
     * of them.
     */
   val application: Decode[OAuth2Application] =
-    WireDecode.of(Json.decoder[OAuth2ApplicationDto])(_.toDomain)
+    WireDecode.single(Json.decoder[OAuth2ApplicationDto])(_.toDomain)
 
   /** The same object as [[application]], from the responses that '''do''' carry `client_secret`.
     *
@@ -70,35 +69,31 @@ private[account] object UserAccountDecoders:
 
   /** A bare array of OAuth2 application objects, as the listing returns it — never with a secret in it. */
   val applications: Decode[Vector[OAuth2Application]] =
-    WireDecode.of(Json.decoder[Vector[OAuth2ApplicationDto]]): dtos =>
-      OAuth2ApplicationDto.toDomainAll(JsonPath.Root, dtos)
+    WireDecode.vector(Json.decoder[Vector[OAuth2ApplicationDto]])(OAuth2ApplicationDto.toDomainAll)
 
   /** A bare array of email objects, which is what both the listing and the `201` of an add return. */
   val emails: Decode[Vector[Email]] =
-    WireDecode.of(Json.decoder[Vector[EmailDto]])(dtos => EmailDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[EmailDto]])(EmailDto.toDomainAll)
 
   /** The account's settings object, returned by both the read and the update. */
   val settings: Decode[UserSettings] =
-    WireDecode.of(Json.decoder[UserSettingsDto])(_.toDomain)
+    WireDecode.single(Json.decoder[UserSettingsDto])(_.toDomain)
 
   /** The account's quota report, with its nested `used` tree already flattened. */
   val quota: Decode[QuotaInfo] =
-    WireDecode.of(Json.decoder[QuotaInfoDto])(_.toDomain)
+    WireDecode.single(Json.decoder[QuotaInfoDto])(_.toDomain)
 
   /** A bare array of quota-counting artifacts. */
   val quotaArtifacts: Decode[Vector[QuotaUsedArtifact]] =
-    WireDecode.of(Json.decoder[Vector[QuotaUsedArtifactDto]]): dtos =>
-      QuotaUsedArtifactDto.toDomainAll(JsonPath.Root, dtos)
+    WireDecode.vector(Json.decoder[Vector[QuotaUsedArtifactDto]])(QuotaUsedArtifactDto.toDomainAll)
 
   /** A bare array of quota-counting attachments. */
   val quotaAttachments: Decode[Vector[QuotaUsedAttachment]] =
-    WireDecode.of(Json.decoder[Vector[QuotaUsedAttachmentDto]]): dtos =>
-      QuotaUsedAttachmentDto.toDomainAll(JsonPath.Root, dtos)
+    WireDecode.vector(Json.decoder[Vector[QuotaUsedAttachmentDto]])(QuotaUsedAttachmentDto.toDomainAll)
 
   /** A bare array of quota-counting package versions. */
   val quotaPackages: Decode[Vector[QuotaUsedPackage]] =
-    WireDecode.of(Json.decoder[Vector[QuotaUsedPackageDto]]): dtos =>
-      QuotaUsedPackageDto.toDomainAll(JsonPath.Root, dtos)
+    WireDecode.vector(Json.decoder[Vector[QuotaUsedPackageDto]])(QuotaUsedPackageDto.toDomainAll)
 
   /** The bare JSON boolean `GET /user/quota/check` answers.
     *
@@ -112,28 +107,28 @@ private[account] object UserAccountDecoders:
 
   /** One repository object, as the creation returns it. */
   val repository: Decode[Repository] =
-    WireDecode.of(Json.decoder[RepositoryDto])(_.toDomain)
+    WireDecode.single(Json.decoder[RepositoryDto])(_.toDomain)
 
   /** A bare array of repository objects, as the account's repository listing returns it. */
   val repositories: Decode[Vector[Repository]] =
-    WireDecode.of(Json.decoder[Vector[RepositoryDto]]): dtos =>
-      Elements.convert(JsonPath.Root, dtos)((dto, path) => dto.toDomainAt(path))
+    WireDecode.vector(Json.decoder[Vector[RepositoryDto]]): (at, dtos) =>
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** A bare array of team objects, as the account's team listing returns it. */
   val teams: Decode[Vector[Team]] =
-    WireDecode.of(Json.decoder[Vector[TeamDto]])(dtos => TeamDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[TeamDto]])(TeamDto.toDomainAll)
 
   /** One runner object. */
   val runner: Decode[ActionRunner] =
-    WireDecode.of(Json.decoder[ActionRunnerDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ActionRunnerDto])(_.toDomain)
 
   /** A bare array of runner objects. */
   val runners: Decode[Vector[ActionRunner]] =
-    WireDecode.of(Json.decoder[Vector[ActionRunnerDto]])(dtos => ActionRunnerDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionRunnerDto]])(ActionRunnerDto.toDomainAll)
 
   /** A bare array of job objects, as the runner job search returns it. */
   val jobs: Decode[Vector[ActionRunJob]] =
-    WireDecode.of(Json.decoder[Vector[ActionRunJobDto]])(dtos => ActionRunJobDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionRunJobDto]])(ActionRunJobDto.toDomainAll)
 
   /** The `{id, uuid, token}` object a runner registration returns, whose `token` is a live credential.
     *
@@ -142,26 +137,26 @@ private[account] object UserAccountDecoders:
     * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]].
     */
   val registeredRunner: Decode[RegisteredRunner] =
-    Decode.sensitive(WireDecode.of(Json.decoder[RegisteredRunnerDto])(_.toDomain))
+    Decode.sensitive(WireDecode.single(Json.decoder[RegisteredRunnerDto])(_.toDomain))
 
   /** The one-key object the registration-token endpoint returns — the same credential with nothing around it, and
     * [[com.worxbend.codeberg4s.core.Decode.sensitive]] for the same reason as [[registeredRunner]].
     */
   val registrationToken: Decode[RunnerRegistrationToken] =
-    Decode.sensitive(WireDecode.of(Json.decoder[RegistrationTokenDto])(_.toDomain))
+    Decode.sensitive(WireDecode.single(Json.decoder[RegistrationTokenDto])(_.toDomain))
 
   /** One variable object. */
   val variable: Decode[ActionVariable] =
-    WireDecode.of(Json.decoder[ActionVariableDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ActionVariableDto])(_.toDomain)
 
   /** A bare array of variable objects. */
   val variables: Decode[Vector[ActionVariable]] =
-    WireDecode.of(Json.decoder[Vector[ActionVariableDto]])(dtos => ActionVariableDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionVariableDto]])(ActionVariableDto.toDomainAll)
 
   /** One webhook object. */
   val webhook: Decode[Webhook] =
-    WireDecode.of(Json.decoder[WebhookDto])(_.toDomain)
+    WireDecode.single(Json.decoder[WebhookDto])(_.toDomain)
 
   /** A bare array of webhook objects, as the account's hook listing returns it. */
   val webhooks: Decode[Vector[Webhook]] =
-    WireDecode.of(Json.decoder[Vector[WebhookDto]])(dtos => WebhookDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[WebhookDto]])(WebhookDto.toDomainAll)

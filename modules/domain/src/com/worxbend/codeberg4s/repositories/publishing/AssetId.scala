@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.publishing
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
 
 /** The instance-local identifier of a release attachment, as `/releases/{id}/assets/{attachment_id}` takes it.
@@ -19,19 +20,16 @@ opaque type AssetId = Long
 
 object AssetId:
 
-  /** The smallest identifier Forgejo can issue. Attachment ids are database row ids, which start at one. */
-  val MinValue: Long = 1L
-
   /** Parses an attachment identifier.
     *
-    * Rejects zero and negatives for the reason [[MinValue]] gives. Nothing else is checked: the value is rendered into
-    * a path segment as decimal digits, which cannot forge a path.
+    * Rejects zero and negatives, since attachment ids are database row ids that start at one. Nothing else is checked:
+    * the value is rendered into a path segment as decimal digits, which cannot forge a path.
     *
     * @return
     *   the identifier, or a [[ValidationError]] on the `"assetId"` field
     */
   def from(value: Long): Either[ValidationError, AssetId] =
-    if value < MinValue then Left(ValidationError("assetId", s"must be at least $MinValue")) else Right(value)
+    PositiveId.from("assetId", value)
 
   extension (id: AssetId)
 

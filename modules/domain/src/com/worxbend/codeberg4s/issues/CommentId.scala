@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.issues
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
 
 /** The instance-wide identifier of a [[Comment]].
@@ -24,7 +25,7 @@ object CommentId:
     *   the id, or a [[ValidationError]] on the `"commentId"` field
     */
   def from(value: Long): Either[ValidationError, CommentId] =
-    NumericId.from("commentId", value)
+    PositiveId.from("commentId", value)
 
   extension (id: CommentId)
 

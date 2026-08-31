@@ -1,9 +1,9 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.miscellaneous.TemplateName
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 /** The two listings whose body is a bare array of '''strings''' — `GET /gitignore/templates` and
   * `GET /label/templates`.
@@ -22,7 +22,7 @@ object TemplateNamesDto:
   /** Converts a decoded array of names, reporting the position of whichever element failed.
     *
     * '''One bad name fails the whole listing''', which is the contract every array-shaped body in this library has —
-    * see [[com.worxbend.codeberg4s.repositories.wire.Elements]]. It is a very unlikely failure:
+    * see [[com.worxbend.codeberg4s.codec.ArrayElements]]. It is a very unlikely failure:
     * [[com.worxbend.codeberg4s.miscellaneous.TemplateName]] rejects only a blank name, a control character and a `.` or
     * `..` part, none of which is a file name a Forgejo distribution ships.
     *
@@ -32,5 +32,5 @@ object TemplateNamesDto:
     *   the decoded strings, in wire order
     */
   def toDomainAll(base: JsonPath, names: Vector[String]): Either[DecodeFailure, Vector[TemplateName]] =
-    Elements.convert(base, names): (name, path) =>
+    ArrayElements.convert(base, names): (name, path) =>
       TemplateName.from(name).left.map(error => DecodeFailure(path, error.message))

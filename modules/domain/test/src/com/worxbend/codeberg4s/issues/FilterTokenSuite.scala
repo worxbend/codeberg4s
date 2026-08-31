@@ -6,7 +6,7 @@ import munit.FunSuite
   *
   * The comma is the point. Forgejo joins several label names into one `labels` parameter with no escape, so a name
   * carrying a comma would silently become two filters — the query-string equivalent of the path forging
-  * [[com.worxbend.codeberg4s.repositories.Owner]] rejects.
+  * [[com.worxbend.codeberg4s.Owner]] rejects.
   */
 final class FilterTokenSuite extends FunSuite:
 

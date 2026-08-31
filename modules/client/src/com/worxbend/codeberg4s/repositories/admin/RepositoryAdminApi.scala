@@ -2,10 +2,15 @@ package com.worxbend.codeberg4s.repositories.admin
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.removeWithBody
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.issues.Issue
 import com.worxbend.codeberg4s.issues.TrackedTime
@@ -18,8 +23,6 @@ import com.worxbend.codeberg4s.repositories.Branch
 import com.worxbend.codeberg4s.repositories.BranchName
 import com.worxbend.codeberg4s.repositories.ContentEntry
 import com.worxbend.codeberg4s.repositories.ContentPath
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.admin.wire.AdminQueries
 import com.worxbend.codeberg4s.repositories.admin.wire.AvatarOptionDto
@@ -296,8 +299,8 @@ final class RepositoryAdminApi private[codeberg4s] (pipeline: ApiPipeline[Future
     *
     * '''Failures.''' The group contract above.
     */
-  def pushMirrors(owner: Owner, name: RepoName, page: PageParams): Future[Page[PushMirror]] =
-    pipeline.callPage(RepositoryAdminApi.pushMirrorsRequest(owner, name, page), page)(using
+  def pushMirrors(owner: Owner, name: RepoName, params: PageParams): Future[Page[PushMirror]] =
+    pipeline.callPage(RepositoryAdminApi.pushMirrorsRequest(owner, name, params), params)(using
       RepositoryAdminDecoders.pushMirrors)
 
   /** Reads one push mirror by its remote name — `GET /repos/{owner}/{repo}/push_mirrors/{name}`.
@@ -474,8 +477,9 @@ final class RepositoryAdminApi private[codeberg4s] (pipeline: ApiPipeline[Future
     *
     * '''Failures.''' The group contract above.
     */
-  def stargazers(owner: Owner, name: RepoName, page: PageParams): Future[Page[User]] =
-    pipeline.callPage(RepositoryAdminApi.stargazersRequest(owner, name, page), page)(using RepositoryAdminDecoders.users)
+  def stargazers(owner: Owner, name: RepoName, params: PageParams): Future[Page[User]] =
+    pipeline.callPage(RepositoryAdminApi.stargazersRequest(owner, name, params), params)(using
+      RepositoryAdminDecoders.users)
 
   /** Lists the accounts that watch the repository — `GET /repos/{owner}/{repo}/subscribers`.
     *
@@ -485,8 +489,8 @@ final class RepositoryAdminApi private[codeberg4s] (pipeline: ApiPipeline[Future
     *
     * '''Failures.''' The group contract above.
     */
-  def subscribers(owner: Owner, name: RepoName, page: PageParams): Future[Page[User]] =
-    pipeline.callPage(RepositoryAdminApi.subscribersRequest(owner, name, page), page)(using
+  def subscribers(owner: Owner, name: RepoName, params: PageParams): Future[Page[User]] =
+    pipeline.callPage(RepositoryAdminApi.subscribersRequest(owner, name, params), params)(using
       RepositoryAdminDecoders.users)
 
   // --- branches -------------------------------------------------------------
@@ -684,9 +688,9 @@ final class RepositoryAdminApi private[codeberg4s] (pipeline: ApiPipeline[Future
       owner: Owner,
       name: RepoName,
       date: Option[LocalDate],
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[RepositoryActivity]] =
-    pipeline.callPage(RepositoryAdminApi.activityFeedRequest(owner, name, date, page), page)(using
+    pipeline.callPage(RepositoryAdminApi.activityFeedRequest(owner, name, date, params), params)(using
       RepositoryAdminDecoders.activities)
 
   /** Reads how many bytes of each language the repository holds — `GET /repos/{owner}/{repo}/languages`.
@@ -753,9 +757,9 @@ final class RepositoryAdminApi private[codeberg4s] (pipeline: ApiPipeline[Future
       owner: Owner,
       name: RepoName,
       query: TrackedTimeQuery,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[TrackedTime]] =
-    pipeline.callPage(RepositoryAdminApi.trackedTimesRequest(owner, name, query, page), page)(using
+    pipeline.callPage(RepositoryAdminApi.trackedTimesRequest(owner, name, query, params), params)(using
       RepositoryAdminDecoders.trackedTimes)
 
   /** Lists one account's tracked time in the repository — `GET /repos/{owner}/{repo}/times/{user}`.
@@ -785,8 +789,9 @@ final class RepositoryAdminApi private[codeberg4s] (pipeline: ApiPipeline[Future
     * @param keyword
     *   the search term, which the spec marks required
     */
-  def searchTopics(keyword: String, page: PageParams): Future[Page[TopicSummary]] =
-    pipeline.callPage(RepositoryAdminApi.searchTopicsRequest(keyword, page), page)(using RepositoryAdminDecoders.topics)
+  def searchTopics(keyword: String, params: PageParams): Future[Page[TopicSummary]] =
+    pipeline.callPage(RepositoryAdminApi.searchTopicsRequest(keyword, params), params)(using
+      RepositoryAdminDecoders.topics)
 
 /** The requests this group issues, its operation ids, and its typed rail. */
 object RepositoryAdminApi:
@@ -976,8 +981,8 @@ object RepositoryAdminApi:
       exec.attempt(rail.syncMirror(owner, name))
 
     /** [[RepositoryAdminApi.pushMirrors]] with its failure as a value. */
-    def pushMirrors(owner: Owner, name: RepoName, page: PageParams): Future[Either[CodebergError, Page[PushMirror]]] =
-      exec.attempt(rail.pushMirrors(owner, name, page))
+    def pushMirrors(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[PushMirror]]] =
+      exec.attempt(rail.pushMirrors(owner, name, params))
 
     /** The single push-mirror read on [[RepositoryAdminApi]], with its failure as a value. */
     def pushMirror(owner: Owner, name: RepoName, mirror: MirrorName): Future[Either[CodebergError, PushMirror]] =
@@ -1040,12 +1045,12 @@ object RepositoryAdminApi:
       exec.attempt(rail.reviewers(owner, name))
 
     /** [[RepositoryAdminApi.stargazers]] with its failure as a value. */
-    def stargazers(owner: Owner, name: RepoName, page: PageParams): Future[Either[CodebergError, Page[User]]] =
-      exec.attempt(rail.stargazers(owner, name, page))
+    def stargazers(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[User]]] =
+      exec.attempt(rail.stargazers(owner, name, params))
 
     /** [[RepositoryAdminApi.subscribers]] with its failure as a value. */
-    def subscribers(owner: Owner, name: RepoName, page: PageParams): Future[Either[CodebergError, Page[User]]] =
-      exec.attempt(rail.subscribers(owner, name, page))
+    def subscribers(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[User]]] =
+      exec.attempt(rail.subscribers(owner, name, params))
 
     /** [[RepositoryAdminApi.createBranch]] with its failure as a value. */
     def createBranch(owner: Owner, name: RepoName, command: CreateBranch): Future[Either[CodebergError, Branch]] =
@@ -1120,9 +1125,9 @@ object RepositoryAdminApi:
         owner: Owner,
         name: RepoName,
         date: Option[LocalDate],
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[RepositoryActivity]]] =
-      exec.attempt(rail.activityFeed(owner, name, date, page))
+      exec.attempt(rail.activityFeed(owner, name, date, params))
 
     /** [[RepositoryAdminApi.languages]] with its failure as a value. */
     def languages(owner: Owner, name: RepoName): Future[Either[CodebergError, LanguageBreakdown]] =
@@ -1145,9 +1150,9 @@ object RepositoryAdminApi:
         owner: Owner,
         name: RepoName,
         query: TrackedTimeQuery,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[TrackedTime]]] =
-      exec.attempt(rail.trackedTimes(owner, name, query, page))
+      exec.attempt(rail.trackedTimes(owner, name, query, params))
 
     /** [[RepositoryAdminApi.trackedTimesFor]] with its failure as a value. */
     def trackedTimesFor(
@@ -1158,8 +1163,8 @@ object RepositoryAdminApi:
       exec.attempt(rail.trackedTimesFor(owner, name, user))
 
     /** [[RepositoryAdminApi.searchTopics]] with its failure as a value. */
-    def searchTopics(keyword: String, page: PageParams): Future[Either[CodebergError, Page[TopicSummary]]] =
-      exec.attempt(rail.searchTopics(keyword, page))
+    def searchTopics(keyword: String, params: PageParams): Future[Either[CodebergError, Page[TopicSummary]]] =
+      exec.attempt(rail.searchTopics(keyword, params))
 
   private def createRequest(command: CreateRepository): CodebergRequest =
     write(CreateOperation, HttpMethod.Post, List("user", "repos"), RepositoryOptionDto.renderCreate(command))
@@ -1171,7 +1176,7 @@ object RepositoryAdminApi:
     write(EditOperation, HttpMethod.Patch, repoPath(owner, name), RepositoryOptionDto.renderEdit(command))
 
   private def deleteRequest(owner: Owner, name: RepoName): CodebergRequest =
-    remove(DeleteOperation, repoPath(owner, name), None)
+    remove(DeleteOperation, repoPath(owner, name))
 
   private def migrateRequest(command: MigrateRepository): CodebergRequest =
     write(MigrateOperation, HttpMethod.Post, List("repos", "migrate"), MigrateRepoOptionsDto.render(command))
@@ -1196,8 +1201,8 @@ object RepositoryAdminApi:
   private def syncMirrorRequest(owner: Owner, name: RepoName): CodebergRequest =
     post(SyncMirrorOperation, repoPath(owner, name) :+ "mirror-sync")
 
-  private def pushMirrorsRequest(owner: Owner, name: RepoName, page: PageParams): CodebergRequest =
-    read(ListPushMirrorsOperation, pushMirrorsPath(owner, name), AdminQueries.paging(page))
+  private def pushMirrorsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
+    read(ListPushMirrorsOperation, pushMirrorsPath(owner, name), AdminQueries.paging(params))
 
   private def pushMirrorRequest(owner: Owner, name: RepoName, mirror: MirrorName): CodebergRequest =
     read(GetPushMirrorOperation, pushMirrorsPath(owner, name) :+ mirror.value, Nil)
@@ -1206,7 +1211,7 @@ object RepositoryAdminApi:
     write(AddPushMirrorOperation, HttpMethod.Post, pushMirrorsPath(owner, name), PushMirrorOptionDto.render(command))
 
   private def deletePushMirrorRequest(owner: Owner, name: RepoName, mirror: MirrorName): CodebergRequest =
-    remove(DeletePushMirrorOperation, pushMirrorsPath(owner, name) :+ mirror.value, None)
+    remove(DeletePushMirrorOperation, pushMirrorsPath(owner, name) :+ mirror.value)
 
   private def syncPushMirrorsRequest(owner: Owner, name: RepoName): CodebergRequest =
     post(SyncPushMirrorsOperation, repoPath(owner, name) :+ "push_mirrors-sync")
@@ -1240,7 +1245,7 @@ object RepositoryAdminApi:
     )
 
   private def unwatchRequest(owner: Owner, name: RepoName): CodebergRequest =
-    remove(UnwatchOperation, subscriptionPath(owner, name), None)
+    remove(UnwatchOperation, subscriptionPath(owner, name))
 
   private def assigneesRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(ListAssigneesOperation, repoPath(owner, name) :+ "assignees", Nil)
@@ -1248,17 +1253,17 @@ object RepositoryAdminApi:
   private def reviewersRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(ListReviewersOperation, repoPath(owner, name) :+ "reviewers", Nil)
 
-  private def stargazersRequest(owner: Owner, name: RepoName, page: PageParams): CodebergRequest =
-    read(ListStargazersOperation, repoPath(owner, name) :+ "stargazers", AdminQueries.paging(page))
+  private def stargazersRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
+    read(ListStargazersOperation, repoPath(owner, name) :+ "stargazers", AdminQueries.paging(params))
 
-  private def subscribersRequest(owner: Owner, name: RepoName, page: PageParams): CodebergRequest =
-    read(ListSubscribersOperation, repoPath(owner, name) :+ "subscribers", AdminQueries.paging(page))
+  private def subscribersRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
+    read(ListSubscribersOperation, repoPath(owner, name) :+ "subscribers", AdminQueries.paging(params))
 
   private def createBranchRequest(owner: Owner, name: RepoName, command: CreateBranch): CodebergRequest =
     write(CreateBranchOperation, HttpMethod.Post, branchesPath(owner, name), BranchOptionDto.renderCreate(command))
 
   private def deleteBranchRequest(owner: Owner, name: RepoName, branch: BranchName): CodebergRequest =
-    remove(DeleteBranchOperation, branchesPath(owner, name) ++ branch.segments, None)
+    remove(DeleteBranchOperation, branchesPath(owner, name) ++ branch.segments)
 
   private def renameBranchRequest(
       owner: Owner,
@@ -1309,10 +1314,10 @@ object RepositoryAdminApi:
       path: ContentPath,
       command: DeleteFile,
   ): CodebergRequest =
-    remove(
+    removeWithBody(
       DeleteFileOperation,
       contentsPath(owner, name) ++ path.segments,
-      Some(RequestBody.Json(FileOptionsDto.renderDelete(command))),
+      FileOptionsDto.renderDelete(command),
     )
 
   private def changeFilesRequest(owner: Owner, name: RepoName, command: ChangeFiles): CodebergRequest =
@@ -1322,18 +1327,18 @@ object RepositoryAdminApi:
     write(UpdateAvatarOperation, HttpMethod.Post, avatarPath(owner, name), AvatarOptionDto.render(image))
 
   private def deleteAvatarRequest(owner: Owner, name: RepoName): CodebergRequest =
-    remove(DeleteAvatarOperation, avatarPath(owner, name), None)
+    remove(DeleteAvatarOperation, avatarPath(owner, name))
 
   private def activityFeedRequest(
       owner: Owner,
       name: RepoName,
       date: Option[LocalDate],
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
     read(
       ListActivityFeedOperation,
       repoPath(owner, name) ++ List("activities", "feeds"),
-      AdminQueries.activities(date) ++ AdminQueries.paging(page),
+      AdminQueries.activities(date) ++ AdminQueries.paging(params),
     )
 
   private def languagesRequest(owner: Owner, name: RepoName): CodebergRequest =
@@ -1352,42 +1357,22 @@ object RepositoryAdminApi:
       owner: Owner,
       name: RepoName,
       query: TrackedTimeQuery,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
     read(
       ListTrackedTimesOperation,
       timesPath(owner, name),
-      IssueQueries.trackedTimes(query) ++ AdminQueries.paging(page),
+      IssueQueries.trackedTimes(query) ++ AdminQueries.paging(params),
     )
 
   private def trackedTimesForRequest(owner: Owner, name: RepoName, user: Username): CodebergRequest =
     read(UserTrackedTimesOperation, timesPath(owner, name) :+ user.value, Nil)
 
-  private def searchTopicsRequest(keyword: String, page: PageParams): CodebergRequest =
+  private def searchTopicsRequest(keyword: String, params: PageParams): CodebergRequest =
     read(
       SearchTopicsOperation,
       List("topics", "search"),
-      AdminQueries.topicSearch(keyword) ++ AdminQueries.paging(page),
-    )
-
-  private def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = None,
-    )
-
-  private def write(operation: String, method: HttpMethod, path: List[String], body: String): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Json(body)),
+      AdminQueries.topicSearch(keyword) ++ AdminQueries.paging(params),
     )
 
   /** A `POST` that Forgejo declares no request model for — accept, reject, convert and the four sync calls. */
@@ -1399,16 +1384,6 @@ object RepositoryAdminApi:
       query     = Nil,
       headers   = Nil,
       body      = None,
-    )
-
-  private def remove(operation: String, path: List[String], body: Option[RequestBody]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Delete,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = body,
     )
 
   private def repoPath(owner: Owner, name: RepoName): List[String] =

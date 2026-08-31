@@ -2,15 +2,19 @@ package com.worxbend.codeberg4s.issues
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.upload
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.issues.wire.EditAttachmentOptionDto
 import com.worxbend.codeberg4s.issues.wire.IssueQueries
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 
 import scala.concurrent.Future
 
@@ -387,19 +391,19 @@ object IssueAttachmentApi:
       exec.attempt(rail.deleteOnComment(owner, name, comment, id))
 
   private def listForIssueRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
-    IssueRequests.read(ListForIssueOperation, issueAssetsPath(owner, name, number), Nil)
+    read(ListForIssueOperation, issueAssetsPath(owner, name, number), Nil)
 
   private def uploadToIssueRequest(
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
-      upload: UploadAttachment,
+      attachment: UploadAttachment,
   ): CodebergRequest =
-    IssueRequests.upload(
+    upload(
       UploadToIssueOperation,
       issueAssetsPath(owner, name, number),
-      IssueQueries.attachmentUpload(upload),
-      multipart(upload),
+      IssueQueries.attachmentUpload(attachment),
+      multipart(attachment),
     )
 
   private def getOnIssueRequest(
@@ -408,7 +412,7 @@ object IssueAttachmentApi:
       number: IssueNumber,
       id: AttachmentId,
   ): CodebergRequest =
-    IssueRequests.read(GetOnIssueOperation, issueAssetPath(owner, name, number, id), Nil)
+    read(GetOnIssueOperation, issueAssetPath(owner, name, number, id), Nil)
 
   private def editOnIssueRequest(
       owner: Owner,
@@ -417,7 +421,7 @@ object IssueAttachmentApi:
       id: AttachmentId,
       command: EditAttachment,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       EditOnIssueOperation,
       HttpMethod.Patch,
       issueAssetPath(owner, name, number, id),
@@ -430,22 +434,22 @@ object IssueAttachmentApi:
       number: IssueNumber,
       id: AttachmentId,
   ): CodebergRequest =
-    IssueRequests.remove(DeleteOnIssueOperation, issueAssetPath(owner, name, number, id))
+    remove(DeleteOnIssueOperation, issueAssetPath(owner, name, number, id))
 
   private def listForCommentRequest(owner: Owner, name: RepoName, comment: CommentId): CodebergRequest =
-    IssueRequests.read(ListForCommentOperation, commentAssetsPath(owner, name, comment), Nil)
+    read(ListForCommentOperation, commentAssetsPath(owner, name, comment), Nil)
 
   private def uploadToCommentRequest(
       owner: Owner,
       name: RepoName,
       comment: CommentId,
-      upload: UploadAttachment,
+      attachment: UploadAttachment,
   ): CodebergRequest =
-    IssueRequests.upload(
+    upload(
       UploadToCommentOperation,
       commentAssetsPath(owner, name, comment),
-      IssueQueries.attachmentUpload(upload),
-      multipart(upload),
+      IssueQueries.attachmentUpload(attachment),
+      multipart(attachment),
     )
 
   private def getOnCommentRequest(
@@ -454,7 +458,7 @@ object IssueAttachmentApi:
       comment: CommentId,
       id: AttachmentId,
   ): CodebergRequest =
-    IssueRequests.read(GetOnCommentOperation, commentAssetPath(owner, name, comment, id), Nil)
+    read(GetOnCommentOperation, commentAssetPath(owner, name, comment, id), Nil)
 
   private def editOnCommentRequest(
       owner: Owner,
@@ -463,7 +467,7 @@ object IssueAttachmentApi:
       id: AttachmentId,
       command: EditAttachment,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       EditOnCommentOperation,
       HttpMethod.Patch,
       commentAssetPath(owner, name, comment, id),
@@ -476,7 +480,7 @@ object IssueAttachmentApi:
       comment: CommentId,
       id: AttachmentId,
   ): CodebergRequest =
-    IssueRequests.remove(DeleteOnCommentOperation, commentAssetPath(owner, name, comment, id))
+    remove(DeleteOnCommentOperation, commentAssetPath(owner, name, comment, id))
 
   private def multipart(upload: UploadAttachment): RequestBody =
     RequestBody.Multipart(AttachmentFieldName, upload.fileName, upload.content, upload.mediaType)

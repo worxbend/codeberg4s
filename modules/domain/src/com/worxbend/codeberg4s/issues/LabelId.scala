@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.issues
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
 
 /** The instance-wide identifier of a [[Label]] — the `{id}` of `/repos/{owner}/{repo}/labels/{id}`.
@@ -21,7 +22,7 @@ object LabelId:
     *   the id, or a [[ValidationError]] on the `"labelId"` field
     */
   def from(value: Long): Either[ValidationError, LabelId] =
-    NumericId.from("labelId", value)
+    PositiveId.from("labelId", value)
 
   extension (id: LabelId)
 

@@ -1,22 +1,9 @@
 package com.worxbend.codeberg4s.miscellaneous
 
-import com.worxbend.codeberg4s.BaseUri
-import com.worxbend.codeberg4s.CodebergConfig
+import com.worxbend.codeberg4s.ClientSuiteHarness
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
-import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.auth.Auth
-import com.worxbend.codeberg4s.client.FutureExec
-import com.worxbend.codeberg4s.client.FutureTimer
-import com.worxbend.codeberg4s.codec.ApiErrorBodyCodec
 import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.JitterSource
-import com.worxbend.codeberg4s.core.Telemetry
-import com.worxbend.codeberg4s.retry.Jitter
-import com.worxbend.codeberg4s.retry.RetryPolicy
-import com.worxbend.codeberg4s.transport.SttpHttpPort
 
 import sttp.client4.Backend
 import sttp.client4.testing.BackendStub
@@ -26,9 +13,7 @@ import sttp.model.StatusCode
 
 import munit.FunSuite
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
 
 /** The instance-level group over a `BackendStub`: nothing here opens a socket.
   *
@@ -36,21 +21,10 @@ import scala.concurrent.duration.DurationInt
   * whether the two rails agree about a failure. Decoding itself is asserted in `modules/codec` against the golden
   * captures, so the payloads below are the smallest bodies that exercise a seam.
   */
-final class MiscellaneousApiSuite extends FunSuite:
-
-  private given ExecutionContext = munitExecutionContext
-
-  private given JitterSource = JitterSource.Deterministic
-
-  /** The API root every assertion about a dialled URI is written against. */
-  private val Root: String = "https://forge.example/api/v1"
-
-  private val Config: CodebergConfig =
-    CodebergConfig(Auth.Anonymous)
-      .copy(baseUri = orFail(BaseUri.from(Root)), retry = MiscellaneousApiSuite.PromptRetry)
+final class MiscellaneousApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("apiSettings reports the clamp that makes items.size an unusable end-of-pages test"):
-    onBackend(responding(200, MiscellaneousApiSuite.ApiSettingsBody)): api =>
+    onApi(responding(200, MiscellaneousApiSuite.ApiSettingsBody)): api =>
       api.apiSettings().map: settings =>
         assertEquals(settings.maxResponseItems, 50L)
         assertEquals(settings.defaultPagingNum, 30L)
@@ -59,13 +33,13 @@ final class MiscellaneousApiSuite extends FunSuite:
   test("apiSettings targets /settings/api on the configured instance"):
     val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.ApiSettingsBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.apiSettings().map(_ => assertEquals(dialled(backend), s"$Root/settings/api"))
 
   test("repositorySettings targets /settings/repository and reports the disabled features"):
     val backend = RecordingBackend(responding(200, """{"forks_disabled":true}"""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.repositorySettings().map: settings =>
         assertEquals(dialled(backend), s"$Root/settings/repository")
         assertEquals(settings.forksDisabled, true)
@@ -74,7 +48,7 @@ final class MiscellaneousApiSuite extends FunSuite:
   test("attachmentSettings targets /settings/attachment and splits the allowed types"):
     val backend = RecordingBackend(responding(200, """{"enabled":true,"allowed_types":"image/png,.pdf"}"""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.attachmentSettings().map: settings =>
         assertEquals(dialled(backend), s"$Root/settings/attachment")
         assertEquals(settings.allowedTypes, Vector("image/png", ".pdf"))
@@ -82,27 +56,27 @@ final class MiscellaneousApiSuite extends FunSuite:
   test("signingKey hands back an armored block that no JSON parser would have accepted"):
     val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.ArmoredKey))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.signingKey().map: key =>
         assertEquals(dialled(backend), s"$Root/signing-key.gpg")
         assertEquals(key, Some(SigningKey(MiscellaneousApiSuite.ArmoredKey)))
 
   test("an instance that signs nothing answers 200 with an empty body, which is None and not a failure"):
-    onBackend(responding(200, "")): api =>
+    onApi(responding(200, "")): api =>
       api.signingKey().map(key => assertEquals(key, None))
 
   test("renderMarkdown POSTs the capitalised option body to /markdown"):
     val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.RenderedHtml))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.renderMarkdown(MarkdownRenderRequest.of("# Title")).map: _ =>
         assertEquals(dialled(backend), s"$Root/markdown")
-        assertEquals(method(backend), "POST")
+        assertEquals(methodOf(backend), "POST")
         assertEquals(Json.parse(sentBody(backend)).toOption.flatMap(_.field("Text")).flatMap(_.strOpt), Some("# Title"))
-        assertEquals(contentType(backend), Some("application/json"))
+        assertEquals(contentTypeOf(backend), Some("application/json"))
 
   test("renderMarkdown returns the HTML fragment verbatim, unparsed"):
-    onBackend(responding(200, MiscellaneousApiSuite.RenderedHtml)): api =>
+    onApi(responding(200, MiscellaneousApiSuite.RenderedHtml)): api =>
       api
         .renderMarkdown(MarkdownRenderRequest.of("# Title"))
         .map(html => assertEquals(html, RenderedMarkdown(MiscellaneousApiSuite.RenderedHtml)))
@@ -110,11 +84,11 @@ final class MiscellaneousApiSuite extends FunSuite:
   test("renderMarkdownRaw sends the markdown itself as a plain-text body"):
     val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.RenderedHtml))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.renderMarkdownRaw("# Title").map: html =>
         assertEquals(dialled(backend), s"$Root/markdown/raw")
         assertEquals(sentBody(backend), "# Title")
-        assertEquals(contentType(backend), Some("text/plain; charset=utf-8"))
+        assertEquals(contentTypeOf(backend), Some("text/plain; charset=utf-8"))
         assertEquals(html, RenderedMarkdown(MiscellaneousApiSuite.RenderedHtml))
 
   test("rendering is retried after a 503 even though it is a POST, because it changes nothing"):
@@ -125,26 +99,26 @@ final class MiscellaneousApiSuite extends FunSuite:
       )
     )
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.renderMarkdown(MarkdownRenderRequest.of("# Title")).map: html =>
         assertEquals(html, RenderedMarkdown(MiscellaneousApiSuite.RenderedHtml))
         assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
 
   test("a 404 fails the convenience rail with a CodebergException carrying the Api failure"):
-    onBackend(responding(404, MiscellaneousApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, MiscellaneousApiSuite.NotFoundBody)): api =>
       api.apiSettings().failed.map:
         case CodebergException(error) => assertEquals(summary(error), MiscellaneousApiSuite.ExpectedNotFound)
         case other                    => fail(s"expected a CodebergException, got $other")
 
   test("a 404 reaches the typed rail as a Left reporting the very same failure"):
-    onBackend(responding(404, MiscellaneousApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, MiscellaneousApiSuite.NotFoundBody)): api =>
       for
         raised <- api.apiSettings().failed
         typed  <- api.attempt.apiSettings()
-      yield assertRailsAgree(raised, typed)
+      yield assertNotFoundOnBothRails(raised, typed)
 
   test("a 422 on a rejected render reaches both rails as the same Api failure"):
-    onBackend(responding(422, MiscellaneousApiSuite.ValidationBody)): api =>
+    onApi(responding(422, MiscellaneousApiSuite.ValidationBody)): api =>
       for
         raised <- api.renderMarkdown(MarkdownRenderRequest.of("# Title")).failed
         typed  <- api.attempt.renderMarkdown(MarkdownRenderRequest.of("# Title"))
@@ -156,7 +130,7 @@ final class MiscellaneousApiSuite extends FunSuite:
           fail(s"the rails disagreed: $convenience versus $materialised")
 
   test("a 200 whose settings payload names no limits becomes DecodingFailed, never an exception"):
-    onBackend(responding(200, """{"unexpected":true}""")): api =>
+    onApi(responding(200, """{"unexpected":true}""")): api =>
       api.attempt.apiSettings().map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$.max_response_items")
         case other                                             => fail(s"expected a decoding failure, got $other")
@@ -166,7 +140,7 @@ final class MiscellaneousApiSuite extends FunSuite:
   test("uiSettings targets /settings/ui and reports what the reaction endpoints will accept"):
     val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.UiSettingsBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.uiSettings().map: settings =>
         assertEquals(dialled(backend), s"$Root/settings/ui")
         assertEquals(settings.allowedReactions, Vector("+1", "heart"))
@@ -176,7 +150,7 @@ final class MiscellaneousApiSuite extends FunSuite:
         assertEquals(settings.allows("rocket"), false)
 
   test("an instance that reports no UI settings at all still decodes, because none of them is required"):
-    onBackend(responding(200, "{}")): api =>
+    onApi(responding(200, "{}")): api =>
       api.uiSettings().map: settings =>
         assertEquals(settings.allowedReactions, Vector.empty[String])
         assertEquals(settings.defaultTheme, None)
@@ -187,17 +161,17 @@ final class MiscellaneousApiSuite extends FunSuite:
   test("sshSigningKey hands back an authorized-key line that no JSON parser would have accepted"):
     val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.OpenSshKey))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.sshSigningKey().map: key =>
         assertEquals(dialled(backend), s"$Root/signing-key.ssh")
         assertEquals(key, Some(SshSigningKey(MiscellaneousApiSuite.OpenSshKey)))
 
   test("an instance that does not sign with SSH answers 200 with an empty body, which is None and not a failure"):
-    onBackend(responding(200, "")): api =>
+    onApi(responding(200, "")): api =>
       api.sshSigningKey().map(key => assertEquals(key, None))
 
   test("the 404 this endpoint declares is a failure, unlike the empty body"):
-    onBackend(responding(404, MiscellaneousApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, MiscellaneousApiSuite.NotFoundBody)): api =>
       api.attempt.sshSigningKey().map:
         case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 404)
         case other                                 => fail(s"expected an Api failure, got $other")
@@ -207,13 +181,13 @@ final class MiscellaneousApiSuite extends FunSuite:
   test("gitignoreTemplates targets /gitignore/templates and returns names that address the by-name endpoint"):
     val backend = RecordingBackend(responding(200, """["AL","Actionscript","Ada"]"""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.gitignoreTemplates().map: names =>
         assertEquals(dialled(backend), s"$Root/gitignore/templates")
         assertEquals(names.map(_.value), Vector("AL", "Actionscript", "Ada"))
 
   test("a listing carrying a name nothing could be addressed with fails at that element's own index"):
-    onBackend(responding(200, """["AL","..","Ada"]""")): api =>
+    onApi(responding(200, """["AL","..","Ada"]""")): api =>
       api.attempt.gitignoreTemplates().map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$[1]")
         case other                                             => fail(s"expected a decoding failure, got $other")
@@ -221,7 +195,7 @@ final class MiscellaneousApiSuite extends FunSuite:
   test("gitignoreTemplate percent-encodes a template name that carries a space"):
     val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.GitignoreTemplateBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.gitignoreTemplate(orFail(TemplateName.from("Visual Studio"))).map: template =>
         assertEquals(dialled(backend), s"$Root/gitignore/templates/Visual%20Studio")
         assertEquals(template.name, Some("Visual Studio"))
@@ -230,7 +204,7 @@ final class MiscellaneousApiSuite extends FunSuite:
   test("labelTemplates targets the singular /label/templates"):
     val backend = RecordingBackend(responding(200, """["Default","Advanced"]"""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.labelTemplates().map: names =>
         assertEquals(dialled(backend), s"$Root/label/templates")
         assertEquals(names.map(_.value), Vector("Default", "Advanced"))
@@ -238,7 +212,7 @@ final class MiscellaneousApiSuite extends FunSuite:
   test("labelTemplate answers every label in the set, and a colour it cannot read is None rather than a failure"):
     val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.LabelTemplateBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.labelTemplate(orFail(TemplateName.from("Default"))).map: labels =>
         assertEquals(dialled(backend), s"$Root/label/templates/Default")
         assertEquals(labels.map(_.name), Vector("bug", "duplicate"))
@@ -249,7 +223,7 @@ final class MiscellaneousApiSuite extends FunSuite:
   test("licenseTemplates targets /licenses and carries no license text"):
     val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.LicenseListBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.licenseTemplates().map: entries =>
         assertEquals(dialled(backend), s"$Root/licenses")
         assertEquals(entries.map(_.name.value), Vector("MIT", "GNU Affero General Public License v3.0"))
@@ -258,7 +232,7 @@ final class MiscellaneousApiSuite extends FunSuite:
   test("licenseTemplate fetches one body, percent-encoding the spaces a license name genuinely has"):
     val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.LicenseBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.licenseTemplate(orFail(TemplateName.from("GNU Affero General Public License v3.0"))).map: template =>
         assertEquals(
           dialled(backend),
@@ -271,23 +245,23 @@ final class MiscellaneousApiSuite extends FunSuite:
   test("renderMarkup POSTs the capitalised option body to /markup, file path included"):
     val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.RenderedHtml))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.renderMarkup(MarkupRenderRequest.ofFile("* Title", "README.org")).map: html =>
         assertEquals(dialled(backend), s"$Root/markup")
-        assertEquals(method(backend), "POST")
+        assertEquals(methodOf(backend), "POST")
         assertEquals(Json.parse(sentBody(backend)).toOption.flatMap(_.field("Text")).flatMap(_.strOpt), Some("* Title"))
         assertEquals(Json.parse(sentBody(backend)).toOption.flatMap(_.field("Mode")).flatMap(_.strOpt), Some("file"))
         assertEquals(
           Json.parse(sentBody(backend)).toOption.flatMap(_.field("FilePath")).flatMap(_.strOpt),
           Some("README.org"),
         )
-        assertEquals(contentType(backend), Some("application/json"))
+        assertEquals(contentTypeOf(backend), Some("application/json"))
         assertEquals(html, RenderedMarkdown(MiscellaneousApiSuite.RenderedHtml))
 
   test("renderMarkup omits the three optional keys the caller did not set"):
     val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.RenderedHtml))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.renderMarkup(MarkupRenderRequest.of("# Title", MarkupMode.Gfm)).map: _ =>
         assertEquals(Json.parse(sentBody(backend)).toOption.map(_.keys.toList.sorted), Some(List("Mode", "Text", "Wiki")))
 
@@ -299,7 +273,7 @@ final class MiscellaneousApiSuite extends FunSuite:
       )
     )
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.renderMarkup(MarkupRenderRequest.of("# Title", MarkupMode.Markdown)).map: _ =>
         assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
 
@@ -308,7 +282,7 @@ final class MiscellaneousApiSuite extends FunSuite:
   test("nodeInfo targets /nodeinfo and reads the federation document rather than handing back a string"):
     val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.NodeInfoBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.nodeInfo().map: info =>
         assertEquals(dialled(backend), s"$Root/nodeinfo")
         assertEquals(info.version, "2.1")
@@ -318,7 +292,7 @@ final class MiscellaneousApiSuite extends FunSuite:
         assertEquals(info.usage.flatMap(_.users).flatMap(_.total), Some(1234L))
 
   test("a nodeinfo document naming no software fails at $.software, on both rails alike"):
-    onBackend(responding(200, """{"version":"2.1"}""")): api =>
+    onApi(responding(200, """{"version":"2.1"}""")): api =>
       for
         raised <- api.nodeInfo().failed
         typed  <- api.attempt.nodeInfo()
@@ -334,14 +308,14 @@ final class MiscellaneousApiSuite extends FunSuite:
   test("actionsRun targets /actions/run and decodes the run the calling token belongs to"):
     val backend = RecordingBackend(responding(200, MiscellaneousApiSuite.ActionRunBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.actionsRun().map: run =>
         assertEquals(dialled(backend), s"$Root/actions/run")
         assertEquals(run.id.value, 4711L)
         assertEquals(run.indexInRepo, Some(42L))
 
   test("a 401 from the workflow-run lookup reaches both rails as the same Api failure"):
-    onBackend(responding(401, MiscellaneousApiSuite.UnauthorizedBody)): api =>
+    onApi(responding(401, MiscellaneousApiSuite.UnauthorizedBody)): api =>
       for
         raised <- api.actionsRun().failed
         typed  <- api.attempt.actionsRun()
@@ -355,67 +329,25 @@ final class MiscellaneousApiSuite extends FunSuite:
 
   // --- assertions -----------------------------------------------------------
 
-  /** Both rails must report the same failure, so the choice between them is a choice of style and nothing else. */
-  private def assertRailsAgree(raised: Throwable, typed: Either[CodebergError, ServerApiSettings]): Unit =
-    (raised, typed) match
-      case (CodebergException(convenience), Left(materialised)) =>
-        assertEquals(summary(materialised), summary(convenience))
-        assertEquals(summary(materialised), MiscellaneousApiSuite.ExpectedNotFound)
-      case (convenience, materialised)                          =>
-        fail(s"the rails disagreed: $convenience versus $materialised")
-
-  /** An `Api` failure projected onto the parts that do not depend on wall-clock time, so two calls are comparable. */
-  private def summary(error: CodebergError): (String, Int, Option[String]) =
-    error match
-      case CodebergError.Api(ctx, status, body) => (ctx.operation, status, body.message)
-      case other                                => fail(s"expected an Api failure, got ${other.describe}")
+  /** Both rails must report the same `404`, so the choice between them is a choice of style and nothing else.
+    *
+    * [[ClientSuiteHarness.assertRailsAgree]] settles that the two agree; what this adds is which failure they agreed
+    * on, so a pair of rails that agreed on the wrong one would still fail the test.
+    */
+  private def assertNotFoundOnBothRails(raised: Throwable, typed: Either[CodebergError, ServerApiSettings]): Unit =
+    assertRailsAgree(raised, typed)
+    assertEquals(summary(typed.swap.getOrElse(fail("expected a failure"))), MiscellaneousApiSuite.ExpectedNotFound)
 
   // --- fixtures -------------------------------------------------------------
 
-  private def responding(status: Int, body: String): BackendStub[Future] =
-    BackendStub.asynchronousFuture.whenAnyRequest.thenRespond(ResponseStub.adjust(body, StatusCode(status)))
-
-  private def recorded(backend: RecordingBackend): sttp.client4.GenericRequest[?, ?] =
-    backend.allInteractions.headOption match
-      case Some((request, _)) => request
-      case None               => fail("no request reached the backend")
-
-  private def dialled(backend: RecordingBackend): String =
-    recorded(backend).uri.toString
-
-  private def method(backend: RecordingBackend): String =
-    recorded(backend).method.method
+  /** Builds the API under test on a pipeline over `backend`, releasing the timer whatever happens. */
+  private def onApi[A](backend: Backend[Future])(use: MiscellaneousApi => Future[A]): Future[A] =
+    onPipeline(backend)(pipeline => use(MiscellaneousApi(pipeline)))
 
   private def sentBody(backend: RecordingBackend): String =
-    recorded(backend).body match
+    firstRequest(backend).body match
       case sttp.client4.StringBody(value, _, _) => value
       case other                                => fail(s"expected a string body, got $other")
-
-  private def contentType(backend: RecordingBackend): Option[String] =
-    recorded(backend).contentType
-
-  /** Runs `use` against an anonymous client on `backend`, releasing the timer whatever the outcome. */
-  private def onBackend[A](backend: Backend[Future])(use: MiscellaneousApi => Future[A]): Future[A] =
-    given Exec[Future] = FutureExec()
-
-    val timer = FutureTimer()
-
-    val pipeline = ApiPipeline[Future](
-      SttpHttpPort(backend, Config),
-      Config,
-      timer,
-      Telemetry.noOp[Future],
-      ApiErrorBodyCodec.parse,
-    )
-
-    use(MiscellaneousApi(pipeline)).transform: outcome =>
-      timer.close()
-      outcome
-
-  private def orFail[A](result: Either[ValidationError, A]): A =
-    result match
-      case Right(value) => value
-      case Left(error)  => fail(s"invalid fixture: ${error.field} ${error.message}")
 
 /** The response bodies this suite stubs, kept out of the test bodies so each test reads as one behaviour. */
 object MiscellaneousApiSuite:
@@ -493,12 +425,3 @@ object MiscellaneousApiSuite:
 
   private val ExpectedValidation: (String, Int, Option[String]) =
     (MiscellaneousApi.RenderMarkdownOperation, 422, Some("Unsupported render mode"))
-
-  /** Retries promptly and predictably: the default policy would make the retry test take a quarter of a second. */
-  private val PromptRetry: RetryPolicy = RetryPolicy(
-    maxAttempts       = 3,
-    baseDelay         = 1.milli,
-    maxDelay          = 5.millis,
-    jitter            = Jitter.None,
-    respectRetryAfter = false,
-  )

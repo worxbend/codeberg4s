@@ -5,7 +5,6 @@ import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.CommitRef
 import com.worxbend.codeberg4s.repositories.CommitSha
 import com.worxbend.codeberg4s.repositories.Tag
 import com.worxbend.codeberg4s.repositories.TagName
@@ -48,7 +47,7 @@ final case class TagDto(
     for
       tagName   <- Wire.validated(at, "name", name)(TagName.from)
       target    <- Wire.validated(at, "id", id)(CommitSha.from)
-      reference <- commitAt(at)
+      reference <- Wire.nested(at, "commit", commit)(_.toDomainAt(_))
     yield Tag(
       name             = tagName,
       message          = message,
@@ -62,9 +61,6 @@ final case class TagDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, Tag] =
     toDomainAt(JsonPath.Root)
-
-  private def commitAt(at: JsonPath): Either[DecodeFailure, Option[CommitRef]] =
-    commit.fold(Right(None))(dto => dto.toDomainAt(at.field("commit")).map(Some.apply))
 
 object TagDto:
 

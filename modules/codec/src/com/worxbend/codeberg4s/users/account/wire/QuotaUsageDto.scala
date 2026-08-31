@@ -1,10 +1,10 @@
 package com.worxbend.codeberg4s.users.account.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.users.account.AttachmentContainer
 import com.worxbend.codeberg4s.users.account.QuotaUsedArtifact
 import com.worxbend.codeberg4s.users.account.QuotaUsedAttachment
@@ -23,8 +23,8 @@ import com.worxbend.codeberg4s.users.account.QuotaUsedPackage
   * report a caller is reading to find out why they are over quota.
   *
   * That is also why these models have no `toDomainAt`: a path exists to say where a conversion failed, and none of
-  * these can. The array conversions still go through [[com.worxbend.codeberg4s.repositories.wire.Elements.convert]] so
-  * that the day one of these fields becomes load-bearing, the position reporting is already in place.
+  * these can. The array conversions still go through [[com.worxbend.codeberg4s.codec.ArrayElements.convert]] so that
+  * the day one of these fields becomes load-bearing, the position reporting is already in place.
   */
 final case class QuotaUsedArtifactDto(
     name: Option[String],
@@ -57,7 +57,7 @@ object QuotaUsedArtifactDto:
       base: JsonPath,
       dtos: Vector[QuotaUsedArtifactDto],
   ): Either[DecodeFailure, Vector[QuotaUsedArtifact]] =
-    Elements.convert(base, dtos)((dto, _) => dto.toDomain)
+    ArrayElements.convert(base, dtos)((dto, _) => dto.toDomain)
 
 /** Forgejo's `QuotaUsedAttachment` model — one attachment counting towards the quota.
   *
@@ -120,7 +120,7 @@ object QuotaUsedAttachmentDto:
       base: JsonPath,
       dtos: Vector[QuotaUsedAttachmentDto],
   ): Either[DecodeFailure, Vector[QuotaUsedAttachment]] =
-    Elements.convert(base, dtos)((dto, _) => dto.toDomain)
+    ArrayElements.convert(base, dtos)((dto, _) => dto.toDomain)
 
 /** Forgejo's `QuotaUsedPackage` model — one package version counting towards the quota.
   *
@@ -168,4 +168,4 @@ object QuotaUsedPackageDto:
       base: JsonPath,
       dtos: Vector[QuotaUsedPackageDto],
   ): Either[DecodeFailure, Vector[QuotaUsedPackage]] =
-    Elements.convert(base, dtos)((dto, _) => dto.toDomain)
+    ArrayElements.convert(base, dtos)((dto, _) => dto.toDomain)

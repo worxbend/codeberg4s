@@ -2,15 +2,18 @@ package com.worxbend.codeberg4s.organizations
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.bodiless
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.organizations.wire.OrganizationQueries
 import com.worxbend.codeberg4s.organizations.wire.TeamOptionDto
 import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.admin.RepositoryActivity
 import com.worxbend.codeberg4s.users.User
@@ -450,7 +453,7 @@ object OrganizationTeamApi:
       exec.attempt(rail.removeRepository(id, org, name))
 
   private def createRequest(org: OrgName, command: CreateTeam): CodebergRequest =
-    OrganizationRequests.write(
+    write(
       CreateOperation,
       HttpMethod.Post,
       OrganizationRequests.organizationPath(org) :+ OrganizationRequests.TeamsSegment,
@@ -463,14 +466,14 @@ object OrganizationTeamApi:
       includeDescription: Option[Boolean],
       params: PageParams,
   ): CodebergRequest =
-    OrganizationRequests.read(
+    read(
       SearchOperation,
       OrganizationRequests.organizationPath(org) ++ List(OrganizationRequests.TeamsSegment, "search"),
       OrganizationQueries.teamSearch(text, includeDescription, params),
     )
 
   private def editRequest(id: TeamId, command: EditTeam): CodebergRequest =
-    OrganizationRequests.write(
+    write(
       EditOperation,
       HttpMethod.Patch,
       OrganizationRequests.teamPath(id),
@@ -478,32 +481,32 @@ object OrganizationTeamApi:
     )
 
   private def deleteRequest(id: TeamId): CodebergRequest =
-    OrganizationRequests.bare(DeleteOperation, HttpMethod.Delete, OrganizationRequests.teamPath(id))
+    bodiless(DeleteOperation, HttpMethod.Delete, OrganizationRequests.teamPath(id))
 
   private def activitiesRequest(id: TeamId, date: Option[LocalDate], params: PageParams): CodebergRequest =
-    OrganizationRequests.read(
+    read(
       ActivitiesOperation,
       OrganizationRequests.teamPath(id) ++ List("activities", "feeds"),
       OrganizationQueries.activities(date, params),
     )
 
   private def memberRequest(id: TeamId, username: Username): CodebergRequest =
-    OrganizationRequests.read(MemberOperation, memberPath(id, username), Nil)
+    read(MemberOperation, memberPath(id, username), Nil)
 
   private def addMemberRequest(id: TeamId, username: Username): CodebergRequest =
-    OrganizationRequests.bare(AddMemberOperation, HttpMethod.Put, memberPath(id, username))
+    bodiless(AddMemberOperation, HttpMethod.Put, memberPath(id, username))
 
   private def removeMemberRequest(id: TeamId, username: Username): CodebergRequest =
-    OrganizationRequests.bare(RemoveMemberOperation, HttpMethod.Delete, memberPath(id, username))
+    bodiless(RemoveMemberOperation, HttpMethod.Delete, memberPath(id, username))
 
   private def repositoryRequest(id: TeamId, org: OrgName, name: RepoName): CodebergRequest =
-    OrganizationRequests.read(RepositoryOperation, repositoryPath(id, org, name), Nil)
+    read(RepositoryOperation, repositoryPath(id, org, name), Nil)
 
   private def addRepositoryRequest(id: TeamId, org: OrgName, name: RepoName): CodebergRequest =
-    OrganizationRequests.bare(AddRepositoryOperation, HttpMethod.Put, repositoryPath(id, org, name))
+    bodiless(AddRepositoryOperation, HttpMethod.Put, repositoryPath(id, org, name))
 
   private def removeRepositoryRequest(id: TeamId, org: OrgName, name: RepoName): CodebergRequest =
-    OrganizationRequests.bare(RemoveRepositoryOperation, HttpMethod.Delete, repositoryPath(id, org, name))
+    bodiless(RemoveRepositoryOperation, HttpMethod.Delete, repositoryPath(id, org, name))
 
   private def memberPath(id: TeamId, username: Username): List[String] =
     OrganizationRequests.teamPath(id) ++ List(MembersSegment, username.value)

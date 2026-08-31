@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
@@ -8,7 +9,6 @@ import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.hooks.IssueFormField
 import com.worxbend.codeberg4s.repositories.hooks.IssueFormFieldType
 import com.worxbend.codeberg4s.repositories.hooks.IssueTemplate
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 /** Forgejo's `IssueFormField` model — one control of an issue form template.
   *
@@ -126,4 +126,4 @@ object IssueTemplateDto:
 
   /** Converts a decoded array of templates, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[IssueTemplateDto]): Either[DecodeFailure, Vector[IssueTemplate]] =
-    Elements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

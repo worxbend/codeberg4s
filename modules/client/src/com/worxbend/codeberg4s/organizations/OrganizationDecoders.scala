@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.organizations
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.issues.Label
@@ -19,7 +20,6 @@ import com.worxbend.codeberg4s.repositories.admin.RepositoryActivity
 import com.worxbend.codeberg4s.repositories.admin.wire.ActivityDto
 import com.worxbend.codeberg4s.repositories.hooks.Webhook
 import com.worxbend.codeberg4s.repositories.hooks.wire.WebhookDto
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
@@ -56,74 +56,74 @@ private[organizations] object OrganizationDecoders:
 
   /** One organisation object, as `GET /orgs/{org}` returns it. */
   val organization: Decode[Organization] =
-    WireDecode.of(Json.decoder[OrganizationDto])(_.toDomain)
+    WireDecode.single(Json.decoder[OrganizationDto])(_.toDomain)
 
   /** A bare array of organisation objects, as `GET /orgs` and `GET /users/{username}/orgs` return it. */
   val organizations: Decode[Vector[Organization]] =
-    WireDecode.of(Json.decoder[Vector[OrganizationDto]])(dtos => OrganizationDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[OrganizationDto]])(OrganizationDto.toDomainAll)
 
   /** One team object, as `GET /teams/{id}` returns it. */
   val team: Decode[Team] =
-    WireDecode.of(Json.decoder[TeamDto])(_.toDomain)
+    WireDecode.single(Json.decoder[TeamDto])(_.toDomain)
 
   /** A bare array of team objects, as `GET /orgs/{org}/teams` returns it. */
   val teams: Decode[Vector[Team]] =
-    WireDecode.of(Json.decoder[Vector[TeamDto]])(dtos => TeamDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[TeamDto]])(TeamDto.toDomainAll)
 
   /** A bare array of user objects, as the member and team-member listings return it. */
   val users: Decode[Vector[User]] =
-    WireDecode.of(Json.decoder[Vector[UserDto]]): dtos =>
-      Elements.convert(JsonPath.Root, dtos)((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[UserDto]]): (at, dtos) =>
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** A bare array of repository objects, as the organisation and team repository listings return it. */
   val repositories: Decode[Vector[Repository]] =
-    WireDecode.of(Json.decoder[Vector[RepositoryDto]]): dtos =>
-      Elements.convert(JsonPath.Root, dtos)((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[RepositoryDto]]): (at, dtos) =>
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** One user object, as `GET /teams/{id}/members/{username}` returns it. */
   val user: Decode[User] =
-    WireDecode.of(Json.decoder[UserDto])(_.toDomain)
+    WireDecode.single(Json.decoder[UserDto])(_.toDomain)
 
   /** One repository object, as `GET /teams/{id}/repos/{org}/{repo}` returns it. */
   val repository: Decode[Repository] =
-    WireDecode.of(Json.decoder[RepositoryDto])(_.toDomain)
+    WireDecode.single(Json.decoder[RepositoryDto])(_.toDomain)
 
   /** The `{"ok", "data"}` envelope the team search returns; see the object note. */
   val teamSearchResults: Decode[Vector[Team]] =
-    WireDecode.of(Json.decoder[SearchEnvelopeDto[TeamDto]]): envelope =>
-      Elements.convert(JsonPath.Root.field("data"), envelope.data)((dto, at) => dto.toDomainAt(at))
+    WireDecode.single(Json.decoder[SearchEnvelopeDto[TeamDto]]): envelope =>
+      ArrayElements.convert(JsonPath.Root.field("data"), envelope.data)((dto, at) => dto.toDomainAt(at))
 
   /** One webhook object, as the organisation hook routes return it. */
   val webhook: Decode[Webhook] =
-    WireDecode.of(Json.decoder[WebhookDto])(_.toDomain)
+    WireDecode.single(Json.decoder[WebhookDto])(_.toDomain)
 
   /** A bare array of webhook objects, as `GET /orgs/{org}/hooks` returns it. */
   val webhooks: Decode[Vector[Webhook]] =
-    WireDecode.of(Json.decoder[Vector[WebhookDto]])(dtos => WebhookDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[WebhookDto]])(WebhookDto.toDomainAll)
 
   /** One label object, as the organisation label routes return it. */
   val label: Decode[Label] =
-    WireDecode.of(Json.decoder[LabelDto])(_.toDomain)
+    WireDecode.single(Json.decoder[LabelDto])(_.toDomain)
 
   /** A bare array of label objects; `golden/organization/org-labels-list.json` is a capture of exactly this. */
   val labels: Decode[Vector[Label]] =
-    WireDecode.of(Json.decoder[Vector[LabelDto]])(dtos => LabelDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[LabelDto]])(LabelDto.toDomainAll)
 
   /** A bare array of activity entries, as the organisation and team feeds return them. */
   val activities: Decode[Vector[RepositoryActivity]] =
-    WireDecode.of(Json.decoder[Vector[ActivityDto]])(dtos => ActivityDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActivityDto]])(ActivityDto.toDomainAll)
 
   /** A bare array of block records, as `GET /orgs/{org}/list_blocked` returns it. */
   val blockedUsers: Decode[Vector[BlockedUser]] =
-    WireDecode.of(Json.decoder[Vector[BlockedUserDto]])(dtos => BlockedUserDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[BlockedUserDto]])(BlockedUserDto.toDomainAll)
 
   /** The five effective permission flags, as `GET /users/{username}/orgs/{org}/permissions` returns them. */
   val permissions: Decode[OrganizationPermissions] =
-    WireDecode.of(Json.decoder[OrganizationPermissionsDto])(_.toDomain)
+    WireDecode.single(Json.decoder[OrganizationPermissionsDto])(_.toDomain)
 
   /** The quota tree, as `GET /orgs/{org}/quota` returns it. */
   val quotaInfo: Decode[QuotaInfo] =
-    WireDecode.of(Json.decoder[QuotaInfoDto])(_.toDomain)
+    WireDecode.single(Json.decoder[QuotaInfoDto])(_.toDomain)
 
   /** The bare JSON boolean `GET /orgs/{org}/quota/check` answers with.
     *
@@ -136,12 +136,12 @@ private[organizations] object OrganizationDecoders:
 
   /** A bare array of artifact usage entries. */
   val quotaArtifacts: Decode[Vector[QuotaArtifact]] =
-    WireDecode.of(Json.decoder[Vector[QuotaArtifactDto]])(dtos => QuotaArtifactDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[QuotaArtifactDto]])(QuotaArtifactDto.toDomainAll)
 
   /** A bare array of attachment usage entries. */
   val quotaAttachments: Decode[Vector[QuotaAttachment]] =
-    WireDecode.of(Json.decoder[Vector[QuotaAttachmentDto]])(dtos => QuotaAttachmentDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[QuotaAttachmentDto]])(QuotaAttachmentDto.toDomainAll)
 
   /** A bare array of package usage entries. */
   val quotaPackages: Decode[Vector[QuotaPackage]] =
-    WireDecode.of(Json.decoder[Vector[QuotaPackageDto]])(dtos => QuotaPackageDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[QuotaPackageDto]])(QuotaPackageDto.toDomainAll)

@@ -1,12 +1,13 @@
 package com.worxbend.codeberg4s.issues
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
 
 /** The instance-wide identifier of one [[TrackedTime]] entry — the `{id}` of
   * `/repos/{owner}/{repo}/issues/{index}/times/{id}`.
   *
-  * Not an [[IssueNumber]] and not a [[CommentId]], though all three are `int64`; see [[NumericId]] for why they are
-  * kept apart.
+  * Not an [[IssueNumber]] and not a [[CommentId]], though all three are `int64`; see
+  * [[com.worxbend.codeberg4s.PositiveId]] for why they are kept apart.
   *
   * ==Error contract==
   *
@@ -24,7 +25,7 @@ object TrackedTimeId:
     *   the identifier, or a [[ValidationError]] on the `"trackedTimeId"` field
     */
   def from(value: Long): Either[ValidationError, TrackedTimeId] =
-    NumericId.from("trackedTimeId", value)
+    PositiveId.from("trackedTimeId", value)
 
   extension (id: TrackedTimeId)
 

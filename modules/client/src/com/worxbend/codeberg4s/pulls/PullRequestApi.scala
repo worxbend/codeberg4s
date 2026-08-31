@@ -2,11 +2,16 @@ package com.worxbend.codeberg4s.pulls
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
-import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RequestBody
@@ -29,10 +34,7 @@ import com.worxbend.codeberg4s.pulls.wire.ReviewDto
 import com.worxbend.codeberg4s.pulls.wire.SubmitPullReviewOptionsDto
 import com.worxbend.codeberg4s.repositories.BranchName
 import com.worxbend.codeberg4s.repositories.Commit
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.wire.CommitDto
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 import scala.concurrent.Future
 
@@ -60,9 +62,9 @@ import scala.concurrent.Future
   *   - [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] when a retryable failure outlived the policy.
   *
   * [[com.worxbend.codeberg4s.CodebergError.Validation]] is '''not''' produced by any operation here. Every argument is
-  * an already-validated type — [[com.worxbend.codeberg4s.repositories.Owner]], [[PullRequestNumber]],
-  * [[PullRequestHead]], [[com.worxbend.codeberg4s.repositories.CommitSha]] — so a value that would forge a path or a
-  * query parameter is rejected by its own smart constructor before a client is ever involved.
+  * an already-validated type — [[com.worxbend.codeberg4s.Owner]], [[PullRequestNumber]], [[PullRequestHead]],
+  * [[com.worxbend.codeberg4s.repositories.CommitSha]] — so a value that would forge a path or a query parameter is
+  * rejected by its own smart constructor before a client is ever involved.
   *
   * ==Retries==
   *
@@ -125,8 +127,8 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     * @param page
     *   which window to fetch, and how large
     */
-  def list(owner: Owner, name: RepoName, query: PullRequestQuery, page: PageParams): Future[Page[PullRequest]] =
-    pipeline.callPage(PullRequestApi.listRequest(owner, name, query, page), page)(using PullRequestApi.PullsDecoder)
+  def list(owner: Owner, name: RepoName, query: PullRequestQuery, params: PageParams): Future[Page[PullRequest]] =
+    pipeline.callPage(PullRequestApi.listRequest(owner, name, query, params), params)(using PullRequestApi.PullsDecoder)
 
   /** Reads one pull request — `GET /repos/{owner}/{repo}/pulls/{index}`.
     *
@@ -257,9 +259,9 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
       owner: Owner,
       name: RepoName,
       number: PullRequestNumber,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[Review]] =
-    pipeline.callPage(PullRequestApi.reviewsRequest(owner, name, number, page), page)(using
+    pipeline.callPage(PullRequestApi.reviewsRequest(owner, name, number, params), params)(using
       PullRequestApi.ReviewsDecoder)
 
   /** Lists the commits a pull request would bring — `GET /repos/{owner}/{repo}/pulls/{index}/commits`.
@@ -285,9 +287,9 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
       owner: Owner,
       name: RepoName,
       number: PullRequestNumber,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[Commit]] =
-    pipeline.callPage(PullRequestApi.commitsRequest(owner, name, number, page), page)(using
+    pipeline.callPage(PullRequestApi.commitsRequest(owner, name, number, params), params)(using
       PullRequestApi.CommitsDecoder)
 
   /** Lists the files a pull request changes — `GET /repos/{owner}/{repo}/pulls/{index}/files`.
@@ -308,9 +310,10 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
       owner: Owner,
       name: RepoName,
       number: PullRequestNumber,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[ChangedFile]] =
-    pipeline.callPage(PullRequestApi.filesRequest(owner, name, number, page), page)(using PullRequestApi.FilesDecoder)
+    pipeline.callPage(PullRequestApi.filesRequest(owner, name, number, params), params)(using
+      PullRequestApi.FilesDecoder)
 
   /** Lists the repository's pinned pull requests — `GET /repos/{owner}/{repo}/pulls/pinned`.
     *
@@ -876,9 +879,9 @@ object PullRequestApi:
         owner: Owner,
         name: RepoName,
         query: PullRequestQuery,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[PullRequest]]] =
-      exec.attempt(rail.list(owner, name, query, page))
+      exec.attempt(rail.list(owner, name, query, params))
 
     /** The single-pull-request read on [[PullRequestApi]], with its failure as a value. */
     def get(
@@ -919,27 +922,27 @@ object PullRequestApi:
         owner: Owner,
         name: RepoName,
         number: PullRequestNumber,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[Review]]] =
-      exec.attempt(rail.listReviews(owner, name, number, page))
+      exec.attempt(rail.listReviews(owner, name, number, params))
 
     /** [[PullRequestApi.listCommits]] with its failure as a value. */
     def listCommits(
         owner: Owner,
         name: RepoName,
         number: PullRequestNumber,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[Commit]]] =
-      exec.attempt(rail.listCommits(owner, name, number, page))
+      exec.attempt(rail.listCommits(owner, name, number, params))
 
     /** [[PullRequestApi.listFiles]] with its failure as a value. */
     def listFiles(
         owner: Owner,
         name: RepoName,
         number: PullRequestNumber,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[ChangedFile]]] =
-      exec.attempt(rail.listFiles(owner, name, number, page))
+      exec.attempt(rail.listFiles(owner, name, number, params))
 
     /** [[PullRequestApi.listPinned]] with its failure as a value. */
     def listPinned(owner: Owner, name: RepoName): Future[Either[CodebergError, Vector[PullRequest]]] =
@@ -1113,9 +1116,9 @@ object PullRequestApi:
       owner: Owner,
       name: RepoName,
       query: PullRequestQuery,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    read(ListOperation, pullsPath(owner, name), PullRequestQueries.pulls(query) ++ PullRequestQueries.paging(page))
+    read(ListOperation, pullsPath(owner, name), PullRequestQueries.pulls(query) ++ PullRequestQueries.paging(params))
 
   private def getRequest(owner: Owner, name: RepoName, number: PullRequestNumber): CodebergRequest =
     read(GetOperation, pullPath(owner, name, number), Nil)
@@ -1153,25 +1156,25 @@ object PullRequestApi:
       owner: Owner,
       name: RepoName,
       number: PullRequestNumber,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    read(ListReviewsOperation, pullPath(owner, name, number) :+ "reviews", PullRequestQueries.paging(page))
+    read(ListReviewsOperation, pullPath(owner, name, number) :+ "reviews", PullRequestQueries.paging(params))
 
   private def commitsRequest(
       owner: Owner,
       name: RepoName,
       number: PullRequestNumber,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    read(ListCommitsOperation, pullPath(owner, name, number) :+ "commits", PullRequestQueries.paging(page))
+    read(ListCommitsOperation, pullPath(owner, name, number) :+ "commits", PullRequestQueries.paging(params))
 
   private def filesRequest(
       owner: Owner,
       name: RepoName,
       number: PullRequestNumber,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    read(ListFilesOperation, pullPath(owner, name, number) :+ "files", PullRequestQueries.paging(page))
+    read(ListFilesOperation, pullPath(owner, name, number) :+ "files", PullRequestQueries.paging(params))
 
   private def pinnedRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(ListPinnedOperation, pullsPath(owner, name) :+ "pinned", Nil)
@@ -1200,7 +1203,7 @@ object PullRequestApi:
     read(MergeStatusOperation, pullPath(owner, name, number) :+ "merge", Nil)
 
   private def cancelMergeRequest(owner: Owner, name: RepoName, number: PullRequestNumber): CodebergRequest =
-    send(CancelScheduledMergeOperation, HttpMethod.Delete, pullPath(owner, name, number) :+ "merge", Nil, None)
+    remove(CancelScheduledMergeOperation, pullPath(owner, name, number) :+ "merge")
 
   private def updateBranchRequest(
       owner: Owner,
@@ -1208,13 +1211,7 @@ object PullRequestApi:
       number: PullRequestNumber,
       style: UpdateStyle,
   ): CodebergRequest =
-    send(
-      UpdateBranchOperation,
-      HttpMethod.Post,
-      pullPath(owner, name, number) :+ "update",
-      PullRequestQueries.update(style),
-      None,
-    )
+    post(UpdateBranchOperation, pullPath(owner, name, number) :+ "update", PullRequestQueries.update(style), None)
 
   private def requestReviewsRequest(
       owner: Owner,
@@ -1283,7 +1280,7 @@ object PullRequestApi:
       number: PullRequestNumber,
       review: ReviewId,
   ): CodebergRequest =
-    send(DeleteReviewOperation, HttpMethod.Delete, reviewPath(owner, name, number, review), Nil, None)
+    remove(DeleteReviewOperation, reviewPath(owner, name, number, review))
 
   private def dismissReviewRequest(
       owner: Owner,
@@ -1311,9 +1308,8 @@ object PullRequestApi:
       number: PullRequestNumber,
       review: ReviewId,
   ): CodebergRequest =
-    send(
+    post(
       UndismissReviewOperation,
-      HttpMethod.Post,
       reviewPath(owner, name, number, review) :+ "undismissals",
       Nil,
       Some(RequestBody.Empty),
@@ -1357,30 +1353,22 @@ object PullRequestApi:
       review: ReviewId,
       comment: ReviewCommentId,
   ): CodebergRequest =
-    send(
-      DeleteReviewCommentOperation,
-      HttpMethod.Delete,
-      reviewCommentPath(owner, name, number, review, comment),
-      Nil,
-      None,
-    )
+    remove(DeleteReviewCommentOperation, reviewCommentPath(owner, name, number, review, comment))
 
-  private def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    send(operation, HttpMethod.Get, path, query, None)
-
-  private def write(operation: String, method: HttpMethod, path: List[String], body: String): CodebergRequest =
-    send(operation, method, path, Nil, Some(RequestBody.Json(body)))
-
-  private def send(
+  /** The two `POST`s in this group that carry no JSON body, which no shared builder covers.
+    *
+    * `update` is the only mutation here with query parameters, and `undismissals` is the only one that wants
+    * [[com.worxbend.codeberg4s.core.RequestBody.Empty]] rather than no body at all.
+    */
+  private def post(
       operation: String,
-      method: HttpMethod,
       path: List[String],
       query: List[(String, String)],
       body: Option[RequestBody],
   ): CodebergRequest =
     CodebergRequest(
       operation = operation,
-      method    = method,
+      method    = HttpMethod.Post,
       path      = path,
       query     = query,
       headers   = Nil,
@@ -1425,27 +1413,26 @@ object PullRequestApi:
     reviewCommentsPath(owner, name, number, review) :+ comment.value.toString
 
   private val PullDecoder: Decode[PullRequest] =
-    WireDecode.of(Json.decoder[PullRequestDto])(_.toDomain)
+    WireDecode.single(Json.decoder[PullRequestDto])(_.toDomain)
 
   private val PullsDecoder: Decode[Vector[PullRequest]] =
-    WireDecode.of(Json.decoder[Vector[PullRequestDto]])(dtos => PullRequestDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[PullRequestDto]])(PullRequestDto.toDomainAll)
 
   private val ReviewDecoder: Decode[Review] =
-    WireDecode.of(Json.decoder[ReviewDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ReviewDto])(_.toDomain)
 
   private val ReviewsDecoder: Decode[Vector[Review]] =
-    WireDecode.of(Json.decoder[Vector[ReviewDto]])(dtos => ReviewDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ReviewDto]])(ReviewDto.toDomainAll)
 
   private val ReviewCommentDecoder: Decode[ReviewComment] =
-    WireDecode.of(Json.decoder[ReviewCommentDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ReviewCommentDto])(_.toDomain)
 
   private val ReviewCommentsDecoder: Decode[Vector[ReviewComment]] =
-    WireDecode.of(Json.decoder[Vector[ReviewCommentDto]])(dtos => ReviewCommentDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ReviewCommentDto]])(ReviewCommentDto.toDomainAll)
 
   private val CommitsDecoder: Decode[Vector[Commit]] =
-    WireDecode.of(Json.decoder[Vector[CommitDto]])(dtos =>
-      Elements.convert(JsonPath.Root, dtos)((dto, path) => dto.toDomainAt(path))
-    )
+    WireDecode.vector(Json.decoder[Vector[CommitDto]]): (at, dtos) =>
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   private val FilesDecoder: Decode[Vector[ChangedFile]] =
-    WireDecode.of(Json.decoder[Vector[ChangedFileDto]])(dtos => ChangedFileDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ChangedFileDto]])(ChangedFileDto.toDomainAll)

@@ -1,40 +1,22 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
-import com.worxbend.codeberg4s.BaseUri
-import com.worxbend.codeberg4s.CodebergConfig
+import com.worxbend.codeberg4s.ClientSuiteHarness
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
-import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.auth.Auth
-import com.worxbend.codeberg4s.client.FutureExec
-import com.worxbend.codeberg4s.client.FutureTimer
-import com.worxbend.codeberg4s.codec.ApiErrorBodyCodec
-import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.Telemetry
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.paging.PageNumber
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.paging.PageSize
 import com.worxbend.codeberg4s.repositories.CommitSha
 import com.worxbend.codeberg4s.repositories.ContentPath
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
-import com.worxbend.codeberg4s.retry.Jitter
-import com.worxbend.codeberg4s.retry.RetryPolicy
-import com.worxbend.codeberg4s.transport.SttpHttpPort
 
 import sttp.client4.Backend
-import sttp.client4.testing.BackendStub
 import sttp.client4.testing.RecordingBackend
-import sttp.client4.testing.ResponseStub
 import sttp.model.Header
-import sttp.model.StatusCode
 
 import munit.FunSuite
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
 
 /** [[RepositoryGitApi]] over a `BackendStub`: nothing in this suite opens a socket.
   *
@@ -46,17 +28,13 @@ import scala.concurrent.duration.DurationInt
   * reaches the wire as several segments rather than percent-encoded whole, the archive format is glued onto the last of
   * those segments, and the tree listing spells its page size `per_page`.
   */
-final class RepositoryGitApiSuite extends FunSuite:
-
-  private given ExecutionContext = munitExecutionContext
+final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
 
   private val Handle: Owner = orFail(Owner.from("worxbend"))
 
   private val Name: RepoName = orFail(RepoName.from("codeberg4s"))
 
   private val Sha: CommitSha = orFail(CommitSha.from("1111111111111111111111111111111111111111"))
-
-  private val Instance: BaseUri = orFail(BaseUri.from("https://forge.example/api/v1"))
 
   private def ref(value: String): RefName = orFail(RefName.from(value))
 
@@ -67,7 +45,7 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("a blob read addresses the blob by its object id"):
     val backend = RecordingBackend(responding(200, RepositoryGitApiSuite.BlobBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.getBlob(Handle, Name, Sha).map: blob =>
         assertEquals(pathOf(backend), s"https://forge.example/api/v1/repos/worxbend/codeberg4s/git/blobs/${Sha.value}")
         assertEquals(blob.content.flatMap(_.text), Some("hello"))
@@ -76,7 +54,7 @@ final class RepositoryGitApiSuite extends FunSuite:
     val backend = RecordingBackend(responding(200, s"[${RepositoryGitApiSuite.BlobBody}]"))
     val second  = orFail(CommitSha.from("2222222222222222222222222222222222222222"))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.getBlobs(Handle, Name, Vector(Sha, second)).map: blobs =>
         assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/worxbend/codeberg4s/git/blobs")
         assertEquals(queryOf(backend), List("shas" -> s"${Sha.value},${second.value}"))
@@ -85,7 +63,7 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("the tree listing sends per_page, not limit — this route is the odd one out"):
     val backend = RecordingBackend(responding(200, """{"tree":[]}"""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .listTree(Handle, Name, Sha, false, window(2, 50))
         .map: _ =>
@@ -95,7 +73,7 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("a recursive tree listing says so, and only when asked"):
     val backend = RecordingBackend(responding(200, """{"tree":[]}"""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .listTree(Handle, Name, Sha, true, PageParams.First)
         .map(_ => assertEquals(queryOf(backend).headOption, Some("recursive" -> "true")))
@@ -103,7 +81,7 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("a tree page ends where rel=next says it ends, and not where truncated or a short page suggest"):
     val backend = responding(200, RepositoryGitApiSuite.TruncatedTreeBody, RepositoryGitApiSuite.PagedHeaders)
 
-    onStub(backend): api =>
+    onApi(backend): api =>
       api.listTree(Handle, Name, Sha, true, window(1, 50)).map: page =>
         assertEquals(page.size, 1)
         assertEquals(page.totalCount, Some(4210))
@@ -111,7 +89,7 @@ final class RepositoryGitApiSuite extends FunSuite:
         assertEquals(page.isLast, false)
 
   test("a tree page whose response carries no Link header reports itself as the last one"):
-    onStub(responding(200, RepositoryGitApiSuite.TruncatedTreeBody)): api =>
+    onApi(responding(200, RepositoryGitApiSuite.TruncatedTreeBody)): api =>
       api.listTree(Handle, Name, Sha, true, PageParams.First).map: page =>
         assertEquals(page.isLast, true)
         assertEquals(page.nextPage, None)
@@ -119,7 +97,7 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("a single-commit read sends only the parts the caller took a position on"):
     val backend = RecordingBackend(responding(200, RepositoryGitApiSuite.CommitBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .getCommit(Handle, Name, Sha, CommitInclude.Default.withFiles(false))
         .map: commit =>
@@ -133,13 +111,13 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("a commit read that asserts nothing sends no query at all"):
     val backend = RecordingBackend(responding(200, RepositoryGitApiSuite.CommitBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.getCommit(Handle, Name, Sha, CommitInclude.Default).map(_ => assertEquals(queryOf(backend), Nil))
 
   test("a diff is a path suffix and comes back as text, unparsed"):
     val backend = RecordingBackend(responding(200, RepositoryGitApiSuite.DiffBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.getCommitDiff(Handle, Name, Sha, DiffType.Diff).map: diff =>
         assertEquals(
           pathOf(backend),
@@ -150,7 +128,7 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("a patch differs from a diff only in the suffix"):
     val backend = RecordingBackend(responding(200, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .getCommitDiff(Handle, Name, Sha, DiffType.Patch)
         .map(body => assertEquals((pathOf(backend).endsWith(".patch"), body), (true, "")))
@@ -160,7 +138,7 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("a note read drops the stat parameter, which this route does not declare"):
     val backend = RecordingBackend(responding(200, """{"message":"seen"}"""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .getNote(Handle, Name, Sha, CommitInclude.Minimal)
         .map: note =>
@@ -171,15 +149,15 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("setting a note POSTs the one key the model has"):
     val backend = RecordingBackend(responding(200, """{"message":"seen"}"""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.setNote(Handle, Name, Sha, "seen").map: _ =>
         assertEquals(methodOf(backend), "POST")
         assertEquals(bodyOf(backend), """{"message":"seen"}""")
 
   test("setting a note is never retried, POST being a POST whatever its effect"):
-    val backend = RecordingBackend(afterOneOutage("""{"message":"seen"}""", 200))
+    val backend = RecordingBackend(flakyThen(200, """{"message":"seen"}"""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.attempt
         .setNote(Handle, Name, Sha, "seen")
         .map: outcome =>
@@ -189,19 +167,19 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("removing a note is a DELETE that reads no body"):
     val backend = RecordingBackend(responding(204, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.removeNote(Handle, Name, Sha).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
         assertEquals(pathOf(backend), s"https://forge.example/api/v1/repos/worxbend/codeberg4s/git/notes/${Sha.value}")
 
   test("a 204 decorated with an unexpected payload still succeeds, because nothing decodes it"):
-    onStub(responding(204, """{"unexpected":true}""")): api =>
+    onApi(responding(204, """{"unexpected":true}""")): api =>
       api.attempt.removeNote(Handle, Name, Sha).map(outcome => assertEquals(outcome.isRight, true))
 
   test("removing a note is not retried either — a repeat would answer 404 for work that succeeded"):
-    val backend = RecordingBackend(afterOneOutage("", 204))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.attempt
         .removeNote(Handle, Name, Sha)
         .map: outcome =>
@@ -213,7 +191,7 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("the whole-repository ref listing takes no window, because the route declares none"):
     val backend = RecordingBackend(responding(200, RepositoryGitApiSuite.RefsBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.listRefs(Handle, Name).map: refs =>
         assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/worxbend/codeberg4s/git/refs")
         assertEquals(queryOf(backend), Nil)
@@ -222,7 +200,7 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("a slashed ref reaches the wire as several segments, because encoding it whole is a 404"):
     val backend = RecordingBackend(responding(200, RepositoryGitApiSuite.RefsBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .listMatchingRefs(Handle, Name, ref("refs/heads/main"))
         .map: _ =>
@@ -234,7 +212,7 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("an annotated tag is addressed by the id of the tag object"):
     val backend = RecordingBackend(responding(200, RepositoryGitApiSuite.AnnotatedTagBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.getAnnotatedTag(Handle, Name, Sha).map: tag =>
         assertEquals(pathOf(backend), s"https://forge.example/api/v1/repos/worxbend/codeberg4s/git/tags/${Sha.value}")
         assertEquals(tag.name.value, "v1.0")
@@ -244,7 +222,7 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("a combined status windows the nested statuses and keeps the envelope"):
     val backend = RecordingBackend(responding(200, RepositoryGitApiSuite.CombinedStatusBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .getCombinedStatus(Handle, Name, ref("main"), window(1, 30))
         .map: combined =>
@@ -257,7 +235,7 @@ final class RepositoryGitApiSuite extends FunSuite:
     val backend = RecordingBackend(responding(200, "[]"))
     val query   = CommitStatusQuery.Empty.sortedBy(CommitStatusSort.Oldest).inState(CommitStatusState.Failure)
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .listStatuses(Handle, Name, ref("v1.0"), query, window(1, 30))
         .map: _ =>
@@ -268,7 +246,7 @@ final class RepositoryGitApiSuite extends FunSuite:
           )
 
   test("a status page past the end is an empty page, not a failure"):
-    onStub(responding(200, "[]")): api =>
+    onApi(responding(200, "[]")): api =>
       api
         .listStatuses(Handle, Name, ref("main"), CommitStatusQuery.Empty, PageParams.First)
         .map: page =>
@@ -278,7 +256,7 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("a commit's pull request is read through the commits path, not the git path"):
     val backend = RecordingBackend(responding(200, RepositoryGitApiSuite.PullRequestBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.getCommitPullRequest(Handle, Name, Sha).map: pull =>
         assertEquals(
           pathOf(backend),
@@ -290,7 +268,7 @@ final class RepositoryGitApiSuite extends FunSuite:
     val backend = RecordingBackend(responding(200, RepositoryGitApiSuite.CompareBody))
     val range   = CompareRange.between(ref("v1.0"), ref("renovate/deps"))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.compare(Handle, Name, range).map: comparison =>
         assertEquals(
           pathOf(backend),
@@ -305,7 +283,7 @@ final class RepositoryGitApiSuite extends FunSuite:
     val backend = RecordingBackend(responding(200, RepositoryGitApiSuite.FileResponseBody))
     val command = ApplyDiffPatch.of("--- a").withMessage("apply")
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.applyDiffPatch(Handle, Name, command).map: change =>
         assertEquals(methodOf(backend), "POST")
         assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/worxbend/codeberg4s/diffpatch")
@@ -313,17 +291,17 @@ final class RepositoryGitApiSuite extends FunSuite:
         assertEquals(change.commit.map(_.sha.value), Some(Sha.value))
 
   test("applying a patch is never retried, because a repeat leaves a second commit"):
-    val backend = RecordingBackend(afterOneOutage(RepositoryGitApiSuite.FileResponseBody, 200))
+    val backend = RecordingBackend(flakyThen(200, RepositoryGitApiSuite.FileResponseBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.attempt
         .applyDiffPatch(Handle, Name, ApplyDiffPatch.of("--- a"))
         .map(_ => assertEquals(backend.allInteractions.size, 1, "the POST was retried"))
 
   test("a read is retried, so the eligibility difference is real and not a comment"):
-    val backend = RecordingBackend(afterOneOutage(RepositoryGitApiSuite.BlobBody, 200))
+    val backend = RecordingBackend(flakyThen(200, RepositoryGitApiSuite.BlobBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.getBlob(Handle, Name, Sha).map: blob =>
         assertEquals(blob.size, 5L)
         assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
@@ -331,7 +309,7 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("editorconfig sends the path as segments and the ref as a query parameter"):
     val backend = RecordingBackend(responding(200, """{"indent_style":"space","indent_size":4}"""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .getEditorConfig(Handle, Name, path("modules/core/Foo.scala"), Some(ref("refs/heads/main")))
         .map: definitions =>
@@ -345,7 +323,7 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("a raw file read sends no ref when none was given, and returns the body unchanged"):
     val backend = RecordingBackend(responding(200, "# codeberg4s\n"))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.getRawFile(Handle, Name, path("README.md"), None).map: body =>
         assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/worxbend/codeberg4s/raw/README.md")
         assertEquals(queryOf(backend), Nil)
@@ -354,7 +332,7 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("the media read differs from the raw read only in the path segment"):
     val backend = RecordingBackend(responding(200, "pointer"))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .getMediaFile(Handle, Name, path("assets/logo.png"), Some(ref("main")))
         .map: _ =>
@@ -364,7 +342,7 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("an archive glues the format onto the last segment of the ref"):
     val backend = RecordingBackend(responding(200, "PK"))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .getArchive(Handle, Name, ref("release/2026"), ArchiveFormat.TarGz)
         .map: _ =>
@@ -376,7 +354,7 @@ final class RepositoryGitApiSuite extends FunSuite:
   test("an unslashed ref archives as one segment, suffix included"):
     val backend = RecordingBackend(responding(200, "PK"))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .getArchive(Handle, Name, ref("main"), ArchiveFormat.Zip)
         .map(_ =>
@@ -386,160 +364,73 @@ final class RepositoryGitApiSuite extends FunSuite:
   // --- failures -------------------------------------------------------------
 
   test("a 404 fails the convenience rail with a CodebergException carrying the Api failure"):
-    onStub(responding(404, RepositoryGitApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, RepositoryGitApiSuite.NotFoundBody)): api =>
       api.getBlob(Handle, Name, Sha).failed.map:
         case CodebergException(error) =>
           assertEquals(summary(error), (RepositoryGitApi.GetBlobOperation, 404, Some("GetBlob")))
         case other                    => fail(s"expected a CodebergException, got $other")
 
   test("a 404 reaches the typed rail as a Left reporting the very same failure"):
-    onStub(responding(404, RepositoryGitApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, RepositoryGitApiSuite.NotFoundBody)): api =>
       for
         raised <- api.getBlob(Handle, Name, Sha).failed
         typed  <- api.attempt.getBlob(Handle, Name, Sha)
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on a tree listing failure too, so the choice of rail is only a choice of style"):
-    onStub(responding(404, RepositoryGitApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, RepositoryGitApiSuite.NotFoundBody)): api =>
       for
         raised <- api.listTree(Handle, Name, Sha, false, PageParams.First).failed
         typed  <- api.attempt.listTree(Handle, Name, Sha, false, PageParams.First)
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on the archive read as well, which has no decoder to disagree about"):
-    onStub(responding(404, RepositoryGitApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, RepositoryGitApiSuite.NotFoundBody)): api =>
       for
         raised <- api.getArchive(Handle, Name, ref("main"), ArchiveFormat.Zip).failed
         typed  <- api.attempt.getArchive(Handle, Name, ref("main"), ArchiveFormat.Zip)
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on a note deletion failure, where the success carries no value at all"):
-    onStub(responding(404, RepositoryGitApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, RepositoryGitApiSuite.NotFoundBody)): api =>
       for
         raised <- api.removeNote(Handle, Name, Sha).failed
         typed  <- api.attempt.removeNote(Handle, Name, Sha)
       yield assertRailsAgree(raised, typed)
 
   test("a 200 whose payload does not fit the model becomes DecodingFailed, never an escaping codec exception"):
-    onStub(responding(200, """{"size":3}""")): api =>
+    onApi(responding(200, """{"size":3}""")): api =>
       api.attempt.getBlob(Handle, Name, Sha).map:
         case Left(CodebergError.DecodingFailed(_, _, failed, _)) => assertEquals(failed.render, "$.sha")
         case other                                               => fail(s"expected a decoding failure, got $other")
 
   test("a bad entry of a tree page reports its position, all the way through the pipeline"):
-    onStub(responding(200, """{"tree":[{"path":"a","sha":"cafebabe"},{"path":"b"}]}""")): api =>
+    onApi(responding(200, """{"tree":[{"path":"a","sha":"cafebabe"},{"path":"b"}]}""")): api =>
       api.attempt.listTree(Handle, Name, Sha, false, PageParams.First).map:
         case Left(CodebergError.DecodingFailed(_, _, failed, _)) => assertEquals(failed.render, "$.tree[1].sha")
         case other                                               => fail(s"expected a decoding failure, got $other")
 
   test("a 422 on a patch reaches both rails identically, carrying Forgejo's errors array"):
-    onStub(responding(422, RepositoryGitApiSuite.ValidationBody)): api =>
+    onApi(responding(422, RepositoryGitApiSuite.ValidationBody)): api =>
       for
         raised <- api.applyDiffPatch(Handle, Name, ApplyDiffPatch.of("--- a")).failed
         typed  <- api.attempt.applyDiffPatch(Handle, Name, ApplyDiffPatch.of("--- a"))
       yield
-        assertEquals(details(typed), List("patch does not apply"))
+        assertEquals(detailsOf(typed), List("patch does not apply"))
         assertRailsAgree(raised, typed)
 
   test("a 423 on an archived repository is an Api failure carrying the operation id"):
-    onStub(responding(423, RepositoryGitApiSuite.ValidationBody)): api =>
+    onApi(responding(423, RepositoryGitApiSuite.ValidationBody)): api =>
       api.attempt.applyDiffPatch(Handle, Name, ApplyDiffPatch.of("--- a")).map:
         case Left(CodebergError.Api(ctx, status, _)) =>
           assertEquals((ctx.operation, status), (RepositoryGitApi.ApplyDiffPatchOperation, 423))
         case other                                   => fail(s"expected an Api failure, got $other")
 
-  // --- assertions -----------------------------------------------------------
-
-  private def assertRailsAgree[A](raised: Throwable, typed: Either[CodebergError, A]): Unit =
-    (raised, typed) match
-      case (CodebergException(convenience), Left(materialised)) =>
-        assertEquals(summary(materialised), summary(convenience))
-      case (convenience, materialised)                          =>
-        fail(s"the rails disagreed: $convenience versus $materialised")
-
-  private def summary(error: CodebergError): (String, Int, Option[String]) =
-    error match
-      case CodebergError.Api(ctx, status, body) => (ctx.operation, status, body.message)
-      case other                                => fail(s"expected an Api failure, got ${other.describe}")
-
-  private def details[A](result: Either[CodebergError, A]): List[String] =
-    result match
-      case Left(CodebergError.Api(_, _, body)) => body.errors
-      case other                               => fail(s"expected an Api failure, got $other")
-
   // --- harness --------------------------------------------------------------
 
-  private def responding(status: Int, body: String): BackendStub[Future] =
-    responding(status, body, Nil)
-
-  private def responding(status: Int, body: String, headers: List[Header]): BackendStub[Future] =
-    BackendStub.asynchronousFuture.whenAnyRequest.thenRespond(ResponseStub.adjust(body, StatusCode(status), headers))
-
-  /** A backend that answers `503` once and then succeeds, which is what tells a retried call apart from a bare one. */
-  private def afterOneOutage(body: String, status: Int): BackendStub[Future] =
-    BackendStub.asynchronousFuture.whenAnyRequest.thenRespondCyclic(
-      ResponseStub.adjust("", StatusCode(503)),
-      ResponseStub.adjust(body, StatusCode(status)),
-    )
-
-  private def dialled(backend: RecordingBackend): String =
-    backend.allInteractions.headOption match
-      case Some((request, _)) => request.uri.toString
-      case None               => fail("no request reached the backend")
-
-  /** The dialled URI without its query string. Written with `indexOf` rather than a character comparison because
-    * `.scalafix.conf` bans universal equality outright.
-    */
-  private def pathOf(backend: RecordingBackend): String =
-    val uri   = dialled(backend)
-    val query = uri.indexOf('?')
-
-    if query < 0 then uri else uri.take(query)
-
-  private def queryOf(backend: RecordingBackend): List[(String, String)] =
-    backend.allInteractions.headOption match
-      case Some((request, _)) => request.uri.params.toSeq.toList
-      case None               => fail("no request reached the backend")
-
-  private def methodOf(backend: RecordingBackend): String =
-    backend.allInteractions.headOption match
-      case Some((request, _)) => request.method.method
-      case None               => fail("no request reached the backend")
-
-  private def bodyOf(backend: RecordingBackend): String =
-    backend.allInteractions.headOption match
-      case Some((request, _)) => request.body.show.stripPrefix("string: ")
-      case None               => fail("no request reached the backend")
-
-  private def window(page: Int, size: Int): PageParams =
-    PageParams(orFail(PageNumber.from(page)), orFail(PageSize.from(size)))
-
-  private def onStub[A](backend: Backend[Future])(use: RepositoryGitApi => Future[A]): Future[A] =
-    onBackend(backend)(use)
-
-  /** Builds the pipeline this group's API sits on, and releases the timer whatever the outcome. */
-  private def onBackend[A](backend: Backend[Future])(use: RepositoryGitApi => Future[A]): Future[A] =
-    given Exec[Future] = FutureExec()
-
-    val config = CodebergConfig(Auth.Anonymous).copy(baseUri = Instance, retry = RepositoryGitApiSuite.PromptRetry)
-    val timer  = FutureTimer()
-
-    val pipeline = ApiPipeline[Future](
-      SttpHttpPort(backend, config),
-      config,
-      timer,
-      Telemetry.noOp[Future],
-      ApiErrorBodyCodec.parse,
-    )
-
-    use(RepositoryGitApi(pipeline)).transform: outcome =>
-      timer.close()
-      outcome
-
-  private def orFail[A](result: Either[ValidationError, A]): A =
-    result match
-      case Right(value) => value
-      case Left(error)  => fail(s"invalid fixture: ${error.field} ${error.message}")
+  /** Builds the API under test on a pipeline over `backend`, releasing the timer whatever happens. */
+  private def onApi[A](backend: Backend[Future])(use: RepositoryGitApi => Future[A]): Future[A] =
+    onPipeline(backend)(pipeline => use(RepositoryGitApi(pipeline)))
 
 /** The response bodies this suite stubs, derived from `spec/swagger.v1.json` and kept out of the test bodies so each
   * test reads as one behaviour. No golden capture exists for any endpoint in this group.
@@ -602,12 +493,3 @@ object RepositoryGitApiSuite:
 
   private val ValidationBody: String =
     """{"message":"ApplyDiffPatch","url":"https://codeberg.org/api/swagger","errors":["patch does not apply"]}"""
-
-  /** Retries promptly and predictably: the default policy would make the retry tests take a quarter of a second. */
-  private val PromptRetry: RetryPolicy = RetryPolicy(
-    maxAttempts       = 3,
-    baseDelay         = 1.milli,
-    maxDelay          = 5.millis,
-    jitter            = Jitter.None,
-    respectRetryAfter = false,
-  )

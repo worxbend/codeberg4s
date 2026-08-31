@@ -1,13 +1,14 @@
 package com.worxbend.codeberg4s.users.social
 
+import com.worxbend.codeberg4s.ClientSuiteHarness
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
 import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.auth.ApiToken
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.RepoSlug
 import com.worxbend.codeberg4s.users.Username
 
@@ -29,7 +30,7 @@ import scala.concurrent.Future
   * '''No golden fixture backs this group.''' Every payload below was written from `spec/swagger.v1.json`; see the class
   * note on [[UserTokenApi]].
   */
-final class UserTokenApiSuite extends FunSuite with SocialApiHarness:
+final class UserTokenApiSuite extends FunSuite with ClientSuiteHarness:
 
   private val Handle: Username = orFail(Username.from("earl-warren"))
 
@@ -51,7 +52,7 @@ final class UserTokenApiSuite extends FunSuite with SocialApiHarness:
         assertEquals(page.items.flatMap(_.lastEight), Vector("edential"))
 
   test("the listing model cannot carry a credential even when the instance sends one"):
-    onStub(responding(200, s"[${UserTokenApiSuite.CreatedBody}]")): api =>
+    onApi(responding(200, s"[${UserTokenApiSuite.CreatedBody}]")): api =>
       api.list(Handle, PageParams.First).map: page =>
         assert(
           !page.items.toString.contains(UserTokenApiSuite.Material),
@@ -78,7 +79,7 @@ final class UserTokenApiSuite extends FunSuite with SocialApiHarness:
         assertEquals(created.details.id.value, 42L)
 
   test("a minted token never renders its material, from any of the three rendering paths"):
-    onStub(responding(201, UserTokenApiSuite.CreatedBody)): api =>
+    onApi(responding(201, UserTokenApiSuite.CreatedBody)): api =>
       api.create(Handle, orFail(CreateAccessToken.named("ci"))).map: created =>
         assert(!created.toString.contains(UserTokenApiSuite.Material), s"the token reached toString: $created")
         assert(!s"$created".contains(UserTokenApiSuite.Material), "the token reached string interpolation")
@@ -107,7 +108,7 @@ final class UserTokenApiSuite extends FunSuite with SocialApiHarness:
           assertEquals(attemptsOn(backend), 1, "the POST was retried")
 
   test("a failed creation puts nothing token-shaped into the error a caller would log"):
-    onStub(responding(403, UserTokenApiSuite.ForbiddenBody)): api =>
+    onApi(responding(403, UserTokenApiSuite.ForbiddenBody)): api =>
       api.attempt
         .create(Handle, orFail(CreateAccessToken.named("ci")))
         .map:
@@ -117,7 +118,7 @@ final class UserTokenApiSuite extends FunSuite with SocialApiHarness:
           case Right(_)    => fail("expected a 403 to fail")
 
   test("a creation whose payload carried a credential but no id fails without echoing the body"):
-    onStub(responding(201, UserTokenApiSuite.CreatedWithoutIdBody)): api =>
+    onApi(responding(201, UserTokenApiSuite.CreatedWithoutIdBody)): api =>
       api.attempt.create(Handle, orFail(CreateAccessToken.named("ci"))).map:
         case Left(error @ CodebergError.DecodingFailed(_, snippet, path, _)) =>
           assertEquals(path.render, "$.id")
@@ -130,14 +131,14 @@ final class UserTokenApiSuite extends FunSuite with SocialApiHarness:
           fail(s"expected a decoding failure, got $other")
 
   test("the placeholder reaches the convenience rail too, not only the typed one"):
-    onStub(responding(201, UserTokenApiSuite.CreatedWithoutIdBody)): api =>
+    onApi(responding(201, UserTokenApiSuite.CreatedWithoutIdBody)): api =>
       api.create(Handle, orFail(CreateAccessToken.named("ci"))).failed.map:
         case CodebergException(error) =>
           assert(!error.describe.contains(UserTokenApiSuite.Material), s"the credential reached: ${error.describe}")
         case other                    => fail(s"expected a CodebergException, got $other")
 
   test("every other call keeps the body excerpt, because only the token endpoint's body is a credential"):
-    onStub(responding(200, UserTokenApiSuite.MalformedListBody)): api =>
+    onApi(responding(200, UserTokenApiSuite.MalformedListBody)): api =>
       api.attempt.list(Handle, PageParams.First).map:
         case Left(CodebergError.DecodingFailed(_, snippet, _, _)) =>
           assertEquals(snippet, UserTokenApiSuite.MalformedListBody)
@@ -172,41 +173,41 @@ final class UserTokenApiSuite extends FunSuite with SocialApiHarness:
   // --- failures -------------------------------------------------------------
 
   test("a 403 fails the convenience rail with a CodebergException carrying the Api failure"):
-    onStub(responding(403, UserTokenApiSuite.ForbiddenBody)): api =>
+    onApi(responding(403, UserTokenApiSuite.ForbiddenBody)): api =>
       api.list(Handle, PageParams.First).failed.map:
         case CodebergException(error) =>
           assertEquals(summary(error), (UserTokenApi.ListOperation, 403, Some(UserTokenApiSuite.ForbiddenText)))
         case other                    => fail(s"expected a CodebergException, got $other")
 
   test("a 403 reaches the typed rail as a Left reporting the very same failure"):
-    onStub(responding(403, UserTokenApiSuite.ForbiddenBody)): api =>
+    onApi(responding(403, UserTokenApiSuite.ForbiddenBody)): api =>
       for
         raised <- api.list(Handle, PageParams.First).failed
         typed  <- api.attempt.list(Handle, PageParams.First)
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on the creation as well, credential or no credential"):
-    onStub(responding(403, UserTokenApiSuite.ForbiddenBody)): api =>
+    onApi(responding(403, UserTokenApiSuite.ForbiddenBody)): api =>
       for
         raised <- api.create(Handle, orFail(CreateAccessToken.named("ci"))).failed
         typed  <- api.attempt.create(Handle, orFail(CreateAccessToken.named("ci")))
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on the revocation as well"):
-    onStub(responding(404, UserTokenApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, UserTokenApiSuite.NotFoundBody)): api =>
       for
         raised <- api.delete(Handle, ById).failed
         typed  <- api.attempt.delete(Handle, ById)
       yield assertRailsAgree(raised, typed)
 
   test("a 400 is an Api failure too — Forgejo uses it for validation on this endpoint"):
-    onStub(responding(400, UserTokenApiSuite.ValidationBody)): api =>
+    onApi(responding(400, UserTokenApiSuite.ValidationBody)): api =>
       api.attempt.create(Handle, orFail(CreateAccessToken.named("ci"))).map:
         case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 400)
         case other                                 => fail(s"expected an Api failure, got $other")
 
   test("a failure carries the operation id of the endpoint it came from, so an alert can name it"):
-    onStub(responding(403, UserTokenApiSuite.ForbiddenBody)): api =>
+    onApi(responding(403, UserTokenApiSuite.ForbiddenBody)): api =>
       api.attempt
         .delete(Handle, ById)
         .map(outcome => assertEquals(operationOf(outcome), UserTokenApi.DeleteOperation))
@@ -216,11 +217,9 @@ final class UserTokenApiSuite extends FunSuite with SocialApiHarness:
   private def slug: RepoSlug =
     RepoSlug(orFail(Owner.from("forgejo")), orFail(RepoName.from("forgejo")))
 
+  /** Builds the API under test on a pipeline over `backend`, releasing the timer whatever happens. */
   private def onApi[A](backend: Backend[Future])(use: UserTokenApi => Future[A]): Future[A] =
-    onBackend(backend)(UserTokenApi(_))(use)
-
-  private def onStub[A](backend: Backend[Future])(use: UserTokenApi => Future[A]): Future[A] =
-    onApi(backend)(use)
+    onPipeline(backend)(pipeline => use(UserTokenApi(pipeline)))
 
 /** The response bodies this suite stubs, hand-written from `spec/swagger.v1.json`; see the class note. */
 object UserTokenApiSuite:

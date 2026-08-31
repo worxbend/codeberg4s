@@ -13,7 +13,7 @@ import com.worxbend.codeberg4s.repositories.BranchName
   * Every key on `golden/repository/branch-single.json` and on the three elements of
   * `golden/repository/branches-list.json` is represented. Two of those branches are named `renovate/…` and `v16.0/…`,
   * which is the evidence behind [[com.worxbend.codeberg4s.repositories.BranchName]] accepting slashes where
-  * [[com.worxbend.codeberg4s.repositories.RepoName]] rejects them.
+  * [[com.worxbend.codeberg4s.RepoName]] rejects them.
   *
   * @param name
   *   the `name` key

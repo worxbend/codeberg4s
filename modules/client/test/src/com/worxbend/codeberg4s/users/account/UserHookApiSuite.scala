@@ -28,7 +28,7 @@ final class UserHookApiSuite extends AccountApiSuite:
 
   private val Hook: HookId = orFail(HookId.from(11L))
 
-  private val HooksRoot: String = s"$Root/hooks"
+  private val HooksRoot: String = s"$Endpoint/hooks"
 
   private def command: CreateHook =
     CreateHook
@@ -80,7 +80,7 @@ final class UserHookApiSuite extends AccountApiSuite:
         )
 
   test("creating a hook is never retried, because a repeat delivers every event twice"):
-    val backend = RecordingBackend(failingThenSucceeding(201, UserHookApiSuite.HookBody))
+    val backend = RecordingBackend(flakyThen(201, UserHookApiSuite.HookBody))
 
     onApi(backend): api =>
       api.attempt.create(command).map(_ => assertEquals(attemptsOn(backend), 1, "the POST was retried"))
@@ -102,7 +102,7 @@ final class UserHookApiSuite extends AccountApiSuite:
         assertEquals(bodyOf(backend), """{"active":false}""")
 
   test("editing a hook is retried, because it names a row id and states the value it wants"):
-    val backend = RecordingBackend(failingThenSucceeding(200, UserHookApiSuite.HookBody))
+    val backend = RecordingBackend(flakyThen(200, UserHookApiSuite.HookBody))
 
     onApi(backend): api =>
       api.edit(Hook, EditHook.Empty.deactivated).map(_ => assertEquals(attemptsOn(backend), 2))
@@ -116,7 +116,7 @@ final class UserHookApiSuite extends AccountApiSuite:
         assertEquals(pathOf(backend), s"$HooksRoot/11")
 
   test("deleting a hook is retried, because a row id is never reused"):
-    val backend = RecordingBackend(failingThenSucceeding(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api.delete(Hook).map(_ => assertEquals(attemptsOn(backend), 2))
