@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.pulls
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
 
 /** The instance-wide identifier of a [[Review]] — the `{id}` of `/repos/{owner}/{repo}/pulls/{index}/reviews/{id}`.
@@ -20,7 +21,7 @@ object ReviewId:
     *   the id, or a [[ValidationError]] on the `"reviewId"` field
     */
   def from(value: Long): Either[ValidationError, ReviewId] =
-    PullIds.from("reviewId", value)
+    PositiveId.from("reviewId", value)
 
   extension (id: ReviewId)
 

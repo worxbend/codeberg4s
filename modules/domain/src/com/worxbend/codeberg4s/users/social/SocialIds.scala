@@ -1,32 +1,7 @@
 package com.worxbend.codeberg4s.users.social
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
-
-/** Validation shared by every identifier in this group that Forgejo expresses as a positive integer.
-  *
-  * [[SshKeyId]], [[GpgKeyId]], [[AccessTokenId]] and [[BlockId]] are all `int64` on the wire and three of the four end
-  * up interpolated into a request path. A number cannot forge a path, so the point is confusion rather than escaping: a
-  * key's row id, a token's row id and a block's row id are all `Long`, all plausible values for one another, and all
-  * reachable from responses a caller holds at the same time. Passing one where another belongs gets a `404` that reads
-  * like a missing resource rather than like a caller bug.
-  *
-  * This duplicates `com.worxbend.codeberg4s.repositories.actions.ActionIds`, `com.worxbend.codeberg4s.issues.NumericId`
-  * and `com.worxbend.codeberg4s.pulls.PullIds`, each of which is private to its own group and therefore unreachable
-  * from here. `docs/LEDGER.md` already lists that kind of helper under "helpers awaiting promotion"; the right fix is
-  * one shared validator in the domain module root, not a widened internal.
-  */
-private[social] object SocialIds:
-
-  private val MinValue: Long = 1L
-
-  /** Accepts `value` only if it is a positive identifier.
-    *
-    * @param field
-    *   the field name to report in a [[ValidationError]]
-    */
-  def from(field: String, value: Long): Either[ValidationError, Long] =
-    if value < MinValue then Left(ValidationError(field, s"must be at least $MinValue"))
-    else Right(value)
 
 /** The row identifier of one registered SSH key — the `{id}` of `/user/keys/{id}`.
   *
@@ -44,7 +19,7 @@ object SshKeyId:
     *   the identifier, or a [[ValidationError]] on the `"sshKeyId"` field
     */
   def from(value: Long): Either[ValidationError, SshKeyId] =
-    SocialIds.from("sshKeyId", value)
+    PositiveId.from("sshKeyId", value)
 
   extension (id: SshKeyId)
 
@@ -68,7 +43,7 @@ object GpgKeyId:
     *   the identifier, or a [[ValidationError]] on the `"gpgKeyId"` field
     */
   def from(value: Long): Either[ValidationError, GpgKeyId] =
-    SocialIds.from("gpgKeyId", value)
+    PositiveId.from("gpgKeyId", value)
 
   extension (id: GpgKeyId)
 
@@ -90,7 +65,7 @@ object AccessTokenId:
     *   the identifier, or a [[ValidationError]] on the `"accessTokenId"` field
     */
   def from(value: Long): Either[ValidationError, AccessTokenId] =
-    SocialIds.from("accessTokenId", value)
+    PositiveId.from("accessTokenId", value)
 
   extension (id: AccessTokenId)
 
@@ -113,7 +88,7 @@ object BlockId:
     *   the identifier, or a [[ValidationError]] on the `"blockId"` field
     */
   def from(value: Long): Either[ValidationError, BlockId] =
-    SocialIds.from("blockId", value)
+    PositiveId.from("blockId", value)
 
   extension (id: BlockId)
 

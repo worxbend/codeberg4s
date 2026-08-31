@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.issues
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
 
 /** The instance-wide identifier of a [[Milestone]] — the `{id}` of `/repos/{owner}/{repo}/milestones/{id}`.
@@ -20,7 +21,7 @@ object MilestoneId:
     *   the id, or a [[ValidationError]] on the `"milestoneId"` field
     */
   def from(value: Long): Either[ValidationError, MilestoneId] =
-    NumericId.from("milestoneId", value)
+    PositiveId.from("milestoneId", value)
 
   extension (id: MilestoneId)
 

@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.organizations
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
 
 import java.time.Instant
@@ -15,8 +16,6 @@ opaque type BlockId = Long
 
 object BlockId:
 
-  private val MinValue: Long = 1L
-
   /** Parses a block identifier.
     *
     * Rejects anything below `1`: Forgejo's identifiers are database row ids and start at one.
@@ -25,7 +24,7 @@ object BlockId:
     *   the identifier, or a [[ValidationError]] on the `"blockId"` field
     */
   def from(value: Long): Either[ValidationError, BlockId] =
-    if value < MinValue then Left(ValidationError("blockId", s"must be at least $MinValue")) else Right(value)
+    PositiveId.from("blockId", value)
 
   extension (id: BlockId)
 

@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.pulls
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
 
 /** The instance-wide identifier of a [[ReviewComment]] — the `{comment}` of
@@ -22,13 +23,13 @@ object ReviewCommentId:
 
   /** Parses a review-comment id.
     *
-    * Rejects anything below `1`, for the reason [[PullIds]] gives.
+    * Rejects anything below `1`, for the reason [[com.worxbend.codeberg4s.PositiveId]] gives.
     *
     * @return
     *   the id, or a [[ValidationError]] on the `"reviewCommentId"` field
     */
   def from(value: Long): Either[ValidationError, ReviewCommentId] =
-    PullIds.from("reviewCommentId", value)
+    PositiveId.from("reviewCommentId", value)
 
   extension (id: ReviewCommentId)
 

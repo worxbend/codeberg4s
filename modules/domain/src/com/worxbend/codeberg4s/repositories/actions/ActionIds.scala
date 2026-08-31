@@ -1,33 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
-
-/** Validation shared by every identifier in this group that Forgejo expresses as a positive integer.
-  *
-  * [[RunId]], [[JobId]], [[ArtifactId]], [[TaskId]] and [[JobAttempt]] are all `int64` on the wire, and the first three
-  * end up interpolated into a request path. A number cannot forge a path, so the point is confusion rather than
-  * escaping: a run's instance-wide `id`, its per-repository `index_in_repo`, the `task_id` of one of its jobs and the
-  * id of an artifact it produced are all `Long`, all plausible values for one another, and all reachable from the same
-  * response. Passing one where another belongs gets a `404` that reads like a missing resource rather than like a
-  * caller bug.
-  *
-  * This duplicates `com.worxbend.codeberg4s.issues.NumericId` and `com.worxbend.codeberg4s.pulls.PullIds`, both of
-  * which are private to their own group and therefore unreachable from here. `docs/LEDGER.md` already lists that kind
-  * of helper under "helpers awaiting promotion"; the right fix is one shared validator in the domain module root, not a
-  * widened internal.
-  */
-private[actions] object ActionIds:
-
-  private val MinValue: Long = 1L
-
-  /** Accepts `value` only if it is a positive identifier.
-    *
-    * @param field
-    *   the field name to report in a [[ValidationError]]
-    */
-  def from(field: String, value: Long): Either[ValidationError, Long] =
-    if value < MinValue then Left(ValidationError(field, s"must be at least $MinValue"))
-    else Right(value)
 
 /** The instance-wide identifier of one Actions run — the `{run_id}` of `/repos/{owner}/{repo}/actions/runs/{run_id}`.
   *
@@ -45,7 +19,7 @@ object RunId:
     *   the identifier, or a [[ValidationError]] on the `"runId"` field
     */
   def from(value: Long): Either[ValidationError, RunId] =
-    ActionIds.from("runId", value)
+    PositiveId.from("runId", value)
 
   extension (id: RunId)
 
@@ -67,7 +41,7 @@ object JobId:
     *   the identifier, or a [[ValidationError]] on the `"jobId"` field
     */
   def from(value: Long): Either[ValidationError, JobId] =
-    ActionIds.from("jobId", value)
+    PositiveId.from("jobId", value)
 
   extension (id: JobId)
 
@@ -87,7 +61,7 @@ object ArtifactId:
     *   the identifier, or a [[ValidationError]] on the `"artifactId"` field
     */
   def from(value: Long): Either[ValidationError, ArtifactId] =
-    ActionIds.from("artifactId", value)
+    PositiveId.from("artifactId", value)
 
   extension (id: ArtifactId)
 
@@ -109,7 +83,7 @@ object TaskId:
     *   the identifier, or a [[ValidationError]] on the `"taskId"` field
     */
   def from(value: Long): Either[ValidationError, TaskId] =
-    ActionIds.from("taskId", value)
+    PositiveId.from("taskId", value)
 
   extension (id: TaskId)
 
@@ -132,7 +106,7 @@ object JobAttempt:
     *   the attempt, or a [[ValidationError]] on the `"jobAttempt"` field
     */
   def from(value: Long): Either[ValidationError, JobAttempt] =
-    ActionIds.from("jobAttempt", value)
+    PositiveId.from("jobAttempt", value)
 
   extension (attempt: JobAttempt)
 

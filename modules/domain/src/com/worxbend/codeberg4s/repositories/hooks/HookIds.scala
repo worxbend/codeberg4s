@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
 import com.worxbend.codeberg4s.PathSegment
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.SegmentLiteral
 import com.worxbend.codeberg4s.ValidationError
 
@@ -18,8 +19,6 @@ opaque type HookId = Long
 
 object HookId:
 
-  private val MinValue: Long = 1L
-
   /** Parses a webhook identifier.
     *
     * Rejects anything below `1`. A number cannot forge a path, so this is a confusion guard rather than an escaping
@@ -29,8 +28,7 @@ object HookId:
     *   the identifier, or a [[ValidationError]] on the `"hookId"` field
     */
   def from(value: Long): Either[ValidationError, HookId] =
-    if value < MinValue then Left(ValidationError("hookId", s"must be at least $MinValue"))
-    else Right(value)
+    PositiveId.from("hookId", value)
 
   extension (id: HookId)
 

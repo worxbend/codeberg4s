@@ -5,8 +5,8 @@ import munit.FunSuite
 /** The four numeric identifiers this group owns, and the one rule they share.
   *
   * They are tested together rather than in four near-identical suites because the behaviour under test is
-  * [[NumericId]]'s; what differs between them is only the field name a rejection reports, and a caller branches on that
-  * name.
+  * [[com.worxbend.codeberg4s.PositiveId]]'s; what differs between them is only the field name a rejection reports, and
+  * a caller branches on that name.
   */
 final class IssueIdentifiersSuite extends FunSuite:
 

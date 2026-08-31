@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.organizations
 
+import com.worxbend.codeberg4s.PositiveId
 import com.worxbend.codeberg4s.ValidationError
 
 /** The instance-wide identifier of a team, as `GET /teams/{id}` takes it.
@@ -13,8 +14,6 @@ opaque type TeamId = Long
 
 object TeamId:
 
-  private val MinValue: Long = 1L
-
   /** Parses a team identifier.
     *
     * Rejects zero and negatives: Forgejo's identifiers are database row ids and start at one.
@@ -23,7 +22,7 @@ object TeamId:
     *   the identifier, or a [[ValidationError]] on the `"teamId"` field
     */
   def from(value: Long): Either[ValidationError, TeamId] =
-    if value < MinValue then Left(ValidationError("teamId", s"must be at least $MinValue")) else Right(value)
+    PositiveId.from("teamId", value)
 
   extension (id: TeamId)
 
