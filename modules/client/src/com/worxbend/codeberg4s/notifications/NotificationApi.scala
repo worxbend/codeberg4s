@@ -9,6 +9,8 @@ import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.bodiless
+import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
@@ -281,7 +283,7 @@ object NotificationApi:
     )
 
   private val markAllReadRequest: CodebergRequest =
-    mutate(MarkAllReadOperation, HttpMethod.Put, NotificationsPath)
+    bodiless(MarkAllReadOperation, HttpMethod.Put, NotificationsPath)
 
   private val unreadCountRequest: CodebergRequest =
     read(UnreadCountOperation, NotificationsPath :+ "new", Nil)
@@ -290,7 +292,7 @@ object NotificationApi:
     read(GetThreadOperation, threadPath(id), Nil)
 
   private def markThreadReadRequest(id: NotificationThreadId): CodebergRequest =
-    mutate(MarkThreadReadOperation, HttpMethod.Patch, threadPath(id))
+    bodiless(MarkThreadReadOperation, HttpMethod.Patch, threadPath(id))
 
   private def listRepositoryRequest(
       owner: Owner,
@@ -305,30 +307,7 @@ object NotificationApi:
     )
 
   private def markRepositoryReadRequest(owner: Owner, name: RepoName): CodebergRequest =
-    mutate(MarkRepositoryReadOperation, HttpMethod.Put, repositoryNotificationsPath(owner, name))
-
-  private def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = None,
-    )
-
-  /** A mark-read call: no query parameters and no body, which is what makes repeating it harmless. See the retry note
-    * on [[NotificationApi]].
-    */
-  private def mutate(operation: String, method: HttpMethod, path: List[String]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
-    )
+    bodiless(MarkRepositoryReadOperation, HttpMethod.Put, repositoryNotificationsPath(owner, name))
 
   private def threadPath(id: NotificationThreadId): List[String] =
     NotificationsPath ++ List("threads", id.value.toString)

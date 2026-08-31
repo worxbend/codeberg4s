@@ -6,8 +6,10 @@ import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
@@ -844,10 +846,10 @@ object RepositoryGitApi:
     read(GetNoteOperation, notePath(owner, name, sha), GitDataQueries.noteInclude(include))
 
   private def setNoteRequest(owner: Owner, name: RepoName, sha: CommitSha, message: String): CodebergRequest =
-    write(SetNoteOperation, HttpMethod.Post, notePath(owner, name, sha), Some(NoteOptionsDto.render(message)))
+    write(SetNoteOperation, HttpMethod.Post, notePath(owner, name, sha), NoteOptionsDto.render(message))
 
   private def removeNoteRequest(owner: Owner, name: RepoName, sha: CommitSha): CodebergRequest =
-    write(RemoveNoteOperation, HttpMethod.Delete, notePath(owner, name, sha), None)
+    remove(RemoveNoteOperation, notePath(owner, name, sha))
 
   private def refsRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(ListRefsOperation, gitPath(owner, name, "refs"), Nil)
@@ -894,7 +896,7 @@ object RepositoryGitApi:
       ApplyDiffPatchOperation,
       HttpMethod.Post,
       repoPath(owner, name) :+ "diffpatch",
-      Some(DiffPatchOptionsDto.render(command)),
+      DiffPatchOptionsDto.render(command),
     )
 
   private def editorConfigRequest(
@@ -954,30 +956,3 @@ object RepositoryGitApi:
 
   private def notePath(owner: Owner, name: RepoName, sha: CommitSha): List[String] =
     gitPath(owner, name, "notes") :+ sha.value
-
-  /** A `GET` carrying no body and adding no header of its own, which is every read in this group. */
-  private def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = None,
-    )
-
-  /** A mutating call. `body` is absent for the `DELETE`, which sends none. */
-  private def write(
-      operation: String,
-      method: HttpMethod,
-      path: List[String],
-      body: Option[String],
-  ): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = body.map(RequestBody.Json.apply),
-    )

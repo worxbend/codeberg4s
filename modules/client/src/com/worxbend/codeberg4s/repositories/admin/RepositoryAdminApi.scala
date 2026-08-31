@@ -6,8 +6,11 @@ import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.removeWithBody
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.issues.Issue
 import com.worxbend.codeberg4s.issues.TrackedTime
@@ -1173,7 +1176,7 @@ object RepositoryAdminApi:
     write(EditOperation, HttpMethod.Patch, repoPath(owner, name), RepositoryOptionDto.renderEdit(command))
 
   private def deleteRequest(owner: Owner, name: RepoName): CodebergRequest =
-    remove(DeleteOperation, repoPath(owner, name), None)
+    remove(DeleteOperation, repoPath(owner, name))
 
   private def migrateRequest(command: MigrateRepository): CodebergRequest =
     write(MigrateOperation, HttpMethod.Post, List("repos", "migrate"), MigrateRepoOptionsDto.render(command))
@@ -1208,7 +1211,7 @@ object RepositoryAdminApi:
     write(AddPushMirrorOperation, HttpMethod.Post, pushMirrorsPath(owner, name), PushMirrorOptionDto.render(command))
 
   private def deletePushMirrorRequest(owner: Owner, name: RepoName, mirror: MirrorName): CodebergRequest =
-    remove(DeletePushMirrorOperation, pushMirrorsPath(owner, name) :+ mirror.value, None)
+    remove(DeletePushMirrorOperation, pushMirrorsPath(owner, name) :+ mirror.value)
 
   private def syncPushMirrorsRequest(owner: Owner, name: RepoName): CodebergRequest =
     post(SyncPushMirrorsOperation, repoPath(owner, name) :+ "push_mirrors-sync")
@@ -1242,7 +1245,7 @@ object RepositoryAdminApi:
     )
 
   private def unwatchRequest(owner: Owner, name: RepoName): CodebergRequest =
-    remove(UnwatchOperation, subscriptionPath(owner, name), None)
+    remove(UnwatchOperation, subscriptionPath(owner, name))
 
   private def assigneesRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(ListAssigneesOperation, repoPath(owner, name) :+ "assignees", Nil)
@@ -1260,7 +1263,7 @@ object RepositoryAdminApi:
     write(CreateBranchOperation, HttpMethod.Post, branchesPath(owner, name), BranchOptionDto.renderCreate(command))
 
   private def deleteBranchRequest(owner: Owner, name: RepoName, branch: BranchName): CodebergRequest =
-    remove(DeleteBranchOperation, branchesPath(owner, name) ++ branch.segments, None)
+    remove(DeleteBranchOperation, branchesPath(owner, name) ++ branch.segments)
 
   private def renameBranchRequest(
       owner: Owner,
@@ -1311,10 +1314,10 @@ object RepositoryAdminApi:
       path: ContentPath,
       command: DeleteFile,
   ): CodebergRequest =
-    remove(
+    removeWithBody(
       DeleteFileOperation,
       contentsPath(owner, name) ++ path.segments,
-      Some(RequestBody.Json(FileOptionsDto.renderDelete(command))),
+      FileOptionsDto.renderDelete(command),
     )
 
   private def changeFilesRequest(owner: Owner, name: RepoName, command: ChangeFiles): CodebergRequest =
@@ -1324,7 +1327,7 @@ object RepositoryAdminApi:
     write(UpdateAvatarOperation, HttpMethod.Post, avatarPath(owner, name), AvatarOptionDto.render(image))
 
   private def deleteAvatarRequest(owner: Owner, name: RepoName): CodebergRequest =
-    remove(DeleteAvatarOperation, avatarPath(owner, name), None)
+    remove(DeleteAvatarOperation, avatarPath(owner, name))
 
   private def activityFeedRequest(
       owner: Owner,
@@ -1372,26 +1375,6 @@ object RepositoryAdminApi:
       AdminQueries.topicSearch(keyword) ++ AdminQueries.paging(params),
     )
 
-  private def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = None,
-    )
-
-  private def write(operation: String, method: HttpMethod, path: List[String], body: String): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Json(body)),
-    )
-
   /** A `POST` that Forgejo declares no request model for — accept, reject, convert and the four sync calls. */
   private def post(operation: String, path: List[String]): CodebergRequest =
     CodebergRequest(
@@ -1401,16 +1384,6 @@ object RepositoryAdminApi:
       query     = Nil,
       headers   = Nil,
       body      = None,
-    )
-
-  private def remove(operation: String, path: List[String], body: Option[RequestBody]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Delete,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = body,
     )
 
   private def repoPath(owner: Owner, name: RepoName): List[String] =

@@ -9,6 +9,9 @@ import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RequestBody
@@ -1201,7 +1204,7 @@ object PullRequestApi:
     read(MergeStatusOperation, pullPath(owner, name, number) :+ "merge", Nil)
 
   private def cancelMergeRequest(owner: Owner, name: RepoName, number: PullRequestNumber): CodebergRequest =
-    send(CancelScheduledMergeOperation, HttpMethod.Delete, pullPath(owner, name, number) :+ "merge", Nil, None)
+    remove(CancelScheduledMergeOperation, pullPath(owner, name, number) :+ "merge")
 
   private def updateBranchRequest(
       owner: Owner,
@@ -1209,13 +1212,7 @@ object PullRequestApi:
       number: PullRequestNumber,
       style: UpdateStyle,
   ): CodebergRequest =
-    send(
-      UpdateBranchOperation,
-      HttpMethod.Post,
-      pullPath(owner, name, number) :+ "update",
-      PullRequestQueries.update(style),
-      None,
-    )
+    post(UpdateBranchOperation, pullPath(owner, name, number) :+ "update", PullRequestQueries.update(style), None)
 
   private def requestReviewsRequest(
       owner: Owner,
@@ -1284,7 +1281,7 @@ object PullRequestApi:
       number: PullRequestNumber,
       review: ReviewId,
   ): CodebergRequest =
-    send(DeleteReviewOperation, HttpMethod.Delete, reviewPath(owner, name, number, review), Nil, None)
+    remove(DeleteReviewOperation, reviewPath(owner, name, number, review))
 
   private def dismissReviewRequest(
       owner: Owner,
@@ -1312,9 +1309,8 @@ object PullRequestApi:
       number: PullRequestNumber,
       review: ReviewId,
   ): CodebergRequest =
-    send(
+    post(
       UndismissReviewOperation,
-      HttpMethod.Post,
       reviewPath(owner, name, number, review) :+ "undismissals",
       Nil,
       Some(RequestBody.Empty),
@@ -1358,30 +1354,22 @@ object PullRequestApi:
       review: ReviewId,
       comment: ReviewCommentId,
   ): CodebergRequest =
-    send(
-      DeleteReviewCommentOperation,
-      HttpMethod.Delete,
-      reviewCommentPath(owner, name, number, review, comment),
-      Nil,
-      None,
-    )
+    remove(DeleteReviewCommentOperation, reviewCommentPath(owner, name, number, review, comment))
 
-  private def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    send(operation, HttpMethod.Get, path, query, None)
-
-  private def write(operation: String, method: HttpMethod, path: List[String], body: String): CodebergRequest =
-    send(operation, method, path, Nil, Some(RequestBody.Json(body)))
-
-  private def send(
+  /** The two `POST`s in this group that carry no JSON body, which no shared builder covers.
+    *
+    * `update` is the only mutation here with query parameters, and `undismissals` is the only one that wants
+    * [[com.worxbend.codeberg4s.core.RequestBody.Empty]] rather than no body at all.
+    */
+  private def post(
       operation: String,
-      method: HttpMethod,
       path: List[String],
       query: List[(String, String)],
       body: Option[RequestBody],
   ): CodebergRequest =
     CodebergRequest(
       operation = operation,
-      method    = method,
+      method    = HttpMethod.Post,
       path      = path,
       query     = query,
       headers   = Nil,

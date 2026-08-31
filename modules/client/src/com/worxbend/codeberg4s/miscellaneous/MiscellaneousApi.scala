@@ -7,6 +7,7 @@ import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RequestBody
@@ -545,25 +546,25 @@ object MiscellaneousApi:
     settingsRequest(UiSettingsOperation, "ui")
 
   private val SigningKeyRequest: CodebergRequest =
-    read(SigningKeyOperation, List("signing-key.gpg"))
+    read(SigningKeyOperation, List("signing-key.gpg"), Nil)
 
   private val SshSigningKeyRequest: CodebergRequest =
-    read(SshSigningKeyOperation, List("signing-key.ssh"))
+    read(SshSigningKeyOperation, List("signing-key.ssh"), Nil)
 
   private val GitignoreTemplatesRequest: CodebergRequest =
-    read(GitignoreTemplatesOperation, GitignoreTemplatesPath)
+    read(GitignoreTemplatesOperation, GitignoreTemplatesPath, Nil)
 
   private val LabelTemplatesRequest: CodebergRequest =
-    read(LabelTemplatesOperation, LabelTemplatesPath)
+    read(LabelTemplatesOperation, LabelTemplatesPath, Nil)
 
   private val LicenseTemplatesRequest: CodebergRequest =
-    read(LicenseTemplatesOperation, LicensesPath)
+    read(LicenseTemplatesOperation, LicensesPath, Nil)
 
   private val NodeInfoRequest: CodebergRequest =
-    read(NodeInfoOperation, List("nodeinfo"))
+    read(NodeInfoOperation, List("nodeinfo"), Nil)
 
   private val ActionsRunRequest: CodebergRequest =
-    read(ActionsRunOperation, List("actions", "run"))
+    read(ActionsRunOperation, List("actions", "run"), Nil)
 
   private val ApiSettingsDecoder: Decode[ServerApiSettings] =
     WireDecode.of(Json.decoder[ServerApiSettingsDto])(_.toDomain)
@@ -615,16 +616,16 @@ object MiscellaneousApi:
     WireDecode.of(Json.decoder[ActionRunDto])(_.toDomain)
 
   private def settingsRequest(operation: String, area: String): CodebergRequest =
-    read(operation, List("settings", area))
+    read(operation, List("settings", area), Nil)
 
   private def gitignoreTemplateRequest(name: TemplateName): CodebergRequest =
-    read(GitignoreTemplateOperation, GitignoreTemplatesPath :+ name.value)
+    read(GitignoreTemplateOperation, GitignoreTemplatesPath :+ name.value, Nil)
 
   private def labelTemplateRequest(name: TemplateName): CodebergRequest =
-    read(LabelTemplateOperation, LabelTemplatesPath :+ name.value)
+    read(LabelTemplateOperation, LabelTemplatesPath :+ name.value, Nil)
 
   private def licenseTemplateRequest(name: TemplateName): CodebergRequest =
-    read(LicenseTemplateOperation, LicensesPath :+ name.value)
+    read(LicenseTemplateOperation, LicensesPath :+ name.value, Nil)
 
   private def markupRequest(request: MarkupRenderRequest): CodebergRequest =
     CodebergRequest(
@@ -634,17 +635,6 @@ object MiscellaneousApi:
       query     = Nil,
       headers   = Nil,
       body      = Some(RequestBody.Json(MarkupOptionDto.fromDomain(request).toJson)),
-    )
-
-  /** A `GET` with no query, no headers and no body — which is every read in this group. */
-  private def read(operation: String, path: List[String]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
     )
 
   private def markdownRequest(request: MarkdownRenderRequest): CodebergRequest =
