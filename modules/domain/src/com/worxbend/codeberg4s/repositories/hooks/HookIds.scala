@@ -49,8 +49,8 @@ object GitHookName:
   /** Parses a Git hook name.
     *
     * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, a value containing a
-    * control character, and the traversal segments `.` and `..` — see
-    * [[com.worxbend.codeberg4s.PathSegment]] for why that is a security boundary and not a convenience.
+    * control character, and the traversal segments `.` and `..` — see [[com.worxbend.codeberg4s.PathSegment]] for why
+    * that is a security boundary and not a convenience.
     *
     * @return
     *   the name, or a [[ValidationError]] on the `"gitHookName"` field

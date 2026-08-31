@@ -71,8 +71,7 @@ object ActivityId:
   * address the mirror afterwards. It is '''not''' the mirror's remote address and not the mirrored repository's name;
   * [[PushMirror.remoteName]] is where a caller gets one.
   *
-  * Validated as a single URI path segment, so it cannot forge a path — see
-  * [[com.worxbend.codeberg4s.PathSegment]].
+  * Validated as a single URI path segment, so it cannot forge a path — see [[com.worxbend.codeberg4s.PathSegment]].
   */
 opaque type MirrorName = String
 

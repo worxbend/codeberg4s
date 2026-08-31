@@ -12,7 +12,7 @@ import com.worxbend.codeberg4s.ValidationError
   * @param body
   *   the comment text as Markdown source; the only thing Forgejo requires, validated by [[CreateComment.of]]
   */
-final case class CreateComment(body: String)
+final case class CreateComment private[codeberg4s] (body: String)
 
 object CreateComment:
 

@@ -30,7 +30,7 @@ import com.worxbend.codeberg4s.ValidationError
   * @param isReadOnly
   *   whether the key may fetch but not push
   */
-final case class CreateDeployKey(
+final case class CreateDeployKey private[codeberg4s] (
     title: String,
     key: String,
     isReadOnly: Boolean,
@@ -78,7 +78,7 @@ object CreateDeployKey:
   *   the instance's fingerprint of the key, matched exactly. The usual source is [[DeployKey.fingerprint]] or
   *   `ssh-keygen -lf`
   */
-final case class DeployKeyQuery(keyId: Option[Long], fingerprint: Option[String]):
+final case class DeployKeyQuery private[codeberg4s] (keyId: Option[Long], fingerprint: Option[String]):
 
   /** Restricts the listing to the deploy key backed by the SSH key row `value`; see [[keyId]]. */
   def forKeyId(value: Long): DeployKeyQuery = copy(keyId = Some(value))

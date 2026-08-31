@@ -35,7 +35,7 @@ import java.time.Instant
   * @param dueDate
   *   a deadline for the pull request
   */
-final case class CreatePullRequest(
+final case class CreatePullRequest private[codeberg4s] (
     title: String,
     head: PullRequestHead,
     base: BranchName,

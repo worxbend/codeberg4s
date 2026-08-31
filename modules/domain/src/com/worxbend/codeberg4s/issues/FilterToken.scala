@@ -7,8 +7,8 @@ import com.worxbend.codeberg4s.ValidationError
   * `GET /repos/{owner}/{repo}/issues` takes `labels` and `milestones` as one string holding several values joined by
   * commas. That encoding has no escape: a value containing a comma is silently read as two filters, so
   * `labels=needs,triage` asks for the labels `needs` and `triage` rather than for `needs,triage`. It is the
-  * query-string cousin of the path forging [[com.worxbend.codeberg4s.PathSegment]] rejects, and it is
-  * rejected the same way — at construction, once, rather than at each call site.
+  * query-string cousin of the path forging [[com.worxbend.codeberg4s.PathSegment]] rejects, and it is rejected the same
+  * way — at construction, once, rather than at each call site.
   *
   * Only '''input''' types are validated this way. [[Label.name]] is a plain `String`, because the instance may already
   * hold a name this validation refuses and refusing to decode it would cost the caller a whole page of labels.

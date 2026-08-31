@@ -19,7 +19,7 @@ import java.time.Instant
   *   the timestamp to record the edit under. The spec notes it "needs admin or repository owner permission"; an
   *   ordinary token that sends it has it ignored rather than rejected
   */
-final case class EditComment(body: String, updatedAt: Option[Instant]):
+final case class EditComment private[codeberg4s] (body: String, updatedAt: Option[Instant]):
 
   /** Records the edit as having happened at `moment`; see [[updatedAt]]. */
   def recordedAt(moment: Instant): EditComment = copy(updatedAt = Some(moment))

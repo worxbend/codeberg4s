@@ -26,7 +26,7 @@ import java.time.Instant
   *   whether to create the milestone already closed; absent leaves the instance's default of open. See
   *   [[IssueStateChange]], which is the same two-valued transition and is shared rather than duplicated
   */
-final case class CreateMilestone(
+final case class CreateMilestone private[codeberg4s] (
     title: String,
     description: Option[String],
     dueOn: Option[Instant],

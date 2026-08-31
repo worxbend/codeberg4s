@@ -40,9 +40,9 @@ object BranchRuleName:
   /** Parses a branch protection rule name.
     *
     * Trims surrounding whitespace. Rejects an empty or blank name, a name containing `/`, a name containing a control
-    * character, and the traversal segments `.` and `..` — see [[com.worxbend.codeberg4s.PathSegment]] for
-    * why that is a security boundary and not a convenience, and the type's own note for why the slash is rejected
-    * rather than encoded.
+    * character, and the traversal segments `.` and `..` — see [[com.worxbend.codeberg4s.PathSegment]] for why that is a
+    * security boundary and not a convenience, and the type's own note for why the slash is rejected rather than
+    * encoded.
     *
     * Glob characters are '''not''' rejected: `*` and `?` are what a rule name is made of, and they are legal in a URI
     * path segment.
