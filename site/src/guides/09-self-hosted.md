@@ -39,6 +39,10 @@ val selfHosted: Either[ValidationError, CodebergConfig] =
   )
 ```
 
+`defaultPageSize` surfaces on the built client as `client.firstPage` — page 1
+at that size — which is what listings and `PageWalk` should start from on an
+instance whose page ceiling differs from codeberg.org's.
+
 Or, if only the host differs:
 
 ```scala mdoc:compile-only

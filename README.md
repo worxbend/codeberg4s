@@ -459,16 +459,18 @@ unbounded collection by accident. One page at a time:
 import com.worxbend.codeberg4s.issues.Issue
 import com.worxbend.codeberg4s.issues.IssueQuery
 import com.worxbend.codeberg4s.paging.Page
-import com.worxbend.codeberg4s.paging.PageParams
 
 import scala.concurrent.Future
 
 val first: Future[Page[Issue]] =
-  client.issues.list(owner, name, IssueQuery.Empty, PageParams.First)
+  client.issues.list(owner, name, IssueQuery.Empty, client.firstPage)
 ```
 
-A `Page[A]` carries `items`, the `params` that produced it, an optional
-`totalCount` from the `x-total-count` header, and `nextPage` / `prevPage`.
+`client.firstPage` is page 1 at the client's configured `defaultPageSize`;
+`PageParams.First` is the same window at the library-wide default size, for
+code that has no client in hand. A `Page[A]` carries `items`, the `params`
+that produced it, an optional `totalCount` from the `x-total-count` header,
+and `nextPage` / `prevPage`.
 
 ### The clamp hazard — why `items.size` is the wrong end-of-pages test
 
@@ -520,12 +522,14 @@ Two more traps worth naming:
   ignore it and return the entire collection — 862 forks, 5233 stargazers in
   the captured fixtures.
 
-Or let `PageWalk` drive the loop, on any listing in the library:
+Or let `PageWalk` drive the loop, on any listing in the library. Start it from
+`client.firstPage` — page 1 at the client's configured `defaultPageSize` —
+rather than the config-free constant `PageParams.First`:
 
 ```scala
 import com.worxbend.codeberg4s.paging.PageWalk
 
-PageWalk.all(PageParams.First): params =>
+PageWalk.all(client.firstPage): params =>
   client.issues.list(owner, name, IssueQuery.Empty, params)
 ```
 
@@ -572,6 +576,9 @@ val selfHosted: Either[ValidationError, CodebergConfig] =
     maxDownloadBodyBytes = CodebergConfig.DefaultMaxDownloadBodyBytes,
   )
 ```
+
+`defaultPageSize` surfaces on the built client as `client.firstPage` — page 1
+at that size — which is what listings and `PageWalk` should start from.
 
 Every field naming a domain concept is a validated type, so a misconfigured
 client fails at construction rather than on its first call. The timeouts and the

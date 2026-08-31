@@ -2,6 +2,9 @@ package com.worxbend.codeberg4s
 
 import com.worxbend.codeberg4s.auth.ApiToken
 import com.worxbend.codeberg4s.auth.Auth
+import com.worxbend.codeberg4s.paging.PageNumber
+import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.paging.PageSize
 import com.worxbend.codeberg4s.repositories.Owner
 import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.Repository
@@ -160,6 +163,14 @@ final class CodebergClientSuite extends FunSuite:
     client.close()
 
     assertEquals(backend.closes, 0)
+
+  test("firstPage is page one at the configured default page size"):
+    val size   = orFail(PageSize.from(7))
+    val config = configFor(Auth.Anonymous).copy(defaultPageSize = size)
+    val client = CodebergClient.usingBackend(config, responding(200, CodebergClientSuite.VersionBody))
+
+    try assertEquals(client.firstPage, PageParams(PageNumber.First, size))
+    finally client.close()
 
   test("a configured token appears in nothing the caller can see about a failure"):
     val config = configFor(Auth.Token(orFail(ApiToken.from(CodebergClientSuite.Secret))))

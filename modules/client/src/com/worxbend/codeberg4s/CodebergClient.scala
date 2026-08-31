@@ -12,6 +12,8 @@ import com.worxbend.codeberg4s.issues.IssueApi
 import com.worxbend.codeberg4s.miscellaneous.MiscellaneousApi
 import com.worxbend.codeberg4s.notifications.NotificationApi
 import com.worxbend.codeberg4s.organizations.OrganizationApi
+import com.worxbend.codeberg4s.paging.PageNumber
+import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.pulls.PullRequestApi
 import com.worxbend.codeberg4s.repositories.RepositoryApi
 import com.worxbend.codeberg4s.repositories.actions.ActionDownloadApi
@@ -55,11 +57,22 @@ import java.util.concurrent.atomic.AtomicBoolean
   * [[CodebergClient.apply]] and [[CodebergClient.usingBackend]].
   */
 final class CodebergClient private (
+    config: CodebergConfig,
     pipeline: ApiPipeline[Future],
     binary: BinaryHttpPort[Future],
     timer: FutureTimer,
     ownedBackend: Option[Backend[Future]],
 )(using Exec[Future]):
+
+  /** The first page at this client's [[CodebergConfig.defaultPageSize]] — where a listing or a
+    * [[com.worxbend.codeberg4s.paging.PageWalk]] against this client starts.
+    *
+    * This is how `defaultPageSize` reaches the listings: every listing takes explicit
+    * [[com.worxbend.codeberg4s.paging.PageParams]], and this value is those params pre-filled from the configuration.
+    * [[com.worxbend.codeberg4s.paging.PageParams.First]] is the config-free constant with the library-wide default
+    * size; prefer `client.firstPage` when the client is in hand so a configured size is honoured.
+    */
+  val firstPage: PageParams = PageParams(PageNumber.First, config.defaultPageSize)
 
   /** `GET /version` — what software the instance is running. */
   val version: VersionApi = VersionApi(pipeline)
@@ -226,4 +239,4 @@ object CodebergClient:
       ApiErrorBodyCodec.parse,
     )
 
-    new CodebergClient(pipeline, port, timer, owned)
+    new CodebergClient(config, pipeline, port, timer, owned)
