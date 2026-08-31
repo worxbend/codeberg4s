@@ -64,12 +64,7 @@ write code that *handles* a `CodebergError` without linking a HTTP client.
 ## Quick start
 
 ```scala
-import com.worxbend.codeberg4s.CodebergClient
-import com.worxbend.codeberg4s.CodebergConfig
-import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.auth.Auth
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
+import com.worxbend.codeberg4s.*
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -89,6 +84,13 @@ val stars: Either[ValidationError, Future[Long]] =
 // ... and at shutdown:
 client.close()
 ```
+
+The single wildcard import works because the root package re-exports the
+everyday surface — `Auth`, `Page`, `PageParams`, and `PageSize` — next to the
+types that already live there (`CodebergClient`, `CodebergConfig`, `Owner`,
+`RepoName`, `ValidationError`, …). The re-export list is deliberately short:
+more specialised types keep one canonical import from their own sub-package,
+as the examples below show.
 
 Authenticating is a different `Auth` and nothing else. A token is validated on
 the way in, so a blank or control-character-bearing string never reaches a
