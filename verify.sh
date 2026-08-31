@@ -55,8 +55,9 @@ readonly COVERED_MODULES=(modules.domain modules.core modules.codec)
 #
 # MEASURED, NOT RECALLED: `scripts/cpd.sh --report` on 2026-08-31 against
 # modules/{domain,core,codec,transport,client}/src with PMD 7.26.0 at 40
-# tokens — 161 groups over 615 locations (448 in codec, 129 in client, 35 in
-# domain, 3 in core, none in transport).
+# tokens — 156 groups, after collapsing the duplicated BlockedUser model. The
+# 161 it read a few commits earlier was the same tree with that duplicate still
+# in it.
 #
 # THIS NUMBER IS NOT COMPARABLE TO ANY MEASUREMENT BELOW, and the drop from
 # 363 was not earned by deleting code alone. `.scalafix.conf` used to set
@@ -107,7 +108,7 @@ readonly COVERED_MODULES=(modules.domain modules.core modules.codec)
 #
 # Deliberately not overridable from the environment: moving the baseline has to
 # appear in a diff, with a commit message saying why.
-readonly CPD_BASELINE_GROUPS=161
+readonly CPD_BASELINE_GROUPS=156
 
 with_slow=false
 nightly=false
