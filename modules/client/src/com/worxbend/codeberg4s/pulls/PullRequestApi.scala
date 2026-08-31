@@ -2,7 +2,6 @@ package com.worxbend.codeberg4s.pulls
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
-import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.client.WireDecode
@@ -1417,24 +1416,23 @@ object PullRequestApi:
     WireDecode.of(Json.decoder[PullRequestDto])(_.toDomain)
 
   private val PullsDecoder: Decode[Vector[PullRequest]] =
-    WireDecode.of(Json.decoder[Vector[PullRequestDto]])(dtos => PullRequestDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[PullRequestDto]])(PullRequestDto.toDomainAll)
 
   private val ReviewDecoder: Decode[Review] =
     WireDecode.of(Json.decoder[ReviewDto])(_.toDomain)
 
   private val ReviewsDecoder: Decode[Vector[Review]] =
-    WireDecode.of(Json.decoder[Vector[ReviewDto]])(dtos => ReviewDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ReviewDto]])(ReviewDto.toDomainAll)
 
   private val ReviewCommentDecoder: Decode[ReviewComment] =
     WireDecode.of(Json.decoder[ReviewCommentDto])(_.toDomain)
 
   private val ReviewCommentsDecoder: Decode[Vector[ReviewComment]] =
-    WireDecode.of(Json.decoder[Vector[ReviewCommentDto]])(dtos => ReviewCommentDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ReviewCommentDto]])(ReviewCommentDto.toDomainAll)
 
   private val CommitsDecoder: Decode[Vector[Commit]] =
-    WireDecode.of(Json.decoder[Vector[CommitDto]])(dtos =>
-      Elements.convert(JsonPath.Root, dtos)((dto, path) => dto.toDomainAt(path))
-    )
+    WireDecode.vector(Json.decoder[Vector[CommitDto]]): (at, dtos) =>
+      Elements.convert(at, dtos)(_.toDomainAt(_))
 
   private val FilesDecoder: Decode[Vector[ChangedFile]] =
-    WireDecode.of(Json.decoder[Vector[ChangedFileDto]])(dtos => ChangedFileDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ChangedFileDto]])(ChangedFileDto.toDomainAll)

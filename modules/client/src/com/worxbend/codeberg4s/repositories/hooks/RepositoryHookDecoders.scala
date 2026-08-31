@@ -40,7 +40,7 @@ private[hooks] object RepositoryHookDecoders:
 
   /** A bare array of webhook objects, as the hook listing returns it. */
   val webhooks: Decode[Vector[Webhook]] =
-    WireDecode.of(Json.decoder[Vector[WebhookDto]])(dtos => WebhookDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[WebhookDto]])(WebhookDto.toDomainAll)
 
   /** One Git hook object. */
   val gitHook: Decode[GitHook] =
@@ -48,11 +48,11 @@ private[hooks] object RepositoryHookDecoders:
 
   /** A bare array of Git hook objects. */
   val gitHooks: Decode[Vector[GitHook]] =
-    WireDecode.of(Json.decoder[Vector[GitHookDto]])(dtos => GitHookDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[GitHookDto]])(GitHookDto.toDomainAll)
 
   /** A bare array of flag names, validated as path segments on the way into the domain. */
   val flags: Decode[Vector[RepositoryFlag]] =
-    WireDecode.of(Json.decoder[Vector[String]])(values => RepositoryFlagWire.toDomainAll(JsonPath.Root, values))
+    WireDecode.vector(Json.decoder[Vector[String]])(RepositoryFlagWire.toDomainAll)
 
   /** One wiki page, content included. */
   val wikiPage: Decode[WikiPage] =
@@ -60,7 +60,7 @@ private[hooks] object RepositoryHookDecoders:
 
   /** A bare array of wiki page listing entries — metadata only, no content. */
   val wikiPages: Decode[Vector[WikiPageMeta]] =
-    WireDecode.of(Json.decoder[Vector[WikiPageMetaDto]])(dtos => WikiPageMetaDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[WikiPageMetaDto]])(WikiPageMetaDto.toDomainAll)
 
   /** The `{"commits", "count"}` envelope the revision listing returns, unwrapped to its revisions. */
   val wikiRevisions: Decode[Vector[WikiCommit]] =
@@ -77,4 +77,4 @@ private[hooks] object RepositoryHookDecoders:
 
   /** A bare array of issue template objects. */
   val issueTemplates: Decode[Vector[IssueTemplate]] =
-    WireDecode.of(Json.decoder[Vector[IssueTemplateDto]])(dtos => IssueTemplateDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[IssueTemplateDto]])(IssueTemplateDto.toDomainAll)

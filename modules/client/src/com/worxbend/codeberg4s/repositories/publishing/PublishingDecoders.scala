@@ -47,5 +47,5 @@ private[publishing] object PublishingDecoders:
     * at `$[3].name` rather than at `$`.
     */
   val assets: Decode[Vector[ReleaseAsset]] =
-    WireDecode.of(Json.decoder[Vector[ReleaseAssetDto]]): dtos =>
-      Elements.convert(JsonPath.Root, dtos)((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[ReleaseAssetDto]]): (at, dtos) =>
+      Elements.convert(at, dtos)(_.toDomainAt(_))

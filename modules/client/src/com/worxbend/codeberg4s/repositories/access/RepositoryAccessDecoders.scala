@@ -1,6 +1,5 @@
 package com.worxbend.codeberg4s.repositories.access
 
-import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
@@ -42,9 +41,7 @@ private[access] object RepositoryAccessDecoders:
 
   /** A bare array of branch protection rules, as the unpaged listing returns it. */
   val branchProtections: Decode[Vector[BranchProtection]] =
-    WireDecode.of(Json.decoder[Vector[BranchProtectionDto]])(dtos =>
-      BranchProtectionDto.toDomainAll(JsonPath.Root, dtos)
-    )
+    WireDecode.vector(Json.decoder[Vector[BranchProtectionDto]])(BranchProtectionDto.toDomainAll)
 
   /** One tag protection rule. */
   val tagProtection: Decode[TagProtection] =
@@ -52,7 +49,7 @@ private[access] object RepositoryAccessDecoders:
 
   /** A bare array of tag protection rules. */
   val tagProtections: Decode[Vector[TagProtection]] =
-    WireDecode.of(Json.decoder[Vector[TagProtectionDto]])(dtos => TagProtectionDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[TagProtectionDto]])(TagProtectionDto.toDomainAll)
 
   /** A bare array of users, which is what the collaborator listing answers.
     *
@@ -62,8 +59,8 @@ private[access] object RepositoryAccessDecoders:
     * its position.
     */
   val collaborators: Decode[Vector[User]] =
-    WireDecode.of(Json.decoder[Vector[UserDto]]): dtos =>
-      Elements.convert(JsonPath.Root, dtos)((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[UserDto]]): (at, dtos) =>
+      Elements.convert(at, dtos)(_.toDomainAt(_))
 
   /** The `{permission, role_name, user}` object the collaborator permission endpoint answers. */
   val collaboratorAccess: Decode[CollaboratorAccess] =
@@ -75,7 +72,7 @@ private[access] object RepositoryAccessDecoders:
 
   /** A bare array of deploy keys. */
   val deployKeys: Decode[Vector[DeployKey]] =
-    WireDecode.of(Json.decoder[Vector[DeployKeyDto]])(dtos => DeployKeyDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[DeployKeyDto]])(DeployKeyDto.toDomainAll)
 
   /** One team, which is what the team check answers rather than the `204` its siblings answer. */
   val team: Decode[Team] =
@@ -83,4 +80,4 @@ private[access] object RepositoryAccessDecoders:
 
   /** A bare array of teams, as `TeamListWithoutPagination` returns it. */
   val teams: Decode[Vector[Team]] =
-    WireDecode.of(Json.decoder[Vector[TeamDto]])(dtos => TeamDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[TeamDto]])(TeamDto.toDomainAll)

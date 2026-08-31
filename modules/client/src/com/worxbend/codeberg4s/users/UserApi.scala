@@ -324,17 +324,17 @@ object UserApi:
     WireDecode.of(Json.decoder[UserDto])(_.toDomain)
 
   private val UserListDecoder: Decode[Vector[User]] =
-    WireDecode.of(Json.decoder[Vector[UserDto]])(dtos => each(JsonPath.Root, dtos)(_.toDomainAt(_)))
+    WireDecode.vector(Json.decoder[Vector[UserDto]])(each(_, _)(_.toDomainAt(_)))
 
   private val UserSearchDecoder: Decode[Vector[User]] =
     WireDecode.of(Json.decoder[SearchEnvelopeDto[UserDto]]): envelope =>
       each(JsonPath.Root.field("data"), envelope.data)(_.toDomainAt(_))
 
   private val RepositoryListDecoder: Decode[Vector[Repository]] =
-    WireDecode.of(Json.decoder[Vector[RepositoryDto]])(dtos => each(JsonPath.Root, dtos)(_.toDomainAt(_)))
+    WireDecode.vector(Json.decoder[Vector[RepositoryDto]])(each(_, _)(_.toDomainAt(_)))
 
   private val PublicKeyListDecoder: Decode[Vector[PublicKey]] =
-    WireDecode.of(Json.decoder[Vector[PublicKeyDto]])(dtos => each(JsonPath.Root, dtos)(_.toDomainAt(_)))
+    WireDecode.vector(Json.decoder[Vector[PublicKeyDto]])(each(_, _)(_.toDomainAt(_)))
 
   /** Converts every element of a decoded list, stopping at the first element that will not convert.
     *

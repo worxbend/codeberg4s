@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.client
 
+import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.core.ResponseBody
@@ -26,3 +27,23 @@ private[codeberg4s] object WireDecode:
     */
   def of[D, A](wire: Decode[D])(toDomain: D => Either[DecodeFailure, A]): Decode[A] =
     (body: ResponseBody) => wire(body).flatMap(toDomain)
+
+  /** A decoder for a response whose whole body is a JSON array, converted element by element.
+    *
+    * This is [[of]] with the one detail every list endpoint would otherwise repeat filled in: the array is the whole
+    * body, so the base path handed to the DTO's `toDomainAll` is [[com.worxbend.codeberg4s.JsonPath.Root]] and the
+    * element paths it reports read as `[0].name` rather than something rooted at a field that does not exist. Writing
+    * that once means a list endpoint names its DTO and its projection and nothing else.
+    *
+    * Use [[of]] instead when the array is nested inside an envelope object, because then the base path is that
+    * envelope's field, not the root.
+    *
+    * @param wire
+    *   the codec module's reader for the array of wire DTOs
+    * @param toDomainAll
+    *   the DTO companion's bulk projection, which takes the base path of the array it is converting
+    */
+  def vector[D, A](
+      wire: Decode[Vector[D]]
+  )(toDomainAll: (JsonPath, Vector[D]) => Either[DecodeFailure, Vector[A]]): Decode[Vector[A]] =
+    of(wire)(dtos => toDomainAll(JsonPath.Root, dtos))

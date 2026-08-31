@@ -45,7 +45,7 @@ private[actions] object RepositoryActionDecoders:
 
   /** A bare array of artifact objects, as both artifact listings return it. */
   val artifacts: Decode[Vector[ActionArtifact]] =
-    WireDecode.of(Json.decoder[Vector[ActionArtifactDto]])(dtos => ActionArtifactDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionArtifactDto]])(ActionArtifactDto.toDomainAll)
 
   /** One run object. */
   val run: Decode[ActionRun] =
@@ -58,7 +58,7 @@ private[actions] object RepositoryActionDecoders:
 
   /** A bare array of job objects, as both the run's job listing and the runner job search return it. */
   val jobs: Decode[Vector[ActionRunJob]] =
-    WireDecode.of(Json.decoder[Vector[ActionRunJobDto]])(dtos => ActionRunJobDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionRunJobDto]])(ActionRunJobDto.toDomainAll)
 
   /** The same envelope as [[runs]], carrying tasks. The key is `workflow_runs` there too; see the envelope's note. */
   val tasks: Decode[Vector[ActionTask]] =
@@ -71,7 +71,7 @@ private[actions] object RepositoryActionDecoders:
 
   /** A bare array of runner objects. */
   val runners: Decode[Vector[ActionRunner]] =
-    WireDecode.of(Json.decoder[Vector[ActionRunnerDto]])(dtos => ActionRunnerDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionRunnerDto]])(ActionRunnerDto.toDomainAll)
 
   /** The `{id, uuid, token}` object a runner registration returns, whose `token` is a live credential.
     *
@@ -90,7 +90,7 @@ private[actions] object RepositoryActionDecoders:
 
   /** A bare array of secret objects — names and timestamps, never values. */
   val secrets: Decode[Vector[ActionSecret]] =
-    WireDecode.of(Json.decoder[Vector[ActionSecretDto]])(dtos => ActionSecretDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionSecretDto]])(ActionSecretDto.toDomainAll)
 
   /** One variable object. */
   val variable: Decode[ActionVariable] =
@@ -98,7 +98,7 @@ private[actions] object RepositoryActionDecoders:
 
   /** A bare array of variable objects. */
   val variables: Decode[Vector[ActionVariable]] =
-    WireDecode.of(Json.decoder[Vector[ActionVariableDto]])(dtos => ActionVariableDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionVariableDto]])(ActionVariableDto.toDomainAll)
 
   /** The dispatch acknowledgement, which is present only when the request asked for it.
     *

@@ -2,7 +2,6 @@ package com.worxbend.codeberg4s.notifications
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
-import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.client.WireDecode
@@ -319,9 +318,7 @@ object NotificationApi:
     WireDecode.of(Json.decoder[NotificationThreadDto])(_.toDomain)
 
   private val ThreadsDecoder: Decode[Vector[NotificationThread]] =
-    WireDecode.of(Json.decoder[Vector[NotificationThreadDto]])(dtos =>
-      NotificationThreadDto.toDomainAll(JsonPath.Root, dtos)
-    )
+    WireDecode.vector(Json.decoder[Vector[NotificationThreadDto]])(NotificationThreadDto.toDomainAll)
 
   private val CountDecoder: Decode[UnreadCount] =
     WireDecode.of(Json.decoder[NotificationCountDto])(_.toDomain)

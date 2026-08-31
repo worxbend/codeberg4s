@@ -1,6 +1,5 @@
 package com.worxbend.codeberg4s.organizations.actions
 
-import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
@@ -48,7 +47,7 @@ private[actions] object OrganizationActionDecoders:
 
   /** A bare array of runner objects, as the organisation's runner listing returns it. */
   val runners: Decode[Vector[ActionRunner]] =
-    WireDecode.of(Json.decoder[Vector[ActionRunnerDto]])(dtos => ActionRunnerDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionRunnerDto]])(ActionRunnerDto.toDomainAll)
 
   /** The `{id, uuid, token}` object a runner registration returns, whose `token` is a live credential.
     *
@@ -67,11 +66,11 @@ private[actions] object OrganizationActionDecoders:
 
   /** A bare array of job objects, as the runner job search returns it. */
   val jobs: Decode[Vector[ActionRunJob]] =
-    WireDecode.of(Json.decoder[Vector[ActionRunJobDto]])(dtos => ActionRunJobDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionRunJobDto]])(ActionRunJobDto.toDomainAll)
 
   /** A bare array of secret objects — names and timestamps, never values. */
   val secrets: Decode[Vector[ActionSecret]] =
-    WireDecode.of(Json.decoder[Vector[ActionSecretDto]])(dtos => ActionSecretDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionSecretDto]])(ActionSecretDto.toDomainAll)
 
   /** One variable object. */
   val variable: Decode[ActionVariable] =
@@ -79,4 +78,4 @@ private[actions] object OrganizationActionDecoders:
 
   /** A bare array of variable objects. */
   val variables: Decode[Vector[ActionVariable]] =
-    WireDecode.of(Json.decoder[Vector[ActionVariableDto]])(dtos => ActionVariableDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionVariableDto]])(ActionVariableDto.toDomainAll)

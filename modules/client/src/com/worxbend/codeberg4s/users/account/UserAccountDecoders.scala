@@ -1,6 +1,5 @@
 package com.worxbend.codeberg4s.users.account
 
-import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
@@ -70,12 +69,11 @@ private[account] object UserAccountDecoders:
 
   /** A bare array of OAuth2 application objects, as the listing returns it — never with a secret in it. */
   val applications: Decode[Vector[OAuth2Application]] =
-    WireDecode.of(Json.decoder[Vector[OAuth2ApplicationDto]]): dtos =>
-      OAuth2ApplicationDto.toDomainAll(JsonPath.Root, dtos)
+    WireDecode.vector(Json.decoder[Vector[OAuth2ApplicationDto]])(OAuth2ApplicationDto.toDomainAll)
 
   /** A bare array of email objects, which is what both the listing and the `201` of an add return. */
   val emails: Decode[Vector[Email]] =
-    WireDecode.of(Json.decoder[Vector[EmailDto]])(dtos => EmailDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[EmailDto]])(EmailDto.toDomainAll)
 
   /** The account's settings object, returned by both the read and the update. */
   val settings: Decode[UserSettings] =
@@ -87,18 +85,15 @@ private[account] object UserAccountDecoders:
 
   /** A bare array of quota-counting artifacts. */
   val quotaArtifacts: Decode[Vector[QuotaUsedArtifact]] =
-    WireDecode.of(Json.decoder[Vector[QuotaUsedArtifactDto]]): dtos =>
-      QuotaUsedArtifactDto.toDomainAll(JsonPath.Root, dtos)
+    WireDecode.vector(Json.decoder[Vector[QuotaUsedArtifactDto]])(QuotaUsedArtifactDto.toDomainAll)
 
   /** A bare array of quota-counting attachments. */
   val quotaAttachments: Decode[Vector[QuotaUsedAttachment]] =
-    WireDecode.of(Json.decoder[Vector[QuotaUsedAttachmentDto]]): dtos =>
-      QuotaUsedAttachmentDto.toDomainAll(JsonPath.Root, dtos)
+    WireDecode.vector(Json.decoder[Vector[QuotaUsedAttachmentDto]])(QuotaUsedAttachmentDto.toDomainAll)
 
   /** A bare array of quota-counting package versions. */
   val quotaPackages: Decode[Vector[QuotaUsedPackage]] =
-    WireDecode.of(Json.decoder[Vector[QuotaUsedPackageDto]]): dtos =>
-      QuotaUsedPackageDto.toDomainAll(JsonPath.Root, dtos)
+    WireDecode.vector(Json.decoder[Vector[QuotaUsedPackageDto]])(QuotaUsedPackageDto.toDomainAll)
 
   /** The bare JSON boolean `GET /user/quota/check` answers.
     *
@@ -116,12 +111,12 @@ private[account] object UserAccountDecoders:
 
   /** A bare array of repository objects, as the account's repository listing returns it. */
   val repositories: Decode[Vector[Repository]] =
-    WireDecode.of(Json.decoder[Vector[RepositoryDto]]): dtos =>
-      Elements.convert(JsonPath.Root, dtos)((dto, path) => dto.toDomainAt(path))
+    WireDecode.vector(Json.decoder[Vector[RepositoryDto]]): (at, dtos) =>
+      Elements.convert(at, dtos)(_.toDomainAt(_))
 
   /** A bare array of team objects, as the account's team listing returns it. */
   val teams: Decode[Vector[Team]] =
-    WireDecode.of(Json.decoder[Vector[TeamDto]])(dtos => TeamDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[TeamDto]])(TeamDto.toDomainAll)
 
   /** One runner object. */
   val runner: Decode[ActionRunner] =
@@ -129,11 +124,11 @@ private[account] object UserAccountDecoders:
 
   /** A bare array of runner objects. */
   val runners: Decode[Vector[ActionRunner]] =
-    WireDecode.of(Json.decoder[Vector[ActionRunnerDto]])(dtos => ActionRunnerDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionRunnerDto]])(ActionRunnerDto.toDomainAll)
 
   /** A bare array of job objects, as the runner job search returns it. */
   val jobs: Decode[Vector[ActionRunJob]] =
-    WireDecode.of(Json.decoder[Vector[ActionRunJobDto]])(dtos => ActionRunJobDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionRunJobDto]])(ActionRunJobDto.toDomainAll)
 
   /** The `{id, uuid, token}` object a runner registration returns, whose `token` is a live credential.
     *
@@ -156,7 +151,7 @@ private[account] object UserAccountDecoders:
 
   /** A bare array of variable objects. */
   val variables: Decode[Vector[ActionVariable]] =
-    WireDecode.of(Json.decoder[Vector[ActionVariableDto]])(dtos => ActionVariableDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[ActionVariableDto]])(ActionVariableDto.toDomainAll)
 
   /** One webhook object. */
   val webhook: Decode[Webhook] =
@@ -164,4 +159,4 @@ private[account] object UserAccountDecoders:
 
   /** A bare array of webhook objects, as the account's hook listing returns it. */
   val webhooks: Decode[Vector[Webhook]] =
-    WireDecode.of(Json.decoder[Vector[WebhookDto]])(dtos => WebhookDto.toDomainAll(JsonPath.Root, dtos))
+    WireDecode.vector(Json.decoder[Vector[WebhookDto]])(WebhookDto.toDomainAll)
