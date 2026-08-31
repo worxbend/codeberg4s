@@ -566,13 +566,13 @@ object MiscellaneousApi:
     read(ActionsRunOperation, List("actions", "run"), Nil)
 
   private val ApiSettingsDecoder: Decode[ServerApiSettings] =
-    WireDecode.of(Json.decoder[ServerApiSettingsDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ServerApiSettingsDto])(_.toDomain)
 
   private val RepositorySettingsDecoder: Decode[ServerRepositorySettings] =
-    WireDecode.of(Json.decoder[ServerRepositorySettingsDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ServerRepositorySettingsDto])(_.toDomain)
 
   private val AttachmentSettingsDecoder: Decode[ServerAttachmentSettings] =
-    WireDecode.of(Json.decoder[ServerAttachmentSettingsDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ServerAttachmentSettingsDto])(_.toDomain)
 
   private val SigningKeyDecoder: Decode[Option[SigningKey]] =
     PlainText.decodedAs(SigningKey.from)
@@ -581,7 +581,7 @@ object MiscellaneousApi:
     PlainText.decodedAs(RenderedMarkdown.apply)
 
   private val UiSettingsDecoder: Decode[ServerUiSettings] =
-    WireDecode.of(Json.decoder[ServerUiSettingsDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ServerUiSettingsDto])(_.toDomain)
 
   private val SshSigningKeyDecoder: Decode[Option[SshSigningKey]] =
     PlainText.decodedAs(SshSigningKey.from)
@@ -593,7 +593,7 @@ object MiscellaneousApi:
     WireDecode.vector(Json.decoder[Vector[String]])(TemplateNamesDto.toDomainAll)
 
   private val GitignoreTemplateDecoder: Decode[GitignoreTemplate] =
-    WireDecode.of(Json.decoder[GitignoreTemplateDto])(_.toDomain)
+    WireDecode.single(Json.decoder[GitignoreTemplateDto])(_.toDomain)
 
   private val TemplateLabelsDecoder: Decode[Vector[TemplateLabel]] =
     WireDecode.vector(Json.decoder[Vector[TemplateLabelDto]])(TemplateLabelDto.toDomainAll)
@@ -601,16 +601,16 @@ object MiscellaneousApi:
   private val LicenseTemplatesDecoder: Decode[Vector[LicenseTemplateSummary]] =
     WireDecode.vector(Json.decoder[Vector[LicenseTemplateSummaryDto]])(LicenseTemplateSummaryDto.toDomainAll)
   private val LicenseTemplateDecoder: Decode[LicenseTemplate]                 =
-    WireDecode.of(Json.decoder[LicenseTemplateDto])(_.toDomain)
+    WireDecode.single(Json.decoder[LicenseTemplateDto])(_.toDomain)
 
   private val NodeInfoDecoder: Decode[NodeInfo] =
-    WireDecode.of(Json.decoder[NodeInfoDto])(_.toDomain)
+    WireDecode.single(Json.decoder[NodeInfoDto])(_.toDomain)
 
   /** The run model the repository Actions group owns, reused verbatim: `GET /actions/run` answers the same `ActionRun`
     * object, so it is read by the same DTO rather than by a second copy of it.
     */
   private val ActionsRunDecoder: Decode[ActionRun] =
-    WireDecode.of(Json.decoder[ActionRunDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ActionRunDto])(_.toDomain)
 
   private def settingsRequest(operation: String, area: String): CodebergRequest =
     read(operation, List("settings", area), Nil)

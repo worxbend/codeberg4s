@@ -36,7 +36,7 @@ private[hooks] object RepositoryHookDecoders:
 
   /** One webhook object. */
   val webhook: Decode[Webhook] =
-    WireDecode.of(Json.decoder[WebhookDto])(_.toDomain)
+    WireDecode.single(Json.decoder[WebhookDto])(_.toDomain)
 
   /** A bare array of webhook objects, as the hook listing returns it. */
   val webhooks: Decode[Vector[Webhook]] =
@@ -44,7 +44,7 @@ private[hooks] object RepositoryHookDecoders:
 
   /** One Git hook object. */
   val gitHook: Decode[GitHook] =
-    WireDecode.of(Json.decoder[GitHookDto])(_.toDomain)
+    WireDecode.single(Json.decoder[GitHookDto])(_.toDomain)
 
   /** A bare array of Git hook objects. */
   val gitHooks: Decode[Vector[GitHook]] =
@@ -56,7 +56,7 @@ private[hooks] object RepositoryHookDecoders:
 
   /** One wiki page, content included. */
   val wikiPage: Decode[WikiPage] =
-    WireDecode.of(Json.decoder[WikiPageDto])(_.toDomain)
+    WireDecode.single(Json.decoder[WikiPageDto])(_.toDomain)
 
   /** A bare array of wiki page listing entries — metadata only, no content. */
   val wikiPages: Decode[Vector[WikiPageMeta]] =
@@ -64,16 +64,16 @@ private[hooks] object RepositoryHookDecoders:
 
   /** The `{"commits", "count"}` envelope the revision listing returns, unwrapped to its revisions. */
   val wikiRevisions: Decode[Vector[WikiCommit]] =
-    WireDecode.of(Json.decoder[WikiCommitListDto]): envelope =>
+    WireDecode.single(Json.decoder[WikiCommitListDto]): envelope =>
       WikiCommitDto.toDomainAll(RepositoryHookDecoders.RevisionsPath, envelope.entries)
 
   /** The repository's issue configuration. */
   val issueConfig: Decode[IssueConfig] =
-    WireDecode.of(Json.decoder[IssueConfigDto])(_.toDomain)
+    WireDecode.single(Json.decoder[IssueConfigDto])(_.toDomain)
 
   /** The verdict on the repository's issue configuration. */
   val issueConfigValidation: Decode[IssueConfigValidation] =
-    WireDecode.of(Json.decoder[IssueConfigValidationDto])(_.toDomain)
+    WireDecode.single(Json.decoder[IssueConfigValidationDto])(_.toDomain)
 
   /** A bare array of issue template objects. */
   val issueTemplates: Decode[Vector[IssueTemplate]] =

@@ -43,7 +43,7 @@ private[actions] object OrganizationActionDecoders:
 
   /** One runner object. */
   val runner: Decode[ActionRunner] =
-    WireDecode.of(Json.decoder[ActionRunnerDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ActionRunnerDto])(_.toDomain)
 
   /** A bare array of runner objects, as the organisation's runner listing returns it. */
   val runners: Decode[Vector[ActionRunner]] =
@@ -56,13 +56,13 @@ private[actions] object OrganizationActionDecoders:
     * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]].
     */
   val registeredRunner: Decode[RegisteredRunner] =
-    Decode.sensitive(WireDecode.of(Json.decoder[RegisteredRunnerDto])(_.toDomain))
+    Decode.sensitive(WireDecode.single(Json.decoder[RegisteredRunnerDto])(_.toDomain))
 
   /** The one-key object the registration-token endpoint returns — the same credential with nothing around it, and
     * [[com.worxbend.codeberg4s.core.Decode.sensitive]] for the same reason as [[registeredRunner]].
     */
   val registrationToken: Decode[RunnerRegistrationToken] =
-    Decode.sensitive(WireDecode.of(Json.decoder[RegistrationTokenDto])(_.toDomain))
+    Decode.sensitive(WireDecode.single(Json.decoder[RegistrationTokenDto])(_.toDomain))
 
   /** A bare array of job objects, as the runner job search returns it. */
   val jobs: Decode[Vector[ActionRunJob]] =
@@ -74,7 +74,7 @@ private[actions] object OrganizationActionDecoders:
 
   /** One variable object. */
   val variable: Decode[ActionVariable] =
-    WireDecode.of(Json.decoder[ActionVariableDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ActionVariableDto])(_.toDomain)
 
   /** A bare array of variable objects. */
   val variables: Decode[Vector[ActionVariable]] =

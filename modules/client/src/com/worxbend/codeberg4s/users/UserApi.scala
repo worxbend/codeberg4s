@@ -321,13 +321,13 @@ object UserApi:
     PagingQuery.window(params)
 
   private val UserDecoder: Decode[User] =
-    WireDecode.of(Json.decoder[UserDto])(_.toDomain)
+    WireDecode.single(Json.decoder[UserDto])(_.toDomain)
 
   private val UserListDecoder: Decode[Vector[User]] =
     WireDecode.vector(Json.decoder[Vector[UserDto]])(each(_, _)(_.toDomainAt(_)))
 
   private val UserSearchDecoder: Decode[Vector[User]] =
-    WireDecode.of(Json.decoder[SearchEnvelopeDto[UserDto]]): envelope =>
+    WireDecode.single(Json.decoder[SearchEnvelopeDto[UserDto]]): envelope =>
       each(JsonPath.Root.field("data"), envelope.data)(_.toDomainAt(_))
 
   private val RepositoryListDecoder: Decode[Vector[Repository]] =

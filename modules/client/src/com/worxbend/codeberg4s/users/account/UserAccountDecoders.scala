@@ -54,7 +54,7 @@ private[account] object UserAccountDecoders:
     * of them.
     */
   val application: Decode[OAuth2Application] =
-    WireDecode.of(Json.decoder[OAuth2ApplicationDto])(_.toDomain)
+    WireDecode.single(Json.decoder[OAuth2ApplicationDto])(_.toDomain)
 
   /** The same object as [[application]], from the responses that '''do''' carry `client_secret`.
     *
@@ -77,11 +77,11 @@ private[account] object UserAccountDecoders:
 
   /** The account's settings object, returned by both the read and the update. */
   val settings: Decode[UserSettings] =
-    WireDecode.of(Json.decoder[UserSettingsDto])(_.toDomain)
+    WireDecode.single(Json.decoder[UserSettingsDto])(_.toDomain)
 
   /** The account's quota report, with its nested `used` tree already flattened. */
   val quota: Decode[QuotaInfo] =
-    WireDecode.of(Json.decoder[QuotaInfoDto])(_.toDomain)
+    WireDecode.single(Json.decoder[QuotaInfoDto])(_.toDomain)
 
   /** A bare array of quota-counting artifacts. */
   val quotaArtifacts: Decode[Vector[QuotaUsedArtifact]] =
@@ -107,7 +107,7 @@ private[account] object UserAccountDecoders:
 
   /** One repository object, as the creation returns it. */
   val repository: Decode[Repository] =
-    WireDecode.of(Json.decoder[RepositoryDto])(_.toDomain)
+    WireDecode.single(Json.decoder[RepositoryDto])(_.toDomain)
 
   /** A bare array of repository objects, as the account's repository listing returns it. */
   val repositories: Decode[Vector[Repository]] =
@@ -120,7 +120,7 @@ private[account] object UserAccountDecoders:
 
   /** One runner object. */
   val runner: Decode[ActionRunner] =
-    WireDecode.of(Json.decoder[ActionRunnerDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ActionRunnerDto])(_.toDomain)
 
   /** A bare array of runner objects. */
   val runners: Decode[Vector[ActionRunner]] =
@@ -137,17 +137,17 @@ private[account] object UserAccountDecoders:
     * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]].
     */
   val registeredRunner: Decode[RegisteredRunner] =
-    Decode.sensitive(WireDecode.of(Json.decoder[RegisteredRunnerDto])(_.toDomain))
+    Decode.sensitive(WireDecode.single(Json.decoder[RegisteredRunnerDto])(_.toDomain))
 
   /** The one-key object the registration-token endpoint returns — the same credential with nothing around it, and
     * [[com.worxbend.codeberg4s.core.Decode.sensitive]] for the same reason as [[registeredRunner]].
     */
   val registrationToken: Decode[RunnerRegistrationToken] =
-    Decode.sensitive(WireDecode.of(Json.decoder[RegistrationTokenDto])(_.toDomain))
+    Decode.sensitive(WireDecode.single(Json.decoder[RegistrationTokenDto])(_.toDomain))
 
   /** One variable object. */
   val variable: Decode[ActionVariable] =
-    WireDecode.of(Json.decoder[ActionVariableDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ActionVariableDto])(_.toDomain)
 
   /** A bare array of variable objects. */
   val variables: Decode[Vector[ActionVariable]] =
@@ -155,7 +155,7 @@ private[account] object UserAccountDecoders:
 
   /** One webhook object. */
   val webhook: Decode[Webhook] =
-    WireDecode.of(Json.decoder[WebhookDto])(_.toDomain)
+    WireDecode.single(Json.decoder[WebhookDto])(_.toDomain)
 
   /** A bare array of webhook objects, as the account's hook listing returns it. */
   val webhooks: Decode[Vector[Webhook]] =

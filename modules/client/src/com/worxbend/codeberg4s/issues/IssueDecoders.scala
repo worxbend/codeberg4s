@@ -35,7 +35,7 @@ private[issues] object IssueDecoders:
 
   /** One issue object, as the blocking and dependency writes return it. */
   val issue: Decode[Issue] =
-    WireDecode.of(Json.decoder[IssueDto])(_.toDomain)
+    WireDecode.single(Json.decoder[IssueDto])(_.toDomain)
 
   /** A bare array of issue objects — the cross-repository search, the blocks listing and the dependency listing. */
   val issues: Decode[Vector[Issue]] =
@@ -47,7 +47,7 @@ private[issues] object IssueDecoders:
     * blank body is a malformed response and is reported as one rather than being read as "no comment".
     */
   val presentComment: Decode[Comment] =
-    WireDecode.of(Json.decoder[CommentDto])(_.toDomain)
+    WireDecode.single(Json.decoder[CommentDto])(_.toDomain)
 
   /** One comment object, on the endpoints where an empty body is also a success.
     *
@@ -68,7 +68,7 @@ private[issues] object IssueDecoders:
 
   /** One label object. */
   val label: Decode[Label] =
-    WireDecode.of(Json.decoder[LabelDto])(_.toDomain)
+    WireDecode.single(Json.decoder[LabelDto])(_.toDomain)
 
   /** A bare array of label objects, as the per-issue label calls return it. */
   val labels: Decode[Vector[Label]] =
@@ -76,7 +76,7 @@ private[issues] object IssueDecoders:
 
   /** One milestone object. */
   val milestone: Decode[Milestone] =
-    WireDecode.of(Json.decoder[MilestoneDto])(_.toDomain)
+    WireDecode.single(Json.decoder[MilestoneDto])(_.toDomain)
 
   /** A bare array of milestone objects, as the repository's milestone listing returns it. */
   val milestones: Decode[Vector[Milestone]] =
@@ -84,7 +84,7 @@ private[issues] object IssueDecoders:
 
   /** One attachment object. */
   val attachment: Decode[IssueAttachment] =
-    WireDecode.of(Json.decoder[AttachmentDto])(_.toDomain)
+    WireDecode.single(Json.decoder[AttachmentDto])(_.toDomain)
 
   /** A bare array of attachment objects. */
   val attachments: Decode[Vector[IssueAttachment]] =
@@ -92,7 +92,7 @@ private[issues] object IssueDecoders:
 
   /** One reaction object, as adding a reaction returns it. */
   val reaction: Decode[Reaction] =
-    WireDecode.of(Json.decoder[ReactionDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ReactionDto])(_.toDomain)
 
   /** A bare array of reaction objects — one element per account per emoji, never a tally. */
   val reactions: Decode[Vector[Reaction]] =
@@ -100,11 +100,11 @@ private[issues] object IssueDecoders:
 
   /** The one-key object the deadline endpoint answers. */
   val deadline: Decode[IssueDeadline] =
-    WireDecode.of(Json.decoder[IssueDeadlineDto])(_.toDomain)
+    WireDecode.single(Json.decoder[IssueDeadlineDto])(_.toDomain)
 
   /** The `WatchInfo` object the subscription check answers. */
   val subscription: Decode[IssueSubscription] =
-    WireDecode.of(Json.decoder[IssueSubscriptionDto])(_.toDomain)
+    WireDecode.single(Json.decoder[IssueSubscriptionDto])(_.toDomain)
 
   /** A bare array of user objects, as the subscriber listing returns it.
     *
@@ -118,7 +118,7 @@ private[issues] object IssueDecoders:
 
   /** One tracked-time entry, as adding time returns it. */
   val trackedTime: Decode[TrackedTime] =
-    WireDecode.of(Json.decoder[TrackedTimeDto])(_.toDomain)
+    WireDecode.single(Json.decoder[TrackedTimeDto])(_.toDomain)
 
   /** A bare array of tracked-time entries. */
   val trackedTimes: Decode[Vector[TrackedTime]] =

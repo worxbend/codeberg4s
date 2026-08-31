@@ -90,7 +90,7 @@ private[social] object SocialDecoders:
 
   /** One GPG key object. */
   val gpgKey: Decode[GpgKey] =
-    WireDecode.of(Json.decoder[GpgKeyDto])(_.toDomain)
+    WireDecode.single(Json.decoder[GpgKeyDto])(_.toDomain)
 
   /** A bare array of GPG key objects. */
   val gpgKeys: Decode[Vector[GpgKey]] =
@@ -98,7 +98,7 @@ private[social] object SocialDecoders:
 
   /** One SSH public key object, as `POST /user/keys` and `GET /user/keys/{id}` return it. */
   val publicKey: Decode[PublicKey] =
-    WireDecode.of(Json.decoder[PublicKeyDto])(_.toDomain)
+    WireDecode.single(Json.decoder[PublicKeyDto])(_.toDomain)
 
   /** A bare array of access-token objects, with the credential field dropped unconditionally. */
   val accessTokens: Decode[Vector[AccessToken]] =
@@ -112,7 +112,7 @@ private[social] object SocialDecoders:
     * [[com.worxbend.codeberg4s.core.ApiPipeline.redactedSnippet]] for what the excerpt becomes instead.
     */
   val createdAccessToken: Decode[CreatedAccessToken] =
-    Decode.sensitive(WireDecode.of(Json.decoder[AccessTokenDto])(_.toCreated))
+    Decode.sensitive(WireDecode.single(Json.decoder[AccessTokenDto])(_.toCreated))
 
   /** The plain-text challenge `GET /user/gpg_key_token` answers.
     *

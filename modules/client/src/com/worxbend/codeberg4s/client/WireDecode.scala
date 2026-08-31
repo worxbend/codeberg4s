@@ -18,24 +18,28 @@ import com.worxbend.codeberg4s.core.ResponseBody
   */
 private[codeberg4s] object WireDecode:
 
-  /** A decoder that reads `D` from the body and converts it, stopping at the first failure.
+  /** A decoder that reads one wire document as `D` and converts it, stopping at the first failure.
+    *
+    * "Single" describes the wire side, not the domain side: the body is one JSON value handed to one projection. That
+    * covers the endpoints answering with a single object, and equally the envelope-shaped ones whose one object carries
+    * a list, because there the projection — not this helper — decides the base path of the nested array.
     *
     * @param wire
     *   the codec module's reader for the wire DTO
     * @param toDomain
     *   the DTO's own projection, which reports the JSON path of whatever the domain required and did not get
     */
-  def of[D, A](wire: Decode[D])(toDomain: D => Either[DecodeFailure, A]): Decode[A] =
+  def single[D, A](wire: Decode[D])(toDomain: D => Either[DecodeFailure, A]): Decode[A] =
     (body: ResponseBody) => wire(body).flatMap(toDomain)
 
   /** A decoder for a response whose whole body is a JSON array, converted element by element.
     *
-    * This is [[of]] with the one detail every list endpoint would otherwise repeat filled in: the array is the whole
-    * body, so the base path handed to the DTO's `toDomainAll` is [[com.worxbend.codeberg4s.JsonPath.Root]] and the
-    * element paths it reports read as `[0].name` rather than something rooted at a field that does not exist. Writing
-    * that once means a list endpoint names its DTO and its projection and nothing else.
+    * This is [[single]] with the one detail every list endpoint would otherwise repeat filled in: the array is the
+    * whole body, so the base path handed to the DTO's `toDomainAll` is [[com.worxbend.codeberg4s.JsonPath.Root]] and
+    * the element paths it reports read as `[0].name` rather than something rooted at a field that does not exist.
+    * Writing that once means a list endpoint names its DTO and its projection and nothing else.
     *
-    * Use [[of]] instead when the array is nested inside an envelope object, because then the base path is that
+    * Use [[single]] instead when the array is nested inside an envelope object, because then the base path is that
     * envelope's field, not the root.
     *
     * @param wire
@@ -46,4 +50,4 @@ private[codeberg4s] object WireDecode:
   def vector[D, A](
       wire: Decode[Vector[D]]
   )(toDomainAll: (JsonPath, Vector[D]) => Either[DecodeFailure, Vector[A]]): Decode[Vector[A]] =
-    of(wire)(dtos => toDomainAll(JsonPath.Root, dtos))
+    single(wire)(dtos => toDomainAll(JsonPath.Root, dtos))

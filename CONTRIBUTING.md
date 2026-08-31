@@ -290,8 +290,9 @@ the fixtures is that your idea was wrong twice already.
 - a stable `Operation` id — the string that lands in every failure's
   `CallContext`, which callers alert on, so it does not change afterwards;
 - a `CodebergRequest` with the method, path segments, query and headers;
-- a `Decode` built from the DTO, typically
-  `WireDecode.of(Json.decoder[FooDto])(_.toDomain)`;
+- a `Decode` built from the DTO — `WireDecode.single(Json.decoder[FooDto])(_.toDomain)`
+  for one object, or `WireDecode.vector(Json.decoder[Vector[FooDto]])(FooDto.toDomainAll)`
+  when the whole body is an array;
 - a method calling `pipeline.call(request, eligibility)`;
 - the same method on the group's `Attempt` class, as
   `exec.attempt(rail.method(...))` — **derived**, never reimplemented, so the

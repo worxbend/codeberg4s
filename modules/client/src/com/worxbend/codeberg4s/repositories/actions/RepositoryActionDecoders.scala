@@ -41,7 +41,7 @@ private[actions] object RepositoryActionDecoders:
 
   /** One artifact object. */
   val artifact: Decode[ActionArtifact] =
-    WireDecode.of(Json.decoder[ActionArtifactDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ActionArtifactDto])(_.toDomain)
 
   /** A bare array of artifact objects, as both artifact listings return it. */
   val artifacts: Decode[Vector[ActionArtifact]] =
@@ -49,11 +49,11 @@ private[actions] object RepositoryActionDecoders:
 
   /** One run object. */
   val run: Decode[ActionRun] =
-    WireDecode.of(Json.decoder[ActionRunDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ActionRunDto])(_.toDomain)
 
   /** The `{"total_count", "workflow_runs"}` envelope the run listing returns, unwrapped to its runs. */
   val runs: Decode[Vector[ActionRun]] =
-    WireDecode.of(Json.decoder[WorkflowRunsEnvelopeDto[ActionRunDto]]): envelope =>
+    WireDecode.single(Json.decoder[WorkflowRunsEnvelopeDto[ActionRunDto]]): envelope =>
       ActionRunDto.toDomainAll(RepositoryActionDecoders.EntriesPath, envelope.entries)
 
   /** A bare array of job objects, as both the run's job listing and the runner job search return it. */
@@ -62,12 +62,12 @@ private[actions] object RepositoryActionDecoders:
 
   /** The same envelope as [[runs]], carrying tasks. The key is `workflow_runs` there too; see the envelope's note. */
   val tasks: Decode[Vector[ActionTask]] =
-    WireDecode.of(Json.decoder[WorkflowRunsEnvelopeDto[ActionTaskDto]]): envelope =>
+    WireDecode.single(Json.decoder[WorkflowRunsEnvelopeDto[ActionTaskDto]]): envelope =>
       ActionTaskDto.toDomainAll(RepositoryActionDecoders.EntriesPath, envelope.entries)
 
   /** One runner object. */
   val runner: Decode[ActionRunner] =
-    WireDecode.of(Json.decoder[ActionRunnerDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ActionRunnerDto])(_.toDomain)
 
   /** A bare array of runner objects. */
   val runners: Decode[Vector[ActionRunner]] =
@@ -80,13 +80,13 @@ private[actions] object RepositoryActionDecoders:
     * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]].
     */
   val registeredRunner: Decode[RegisteredRunner] =
-    Decode.sensitive(WireDecode.of(Json.decoder[RegisteredRunnerDto])(_.toDomain))
+    Decode.sensitive(WireDecode.single(Json.decoder[RegisteredRunnerDto])(_.toDomain))
 
   /** The one-key object the registration-token endpoint returns — the same credential with nothing around it, and
     * [[com.worxbend.codeberg4s.core.Decode.sensitive]] for the same reason as [[registeredRunner]].
     */
   val registrationToken: Decode[RunnerRegistrationToken] =
-    Decode.sensitive(WireDecode.of(Json.decoder[RegistrationTokenDto])(_.toDomain))
+    Decode.sensitive(WireDecode.single(Json.decoder[RegistrationTokenDto])(_.toDomain))
 
   /** A bare array of secret objects — names and timestamps, never values. */
   val secrets: Decode[Vector[ActionSecret]] =
@@ -94,7 +94,7 @@ private[actions] object RepositoryActionDecoders:
 
   /** One variable object. */
   val variable: Decode[ActionVariable] =
-    WireDecode.of(Json.decoder[ActionVariableDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ActionVariableDto])(_.toDomain)
 
   /** A bare array of variable objects. */
   val variables: Decode[Vector[ActionVariable]] =
@@ -109,7 +109,7 @@ private[actions] object RepositoryActionDecoders:
     * is still understood and one that answers with a malformed body still fails.
     */
   val dispatchedRun: Decode[Option[DispatchedWorkflowRun]] =
-    val present = WireDecode.of(Json.decoder[DispatchedWorkflowRunDto])(_.toDomain)
+    val present = WireDecode.single(Json.decoder[DispatchedWorkflowRunDto])(_.toDomain)
 
     (body: ResponseBody) => if body.isBlank then Right(None) else present(body).map(Some.apply)
 

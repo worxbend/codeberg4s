@@ -63,4 +63,4 @@ object VersionApi:
   )
 
   private val Decoder: Decode[ServerVersion] =
-    WireDecode.of(Json.decoder[ServerVersionDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ServerVersionDto])(_.toDomain)

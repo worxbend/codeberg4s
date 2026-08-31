@@ -37,7 +37,7 @@ private[access] object RepositoryAccessDecoders:
 
   /** One branch protection rule. */
   val branchProtection: Decode[BranchProtection] =
-    WireDecode.of(Json.decoder[BranchProtectionDto])(_.toDomain)
+    WireDecode.single(Json.decoder[BranchProtectionDto])(_.toDomain)
 
   /** A bare array of branch protection rules, as the unpaged listing returns it. */
   val branchProtections: Decode[Vector[BranchProtection]] =
@@ -45,7 +45,7 @@ private[access] object RepositoryAccessDecoders:
 
   /** One tag protection rule. */
   val tagProtection: Decode[TagProtection] =
-    WireDecode.of(Json.decoder[TagProtectionDto])(_.toDomain)
+    WireDecode.single(Json.decoder[TagProtectionDto])(_.toDomain)
 
   /** A bare array of tag protection rules. */
   val tagProtections: Decode[Vector[TagProtection]] =
@@ -64,11 +64,11 @@ private[access] object RepositoryAccessDecoders:
 
   /** The `{permission, role_name, user}` object the collaborator permission endpoint answers. */
   val collaboratorAccess: Decode[CollaboratorAccess] =
-    WireDecode.of(Json.decoder[CollaboratorAccessDto])(_.toDomain)
+    WireDecode.single(Json.decoder[CollaboratorAccessDto])(_.toDomain)
 
   /** One deploy key. */
   val deployKey: Decode[DeployKey] =
-    WireDecode.of(Json.decoder[DeployKeyDto])(_.toDomain)
+    WireDecode.single(Json.decoder[DeployKeyDto])(_.toDomain)
 
   /** A bare array of deploy keys. */
   val deployKeys: Decode[Vector[DeployKey]] =
@@ -76,7 +76,7 @@ private[access] object RepositoryAccessDecoders:
 
   /** One team, which is what the team check answers rather than the `204` its siblings answer. */
   val team: Decode[Team] =
-    WireDecode.of(Json.decoder[TeamDto])(_.toDomain)
+    WireDecode.single(Json.decoder[TeamDto])(_.toDomain)
 
   /** A bare array of teams, as `TeamListWithoutPagination` returns it. */
   val teams: Decode[Vector[Team]] =

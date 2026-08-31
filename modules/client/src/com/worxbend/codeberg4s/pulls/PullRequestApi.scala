@@ -1413,19 +1413,19 @@ object PullRequestApi:
     reviewCommentsPath(owner, name, number, review) :+ comment.value.toString
 
   private val PullDecoder: Decode[PullRequest] =
-    WireDecode.of(Json.decoder[PullRequestDto])(_.toDomain)
+    WireDecode.single(Json.decoder[PullRequestDto])(_.toDomain)
 
   private val PullsDecoder: Decode[Vector[PullRequest]] =
     WireDecode.vector(Json.decoder[Vector[PullRequestDto]])(PullRequestDto.toDomainAll)
 
   private val ReviewDecoder: Decode[Review] =
-    WireDecode.of(Json.decoder[ReviewDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ReviewDto])(_.toDomain)
 
   private val ReviewsDecoder: Decode[Vector[Review]] =
     WireDecode.vector(Json.decoder[Vector[ReviewDto]])(ReviewDto.toDomainAll)
 
   private val ReviewCommentDecoder: Decode[ReviewComment] =
-    WireDecode.of(Json.decoder[ReviewCommentDto])(_.toDomain)
+    WireDecode.single(Json.decoder[ReviewCommentDto])(_.toDomain)
 
   private val ReviewCommentsDecoder: Decode[Vector[ReviewComment]] =
     WireDecode.vector(Json.decoder[Vector[ReviewCommentDto]])(ReviewCommentDto.toDomainAll)

@@ -31,7 +31,7 @@ private[publishing] object PublishingDecoders:
     * the elements of that capture are exactly what these endpoints send one of.
     */
   val tag: Decode[Tag] =
-    WireDecode.of(Json.decoder[TagDto])(_.toDomain)
+    WireDecode.single(Json.decoder[TagDto])(_.toDomain)
 
   /** One attachment object, as the three single-asset endpoints return it.
     *
@@ -39,7 +39,7 @@ private[publishing] object PublishingDecoders:
     * and its failures had to be reported at `$.assets[n]`. Here it '''is''' the body, so the path is the root.
     */
   val asset: Decode[ReleaseAsset] =
-    WireDecode.of(Json.decoder[ReleaseAssetDto])(_.toDomainAt(JsonPath.Root))
+    WireDecode.single(Json.decoder[ReleaseAssetDto])(_.toDomainAt(JsonPath.Root))
 
   /** A bare array of attachment objects, as `GET /releases/{id}/assets` returns it.
     *

@@ -315,10 +315,10 @@ object NotificationApi:
     List("repos", owner.value, name.value, "notifications")
 
   private val ThreadDecoder: Decode[NotificationThread] =
-    WireDecode.of(Json.decoder[NotificationThreadDto])(_.toDomain)
+    WireDecode.single(Json.decoder[NotificationThreadDto])(_.toDomain)
 
   private val ThreadsDecoder: Decode[Vector[NotificationThread]] =
     WireDecode.vector(Json.decoder[Vector[NotificationThreadDto]])(NotificationThreadDto.toDomainAll)
 
   private val CountDecoder: Decode[UnreadCount] =
-    WireDecode.of(Json.decoder[NotificationCountDto])(_.toDomain)
+    WireDecode.single(Json.decoder[NotificationCountDto])(_.toDomain)
