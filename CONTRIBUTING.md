@@ -305,7 +305,7 @@ repeat is a no-op.
 
 **7. Scaladoc it, with the error contract.** Every public member. Say which
 `CodebergError` cases the operation can produce and what a `404` means for this
-operation specifically — the ADT has only five cases and none of them is
+operation specifically — the ADT has only six cases and none of them is
 `NotFound`, so "the repository does not exist" has to be spelled out as
 `Api(ctx, 404, body)`.
 

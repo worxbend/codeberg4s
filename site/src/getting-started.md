@@ -156,9 +156,9 @@ def attemptRead(
   client.repos.attempt.get(owner, name)
 ```
 
-`CodebergError` has exactly five cases — `Transport`, `Api`, `DecodingFailed`,
-`Validation`, `RetriesExhausted`. **There is no `NotFound` and no
-`RateLimited`.** A `404` is `Api(ctx, 404, body)`; a `429` is
+`CodebergError` has exactly six cases — `Transport`, `Api`, `DecodingFailed`,
+`Validation`, `RetriesExhausted`, `WalkTruncated`. **There is no `NotFound` and
+no `RateLimited`.** A `404` is `Api(ctx, 404, body)`; a `429` is
 `Api(ctx, 429, body)`, or a `RetriesExhausted` wrapping one after the retry
 policy gives up. Matching on a case that does not exist is the most common
 mistake made against this library.

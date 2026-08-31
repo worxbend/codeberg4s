@@ -71,10 +71,10 @@ The measured evidence for this, and for five other divergences between the
 pinned spec and what Codeberg actually returns, is in
 [Hazards](project/HAZARDS.md).
 
-## Errors have exactly five shapes
+## Errors have exactly six shapes
 
 `CodebergError` is a closed family: `Transport`, `Api`, `DecodingFailed`,
-`Validation`, `RetriesExhausted`.
+`Validation`, `RetriesExhausted`, `WalkTruncated`.
 
 There is no `NotFound` case and no `RateLimited` case. A `404` is
 `Api(ctx, 404, body)`; a `429` is `Api(ctx, 429, body)`, or a
