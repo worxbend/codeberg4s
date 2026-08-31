@@ -6,6 +6,9 @@ import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.RetryEligibility
@@ -695,37 +698,7 @@ object RepositoryPublishingApi:
       GenerateRepoOptionDto.render(command),
     )
 
-  private def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = None,
-    )
-
-  private def write(operation: String, method: HttpMethod, path: List[String], body: String): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Json(body)),
-    )
-
   /** A `DELETE` with no body at all, which is what every deletion in this group is. */
-  private def remove(operation: String, path: List[String]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Delete,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
-    )
-
   /** `page` and `limit`, always both — `limit` alone is silently ignored by some Forgejo endpoints. */
   private def window(params: PageParams): List[(String, String)] =
     List("page" -> params.page.value.toString, "limit" -> params.size.value.toString)

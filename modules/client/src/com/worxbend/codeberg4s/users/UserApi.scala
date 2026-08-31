@@ -1,12 +1,12 @@
 package com.worxbend.codeberg4s.users
 
 import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.core.Exec
@@ -313,16 +313,6 @@ object UserApi:
     read(KeysOperation, List("users", username.value, "keys"), pageQuery(params))
 
   /** A `GET` with no body and no extra headers, which is every operation in this group. */
-  private def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = None,
-    )
-
   /** `page` and `limit`, always together.
     *
     * Sending `limit` alone is not a smaller version of this: the golden-fixture manifest records list endpoints that

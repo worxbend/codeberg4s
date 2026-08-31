@@ -1,11 +1,11 @@
 package com.worxbend.codeberg4s.repositories
 
 import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.paging.Page
@@ -415,16 +415,6 @@ object RepositoryApi:
     read(ListForksOperation, List("repos", owner.value, name.value, "forks"), window(params))
 
   /** Every operation in this group is a `GET` that carries no body and adds no header of its own. */
-  private def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = None,
-    )
-
   /** The `page` and `limit` parameters, in the order Forgejo's own `Link` header writes them. */
   private def window(params: PageParams): List[(String, String)] =
     List("page" -> params.page.value.toString, "limit" -> params.size.value.toString)

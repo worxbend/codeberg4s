@@ -4,8 +4,10 @@ import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
@@ -346,33 +348,3 @@ object UserKeyApi:
 
   private def gpgKeyPath(id: GpgKeyId): List[String] =
     List("user", "gpg_keys", id.value.toString)
-
-  private def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = None,
-    )
-
-  private def write(operation: String, method: HttpMethod, path: List[String], body: String): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Json(body)),
-    )
-
-  private def remove(operation: String, path: List[String]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Delete,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
-    )
