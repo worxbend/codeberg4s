@@ -1,8 +1,8 @@
 package com.worxbend.codeberg4s
 
-import munit.FunSuite
-
 import com.worxbend.codeberg4s.repositories.BranchName
+
+import munit.FunSuite
 
 /** What the compile-time identifier constructors promise.
   *
@@ -61,9 +61,9 @@ final class SegmentLiteralSuite extends FunSuite:
 
   /** Values chosen to sit on the edges of both spellings of the rule.
     *
-    * Every entry is already equal to its own `trim`, because that is the one place the two rules are meant to
-    * disagree: `PathSegment` trims and the literal check refuses whitespace outright, so a padded value would report a
-    * difference that is intended rather than a drift.
+    * Every entry is already equal to its own `trim`, because that is the one place the two rules are meant to disagree:
+    * `PathSegment` trims and the literal check refuses whitespace outright, so a padded value would report a difference
+    * that is intended rather than a drift.
     */
   private val Corpus: List[String] = List(
     "forgejo",

@@ -11,8 +11,8 @@ import scala.compiletime.ops.string.Matches
   * ==Why this exists==
   *
   * Almost every identifier in this library is written down as a string literal by the programmer, not computed at run
-  * time: `Owner("forgejo")`, `BranchName("main")`, `RepoName("codeberg4s")`. A literal is either valid or it is not, and
-  * which one it is can be decided before the program ever runs. Yet `Owner.from` returns `Either[ValidationError,
+  * time: `Owner("forgejo")`, `BranchName("main")`, `RepoName("codeberg4s")`. A literal is either valid or it is not,
+  * and which one it is can be decided before the program ever runs. Yet `Owner.from` returns `Either[ValidationError,
   * Owner]`, so every one of those literals used to drag a `for` comprehension or an `orFail` helper behind it purely to
   * discharge a failure that cannot happen.
   *
@@ -23,10 +23,9 @@ import scala.compiletime.ops.string.Matches
   *
   * ==How it works, and what it costs==
   *
-  * There is no macro here. Each check is a single `inline if` over
-  * [[scala.compiletime.ops.string.Matches]], which asks the compiler whether a literal '''type''' matches a regular
-  * expression. That happens during typing, so the whole call folds away to the literal string; nothing of this object
-  * survives into the bytecode of the call site.
+  * There is no macro here. Each check is a single `inline if` over [[scala.compiletime.ops.string.Matches]], which asks
+  * the compiler whether a literal '''type''' matches a regular expression. That happens during typing, so the whole
+  * call folds away to the literal string; nothing of this object survives into the bytecode of the call site.
   *
   * The price is that the rule is written twice — once as the readable `if`/`else` chain in [[PathSegment]], and once as
   * a regular expression here — which is exactly the duplication [[PathSegment]]'s own Scaladoc warns about. It is
@@ -73,7 +72,7 @@ object SegmentLiteral:
       case Some(_) =>
         inline if constValue[Matches[V, Plain]] then value
         else error("not a valid " + field + ": " + codeOf(value))
-      case None =>
+      case None    =>
         error("a " + field + " built this way has to be a string literal; use `.from` for a run-time value")
 
   /** Accepts `value` if every `/`-separated part of it can stand alone as one path segment, and fails the compilation
@@ -87,5 +86,5 @@ object SegmentLiteral:
       case Some(_) =>
         inline if constValue[Matches[V, Segmented]] then value
         else error("not a valid " + field + ": " + codeOf(value))
-      case None =>
+      case None    =>
         error("a " + field + " built this way has to be a string literal; use `.from` for a run-time value")
