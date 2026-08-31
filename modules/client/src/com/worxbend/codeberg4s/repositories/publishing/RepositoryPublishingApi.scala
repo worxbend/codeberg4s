@@ -2,6 +2,8 @@ package com.worxbend.codeberg4s.repositories.publishing
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
 import com.worxbend.codeberg4s.core.Exec
@@ -9,11 +11,9 @@ import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Owner
 import com.worxbend.codeberg4s.repositories.Release
 import com.worxbend.codeberg4s.repositories.ReleaseAsset
 import com.worxbend.codeberg4s.repositories.ReleaseId
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.RepositoryDecoders
 import com.worxbend.codeberg4s.repositories.Tag
@@ -59,9 +59,9 @@ import scala.concurrent.Future
   *   - [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] when a retryable failure outlived the policy.
   *
   * [[com.worxbend.codeberg4s.CodebergError.Validation]] is '''not''' produced by any operation here. Every argument is
-  * an already-validated type — [[com.worxbend.codeberg4s.repositories.Owner]],
-  * [[com.worxbend.codeberg4s.repositories.TagName]], [[Topic]], [[AssetId]] — so a value that would forge a path is
-  * rejected by its own smart constructor before a client is ever involved.
+  * an already-validated type — [[com.worxbend.codeberg4s.Owner]], [[com.worxbend.codeberg4s.repositories.TagName]],
+  * [[Topic]], [[AssetId]] — so a value that would forge a path is rejected by its own smart constructor before a client
+  * is ever involved.
   *
   * ==Retries==
   *

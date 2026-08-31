@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.pulls
 
+import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.repositories.BranchName
-import com.worxbend.codeberg4s.repositories.Owner
 
 /** The branch a pull request is opened '''from''', in the spelling `CreatePullRequestOption.head` expects.
   *
@@ -10,11 +10,10 @@ import com.worxbend.codeberg4s.repositories.Owner
   * `trim21/forgejo` against base `forgejo` in `forgejo/forgejo`.
   *
   * There is no `from(value: String)` here, and that is the point. The two spellings are produced by the two
-  * constructors below out of values that are '''already''' validated — an
-  * [[com.worxbend.codeberg4s.repositories.Owner]] cannot contain a `/` or a control character, and a
-  * [[com.worxbend.codeberg4s.repositories.BranchName]] cannot contain a traversal segment — so this type never has to
-  * parse a colon back out of a string and never has to decide what `a:b:c` meant. Both constructors are total, which is
-  * why neither returns an `Either`.
+  * constructors below out of values that are '''already''' validated — an [[com.worxbend.codeberg4s.Owner]] cannot
+  * contain a `/` or a control character, and a [[com.worxbend.codeberg4s.repositories.BranchName]] cannot contain a
+  * traversal segment — so this type never has to parse a colon back out of a string and never has to decide what
+  * `a:b:c` meant. Both constructors are total, which is why neither returns an `Either`.
   */
 opaque type PullRequestHead = String
 

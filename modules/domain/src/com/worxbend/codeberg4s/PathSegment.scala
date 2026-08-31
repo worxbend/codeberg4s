@@ -2,10 +2,10 @@ package com.worxbend.codeberg4s
 
 /** Validation shared by every identifier that becomes part of a URI path.
   *
-  * This is a security boundary, not a convenience: an identifier such as [[com.worxbend.codeberg4s.repositories.Owner]]
-  * or [[com.worxbend.codeberg4s.users.Username]] is interpolated into a request path, so a value containing `/` would
-  * let a caller reach an endpoint the API surface never offered, and a control character would corrupt the request
-  * line. Both are rejected here, once, rather than at each call site.
+  * This is a security boundary, not a convenience: an identifier such as [[com.worxbend.codeberg4s.Owner]] or
+  * [[com.worxbend.codeberg4s.users.Username]] is interpolated into a request path, so a value containing `/` would let
+  * a caller reach an endpoint the API surface never offered, and a control character would corrupt the request line.
+  * Both are rejected here, once, rather than at each call site.
   *
   * '''It lives in the root package so that "once" is true.''' The rule used to sit in
   * `com.worxbend.codeberg4s.repositories` and be visible only there, which meant the three identifiers outside that

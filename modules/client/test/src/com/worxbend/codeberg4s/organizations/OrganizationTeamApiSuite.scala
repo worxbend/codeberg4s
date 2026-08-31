@@ -1,8 +1,8 @@
 package com.worxbend.codeberg4s.organizations
 
 import com.worxbend.codeberg4s.CodebergError
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.RepoName
 
 import sttp.client4.testing.RecordingBackend
 

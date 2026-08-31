@@ -2,13 +2,13 @@ package com.worxbend.codeberg4s.it
 
 import com.worxbend.codeberg4s.CodebergClient
 import com.worxbend.codeberg4s.CodebergError
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.issues.IssueQuery
 import com.worxbend.codeberg4s.paging.PageNumber
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.paging.PageSize
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future

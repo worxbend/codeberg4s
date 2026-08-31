@@ -17,9 +17,7 @@ import com.worxbend.codeberg4s.pulls.ReviewId
 import com.worxbend.codeberg4s.repositories.BranchName
 import com.worxbend.codeberg4s.repositories.CommitSha
 import com.worxbend.codeberg4s.repositories.ContentPath
-import com.worxbend.codeberg4s.repositories.Owner
 import com.worxbend.codeberg4s.repositories.ReleaseId
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.TagName
 import com.worxbend.codeberg4s.users.Username
 

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.publishing
 
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 
 /** Everything `POST /repos/{owner}/{repo}/forks` may be told, as one value.
   *

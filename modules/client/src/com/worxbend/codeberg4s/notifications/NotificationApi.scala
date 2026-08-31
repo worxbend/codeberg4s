@@ -3,6 +3,8 @@ package com.worxbend.codeberg4s.notifications
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.ApiPipeline
@@ -15,8 +17,6 @@ import com.worxbend.codeberg4s.notifications.wire.NotificationQueries
 import com.worxbend.codeberg4s.notifications.wire.NotificationThreadDto
 import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 
 import scala.concurrent.Future
 
@@ -63,9 +63,8 @@ import scala.concurrent.Future
   *   - [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] when a retryable failure outlived the policy.
   *
   * [[com.worxbend.codeberg4s.CodebergError.Validation]] is '''not''' produced by any operation here. Every argument is
-  * an already-validated type — [[com.worxbend.codeberg4s.repositories.Owner]], [[NotificationThreadId]] — so a value
-  * that would forge a path or a query parameter is rejected by its own smart constructor before a client is ever
-  * involved.
+  * an already-validated type — [[com.worxbend.codeberg4s.Owner]], [[NotificationThreadId]] — so a value that would
+  * forge a path or a query parameter is rejected by its own smart constructor before a client is ever involved.
   *
   * ==Retries==
   *

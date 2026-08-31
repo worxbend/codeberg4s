@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.users.account
 
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.repositories.BranchName
-import com.worxbend.codeberg4s.repositories.RepoName
 
 /** What `POST /user/repos` is told.
   *
@@ -33,7 +33,7 @@ import com.worxbend.codeberg4s.repositories.RepoName
   * one a caller could not ask for. A name the instance does not know arrives as a `422`.
   *
   * @param name
-  *   the repository's name, already validated as a path segment by [[com.worxbend.codeberg4s.repositories.RepoName]]
+  *   the repository's name, already validated as a path segment by [[com.worxbend.codeberg4s.RepoName]]
   * @param description
   *   the one-line description, absent to leave it empty
   * @param isPrivate
@@ -115,9 +115,9 @@ object CreateRepository:
 
   /** Starts a command from the one field Forgejo requires.
     *
-    * Total rather than validated: [[com.worxbend.codeberg4s.repositories.RepoName]] has already refused everything that
-    * cannot be a path segment, and whether the name is free is the instance's judgement — it arrives as a `409`, which
-    * is the one status this endpoint declares that no other creation route in the library does.
+    * Total rather than validated: [[com.worxbend.codeberg4s.RepoName]] has already refused everything that cannot be a
+    * path segment, and whether the name is free is the instance's judgement — it arrives as a `409`, which is the one
+    * status this endpoint declares that no other creation route in the library does.
     */
   def named(name: RepoName): CreateRepository =
     CreateRepository(

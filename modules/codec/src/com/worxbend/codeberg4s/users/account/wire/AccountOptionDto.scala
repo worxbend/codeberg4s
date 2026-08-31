@@ -1,9 +1,9 @@
 package com.worxbend.codeberg4s.users.account.wire
 
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.repositories.BranchName
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.users.account.AvatarImage
 import com.worxbend.codeberg4s.users.account.CreateRepository
 import com.worxbend.codeberg4s.users.account.EmailAddress

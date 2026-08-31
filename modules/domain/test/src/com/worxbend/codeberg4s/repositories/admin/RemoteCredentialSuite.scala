@@ -4,8 +4,8 @@ import com.worxbend.codeberg4s.CallContext
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.repositories.RepoName
 
 import munit.FunSuite
 

@@ -2,6 +2,8 @@ package com.worxbend.codeberg4s.repositories.gitdata
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
 import com.worxbend.codeberg4s.core.Exec
@@ -13,8 +15,6 @@ import com.worxbend.codeberg4s.pulls.PullRequest
 import com.worxbend.codeberg4s.repositories.Commit
 import com.worxbend.codeberg4s.repositories.CommitSha
 import com.worxbend.codeberg4s.repositories.ContentPath
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.gitdata.wire.DiffPatchOptionsDto
 import com.worxbend.codeberg4s.repositories.gitdata.wire.GitDataQueries
 import com.worxbend.codeberg4s.repositories.gitdata.wire.NoteOptionsDto
@@ -36,8 +36,8 @@ import scala.concurrent.Future
   * [[com.worxbend.codeberg4s.CodebergError.Transport]] means nothing reached the instance,
   * [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] means a retryable failure outlived the policy, and
   * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] means a `2xx` payload did not fit the model, reported at
-  * the JSON path that did not fit. Arguments are [[com.worxbend.codeberg4s.repositories.Owner]],
-  * [[com.worxbend.codeberg4s.repositories.RepoName]], [[com.worxbend.codeberg4s.repositories.CommitSha]], [[RefName]],
+  * the JSON path that did not fit. Arguments are [[com.worxbend.codeberg4s.Owner]],
+  * [[com.worxbend.codeberg4s.RepoName]], [[com.worxbend.codeberg4s.repositories.CommitSha]], [[RefName]],
   * [[CompareRange]] and [[com.worxbend.codeberg4s.repositories.ContentPath]] rather than `String`, so a value that
   * would forge a request path is rejected by its own smart constructor and no operation here produces
   * [[com.worxbend.codeberg4s.CodebergError.Validation]] for its arguments. Anything an individual operation adds to

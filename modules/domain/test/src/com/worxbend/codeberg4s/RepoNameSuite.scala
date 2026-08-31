@@ -1,6 +1,4 @@
-package com.worxbend.codeberg4s.repositories
-
-import com.worxbend.codeberg4s.ValidationError
+package com.worxbend.codeberg4s
 
 import munit.FunSuite
 

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues
 
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 
 /** One issue named from outside its own repository — Forgejo's `IssueMeta`, and the body of every blocking and
   * dependency call.

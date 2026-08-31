@@ -1,9 +1,9 @@
 package com.worxbend.codeberg4s.users.social
 
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.auth.ApiToken
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.RepoSlug
 
 import munit.FunSuite

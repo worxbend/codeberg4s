@@ -4,6 +4,8 @@ import com.worxbend.codeberg4s.BaseUri
 import com.worxbend.codeberg4s.CodebergConfig
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.client.FutureExec
@@ -17,8 +19,6 @@ import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.paging.PageSize
 import com.worxbend.codeberg4s.repositories.CommitSha
 import com.worxbend.codeberg4s.repositories.ContentPath
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.retry.Jitter
 import com.worxbend.codeberg4s.retry.RetryPolicy
 import com.worxbend.codeberg4s.transport.SttpHttpPort

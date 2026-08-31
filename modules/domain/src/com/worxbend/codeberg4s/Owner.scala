@@ -1,7 +1,4 @@
-package com.worxbend.codeberg4s.repositories
-
-import com.worxbend.codeberg4s.PathSegment
-import com.worxbend.codeberg4s.ValidationError
+package com.worxbend.codeberg4s
 
 /** The user or organisation that owns a repository — the first segment of `owner/name`.
   *

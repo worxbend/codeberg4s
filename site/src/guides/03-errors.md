@@ -59,8 +59,8 @@ carrying the whole `CodebergError`:
 
 ```scala mdoc:compile-only
 import com.worxbend.codeberg4s.CodebergClient
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.repositories.Repository
 
 import scala.concurrent.Future
@@ -75,8 +75,8 @@ def viaConvenience(client: CodebergClient, owner: Owner, name: RepoName): Future
 ```scala mdoc:compile-only
 import com.worxbend.codeberg4s.CodebergClient
 import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.repositories.Repository
 
 import scala.concurrent.Future
@@ -118,8 +118,8 @@ case class, so it pattern-matches directly:
 import com.worxbend.codeberg4s.CodebergClient
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.repositories.Repository
 
 import scala.concurrent.ExecutionContext
@@ -142,8 +142,8 @@ On the typed rail, as a `Left`:
 ```scala mdoc:compile-only
 import com.worxbend.codeberg4s.CodebergClient
 import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.repositories.Repository
 
 import scala.concurrent.ExecutionContext
@@ -262,8 +262,8 @@ and anything else propagates.
 import com.worxbend.codeberg4s.CodebergClient
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.repositories.Repository
 
 import scala.concurrent.ExecutionContext
@@ -318,8 +318,8 @@ chooses how long that string is.
 ```scala mdoc:compile-only
 import com.worxbend.codeberg4s.CodebergClient
 import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.repositories.Repository
 
 import scala.concurrent.ExecutionContext

@@ -5,12 +5,12 @@ import com.worxbend.codeberg4s.ValidationError
 
 /** The handle that names an organisation — the `{org}` of `/orgs/{org}`.
   *
-  * This is deliberately neither [[com.worxbend.codeberg4s.repositories.Owner]] nor
-  * [[com.worxbend.codeberg4s.users.Username]], even though all three are the same characters on the wire. An `Owner`
-  * answers "who does this repository belong to?" and may be a person; a `Username` answers "which account is this?" and
-  * is a person; an `OrgName` answers "which organisation is this?". Giving the three one type would let
-  * `client.organizations.members(repository.slug.owner)` compile against a personal account, which has no members and
-  * answers `404`. Converting is a deliberate step through [[from]], not an implicit widening.
+  * This is deliberately neither [[com.worxbend.codeberg4s.Owner]] nor [[com.worxbend.codeberg4s.users.Username]], even
+  * though all three are the same characters on the wire. An `Owner` answers "who does this repository belong to?" and
+  * may be a person; a `Username` answers "which account is this?" and is a person; an `OrgName` answers "which
+  * organisation is this?". Giving the three one type would let `client.organizations.members(repository.slug.owner)`
+  * compile against a personal account, which has no members and answers `404`. Converting is a deliberate step through
+  * [[from]], not an implicit widening.
   *
   * Values are validated as URI path segments, so an `OrgName` can be interpolated into a request path without further
   * escaping decisions — see [[OrgName.from]] for what that rejects and why.
@@ -50,9 +50,8 @@ object OrgName:
 
     /** The name as a string, ready to be used as one path segment.
       *
-      * This is also the value to hand to [[com.worxbend.codeberg4s.repositories.Owner.from]] when an organisation's
-      * repositories are to be reached through `client.repos` rather than through `client.organizations`; the two types
-      * accept the same characters, so that conversion cannot fail in practice, but it is written out rather than
-      * assumed.
+      * This is also the value to hand to [[com.worxbend.codeberg4s.Owner.from]] when an organisation's repositories are
+      * to be reached through `client.repos` rather than through `client.organizations`; the two types accept the same
+      * characters, so that conversion cannot fail in practice, but it is written out rather than assumed.
       */
     def value: String = name

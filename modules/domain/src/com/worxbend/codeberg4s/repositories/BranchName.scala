@@ -5,11 +5,12 @@ import com.worxbend.codeberg4s.ValidationError
 
 /** The name of a branch, as `GET /repos/{owner}/{repo}/branches/{branch}` spells it.
   *
-  * Unlike [[Owner]] and [[RepoName]], a branch name may legitimately contain `/`:
-  * `golden/repository/branches-list.json` captures `renovate/forgejo-github.com-go-swagger-go-swagger-cmd-swagger-0.x`
-  * and `v16.0/forgejo`, both from `forgejo/forgejo`. Forgejo routes those with a wildcard, so the slash has to reach
-  * the wire as a real separator; a name percent-encoded whole into a single segment answers `404`. [[segments]] exists
-  * for exactly that reason, and it is what the request builder uses.
+  * Unlike [[com.worxbend.codeberg4s.Owner]] and [[com.worxbend.codeberg4s.RepoName]], a branch name may legitimately
+  * contain `/`: `golden/repository/branches-list.json` captures
+  * `renovate/forgejo-github.com-go-swagger-go-swagger-cmd-swagger-0.x` and `v16.0/forgejo`, both from
+  * `forgejo/forgejo`. Forgejo routes those with a wildcard, so the slash has to reach the wire as a real separator; a
+  * name percent-encoded whole into a single segment answers `404`. [[segments]] exists for exactly that reason, and it
+  * is what the request builder uses.
   *
   * That makes the validation below a security boundary rather than a formality: a name is decomposed into segments
   * here, and a `.` or `..` segment — the one thing that would let a caller climb out of the branch route — is rejected

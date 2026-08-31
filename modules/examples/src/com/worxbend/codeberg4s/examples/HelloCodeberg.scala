@@ -2,11 +2,11 @@ package com.worxbend.codeberg4s.examples
 
 import com.worxbend.codeberg4s.CodebergClient
 import com.worxbend.codeberg4s.CodebergConfig
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.ServerVersion
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.auth.Auth
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.Repository
 
 import scala.concurrent.Await

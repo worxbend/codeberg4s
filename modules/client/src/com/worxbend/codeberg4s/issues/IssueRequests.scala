@@ -1,10 +1,10 @@
 package com.worxbend.codeberg4s.issues
 
 import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.CodebergRequest
 import com.worxbend.codeberg4s.core.RequestBody
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 
 /** The request shapes and path prefixes every sub-API of the issue group builds on.
   *

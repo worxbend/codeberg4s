@@ -2,6 +2,8 @@ package com.worxbend.codeberg4s.users.social
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
 import com.worxbend.codeberg4s.core.Exec
@@ -10,8 +12,6 @@ import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.issues.TrackedTime
 import com.worxbend.codeberg4s.paging.Page
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.admin.RepositoryActivity
 import com.worxbend.codeberg4s.users.User

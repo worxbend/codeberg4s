@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.it
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.issues.CreateIssue
 import com.worxbend.codeberg4s.issues.Issue
@@ -10,7 +11,6 @@ import com.worxbend.codeberg4s.issues.LifecycleState
 import com.worxbend.codeberg4s.paging.PageNumber
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.paging.PageSize
-import com.worxbend.codeberg4s.repositories.RepoName
 
 import com.dimafeng.testcontainers.GenericContainer
 import com.dimafeng.testcontainers.munit.TestContainerForAll

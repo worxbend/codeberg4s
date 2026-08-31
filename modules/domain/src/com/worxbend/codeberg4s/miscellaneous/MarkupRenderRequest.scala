@@ -8,11 +8,11 @@ package com.worxbend.codeberg4s.miscellaneous
   * request, and a narrower request cannot be got wrong in the ways this one can.
   *
   * '''Neither [[filePath]] nor [[branchPath]] is a validated path type, and that is deliberate.''' Both travel in the
-  * JSON '''body''', never in the request path, so neither can forge a request the way
-  * [[com.worxbend.codeberg4s.repositories.Owner]] could: whatever they contain is escaped into a JSON string by the
-  * renderer and arrives at the instance verbatim. There is therefore nothing for a smart constructor to defend against,
-  * and a validator here would only refuse file names Forgejo would have accepted. [[context]] is a [[MarkdownContext]]
-  * because that type already exists and is already validated, not because the body needs it to be.
+  * JSON '''body''', never in the request path, so neither can forge a request the way [[com.worxbend.codeberg4s.Owner]]
+  * could: whatever they contain is escaped into a JSON string by the renderer and arrives at the instance verbatim.
+  * There is therefore nothing for a smart constructor to defend against, and a validator here would only refuse file
+  * names Forgejo would have accepted. [[context]] is a [[MarkdownContext]] because that type already exists and is
+  * already validated, not because the body needs it to be.
   *
   * @param text
   *   the markup source. May be empty, which renders to an empty document rather than failing

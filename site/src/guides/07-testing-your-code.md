@@ -51,8 +51,8 @@ Take the client as a parameter rather than constructing one:
 
 ```scala mdoc:compile-only
 import com.worxbend.codeberg4s.CodebergClient
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -120,8 +120,8 @@ import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.auth.Auth
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.retry.RetryPolicy
 
 import sttp.client4.Backend

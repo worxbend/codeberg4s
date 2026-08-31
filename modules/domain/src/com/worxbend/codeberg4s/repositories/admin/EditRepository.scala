@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin
 
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.repositories.BranchName
-import com.worxbend.codeberg4s.repositories.RepoName
 
 /** Where a repository's issues live when they are not in Forgejo — the `external_tracker` object of `EditRepoOption`.
   *

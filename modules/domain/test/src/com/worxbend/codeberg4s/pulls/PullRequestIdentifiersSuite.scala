@@ -1,8 +1,8 @@
 package com.worxbend.codeberg4s.pulls
 
+import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.repositories.BranchName
-import com.worxbend.codeberg4s.repositories.Owner
 
 import munit.FunSuite
 

@@ -6,8 +6,8 @@ import com.worxbend.codeberg4s.ValidationError
 /** One repository topic — `forge`, `forgejo`, `git`, `self-hosted` on `golden/repository/topics.json`.
   *
   * A topic is put in a request path by `PUT` and `DELETE /repos/{owner}/{repo}/topics/{topic}`, so a raw `String` would
-  * be a path-forging hazard exactly as it is for [[com.worxbend.codeberg4s.repositories.Owner]]. That, and only that,
-  * is what this type guarantees: the value is one safe URI path segment.
+  * be a path-forging hazard exactly as it is for [[com.worxbend.codeberg4s.Owner]]. That, and only that, is what this
+  * type guarantees: the value is one safe URI path segment.
   *
   * '''It deliberately does not encode Forgejo's own topic grammar.''' The pinned spec declares no `pattern` and no
   * `maxLength` for a topic name anywhere — neither on `RepoTopicOptions.topics` nor on the `topic` path parameter — so

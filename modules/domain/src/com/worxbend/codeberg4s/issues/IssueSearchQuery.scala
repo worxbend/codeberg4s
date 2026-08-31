@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.issues
 
-import com.worxbend.codeberg4s.repositories.Owner
+import com.worxbend.codeberg4s.Owner
 
 import java.time.Instant
 

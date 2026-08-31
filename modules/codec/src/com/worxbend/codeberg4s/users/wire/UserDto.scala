@@ -49,8 +49,8 @@ final case class UserDto(
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
     * Fails only on `id` and `login`. Those two are what every consumer of an embedded user needs — a login is what
-    * becomes an [[com.worxbend.codeberg4s.repositories.Owner]], and an id is what distinguishes two accounts after a
-    * rename. Everything else is genuinely optional and stays optional.
+    * becomes an [[com.worxbend.codeberg4s.Owner]], and an id is what distinguishes two accounts after a rename.
+    * Everything else is genuinely optional and stays optional.
     *
     * Counts absent from the payload become `0` rather than failing: a reduced embedded user carries no
     * `followers_count`, and reading that as "zero followers" is the same answer the API would give. `visibility` that

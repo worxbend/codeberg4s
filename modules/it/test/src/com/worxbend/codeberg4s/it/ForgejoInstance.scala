@@ -2,9 +2,9 @@ package com.worxbend.codeberg4s.it
 
 import com.worxbend.codeberg4s.BaseUri
 import com.worxbend.codeberg4s.CodebergClient
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.auth.Auth
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.retry.RetryPolicy
 
 import com.dimafeng.testcontainers.GenericContainer

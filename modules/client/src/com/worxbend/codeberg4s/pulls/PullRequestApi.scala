@@ -3,6 +3,8 @@ package com.worxbend.codeberg4s.pulls
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.ApiPipeline
@@ -29,8 +31,6 @@ import com.worxbend.codeberg4s.pulls.wire.ReviewDto
 import com.worxbend.codeberg4s.pulls.wire.SubmitPullReviewOptionsDto
 import com.worxbend.codeberg4s.repositories.BranchName
 import com.worxbend.codeberg4s.repositories.Commit
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.wire.CommitDto
 import com.worxbend.codeberg4s.repositories.wire.Elements
 
@@ -60,9 +60,9 @@ import scala.concurrent.Future
   *   - [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] when a retryable failure outlived the policy.
   *
   * [[com.worxbend.codeberg4s.CodebergError.Validation]] is '''not''' produced by any operation here. Every argument is
-  * an already-validated type — [[com.worxbend.codeberg4s.repositories.Owner]], [[PullRequestNumber]],
-  * [[PullRequestHead]], [[com.worxbend.codeberg4s.repositories.CommitSha]] — so a value that would forge a path or a
-  * query parameter is rejected by its own smart constructor before a client is ever involved.
+  * an already-validated type — [[com.worxbend.codeberg4s.Owner]], [[PullRequestNumber]], [[PullRequestHead]],
+  * [[com.worxbend.codeberg4s.repositories.CommitSha]] — so a value that would forge a path or a query parameter is
+  * rejected by its own smart constructor before a client is ever involved.
   *
   * ==Retries==
   *

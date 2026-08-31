@@ -42,7 +42,7 @@ object ForgejoBootstrap:
     * to a real instance — the live suite is read-only and anonymous unless the operator supplies their own token.
     *
     * @param username
-    *   the login, which is also the [[com.worxbend.codeberg4s.repositories.Owner]] of everything the suite creates
+    *   the login, which is also the [[com.worxbend.codeberg4s.Owner]] of everything the suite creates
     * @param password
     *   the password used for the one basic-authenticated call that issues a token
     * @param email

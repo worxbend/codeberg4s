@@ -5,8 +5,6 @@ import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.paging.PageNumber
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.paging.PageSize
-import com.worxbend.codeberg4s.repositories.Owner
-import com.worxbend.codeberg4s.repositories.RepoName
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.RepositoryApi
 import com.worxbend.codeberg4s.retry.Jitter
