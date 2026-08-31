@@ -516,82 +516,82 @@ final class RepositoryActionApi private[codeberg4s] (pipeline: ApiPipeline[Futur
 object RepositoryActionApi:
 
   /** The stable operation id of [[RepositoryActionApi.listArtifacts]]. Safe to alert on. */
-  val ListArtifactsOperation: String = "actions.artifacts.list"
+  val ListArtifactsOperation: String = "repos.actions.artifacts.list"
 
   /** The stable operation id of the single-artifact read on [[RepositoryActionApi]]. */
-  val GetArtifactOperation: String = "actions.artifacts.get"
+  val GetArtifactOperation: String = "repos.actions.artifacts.get"
 
   /** The stable operation id of [[RepositoryActionApi.deleteArtifact]]. */
-  val DeleteArtifactOperation: String = "actions.artifacts.delete"
+  val DeleteArtifactOperation: String = "repos.actions.artifacts.delete"
 
   /** The stable operation id of [[RepositoryActionApi.listRuns]]. */
-  val ListRunsOperation: String = "actions.runs.list"
+  val ListRunsOperation: String = "repos.actions.runs.list"
 
   /** The stable operation id of the single-run read on [[RepositoryActionApi]]. */
-  val GetRunOperation: String = "actions.runs.get"
+  val GetRunOperation: String = "repos.actions.runs.get"
 
   /** The stable operation id of [[RepositoryActionApi.deleteRun]]. */
-  val DeleteRunOperation: String = "actions.runs.delete"
+  val DeleteRunOperation: String = "repos.actions.runs.delete"
 
   /** The stable operation id of [[RepositoryActionApi.cancelRun]]. */
-  val CancelRunOperation: String = "actions.runs.cancel"
+  val CancelRunOperation: String = "repos.actions.runs.cancel"
 
   /** The stable operation id of [[RepositoryActionApi.listRunArtifacts]]. */
-  val ListRunArtifactsOperation: String = "actions.runs.artifacts.list"
+  val ListRunArtifactsOperation: String = "repos.actions.runs.artifacts.list"
 
   /** The stable operation id of [[RepositoryActionApi.listRunJobs]]. */
-  val ListRunJobsOperation: String = "actions.runs.jobs.list"
+  val ListRunJobsOperation: String = "repos.actions.runs.jobs.list"
 
   /** The stable operation id of [[RepositoryActionApi.jobLogs]]. */
-  val JobLogsOperation: String = "actions.jobs.logs"
+  val JobLogsOperation: String = "repos.actions.jobs.logs"
 
   /** The stable operation id of [[RepositoryActionApi.listRunners]]. */
-  val ListRunnersOperation: String = "actions.runners.list"
+  val ListRunnersOperation: String = "repos.actions.runners.list"
 
   /** The stable operation id of the single-runner read on [[RepositoryActionApi]]. */
-  val GetRunnerOperation: String = "actions.runners.get"
+  val GetRunnerOperation: String = "repos.actions.runners.get"
 
   /** The stable operation id of [[RepositoryActionApi.registerRunner]]. */
-  val RegisterRunnerOperation: String = "actions.runners.register"
+  val RegisterRunnerOperation: String = "repos.actions.runners.register"
 
   /** The stable operation id of [[RepositoryActionApi.deleteRunner]]. */
-  val DeleteRunnerOperation: String = "actions.runners.delete"
+  val DeleteRunnerOperation: String = "repos.actions.runners.delete"
 
   /** The stable operation id of [[RepositoryActionApi.runnerRegistrationToken]]. */
-  val RunnerRegistrationTokenOperation: String = "actions.runners.registrationToken"
+  val RunnerRegistrationTokenOperation: String = "repos.actions.runners.registrationToken"
 
   /** The stable operation id of [[RepositoryActionApi.searchRunnerJobs]]. */
-  val SearchRunnerJobsOperation: String = "actions.runners.jobs.search"
+  val SearchRunnerJobsOperation: String = "repos.actions.runners.jobs.search"
 
   /** The stable operation id of [[RepositoryActionApi.listTasks]]. */
-  val ListTasksOperation: String = "actions.tasks.list"
+  val ListTasksOperation: String = "repos.actions.tasks.list"
 
   /** The stable operation id of [[RepositoryActionApi.listSecrets]]. */
-  val ListSecretsOperation: String = "actions.secrets.list"
+  val ListSecretsOperation: String = "repos.actions.secrets.list"
 
   /** The stable operation id of [[RepositoryActionApi.setSecret]]. */
-  val SetSecretOperation: String = "actions.secrets.set"
+  val SetSecretOperation: String = "repos.actions.secrets.set"
 
   /** The stable operation id of [[RepositoryActionApi.deleteSecret]]. */
-  val DeleteSecretOperation: String = "actions.secrets.delete"
+  val DeleteSecretOperation: String = "repos.actions.secrets.delete"
 
   /** The stable operation id of [[RepositoryActionApi.listVariables]]. */
-  val ListVariablesOperation: String = "actions.variables.list"
+  val ListVariablesOperation: String = "repos.actions.variables.list"
 
   /** The stable operation id of the single-variable read on [[RepositoryActionApi]]. */
-  val GetVariableOperation: String = "actions.variables.get"
+  val GetVariableOperation: String = "repos.actions.variables.get"
 
   /** The stable operation id of [[RepositoryActionApi.createVariable]]. */
-  val CreateVariableOperation: String = "actions.variables.create"
+  val CreateVariableOperation: String = "repos.actions.variables.create"
 
   /** The stable operation id of [[RepositoryActionApi.updateVariable]]. */
-  val UpdateVariableOperation: String = "actions.variables.update"
+  val UpdateVariableOperation: String = "repos.actions.variables.update"
 
   /** The stable operation id of [[RepositoryActionApi.deleteVariable]]. */
-  val DeleteVariableOperation: String = "actions.variables.delete"
+  val DeleteVariableOperation: String = "repos.actions.variables.delete"
 
   /** The stable operation id of [[RepositoryActionApi.dispatchWorkflow]]. */
-  val DispatchWorkflowOperation: String = "actions.workflows.dispatch"
+  val DispatchWorkflowOperation: String = "repos.actions.workflows.dispatch"
 
   /** The typed rail of [[RepositoryActionApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a
     * value.

@@ -24,7 +24,7 @@ final class BinaryPipelineSuite extends FunSuite:
   private val zip: Array[Byte] = Array[Byte](0x50, 0x4B, 0x03, 0x04, 0x00)
 
   private val request: CodebergRequest =
-    CodebergRequest("actions.artifacts.download", HttpMethod.Get, List("repos", "o", "r"), Nil, Nil, None)
+    CodebergRequest("repos.actions.artifacts.download", HttpMethod.Get, List("repos", "o", "r"), Nil, Nil, None)
 
   private final class StubBinaryPort(responses: List[Either[TransportFailure, BinaryResponse]])
       extends BinaryHttpPort[Result]:
@@ -133,7 +133,7 @@ final class BinaryPipelineSuite extends FunSuite:
 
     pipeline(telemetry).callBinary(request, port).toOption.foreach(_ => ())
 
-    assertEquals(telemetry.events, Vector("request actions.artifacts.download", "response 200"))
+    assertEquals(telemetry.events, Vector("request repos.actions.artifacts.download", "response 200"))
 
   test("a telemetry sink that fails does not fail the download it is watching"):
     val telemetry = RecordingTelemetry(failing = true)

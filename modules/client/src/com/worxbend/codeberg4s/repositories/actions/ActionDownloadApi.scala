@@ -67,10 +67,10 @@ final class ActionDownloadApi private[codeberg4s] (
 object ActionDownloadApi:
 
   /** The stable operation id [[ActionDownloadApi.artifact]] copies into every failure's `CallContext`. */
-  val DownloadArtifactOperation: String = "actions.artifacts.download"
+  val DownloadArtifactOperation: String = "repos.actions.artifacts.download"
 
   /** The stable operation id [[ActionDownloadApi.runLogs]] copies into every failure's `CallContext`. */
-  val DownloadRunLogsOperation: String = "actions.runs.logs.download"
+  val DownloadRunLogsOperation: String = "repos.actions.runs.logs.download"
 
   /** The typed rail: both operations with [[com.worxbend.codeberg4s.CodebergError]] as a value. */
   final class Attempt private[codeberg4s] (rail: ActionDownloadApi)(using exec: Exec[Future]):
