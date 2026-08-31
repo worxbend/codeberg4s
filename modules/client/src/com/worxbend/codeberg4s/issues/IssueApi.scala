@@ -317,7 +317,7 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     * '''Answers `201`''' with the deadline the instance now holds; see [[IssueDeadline]].
     *
     * '''Failures.''' The group contract above. A `422` carrying a raw Go parse error is what a timestamp Forgejo cannot
-    * read produces (`docs/HAZARDS.md` §4), though [[com.worxbend.codeberg4s.issues.wire.WireInstant]] renders one it
+    * read produces (`docs/HAZARDS.md` §4), though [[com.worxbend.codeberg4s.codec.Timestamps.render]] renders one it
     * can.
     */
   def setDeadline(owner: Owner, name: RepoName, number: IssueNumber, dueDate: Instant): Future[IssueDeadline] =

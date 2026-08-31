@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.issues.EditIssue
 
 /** Forgejo's `EditIssueOption` request model — the body of `PATCH /repos/{owner}/{repo}/issues/{index}`.
@@ -34,7 +35,7 @@ private[codeberg4s] object EditIssueOptionDto:
       command.assignees.map(logins => "assignees" -> WireNumbers.strings(logins)),
       command.milestone.map(id     => "milestone" -> WireNumbers.identifier(id.value)),
       command.state.map(change     => "state" -> JsonValue.Str(change.wireValue)),
-      command.dueDate.map(moment   => "due_date" -> JsonValue.Str(WireInstant.render(moment))),
+      command.dueDate.map(moment   => "due_date" -> JsonValue.Str(Timestamps.render(moment))),
       Option.when(command.unsetDueDate)("unset_due_date" -> JsonValue.Bool(true)),
       command.ref.map(reference => "ref" -> JsonValue.Str(reference)),
     ).flatten

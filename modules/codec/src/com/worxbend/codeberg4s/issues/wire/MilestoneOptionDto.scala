@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.issues.CreateMilestone
 import com.worxbend.codeberg4s.issues.EditMilestone
 
@@ -29,7 +30,7 @@ private[codeberg4s] object MilestoneOptionDto:
     val fields = List(
       Some("title" -> JsonValue.Str(command.title)),
       command.description.map(text => "description" -> JsonValue.Str(text)),
-      command.dueOn.map(moment     => "due_on" -> JsonValue.Str(WireInstant.render(moment))),
+      command.dueOn.map(moment     => "due_on" -> JsonValue.Str(Timestamps.render(moment))),
       command.state.map(transition => "state" -> JsonValue.Str(transition.wireValue)),
     ).flatten
 
@@ -40,7 +41,7 @@ private[codeberg4s] object MilestoneOptionDto:
     val fields = List(
       command.title.map(text       => "title" -> JsonValue.Str(text)),
       command.description.map(text => "description" -> JsonValue.Str(text)),
-      command.dueOn.map(moment     => "due_on" -> JsonValue.Str(WireInstant.render(moment))),
+      command.dueOn.map(moment     => "due_on" -> JsonValue.Str(Timestamps.render(moment))),
       command.state.map(transition => "state" -> JsonValue.Str(transition.wireValue)),
     ).flatten
 

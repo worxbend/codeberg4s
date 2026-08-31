@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.users.social.wire
 
 import com.worxbend.codeberg4s.codec.PagingQuery
-import com.worxbend.codeberg4s.issues.wire.WireInstant
+import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.users.social.ActivityFeedQuery
 import com.worxbend.codeberg4s.users.social.TrackedTimeWindow
@@ -45,7 +45,7 @@ private[codeberg4s] object SocialQueries:
     *
     * The date is rendered as `yyyy-MM-dd`, which is what the spec's `format: date` means and what Go's date parsing
     * accepts. A [[java.time.LocalDate]] has no time zone to lose, so unlike
-    * [[com.worxbend.codeberg4s.issues.wire.WireInstant]] there is nothing to normalise here.
+    * [[com.worxbend.codeberg4s.codec.Timestamps.render]] there is nothing to normalise here.
     */
   def activityFeeds(query: ActivityFeedQuery): List[(String, String)] =
     List(
@@ -55,13 +55,13 @@ private[codeberg4s] object SocialQueries:
 
   /** The window of the tracked-time listing.
     *
-    * `since` and `before` are rendered by [[com.worxbend.codeberg4s.issues.wire.WireInstant]] in the RFC-3339 form Go
+    * `since` and `before` are rendered by [[com.worxbend.codeberg4s.codec.Timestamps.render]] in the RFC-3339 form Go
     * parses — a malformed one comes back as a `422` whose message is the raw Go parse error, per `docs/HAZARDS.md` §4.
     */
   def trackedTimes(window: TrackedTimeWindow): List[(String, String)] =
     List(
-      window.since.map(moment  => SinceKey -> WireInstant.render(moment)),
-      window.before.map(moment => BeforeKey -> WireInstant.render(moment)),
+      window.since.map(moment  => SinceKey -> Timestamps.render(moment)),
+      window.before.map(moment => BeforeKey -> Timestamps.render(moment)),
     ).flatten
 
   /** `yyyy-MM-dd`, the spec's `format: date`. Immutable and safe to share. */

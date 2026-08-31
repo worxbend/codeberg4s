@@ -2,7 +2,7 @@ package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.issues.wire.WireInstant
+import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.repositories.gitdata.ApplyDiffPatch
 import com.worxbend.codeberg4s.repositories.gitdata.GitAuthor
 
@@ -53,6 +53,6 @@ private[codeberg4s] object DiffPatchOptionsDto:
   private def dates(authored: Option[Instant], committed: Option[Instant]): Option[(String, JsonValue)] =
     authored.zip(committed).map: (author, committer) =>
       "dates" -> JsonValue.Obj(
-        "author"    -> JsonValue.Str(WireInstant.render(author)),
-        "committer" -> JsonValue.Str(WireInstant.render(committer)),
+        "author"    -> JsonValue.Str(Timestamps.render(author)),
+        "committer" -> JsonValue.Str(Timestamps.render(committer)),
       )

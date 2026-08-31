@@ -2,7 +2,7 @@ package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.issues.wire.WireInstant
+import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.repositories.admin.ChangeFiles
 import com.worxbend.codeberg4s.repositories.admin.CommitDates
 import com.worxbend.codeberg4s.repositories.admin.CommitIdentity
@@ -104,8 +104,8 @@ private[codeberg4s] object FileOptionsDto:
     */
   private def dates(when: CommitDates): Option[JsonValue] =
     val fields = List(
-      when.author.map(moment    => "author" -> JsonValue.Str(WireInstant.render(moment))),
-      when.committer.map(moment => "committer" -> JsonValue.Str(WireInstant.render(moment))),
+      when.author.map(moment    => "author" -> JsonValue.Str(Timestamps.render(moment))),
+      when.committer.map(moment => "committer" -> JsonValue.Str(Timestamps.render(moment))),
     ).flatten
 
     Option.when(fields.nonEmpty)(JsonValue.Obj.from(fields))

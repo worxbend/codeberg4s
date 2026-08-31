@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.issues.CreateIssue
 
 /** Forgejo's `CreateIssueOption` request model — the body of `POST /repos/{owner}/{repo}/issues`.
@@ -30,7 +31,7 @@ private[codeberg4s] object CreateIssueOptionDto:
       Option.when(command.assignees.nonEmpty)("assignees" -> WireNumbers.strings(command.assignees)),
       Option.when(command.labels.nonEmpty)("labels"       -> WireNumbers.identifiers(command.labels.map(_.value))),
       command.milestone.map(id   => "milestone" -> WireNumbers.identifier(id.value)),
-      command.dueDate.map(moment => "due_date" -> JsonValue.Str(WireInstant.render(moment))),
+      command.dueDate.map(moment => "due_date" -> JsonValue.Str(Timestamps.render(moment))),
       command.ref.map(reference  => "ref" -> JsonValue.Str(reference)),
       Option.when(command.closed)("closed" -> JsonValue.Bool(true)),
     ).flatten

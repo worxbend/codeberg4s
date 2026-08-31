@@ -6,6 +6,8 @@ import scala.util.Try
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.Year
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 /** Turns Forgejo's timestamp strings into instants, sentinels included.
   *
@@ -17,6 +19,8 @@ import java.time.Year
   * `"0001-01-01T00:00:00Z"` rather than `null`, and `Repository.archived_at` comes back as the Unix epoch
   * (`"1970-01-01T01:00:00+01:00"`) on repositories that were never archived. Both are absence wearing a costume, and
   * both are folded into `None` here so no caller has to know the trick.
+  *
+  * The reverse direction lives here too: [[render]] writes the one spelling Forgejo's parser accepts.
   */
 object Timestamps:
 
@@ -42,6 +46,19 @@ object Timestamps:
   /** [[parse]] lifted over an optional wire value, for the common `dto.createdAt.flatMap(...)` shape. */
   def parseOptional(value: Option[String]): Option[Instant] =
     value.flatMap(parse)
+
+  /** `value` as RFC-3339 with a `Z` offset and second precision, for example `"2026-08-01T18:14:16Z"`.
+    *
+    * The counterpart of [[parse]]. Reading is lenient and writing cannot be: Forgejo parses timestamps with Go's
+    * `time.RFC3339` layout, `2006-01-02T15:04:05Z07:00`, and a value it cannot parse comes back as a `422` whose
+    * message is the raw Go parse error — `docs/HAZARDS.md` §4 captures exactly that response for `?since=notadate`.
+    *
+    * Seconds are the finest unit emitted. `Instant.toString` would append fractional seconds when it has them, which Go
+    * does accept, but truncating keeps the rendering stable regardless of where the caller's instant came from, and
+    * keeps a `since` cursor byte-identical between runs.
+    */
+  def render(value: Instant): String =
+    DateTimeFormatter.ISO_INSTANT.format(value.truncatedTo(ChronoUnit.SECONDS))
 
   /** The shortest string the fixed layout can be: `yyyy-MM-ddTHH:mm:ssZ`. */
   private val MinimumLength: Int = 20

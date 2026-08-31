@@ -2,7 +2,7 @@ package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.issues.wire.WireInstant
+import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.issues.wire.WireNumbers
 import com.worxbend.codeberg4s.pulls.EditPullRequest
 
@@ -41,7 +41,7 @@ private[codeberg4s] object EditPullRequestOptionDto:
       command.milestone.map(id     => "milestone" -> WireNumbers.identifier(id.value)),
       command.state.map(change     => "state" -> JsonValue.Str(change.wireValue)),
       command.base.map(branch      => "base" -> JsonValue.Str(branch.value)),
-      command.dueDate.map(moment   => "due_date" -> JsonValue.Str(WireInstant.render(moment))),
+      command.dueDate.map(moment   => "due_date" -> JsonValue.Str(Timestamps.render(moment))),
       Option.when(command.unsetDueDate)("unset_due_date" -> JsonValue.Bool(true)),
       command.allowMaintainerEdit.map(allowed => "allow_maintainer_edit" -> JsonValue.Bool(allowed)),
     ).flatten
