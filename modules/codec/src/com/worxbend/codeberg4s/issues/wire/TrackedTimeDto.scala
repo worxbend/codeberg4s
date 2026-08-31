@@ -7,7 +7,6 @@ import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.issues.Issue
 import com.worxbend.codeberg4s.issues.TrackedTime
 import com.worxbend.codeberg4s.issues.TrackedTimeId
 
@@ -54,7 +53,7 @@ final case class TrackedTimeDto(
     for
       identifier <- Wire.validated(at, "id", id)(TrackedTimeId.from)
       seconds    <- Wire.required(at, "time", time)
-      target     <- issueAt(at)
+      target     <- Wire.nested(at, "issue", issue)(_.toDomainAt(_))
     yield TrackedTime(
       id        = identifier,
       issue     = target,
@@ -66,9 +65,6 @@ final case class TrackedTimeDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, TrackedTime] =
     toDomainAt(JsonPath.Root)
-
-  private def issueAt(at: JsonPath): Either[DecodeFailure, Option[Issue]] =
-    issue.fold(Right(None))(dto => dto.toDomainAt(at.field("issue")).map(Some.apply))
 
 object TrackedTimeDto:
 

@@ -68,3 +68,26 @@ object Wire:
         construct(present) match
           case Right(built) => Right(Some(built))
           case Left(error)  => Left(DecodeFailure(at.field(field), error.message))
+
+  /** Converts an optional nested DTO, rooting its own failures at the field it was read from.
+    *
+    * Rule 2 makes a nested model optional too, so `owner`, `milestone` and `repository` all arrive as an `Option[…Dto]`
+    * whose conversion is itself fallible. Absence stays absence; a DTO that is present is converted at
+    * `at.field(field)` so a failure inside it reads `$.milestone.title` rather than `$.title`.
+    *
+    * `convert` is the nested DTO's own `toDomainAt`, passed as `_.toDomainAt(_)` — taking it as a function rather than
+    * demanding a common trait keeps the DTOs plain case classes.
+    *
+    * @param at
+    *   the path of the '''enclosing''' model being converted
+    * @param field
+    *   the '''wire''' (snake_case) field name the nested model was read from
+    * @return
+    *   `None` when the field was absent, otherwise the converted model or the nested failure
+    */
+  def nested[A, B](at: JsonPath, field: String, dto: Option[A])(
+      convert: (A, JsonPath) => Either[DecodeFailure, B]
+  ): Either[DecodeFailure, Option[B]] =
+    dto match
+      case None        => Right(None)
+      case Some(value) => convert(value, at.field(field)).map(Some.apply)

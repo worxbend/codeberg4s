@@ -9,7 +9,6 @@ import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.Reaction
 import com.worxbend.codeberg4s.issues.ReactionContent
-import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 
 /** Forgejo's `Reaction` model, field for field.
@@ -33,15 +32,12 @@ final case class ReactionDto(content: Option[String], user: Option[UserDto], cre
   def toDomainAt(at: JsonPath): Either[DecodeFailure, Reaction] =
     for
       emoji   <- Wire.validated(at, "content", content)(ReactionContent.from)
-      reactor <- reactorAt(at)
+      reactor <- Wire.nested(at, "user", user)(_.toDomainAt(_))
     yield Reaction(content = emoji, user = reactor, createdAt = Timestamps.parseOptional(createdAt))
 
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, Reaction] =
     toDomainAt(JsonPath.Root)
-
-  private def reactorAt(at: JsonPath): Either[DecodeFailure, Option[User]] =
-    user.fold(Right(None))(dto => dto.toDomainAt(at.field("user")).map(Some.apply))
 
 object ReactionDto:
 

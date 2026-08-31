@@ -5,7 +5,6 @@ import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.gitdata.GitObjectRef
 import com.worxbend.codeberg4s.repositories.gitdata.GitReference
 import com.worxbend.codeberg4s.repositories.gitdata.RefName
 
@@ -32,15 +31,12 @@ final case class ReferenceDto(ref: Option[String], url: Option[String], obj: Opt
   def toDomainAt(at: JsonPath): Either[DecodeFailure, GitReference] =
     for
       name   <- Wire.validated(at, "ref", ref)(RefName.from)
-      target <- objectAt(at)
+      target <- Wire.nested(at, "object", obj)(_.toDomainAt(_))
     yield GitReference(name = name, url = url, target = target)
 
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, GitReference] =
     toDomainAt(JsonPath.Root)
-
-  private def objectAt(at: JsonPath): Either[DecodeFailure, Option[GitObjectRef]] =
-    obj.fold(Right(None))(dto => dto.toDomainAt(at.field("object")).map(Some.apply))
 
 object ReferenceDto:
 

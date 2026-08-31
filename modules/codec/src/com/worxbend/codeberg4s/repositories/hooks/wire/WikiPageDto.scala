@@ -155,9 +155,7 @@ object WikiPageDto:
       at: JsonPath,
       commit: Option[WikiCommitDto],
   ): Either[DecodeFailure, Option[WikiCommit]] =
-    commit match
-      case None      => Right(None)
-      case Some(dto) => dto.toDomainAt(at.field(LastCommitKey)).map(Some.apply)
+    Wire.nested(at, LastCommitKey, commit)(_.toDomainAt(_))
 
 /** Forgejo's `WikiPageMetaData` model — one entry of the wiki page listing.
   *

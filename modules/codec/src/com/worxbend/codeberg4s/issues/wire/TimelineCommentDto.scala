@@ -7,14 +7,8 @@ import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.issues.Comment
 import com.worxbend.codeberg4s.issues.CommentId
-import com.worxbend.codeberg4s.issues.Issue
-import com.worxbend.codeberg4s.issues.Label
-import com.worxbend.codeberg4s.issues.Milestone
 import com.worxbend.codeberg4s.issues.TimelineEvent
-import com.worxbend.codeberg4s.issues.TrackedTime
-import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 
 /** Forgejo's `TimelineComment` model — one element of `GET /repos/{owner}/{repo}/issues/{index}/timeline`.
@@ -81,16 +75,16 @@ final case class TimelineCommentDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, TimelineEvent] =
     for
       identifier <- Wire.validated(at, "id", id)(CommentId.from)
-      actor      <- userAt(at, "user", user)
-      assigned   <- userAt(at, "assignee", assignee)
-      resolver   <- userAt(at, "resolve_doer", resolveDoer)
-      tag        <- labelAt(at)
-      target     <- milestoneAt(at, "milestone", milestone)
-      previous   <- milestoneAt(at, "old_milestone", oldMilestone)
-      referring  <- issueAt(at, "ref_issue", refIssue)
-      dependent  <- issueAt(at, "dependent_issue", dependentIssue)
-      quoted     <- commentAt(at)
-      logged     <- trackedTimeAt(at)
+      actor      <- Wire.nested(at, "user", user)(_.toDomainAt(_))
+      assigned   <- Wire.nested(at, "assignee", assignee)(_.toDomainAt(_))
+      resolver   <- Wire.nested(at, "resolve_doer", resolveDoer)(_.toDomainAt(_))
+      tag        <- Wire.nested(at, "label", label)(_.toDomainAt(_))
+      target     <- Wire.nested(at, "milestone", milestone)(_.toDomainAt(_))
+      previous   <- Wire.nested(at, "old_milestone", oldMilestone)(_.toDomainAt(_))
+      referring  <- Wire.nested(at, "ref_issue", refIssue)(_.toDomainAt(_))
+      dependent  <- Wire.nested(at, "dependent_issue", dependentIssue)(_.toDomainAt(_))
+      quoted     <- Wire.nested(at, "ref_comment", refComment)(_.toDomainAt(_))
+      logged     <- Wire.nested(at, "tracked_time", trackedTime)(_.toDomainAt(_))
     yield TimelineEvent(
       id              = identifier,
       eventType       = commentType,
@@ -125,28 +119,6 @@ final case class TimelineCommentDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, TimelineEvent] =
     toDomainAt(JsonPath.Root)
-
-  private def userAt(at: JsonPath, field: String, dto: Option[UserDto]): Either[DecodeFailure, Option[User]] =
-    dto.fold(Right(None))(value => value.toDomainAt(at.field(field)).map(Some.apply))
-
-  private def labelAt(at: JsonPath): Either[DecodeFailure, Option[Label]] =
-    label.fold(Right(None))(dto => dto.toDomainAt(at.field("label")).map(Some.apply))
-
-  private def milestoneAt(
-      at: JsonPath,
-      field: String,
-      dto: Option[MilestoneDto],
-  ): Either[DecodeFailure, Option[Milestone]] =
-    dto.fold(Right(None))(value => value.toDomainAt(at.field(field)).map(Some.apply))
-
-  private def issueAt(at: JsonPath, field: String, dto: Option[IssueDto]): Either[DecodeFailure, Option[Issue]] =
-    dto.fold(Right(None))(value => value.toDomainAt(at.field(field)).map(Some.apply))
-
-  private def commentAt(at: JsonPath): Either[DecodeFailure, Option[Comment]] =
-    refComment.fold(Right(None))(dto => dto.toDomainAt(at.field("ref_comment")).map(Some.apply))
-
-  private def trackedTimeAt(at: JsonPath): Either[DecodeFailure, Option[TrackedTime]] =
-    trackedTime.fold(Right(None))(dto => dto.toDomainAt(at.field("tracked_time")).map(Some.apply))
 
 object TimelineCommentDto:
 

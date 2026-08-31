@@ -7,7 +7,6 @@ import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.PublicKey
-import com.worxbend.codeberg4s.users.User
 
 /** Forgejo's `PublicKey` model, field for field.
   *
@@ -50,7 +49,7 @@ final case class PublicKeyDto(
     for
       identifier <- Wire.required(at, "id", id)
       material   <- Wire.required(at, "key", key)
-      ownerModel <- ownerAt(at)
+      ownerModel <- Wire.nested(at, "user", user)(_.toDomainAt(_))
     yield PublicKey(
       id          = identifier,
       key         = material,
@@ -68,9 +67,6 @@ final case class PublicKeyDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, PublicKey] =
     toDomainAt(JsonPath.Root)
-
-  private def ownerAt(at: JsonPath): Either[DecodeFailure, Option[User]] =
-    user.fold(Right(None))(dto => dto.toDomainAt(at.field("user")).map(Some.apply))
 
 object PublicKeyDto:
 

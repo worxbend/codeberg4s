@@ -7,14 +7,11 @@ import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.issues.Comment
 import com.worxbend.codeberg4s.issues.wire.CommentDto
-import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.admin.ActivityId
 import com.worxbend.codeberg4s.repositories.admin.ActivityOperation
 import com.worxbend.codeberg4s.repositories.admin.RepositoryActivity
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
-import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 
 /** Forgejo's `Activity` model, field for field.
@@ -86,9 +83,9 @@ final case class ActivityDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, RepositoryActivity] =
     for
       identifier <- Wire.validated(at, "id", id)(ActivityId.from)
-      actor      <- actorAt(at)
-      repository <- repositoryAt(at)
-      remark     <- commentAt(at)
+      actor      <- Wire.nested(at, "act_user", actUser)(_.toDomainAt(_))
+      repository <- Wire.nested(at, "repo", repo)(_.toDomainAt(_))
+      remark     <- Wire.nested(at, "comment", comment)(_.toDomainAt(_))
     yield RepositoryActivity(
       id         = identifier,
       actor      = actor,
@@ -104,15 +101,6 @@ final case class ActivityDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, RepositoryActivity] =
     toDomainAt(JsonPath.Root)
-
-  private def actorAt(at: JsonPath): Either[DecodeFailure, Option[User]] =
-    actUser.fold(Right(None))(dto => dto.toDomainAt(at.field("act_user")).map(Some.apply))
-
-  private def repositoryAt(at: JsonPath): Either[DecodeFailure, Option[Repository]] =
-    repo.fold(Right(None))(dto => dto.toDomainAt(at.field("repo")).map(Some.apply))
-
-  private def commentAt(at: JsonPath): Either[DecodeFailure, Option[Comment]] =
-    comment.fold(Right(None))(dto => dto.toDomainAt(at.field("comment")).map(Some.apply))
 
 object ActivityDto:
 

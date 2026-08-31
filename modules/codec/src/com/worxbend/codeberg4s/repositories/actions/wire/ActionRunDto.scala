@@ -9,7 +9,6 @@ import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.actions.ActionRun
 import com.worxbend.codeberg4s.repositories.actions.RunId
-import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 
 import scala.concurrent.duration.FiniteDuration
@@ -78,7 +77,7 @@ final case class ActionRunDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, ActionRun] =
     for
       identifier <- Wire.validated(at, "id", id)(RunId.from)
-      author     <- triggerUserAt(at)
+      author     <- Wire.nested(at, "trigger_user", triggerUser)(_.toDomainAt(_))
     yield ActionRun(
       id                = identifier,
       indexInRepo       = indexInRepo,
@@ -107,9 +106,6 @@ final case class ActionRunDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, ActionRun] =
     toDomainAt(JsonPath.Root)
-
-  private def triggerUserAt(at: JsonPath): Either[DecodeFailure, Option[User]] =
-    triggerUser.fold(Right(None))(dto => dto.toDomainAt(at.field("trigger_user")).map(Some.apply))
 
 object ActionRunDto:
 

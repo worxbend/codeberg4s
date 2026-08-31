@@ -8,7 +8,6 @@ import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.pulls.PullRequestBranch
 import com.worxbend.codeberg4s.repositories.BranchName
 import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 
 /** Forgejo's `PRBranchInfo` model, field for field — the `base` and `head` objects of a pull request.
@@ -56,7 +55,7 @@ final case class PullRequestBranchDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, PullRequestBranch] =
     for
       tip        <- Wire.optional(at, "sha", sha)(CommitSha.from)
-      repository <- repositoryAt(at)
+      repository <- Wire.nested(at, "repo", repo)(_.toDomainAt(_))
     yield PullRequestBranch(
       label        = label,
       ref          = ref.flatMap(value => BranchName.from(value).toOption),
@@ -68,9 +67,6 @@ final case class PullRequestBranchDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, PullRequestBranch] =
     toDomainAt(JsonPath.Root)
-
-  private def repositoryAt(at: JsonPath): Either[DecodeFailure, Option[Repository]] =
-    repo.fold(Right(None))(dto => dto.toDomainAt(at.field("repo")).map(Some.apply))
 
 object PullRequestBranchDto:
 

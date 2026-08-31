@@ -11,7 +11,6 @@ import com.worxbend.codeberg4s.pulls.Review
 import com.worxbend.codeberg4s.pulls.ReviewId
 import com.worxbend.codeberg4s.pulls.ReviewState
 import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 
 /** Forgejo's `PullReview` model, field for field.
@@ -61,7 +60,7 @@ final case class ReviewDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, Review] =
     for
       identifier <- Wire.validated(at, "id", id)(ReviewId.from)
-      reviewer   <- authorAt(at)
+      reviewer   <- Wire.nested(at, "user", user)(_.toDomainAt(_))
       pinned     <- Wire.optional(at, "commit_id", commitId)(CommitSha.from)
     yield Review(
       id             = identifier,
@@ -82,9 +81,6 @@ final case class ReviewDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, Review] =
     toDomainAt(JsonPath.Root)
-
-  private def authorAt(at: JsonPath): Either[DecodeFailure, Option[User]] =
-    user.fold(Right(None))(dto => dto.toDomainAt(at.field("user")).map(Some.apply))
 
 object ReviewDto:
 

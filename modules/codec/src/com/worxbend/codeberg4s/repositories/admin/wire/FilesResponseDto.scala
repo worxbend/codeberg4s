@@ -4,9 +4,9 @@ import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.admin.FileChangeSet
-import com.worxbend.codeberg4s.repositories.gitdata.FileCommit
 import com.worxbend.codeberg4s.repositories.gitdata.wire.FileCommitDto
 import com.worxbend.codeberg4s.repositories.wire.ContentEntryDto
 import com.worxbend.codeberg4s.repositories.wire.VerificationDto
@@ -41,16 +41,13 @@ final case class FilesResponseDto(
     */
   def toDomainAt(at: JsonPath): Either[DecodeFailure, FileChangeSet] =
     for
-      written <- commitAt(at)
+      written <- Wire.nested(at, "commit", commit)(_.toDomainAt(_))
       entries <- ArrayElements.convert(at.field("files"), files)((dto, path) => dto.toDomainAt(path))
     yield FileChangeSet(commit = written, files = entries, verification = verification.map(_.toDomain))
 
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, FileChangeSet] =
     toDomainAt(JsonPath.Root)
-
-  private def commitAt(at: JsonPath): Either[DecodeFailure, Option[FileCommit]] =
-    commit.fold(Right(None))(dto => dto.toDomainAt(at.field("commit")).map(Some.apply))
 
 object FilesResponseDto:
 

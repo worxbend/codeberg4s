@@ -9,7 +9,6 @@ import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.Comment
 import com.worxbend.codeberg4s.issues.CommentId
-import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 
 /** Forgejo's `Comment` model, field for field.
@@ -49,7 +48,7 @@ final case class CommentDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, Comment] =
     for
       identifier <- Wire.validated(at, "id", id)(CommentId.from)
-      writer     <- authorAt(at)
+      writer     <- Wire.nested(at, "user", user)(_.toDomainAt(_))
     yield Comment(
       id             = identifier,
       body           = body,
@@ -65,9 +64,6 @@ final case class CommentDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, Comment] =
     toDomainAt(JsonPath.Root)
-
-  private def authorAt(at: JsonPath): Either[DecodeFailure, Option[User]] =
-    user.fold(Right(None))(dto => dto.toDomainAt(at.field("user")).map(Some.apply))
 
 object CommentDto:
 

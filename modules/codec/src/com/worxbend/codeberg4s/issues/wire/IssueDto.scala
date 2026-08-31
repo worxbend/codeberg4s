@@ -10,7 +10,6 @@ import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.Issue
 import com.worxbend.codeberg4s.issues.IssueNumber
 import com.worxbend.codeberg4s.issues.LifecycleState
-import com.worxbend.codeberg4s.issues.Milestone
 import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 
@@ -90,10 +89,10 @@ final case class IssueDto(
       lifecycle  <- Wire.validated(at, "state", state)(value =>
                       LifecycleState.from(value, Timestamps.parseOptional(closedAt))
                     )
-      author     <- authorAt(at)
+      author     <- Wire.nested(at, "user", user)(_.toDomainAt(_))
       assigned   <- assigneesAt(at)
       attached   <- LabelDto.toDomainAll(at.field("labels"), labels)
-      target     <- milestoneAt(at)
+      target     <- Wire.nested(at, "milestone", milestone)(_.toDomainAt(_))
     yield Issue(
       id             = identifier,
       number         = index,
@@ -121,14 +120,8 @@ final case class IssueDto(
   def toDomain: Either[DecodeFailure, Issue] =
     toDomainAt(JsonPath.Root)
 
-  private def authorAt(at: JsonPath): Either[DecodeFailure, Option[User]] =
-    user.fold(Right(None))(dto => dto.toDomainAt(at.field("user")).map(Some.apply))
-
   private def assigneesAt(at: JsonPath): Either[DecodeFailure, Vector[User]] =
     ArrayElements.convert(at.field("assignees"), assignees)((dto, path) => dto.toDomainAt(path))
-
-  private def milestoneAt(at: JsonPath): Either[DecodeFailure, Option[Milestone]] =
-    milestone.fold(Right(None))(dto => dto.toDomainAt(at.field("milestone")).map(Some.apply))
 
 object IssueDto:
 

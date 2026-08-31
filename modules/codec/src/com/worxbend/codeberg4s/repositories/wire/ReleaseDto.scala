@@ -10,7 +10,6 @@ import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.Release
 import com.worxbend.codeberg4s.repositories.ReleaseId
 import com.worxbend.codeberg4s.repositories.TagName
-import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 
 /** Forgejo's `Release` model, field for field.
@@ -86,7 +85,7 @@ final case class ReleaseDto(
     for
       identifier <- Wire.validated(at, "id", id)(ReleaseId.from)
       tag        <- Wire.validated(at, "tag_name", tagName)(TagName.from)
-      publisher  <- authorAt(at)
+      publisher  <- Wire.nested(at, "author", author)(_.toDomainAt(_))
       attached   <- ArrayElements.convert(at.field("assets"), assets)((dto, path) => dto.toDomainAt(path))
     yield Release(
       id                = identifier,
@@ -112,9 +111,6 @@ final case class ReleaseDto(
   /** [[toDomainAt]] for a payload that is the whole response body. */
   def toDomain: Either[DecodeFailure, Release] =
     toDomainAt(JsonPath.Root)
-
-  private def authorAt(at: JsonPath): Either[DecodeFailure, Option[User]] =
-    author.fold(Right(None))(dto => dto.toDomainAt(at.field("author")).map(Some.apply))
 
 object ReleaseDto:
 
