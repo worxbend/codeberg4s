@@ -1,34 +1,28 @@
 package com.worxbend.codeberg4s.repositories.publishing
 
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.HttpMethod
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.codec.PagingQuery
-import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.CodebergRequest
-import com.worxbend.codeberg4s.core.CodebergRequest.read
-import com.worxbend.codeberg4s.core.CodebergRequest.remove
-import com.worxbend.codeberg4s.core.CodebergRequest.write
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RequestBody
-import com.worxbend.codeberg4s.core.RetryEligibility
-import com.worxbend.codeberg4s.paging.Page
-import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Release
-import com.worxbend.codeberg4s.repositories.ReleaseAsset
-import com.worxbend.codeberg4s.repositories.ReleaseId
-import com.worxbend.codeberg4s.repositories.Repository
-import com.worxbend.codeberg4s.repositories.RepositoryDecoders
-import com.worxbend.codeberg4s.repositories.Tag
-import com.worxbend.codeberg4s.repositories.TagName
-import com.worxbend.codeberg4s.repositories.publishing.wire.CreateForkOptionDto
-import com.worxbend.codeberg4s.repositories.publishing.wire.CreateReleaseOptionDto
-import com.worxbend.codeberg4s.repositories.publishing.wire.CreateTagOptionDto
-import com.worxbend.codeberg4s.repositories.publishing.wire.EditAttachmentOptionsDto
-import com.worxbend.codeberg4s.repositories.publishing.wire.EditReleaseOptionDto
-import com.worxbend.codeberg4s.repositories.publishing.wire.GenerateRepoOptionDto
-import com.worxbend.codeberg4s.repositories.publishing.wire.RepoTopicOptionsDto
+import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RequestBody, RetryEligibility}
+import com.worxbend.codeberg4s.paging.{Page, PageParams}
+import com.worxbend.codeberg4s.repositories.publishing.wire.{
+  CreateForkOptionDto,
+  CreateReleaseOptionDto,
+  CreateTagOptionDto,
+  EditAttachmentOptionsDto,
+  EditReleaseOptionDto,
+  GenerateRepoOptionDto,
+  RepoTopicOptionsDto
+}
+import com.worxbend.codeberg4s.repositories.{
+  Release,
+  ReleaseAsset,
+  ReleaseId,
+  Repository,
+  RepositoryDecoders,
+  Tag,
+  TagName
+}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
 
 import scala.concurrent.Future
 

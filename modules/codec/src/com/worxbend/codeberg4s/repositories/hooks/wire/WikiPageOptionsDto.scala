@@ -1,10 +1,8 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
 import com.worxbend.codeberg4s.repositories.FileContent
-import com.worxbend.codeberg4s.repositories.hooks.CreateWikiPage
-import com.worxbend.codeberg4s.repositories.hooks.EditWikiPage
+import com.worxbend.codeberg4s.repositories.hooks.{CreateWikiPage, EditWikiPage}
 
 /** Forgejo's `CreateWikiPageOptions` request model — the body of both `POST /repos/{owner}/{repo}/wiki/new` and
   * `PATCH /repos/{owner}/{repo}/wiki/page/{pageName}`.

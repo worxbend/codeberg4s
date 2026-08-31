@@ -1,16 +1,10 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.wire.CommentDto
-import com.worxbend.codeberg4s.repositories.admin.ActivityId
-import com.worxbend.codeberg4s.repositories.admin.ActivityOperation
-import com.worxbend.codeberg4s.repositories.admin.RepositoryActivity
+import com.worxbend.codeberg4s.repositories.admin.{ActivityId, ActivityOperation, RepositoryActivity}
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 import com.worxbend.codeberg4s.users.wire.UserDto
 

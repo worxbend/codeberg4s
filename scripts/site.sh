@@ -117,6 +117,65 @@ need cs
 need jq
 need java
 
+# --------------------------------------------------------------------------
+# The JDK.
+#
+# Everything below runs OUTSIDE Mill — mdoc, Laika via scala-cli, and scaladoc
+# are all launched through Coursier — so each one inherits whatever `java` is
+# first on PATH. The classpath they are handed, meanwhile, is Java 25 bytecode
+# (`-java-output-version:25` in build.mill). On a machine whose ambient java is
+# older, that mismatch surfaces two steps later as
+#
+#   UnsupportedClassVersionError: … class file version 69.0 … up to 65.0
+#
+# which names neither this script, nor the pin, nor what to do about it. CI
+# never sees it, because the toolchain action installs the pinned JDK globally
+# — so the failure only ever hits a contributor, on their first run.
+#
+# `.mill-jvm-version` is the one place this project says which JDK it builds
+# with. Read it, and either confirm the ambient java already satisfies it or
+# resolve exactly that JDK through Coursier — the same JVM index Mill itself
+# uses for the pin, so on any checkout where `./mill` has run, the JDK is
+# already unpacked in the Coursier cache and the lookup costs milliseconds.
+#
+# The version is never written literally here: it is derived from the pin file,
+# so the pin keeps a single source of truth. When the ambient java already
+# satisfies the pin nothing is exported, which is the CI path — CI keeps the
+# JDK `actions/setup-java` installed and downloads no second copy.
+#
+# Note this block sits above the `./mill` call in the next step, so an exported
+# JAVA_HOME reaches Mill too. That is harmless — Mill honours
+# `.mill-jvm-version` itself and lands on the same JDK — but it is deliberate
+# rather than accidental, and worth knowing before moving this block.
+readonly JVM_PIN_FILE="$ROOT/.mill-jvm-version"
+[[ -f "$JVM_PIN_FILE" ]] || die "$JVM_PIN_FILE is missing, and this script takes its JDK from that file"
+
+jvm_pin=$(tr -d '[:space:]' < "$JVM_PIN_FILE")
+# `temurin:25` -> `25`, and `temurin:25.0.2` -> `25`: bash arithmetic below
+# compares whole numbers, and a patch component would be a syntax error.
+jvm_want=${jvm_pin##*:}
+jvm_want=${jvm_want%%.*}
+
+# Captured, not piped. `set -o pipefail` is on, so `java -version | head` would
+# abort the whole script if `head` exited first and `java` took SIGPIPE — a
+# script-fatal edge in the guard meant to make the script friendlier. `|| true`
+# covers a `java` that exists but exits non-zero; `sed -n …p` yields empty
+# rather than echoing the line back when the first line is not a version banner.
+jvm_raw=$(java -version 2>&1 || true)
+jvm_have=$(printf '%s\n' "$jvm_raw" | sed -nE '1s/.*"([0-9]+).*/\1/p')
+
+if [[ "$jvm_want" =~ ^[0-9]+$ ]] && [[ "$jvm_have" =~ ^[0-9]+$ ]] && (( jvm_have >= jvm_want )); then
+  : # ambient java satisfies the pin; leave PATH alone
+else
+  jvm_home=$(cs java-home --jvm "$jvm_pin") || die \
+    "could not resolve the JDK pinned in .mill-jvm-version ($jvm_pin), and the ambient java is ${jvm_have:-none}. The library compiles to Java $jvm_want bytecode, so mdoc and scaladoc cannot load it on anything older. Put a JDK $jvm_want on PATH, or make 'cs java-home --jvm $jvm_pin' work — it needs network access on its first run."
+  export JAVA_HOME="$jvm_home"
+  export PATH="$JAVA_HOME/bin:$PATH"
+  # Deliberately not an `announce`: that helper numbers the pipeline steps, and
+  # the numbering is referenced by name in site/README.md and in --help.
+  note "ambient java is ${jvm_have:-none}; using the pinned $jvm_pin from $JAVA_HOME"
+fi
+
 if $clean; then
   rm -rf "$SITE_OUT"
 fi

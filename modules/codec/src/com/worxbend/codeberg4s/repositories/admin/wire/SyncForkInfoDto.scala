@@ -1,9 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.repositories.admin.ForkSyncInfo
-import com.worxbend.codeberg4s.repositories.admin.IssuePinsAllowed
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields}
+import com.worxbend.codeberg4s.repositories.admin.{ForkSyncInfo, IssuePinsAllowed}
 
 /** Forgejo's `SyncForkInfo` model, field for field.
   *

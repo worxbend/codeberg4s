@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.miscellaneous
 
-import com.worxbend.codeberg4s.core.Decode
-import com.worxbend.codeberg4s.core.ResponseBody
+import com.worxbend.codeberg4s.core.{Decode, ResponseBody}
 
 /** The identity [[com.worxbend.codeberg4s.core.Decode]]: a response body, unchanged.
   *

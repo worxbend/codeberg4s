@@ -1,16 +1,11 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.CommitSha
 import com.worxbend.codeberg4s.repositories.gitdata.FileCommit
-import com.worxbend.codeberg4s.repositories.wire.CommitMetaDto
-import com.worxbend.codeberg4s.repositories.wire.GitIdentityDto
+import com.worxbend.codeberg4s.repositories.wire.{CommitMetaDto, GitIdentityDto}
 
 /** Forgejo's `FileCommitResponse` — the commit an editing endpoint reports it wrote.
   *

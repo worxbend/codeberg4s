@@ -1,15 +1,16 @@
 package com.worxbend.codeberg4s.repositories.access
 
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.organizations.Team
 import com.worxbend.codeberg4s.organizations.wire.TeamDto
-import com.worxbend.codeberg4s.repositories.access.wire.BranchProtectionDto
-import com.worxbend.codeberg4s.repositories.access.wire.CollaboratorAccessDto
-import com.worxbend.codeberg4s.repositories.access.wire.DeployKeyDto
-import com.worxbend.codeberg4s.repositories.access.wire.TagProtectionDto
+import com.worxbend.codeberg4s.repositories.access.wire.{
+  BranchProtectionDto,
+  CollaboratorAccessDto,
+  DeployKeyDto,
+  TagProtectionDto
+}
 import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 

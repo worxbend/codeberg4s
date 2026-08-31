@@ -4,16 +4,18 @@ import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
-import com.worxbend.codeberg4s.repositories.hooks.wire.GitHookDto
-import com.worxbend.codeberg4s.repositories.hooks.wire.IssueConfigDto
-import com.worxbend.codeberg4s.repositories.hooks.wire.IssueConfigValidationDto
-import com.worxbend.codeberg4s.repositories.hooks.wire.IssueTemplateDto
-import com.worxbend.codeberg4s.repositories.hooks.wire.RepositoryFlagWire
-import com.worxbend.codeberg4s.repositories.hooks.wire.WebhookDto
-import com.worxbend.codeberg4s.repositories.hooks.wire.WikiCommitDto
-import com.worxbend.codeberg4s.repositories.hooks.wire.WikiCommitListDto
-import com.worxbend.codeberg4s.repositories.hooks.wire.WikiPageDto
-import com.worxbend.codeberg4s.repositories.hooks.wire.WikiPageMetaDto
+import com.worxbend.codeberg4s.repositories.hooks.wire.{
+  GitHookDto,
+  IssueConfigDto,
+  IssueConfigValidationDto,
+  IssueTemplateDto,
+  RepositoryFlagWire,
+  WebhookDto,
+  WikiCommitDto,
+  WikiCommitListDto,
+  WikiPageDto,
+  WikiPageMetaDto
+}
 
 /** Every response shape the four API classes of this package can receive, decoded once and shared.
   *

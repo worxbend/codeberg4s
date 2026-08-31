@@ -1,9 +1,6 @@
 package com.worxbend.codeberg4s.pulls.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.WireValues
+import com.worxbend.codeberg4s.codec.{Json, JsonValue, Timestamps, WireValues}
 import com.worxbend.codeberg4s.pulls.EditPullRequest
 
 /** Forgejo's `EditPullRequestOption` request model — the body of `PATCH /repos/{owner}/{repo}/pulls/{index}`.

@@ -1,8 +1,7 @@
 package com.worxbend.codeberg4s.pulls
 
 import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.issues.LabelId
-import com.worxbend.codeberg4s.issues.MilestoneId
+import com.worxbend.codeberg4s.issues.{LabelId, MilestoneId}
 import com.worxbend.codeberg4s.repositories.BranchName
 
 import java.time.Instant
@@ -36,7 +35,7 @@ import java.time.Instant
   * @param dueDate
   *   a deadline for the pull request
   */
-final case class CreatePullRequest(
+final case class CreatePullRequest private[codeberg4s] (
     title: String,
     head: PullRequestHead,
     base: BranchName,

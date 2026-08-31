@@ -1,13 +1,9 @@
 package com.worxbend.codeberg4s.users.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.users.User
-import com.worxbend.codeberg4s.users.UserVisibility
+import com.worxbend.codeberg4s.users.{User, UserVisibility}
 
 /** Forgejo's `User` model, field for field.
   *

@@ -1,23 +1,12 @@
 package com.worxbend.codeberg4s.organizations
 
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.HttpMethod
-import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.CodebergRequest
-import com.worxbend.codeberg4s.core.CodebergRequest.bodiless
-import com.worxbend.codeberg4s.core.CodebergRequest.read
-import com.worxbend.codeberg4s.core.CodebergRequest.write
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RetryEligibility
-import com.worxbend.codeberg4s.issues.CreateLabel
-import com.worxbend.codeberg4s.issues.EditLabel
-import com.worxbend.codeberg4s.issues.Label
-import com.worxbend.codeberg4s.issues.LabelId
-import com.worxbend.codeberg4s.issues.wire.CreateLabelOptionDto
-import com.worxbend.codeberg4s.issues.wire.EditLabelOptionDto
+import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, write}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
+import com.worxbend.codeberg4s.issues.wire.{CreateLabelOptionDto, EditLabelOptionDto}
+import com.worxbend.codeberg4s.issues.{CreateLabel, EditLabel, Label, LabelId}
 import com.worxbend.codeberg4s.organizations.wire.OrganizationQueries
-import com.worxbend.codeberg4s.paging.Page
-import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.paging.{Page, PageParams}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod}
 
 import scala.concurrent.Future
 

@@ -2,17 +2,17 @@ package com.worxbend.codeberg4s.repositories
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.core.Decode
-import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.wire.BranchDto
-import com.worxbend.codeberg4s.repositories.wire.CommitDto
-import com.worxbend.codeberg4s.repositories.wire.ReleaseDto
-import com.worxbend.codeberg4s.repositories.wire.RepositoryContentDto
-import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
-import com.worxbend.codeberg4s.repositories.wire.TagDto
-import com.worxbend.codeberg4s.repositories.wire.TopicNamesDto
+import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
+import com.worxbend.codeberg4s.core.{Decode, DecodeFailure}
+import com.worxbend.codeberg4s.repositories.wire.{
+  BranchDto,
+  CommitDto,
+  ReleaseDto,
+  RepositoryContentDto,
+  RepositoryDto,
+  TagDto,
+  TopicNamesDto
+}
 import com.worxbend.codeberg4s.wire.SearchEnvelopeDto
 
 /** Every response shape [[RepositoryApi]] can receive, decoded once and shared.

@@ -3,10 +3,8 @@ package com.worxbend.codeberg4s.core
 import scala.annotation.tailrec
 import scala.util.Try
 
-import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets
-import java.util.Arrays
-import java.util.Locale
+import java.nio.charset.{Charset, StandardCharsets}
+import java.util.{Arrays, Locale}
 
 /** A response body exactly as it came off the socket — the bytes, and the charset the response declared for them.
   *

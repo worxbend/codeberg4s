@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories
 
-import com.worxbend.codeberg4s.PositiveId
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PositiveId, ValidationError}
 
 /** The instance-local identifier of a release, as `GET /repos/{owner}/{repo}/releases/{id}` takes it.
   *

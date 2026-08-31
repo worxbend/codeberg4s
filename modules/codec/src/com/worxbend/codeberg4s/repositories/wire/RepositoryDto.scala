@@ -1,16 +1,10 @@
 package com.worxbend.codeberg4s.repositories.wire
 
-import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.RepoSlug
-import com.worxbend.codeberg4s.repositories.Repository
+import com.worxbend.codeberg4s.repositories.{RepoSlug, Repository}
 import com.worxbend.codeberg4s.users.wire.UserDto
+import com.worxbend.codeberg4s.{JsonPath, Owner, RepoName}
 
 /** Forgejo's `Repository` model, field for field.
   *

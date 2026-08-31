@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.publishing
 
-import com.worxbend.codeberg4s.ContentType
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{ContentType, ValidationError}
 
 import java.util.Arrays
 

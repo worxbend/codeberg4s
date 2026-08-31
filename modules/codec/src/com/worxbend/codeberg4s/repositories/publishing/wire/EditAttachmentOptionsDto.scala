@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.publishing.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
 import com.worxbend.codeberg4s.repositories.publishing.EditAsset
 
 /** Forgejo's `EditAttachmentOptions` request model — the body of

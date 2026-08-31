@@ -1,14 +1,10 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.repositories.ContentPath
-import com.worxbend.codeberg4s.repositories.gitdata.GitObjectKind
-import com.worxbend.codeberg4s.repositories.gitdata.GitTreeEntry
+import com.worxbend.codeberg4s.repositories.gitdata.{GitObjectKind, GitTreeEntry}
+import com.worxbend.codeberg4s.repositories.{CommitSha, ContentPath}
 
 /** Forgejo's `GitEntry` — one element of a tree listing's `tree` array.
   *

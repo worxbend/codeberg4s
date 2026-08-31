@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
-import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.repositories.FileContent
+import com.worxbend.codeberg4s.repositories.{CommitSha, FileContent}
 
 /** A Git blob read by its object id — `GET /repos/{owner}/{repo}/git/blobs/{sha}`.
   *

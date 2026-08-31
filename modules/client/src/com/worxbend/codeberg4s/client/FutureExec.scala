@@ -1,13 +1,10 @@
 package com.worxbend.codeberg4s.client
 
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.CodebergException
 import com.worxbend.codeberg4s.core.Exec
+import com.worxbend.codeberg4s.{CodebergError, CodebergException}
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.util.Failure
-import scala.util.Success
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 /** The [[com.worxbend.codeberg4s.core.Exec]] instance the published client runs on.
   *

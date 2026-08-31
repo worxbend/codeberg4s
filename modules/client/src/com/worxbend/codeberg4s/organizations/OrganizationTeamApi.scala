@@ -1,23 +1,13 @@
 package com.worxbend.codeberg4s.organizations
 
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.HttpMethod
-import com.worxbend.codeberg4s.RepoName
-import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.CodebergRequest
-import com.worxbend.codeberg4s.core.CodebergRequest.bodiless
-import com.worxbend.codeberg4s.core.CodebergRequest.read
-import com.worxbend.codeberg4s.core.CodebergRequest.write
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RetryEligibility
-import com.worxbend.codeberg4s.organizations.wire.OrganizationQueries
-import com.worxbend.codeberg4s.organizations.wire.TeamOptionDto
-import com.worxbend.codeberg4s.paging.Page
-import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, write}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
+import com.worxbend.codeberg4s.organizations.wire.{OrganizationQueries, TeamOptionDto}
+import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.admin.RepositoryActivity
-import com.worxbend.codeberg4s.users.User
-import com.worxbend.codeberg4s.users.Username
+import com.worxbend.codeberg4s.users.{User, Username}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod, RepoName}
 
 import scala.concurrent.Future
 

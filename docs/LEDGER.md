@@ -40,6 +40,22 @@ done, in the same commit that introduces the model.
 | `Organization`       | `com.worxbend.codeberg4s.organizations`  | wave 5   | —                                         |
 | `Team`               | `com.worxbend.codeberg4s.organizations`  | wave 5   | —                                         |
 | `NotificationThread` | `com.worxbend.codeberg4s.notifications`  | wave 6   | —                                         |
+| `BlockedUser`, `BlockId` | `com.worxbend.codeberg4s.users.social` | wave 1 | organizations (see the collapse below)      |
+
+`BlockedUser` was a duplicate, not a prediction. `GET /user/list_blocked` and
+`GET /orgs/{org}/list_blocked` return the same two-property model, and each
+group had modelled it separately: two `BlockedUser` case classes, two
+`opaque type BlockId = Long` with byte-identical `PositiveId.from("blockId", …)`
+bodies, two DTOs and two test suites. That is exactly what the rule at the top
+of this file calls a review-blocking defect, and it survived because nothing
+checked for it — the duplication gate that was supposed to catch it was, at the
+time, mostly counting import blocks.
+
+`users.social` keeps them, per the first-wave rule; `organizations` imports
+them. The three test cases the organizations suite had and the social one
+lacked — the Go zero-time sentinel, the "at least 1" message on a non-positive
+id, and the empty listing — were moved into `SocialDtoSuite` rather than
+dropped with the file.
 
 Two rows of that table were written before the waves ran and predicted a reuse
 that did not happen. Both are corrected rather than deleted, because the

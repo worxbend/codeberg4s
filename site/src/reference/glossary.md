@@ -12,9 +12,12 @@ The user *or* organisation that owns a repository — the first segment of
 `owner/name`. Answers "who does this repository belong to?", and the answer may
 be either kind of account.
 
-`Owner.from("forgejo")` returns `Either[ValidationError, Owner]`. It rejects a
-blank value, a `/`, and control characters, because an `Owner` is interpolated
-into a request path.
+`Owner("forgejo")` checks the literal while the code compiles and is the
+`Owner`. `Owner.from("forgejo")` returns `Either[ValidationError, Owner]` and is
+for a value known only at run time. Both reject a blank value, a `/`, control
+characters and the traversal segments `.` and `..`, because an `Owner` is
+interpolated into a request path; the literal form additionally refuses
+surrounding whitespace instead of trimming it.
 
 ### `Username`
 
@@ -264,6 +267,12 @@ a public constructor that trusts you. Here they are called `from` (`Owner.from`,
 `ApiToken.from`, `PageSize.from`) or `of` (`CreateIssue.of`,
 `MergePullRequest.using`), and they return `Either[ValidationError, A]` when they
 can fail.
+
+The identifiers that validate as URI path segments — `Owner`, `RepoName`,
+`BranchName`, `TagName`, `Username`, `OrgName` and the rest — also take a string
+literal directly: `Owner("forgejo")`. That is the same rule, checked by the
+compiler instead of at run time, so there is no `Either` to unwrap and an
+invalid literal fails the build.
 
 ### ADT
 

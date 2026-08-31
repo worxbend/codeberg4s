@@ -186,15 +186,6 @@ final class OrganizationCommandsSuite extends FunSuite:
   test("label ordering parsing trims and ignores case"):
     assertEquals(OrganizationLabelSort.parse("  MostIssues "), Some(OrganizationLabelSort.MostIssues))
 
-  // --- BlockId --------------------------------------------------------------
-
-  test("a block id is a positive row id"):
-    assertEquals(orFail(BlockId.from(7L)).value, 7L)
-
-  test("a non-positive block id is refused on the blockId field"):
-    assertEquals(fieldOf(BlockId.from(0L)), "blockId")
-    assertEquals(fieldOf(BlockId.from(-1L)), "blockId")
-
   // --- helpers --------------------------------------------------------------
 
   private def orFail[A](result: Either[ValidationError, A]): A =

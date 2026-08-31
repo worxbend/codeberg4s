@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.users
 
-import com.worxbend.codeberg4s.PathSegment
-import com.worxbend.codeberg4s.SegmentLiteral
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PathSegment, SegmentLiteral, ValidationError}
 
 /** The handle that names a person — the `{username}` of `/users/{username}`.
   *

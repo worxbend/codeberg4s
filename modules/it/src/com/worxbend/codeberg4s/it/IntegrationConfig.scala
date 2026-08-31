@@ -1,14 +1,11 @@
 package com.worxbend.codeberg4s.it
 
-import com.worxbend.codeberg4s.BaseUri
-import com.worxbend.codeberg4s.CodebergConfig
-import com.worxbend.codeberg4s.UserAgent
 import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.paging.PageSize
 import com.worxbend.codeberg4s.retry.RetryPolicy
+import com.worxbend.codeberg4s.{BaseUri, CodebergConfig, UserAgent}
 
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 /** The client configuration both integration suites are built on.
   *

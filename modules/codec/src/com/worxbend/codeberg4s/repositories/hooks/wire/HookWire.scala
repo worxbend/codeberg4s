@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.{Json, JsonFields}
 import com.worxbend.codeberg4s.repositories.hooks.HookEvent
 
 /** The readings this group's DTOs share, written once because getting any of them wrong twice would be silent.

@@ -1,17 +1,11 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.repositories.FileContent
-import com.worxbend.codeberg4s.repositories.hooks.WikiCommit
-import com.worxbend.codeberg4s.repositories.hooks.WikiPage
-import com.worxbend.codeberg4s.repositories.hooks.WikiPageMeta
+import com.worxbend.codeberg4s.repositories.hooks.{WikiCommit, WikiPage, WikiPageMeta}
 import com.worxbend.codeberg4s.repositories.wire.GitIdentityDto
+import com.worxbend.codeberg4s.repositories.{CommitSha, FileContent}
 
 /** Forgejo's `WikiCommit` model — one revision of a wiki page.
   *

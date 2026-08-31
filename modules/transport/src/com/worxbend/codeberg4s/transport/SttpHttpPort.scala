@@ -1,52 +1,49 @@
 package com.worxbend.codeberg4s.transport
 
-import com.worxbend.codeberg4s.CodebergConfig
-import com.worxbend.codeberg4s.ContentType
-import com.worxbend.codeberg4s.TransportCause
 import com.worxbend.codeberg4s.auth.Auth
-import com.worxbend.codeberg4s.core.BinaryHttpPort
-import com.worxbend.codeberg4s.core.BinaryResponse
-import com.worxbend.codeberg4s.core.CodebergRequest
-import com.worxbend.codeberg4s.core.CodebergResponse
-import com.worxbend.codeberg4s.core.HttpPort
-import com.worxbend.codeberg4s.core.RequestBody
-import com.worxbend.codeberg4s.core.ResponseBody
-import com.worxbend.codeberg4s.core.TransportFailure
+import com.worxbend.codeberg4s.core.{
+  BinaryHttpPort,
+  BinaryResponse,
+  CodebergRequest,
+  CodebergResponse,
+  HttpPort,
+  RequestBody,
+  ResponseBody,
+  TransportFailure
+}
+import com.worxbend.codeberg4s.{CodebergConfig, ContentType, TransportCause}
 
-import sttp.capabilities.Effect
-import sttp.capabilities.StreamMaxLengthExceededException
-import sttp.client4.Backend
-import sttp.client4.BackendOptions
-import sttp.client4.GenericRequest
-import sttp.client4.PartialRequest
-import sttp.client4.Request
-import sttp.client4.Response
-import sttp.client4.asByteArrayAlways
-import sttp.client4.basicRequest
+import sttp.capabilities.{Effect, StreamMaxLengthExceededException}
 import sttp.client4.httpclient.HttpClientFutureBackend
-import sttp.client4.multipart
 import sttp.client4.wrappers.DelegateBackend
-import sttp.model.Header
-import sttp.model.HeaderNames
-import sttp.model.MediaType
-import sttp.model.Method
-import sttp.model.Uri
+import sttp.client4.{
+  Backend,
+  BackendOptions,
+  GenericRequest,
+  PartialRequest,
+  Request,
+  Response,
+  asByteArrayAlways,
+  basicRequest,
+  multipart
+}
+import sttp.model.{Header, HeaderNames, MediaType, Method, Uri}
 
 import scala.annotation.tailrec
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.DurationConverters.ScalaDurationOps
 import scala.util.control.NonFatal
 
-import java.net.Authenticator
-import java.net.ConnectException
-import java.net.PasswordAuthentication
-import java.net.SocketException
-import java.net.SocketTimeoutException
-import java.net.UnknownHostException
-import java.net.http.HttpClient
-import java.net.http.HttpTimeoutException
+import java.net.http.{HttpClient, HttpTimeoutException}
+import java.net.{
+  Authenticator,
+  ConnectException,
+  PasswordAuthentication,
+  SocketException,
+  SocketTimeoutException,
+  UnknownHostException
+}
 import java.util.Locale
 import java.util.concurrent.Executor
 

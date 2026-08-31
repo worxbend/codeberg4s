@@ -1,11 +1,12 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.repositories.access.ApprovalCount
-import com.worxbend.codeberg4s.repositories.access.BranchProtectionSettings
-import com.worxbend.codeberg4s.repositories.access.CreateBranchProtection
-import com.worxbend.codeberg4s.repositories.access.EditBranchProtection
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
+import com.worxbend.codeberg4s.repositories.access.{
+  ApprovalCount,
+  BranchProtectionSettings,
+  CreateBranchProtection,
+  EditBranchProtection
+}
 import com.worxbend.codeberg4s.users.Username
 
 /** The twenty-three tunables both branch protection request models share, rendered once.

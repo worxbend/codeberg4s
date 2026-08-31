@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories
 
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
+import com.worxbend.codeberg4s.{Owner, RepoName}
 
 /** The `owner/name` pair that identifies a repository.
   *

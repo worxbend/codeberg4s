@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.pulls.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
 import com.worxbend.codeberg4s.pulls.CreateReview
 
 /** Forgejo's `CreatePullReviewOptions` request model — the body of `POST /repos/{owner}/{repo}/pulls/{index}/reviews`.

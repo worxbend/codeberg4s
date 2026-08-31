@@ -53,6 +53,30 @@ readonly COVERED_MODULES=(modules.domain modules.core modules.codec)
 # change that adds one group fails, and a change that removes ten is told to
 # bank the win by lowering this number.
 #
+# MEASURED, NOT RECALLED: `scripts/cpd.sh --report` on 2026-08-31 against
+# modules/{domain,core,codec,transport,client}/src with PMD 7.26.0 at 40
+# tokens — 156 groups, after collapsing the duplicated BlockedUser model. The
+# 161 it read a few commits earlier was the same tree with that duplicate still
+# in it.
+#
+# THIS NUMBER IS NOT COMPARABLE TO ANY MEASUREMENT BELOW, and the drop from
+# 363 was not earned by deleting code alone. `.scalafix.conf` used to set
+# `groupedImports = Explode`, one import per line. Promoting the shared codec
+# helpers gave 108 files in `codec` the same seven-line preamble, and PMD has
+# no import filter for Scala, so it counted every pair of those preambles as
+# duplication. The raw count reached 408 while duplication that contains real
+# code fell from 222 groups to 183 — measured at both commits with the same
+# tool. 324 of the 408 held nothing but a package clause and imports.
+#
+# Switching to `groupedImports = Merge` collapses each preamble to one line
+# per package, and what is left is duplication of code rather than of file
+# headers. So the count below is specific to `Merge` as well as to PMD 7.26.0
+# at 40 tokens: re-exploding imports would push it back over 300 without a
+# line of logic being copied anywhere.
+#
+# Earlier measurements, kept as history — read them as a series only among
+# themselves, not against the number above:
+#
 # MEASURED, NOT RECALLED: `scripts/cpd.sh --report` on 2026-08-09 against
 # modules/{domain,core,codec,transport,client}/src with PMD 7.26.0 at 40
 # tokens — 363 groups over 1342 locations (762 in codec, 535 in client, 39 in
@@ -84,7 +108,7 @@ readonly COVERED_MODULES=(modules.domain modules.core modules.codec)
 #
 # Deliberately not overridable from the environment: moving the baseline has to
 # appear in a diff, with a commit message saying why.
-readonly CPD_BASELINE_GROUPS=363
+readonly CPD_BASELINE_GROUPS=156
 
 with_slow=false
 nightly=false
@@ -286,6 +310,52 @@ boundary_violation 'modules/domain/src modules/core/src modules/codec/src module
   'bare exceptions are banned — every failure carries a CallContext' || boundaries_ok=false
 $boundaries_ok || fail "architecture boundaries"
 echo "  boundaries clean"
+
+# Every `Attempt` mirror must delegate to the rail method of the SAME NAME.
+#
+# AttemptParitySuite already checks the two rails structurally — same names,
+# same erased parameters, the return type wrapped in Either. What it cannot
+# check is the one line inside each mirror, because nothing it does invokes
+# one. A mirror that delegates to the wrong rail method passes every check it
+# makes, as long as the target shares the parameter list and element type.
+#
+# That is not hypothetical. `IssueSubscriptionApi.Attempt.subscribe` and
+# `.unsubscribe` both read `(Owner, RepoName, IssueNumber, Owner)` returning
+# `Future[Either[CodebergError, Unit]]`, and the same shape recurs across the
+# follow/unfollow and star/unstar families. Editing a copied neighbour is how
+# a new operation gets written here, so swapping one word is the likeliest
+# mistake in the likeliest change.
+#
+# MEASURED: with `unsubscribe` delegating to `subscribe`, AttemptParitySuite
+# passed all six of its tests and the whole 3604-test suite stayed green. This
+# check failed, naming the file and line. It is a grep because the invariant is
+# a source-level one — the mirrors are hand-written by design — and because
+# invoking 437 mirrors reflectively would need a synthesised argument for every
+# parameter type in the library, which is a larger and more brittle thing than
+# the bug it would catch.
+mirrors_checked=0
+mirror_violations=""
+while IFS= read -r line; do
+  file=${line%%:*}
+  rest=${line#*:}
+  lineno=${rest%%:*}
+  target=$(sed -n "${lineno}p" "$file" | sed -E 's/.*exec\.attempt\(rail\.([A-Za-z0-9_]+).*/\1/')
+  # The nearest `def` at or above this line is the mirror this call belongs to.
+  owner=$(sed -n "1,${lineno}p" "$file" | grep -oE '^[[:space:]]*(override )?def [A-Za-z0-9_]+' | tail -1 |
+    sed -E 's/.*def //')
+  mirrors_checked=$((mirrors_checked + 1))
+  if [[ "$owner" != "$target" ]]; then
+    mirror_violations+="    $file:$lineno: Attempt.$owner delegates to rail.$target"$'\n'
+  fi
+done < <(grep -rInE 'exec\.attempt\(rail\.' modules/client/src --include='*.scala')
+
+if [[ -n "$mirror_violations" ]]; then
+  printf '\033[31m  %s\033[0m\n' 'an Attempt mirror delegates to a differently named rail operation'
+  printf '%s' "$mirror_violations"
+  fail "Attempt rail delegation"
+fi
+(( mirrors_checked > 0 )) || fail "Attempt delegation check found no mirrors — the pattern is stale"
+echo "  $mirrors_checked Attempt mirrors delegate to their own rail operation"
 
 # ---------------------------------------------------------------------------
 announce "Coverage"

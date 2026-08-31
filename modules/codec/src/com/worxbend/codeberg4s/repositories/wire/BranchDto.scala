@@ -1,12 +1,9 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.Branch
-import com.worxbend.codeberg4s.repositories.BranchName
+import com.worxbend.codeberg4s.repositories.{Branch, BranchName}
 
 /** Forgejo's `Branch` model, field for field.
   *

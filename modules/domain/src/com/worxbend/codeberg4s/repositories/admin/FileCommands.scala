@@ -1,11 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin
 
-import com.worxbend.codeberg4s.repositories.BranchName
-import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.repositories.CommitVerification
-import com.worxbend.codeberg4s.repositories.ContentEntry
-import com.worxbend.codeberg4s.repositories.ContentPath
 import com.worxbend.codeberg4s.repositories.gitdata.FileCommit
+import com.worxbend.codeberg4s.repositories.{BranchName, CommitSha, CommitVerification, ContentEntry, ContentPath}
 
 import java.time.Instant
 

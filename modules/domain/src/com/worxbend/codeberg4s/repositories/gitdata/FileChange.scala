@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
-import com.worxbend.codeberg4s.repositories.CommitVerification
-import com.worxbend.codeberg4s.repositories.ContentEntry
+import com.worxbend.codeberg4s.repositories.{CommitVerification, ContentEntry}
 
 /** What an editing endpoint answers with: the commit it wrote, and the file as it now stands.
   *

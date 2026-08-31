@@ -1,41 +1,25 @@
 package com.worxbend.codeberg4s.repositories.admin
 
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.HttpMethod
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
-import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.CodebergRequest
-import com.worxbend.codeberg4s.core.CodebergRequest.read
-import com.worxbend.codeberg4s.core.CodebergRequest.remove
-import com.worxbend.codeberg4s.core.CodebergRequest.removeWithBody
-import com.worxbend.codeberg4s.core.CodebergRequest.write
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RetryEligibility
-import com.worxbend.codeberg4s.issues.Issue
-import com.worxbend.codeberg4s.issues.TrackedTime
-import com.worxbend.codeberg4s.issues.TrackedTimeQuery
+import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, removeWithBody, write}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.issues.wire.IssueQueries
+import com.worxbend.codeberg4s.issues.{Issue, TrackedTime, TrackedTimeQuery}
 import com.worxbend.codeberg4s.miscellaneous.SigningKey
-import com.worxbend.codeberg4s.paging.Page
-import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.Branch
-import com.worxbend.codeberg4s.repositories.BranchName
-import com.worxbend.codeberg4s.repositories.ContentEntry
-import com.worxbend.codeberg4s.repositories.ContentPath
-import com.worxbend.codeberg4s.repositories.Repository
-import com.worxbend.codeberg4s.repositories.admin.wire.AdminQueries
-import com.worxbend.codeberg4s.repositories.admin.wire.AvatarOptionDto
-import com.worxbend.codeberg4s.repositories.admin.wire.BranchOptionDto
-import com.worxbend.codeberg4s.repositories.admin.wire.FileOptionsDto
-import com.worxbend.codeberg4s.repositories.admin.wire.MigrateRepoOptionsDto
-import com.worxbend.codeberg4s.repositories.admin.wire.PushMirrorOptionDto
-import com.worxbend.codeberg4s.repositories.admin.wire.RepositoryOptionDto
-import com.worxbend.codeberg4s.repositories.admin.wire.TransferRepoOptionDto
-import com.worxbend.codeberg4s.repositories.gitdata.FileChange
-import com.worxbend.codeberg4s.repositories.gitdata.RefName
-import com.worxbend.codeberg4s.users.User
-import com.worxbend.codeberg4s.users.Username
+import com.worxbend.codeberg4s.paging.{Page, PageParams}
+import com.worxbend.codeberg4s.repositories.admin.wire.{
+  AdminQueries,
+  AvatarOptionDto,
+  BranchOptionDto,
+  FileOptionsDto,
+  MigrateRepoOptionsDto,
+  PushMirrorOptionDto,
+  RepositoryOptionDto,
+  TransferRepoOptionDto
+}
+import com.worxbend.codeberg4s.repositories.gitdata.{FileChange, RefName}
+import com.worxbend.codeberg4s.repositories.{Branch, BranchName, ContentEntry, ContentPath, Repository}
+import com.worxbend.codeberg4s.users.{User, Username}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
 
 import scala.concurrent.Future
 

@@ -1,10 +1,7 @@
 package com.worxbend.codeberg4s
 
-import scala.compiletime.codeOf
-import scala.compiletime.constValue
-import scala.compiletime.constValueOpt
-import scala.compiletime.error
 import scala.compiletime.ops.string.Matches
+import scala.compiletime.{codeOf, constValue, constValueOpt, error}
 
 /** The compile-time half of [[PathSegment]] — the same rules, checked while the code compiles.
   *

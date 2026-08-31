@@ -1,12 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.WireValues
-import com.worxbend.codeberg4s.issues.LabelRef
-import com.worxbend.codeberg4s.issues.LabelRemoval
-import com.worxbend.codeberg4s.issues.LabelUpdate
+import com.worxbend.codeberg4s.codec.{Json, JsonValue, Timestamps, WireValues}
+import com.worxbend.codeberg4s.issues.{LabelRef, LabelRemoval, LabelUpdate}
 
 /** Forgejo's `IssueLabelsOption` and `DeleteLabelsOption` request models — the bodies of the four per-issue label
   * calls.

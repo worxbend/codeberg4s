@@ -1,40 +1,29 @@
 package com.worxbend.codeberg4s.pulls
 
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.HttpMethod
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.CodebergRequest
-import com.worxbend.codeberg4s.core.CodebergRequest.read
-import com.worxbend.codeberg4s.core.CodebergRequest.remove
-import com.worxbend.codeberg4s.core.CodebergRequest.write
-import com.worxbend.codeberg4s.core.Decode
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RequestBody
-import com.worxbend.codeberg4s.core.RetryEligibility
+import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
+import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RequestBody, RetryEligibility}
 import com.worxbend.codeberg4s.miscellaneous.PlainText
-import com.worxbend.codeberg4s.paging.Page
-import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.pulls.wire.ChangedFileDto
-import com.worxbend.codeberg4s.pulls.wire.CreatePullRequestOptionDto
-import com.worxbend.codeberg4s.pulls.wire.CreatePullReviewOptionsDto
-import com.worxbend.codeberg4s.pulls.wire.DismissPullReviewOptionsDto
-import com.worxbend.codeberg4s.pulls.wire.EditPullRequestOptionDto
-import com.worxbend.codeberg4s.pulls.wire.MergePullRequestOptionDto
-import com.worxbend.codeberg4s.pulls.wire.NewReviewCommentDto
-import com.worxbend.codeberg4s.pulls.wire.PullRequestDto
-import com.worxbend.codeberg4s.pulls.wire.PullRequestQueries
-import com.worxbend.codeberg4s.pulls.wire.PullReviewRequestOptionsDto
-import com.worxbend.codeberg4s.pulls.wire.ReviewCommentDto
-import com.worxbend.codeberg4s.pulls.wire.ReviewDto
-import com.worxbend.codeberg4s.pulls.wire.SubmitPullReviewOptionsDto
-import com.worxbend.codeberg4s.repositories.BranchName
-import com.worxbend.codeberg4s.repositories.Commit
+import com.worxbend.codeberg4s.paging.{Page, PageParams}
+import com.worxbend.codeberg4s.pulls.wire.{
+  ChangedFileDto,
+  CreatePullRequestOptionDto,
+  CreatePullReviewOptionsDto,
+  DismissPullReviewOptionsDto,
+  EditPullRequestOptionDto,
+  MergePullRequestOptionDto,
+  NewReviewCommentDto,
+  PullRequestDto,
+  PullRequestQueries,
+  PullReviewRequestOptionsDto,
+  ReviewCommentDto,
+  ReviewDto,
+  SubmitPullReviewOptionsDto
+}
 import com.worxbend.codeberg4s.repositories.wire.CommitDto
+import com.worxbend.codeberg4s.repositories.{BranchName, Commit}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
 
 import scala.concurrent.Future
 

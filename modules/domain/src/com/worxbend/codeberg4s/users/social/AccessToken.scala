@@ -1,10 +1,8 @@
 package com.worxbend.codeberg4s.users.social
 
-import com.worxbend.codeberg4s.PathSegment
-import com.worxbend.codeberg4s.SegmentLiteral
-import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.auth.ApiToken
 import com.worxbend.codeberg4s.repositories.RepoSlug
+import com.worxbend.codeberg4s.{PathSegment, SegmentLiteral, ValidationError}
 
 import java.time.Instant
 

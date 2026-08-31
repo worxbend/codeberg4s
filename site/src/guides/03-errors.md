@@ -6,9 +6,9 @@ each of the five failures means, which of the two error rails to use, and how a
 
 ## Everything that can go wrong, as one closed family
 
-`com.worxbend.codeberg4s.CodebergError` is a Scala 3 `enum` with exactly five
-cases. There is no sixth, and the compiler will tell you if you forget one in a
-match.
+`com.worxbend.codeberg4s.CodebergError` is a Scala 3 `enum` with exactly six
+cases. There is no seventh, and the compiler will tell you if you forget one in
+a match.
 
 | Case | What happened | What to do |
 | --- | --- | --- |
@@ -17,6 +17,7 @@ match.
 | `DecodingFailed(ctx, snippet, path, cause)` | a 2xx payload did not match the model | retrying will not help; `path` and `snippet` are what a bug report needs |
 | `Validation(error)` | a smart constructor rejected an argument, before any request was built | fix the argument |
 | `RetriesExhausted(ctx, attempts, last)` | the retry engine gave up | react to `last`; it is preserved verbatim |
+| `WalkTruncated(pagesVisited, resumeFrom)` | a walk over every page hit its page cap while the server was still offering another | walk again from `resumeFrom`, or narrow the query |
 
 Two things are deliberately absent, and getting this wrong is the single most
 common mistake when writing against this library:

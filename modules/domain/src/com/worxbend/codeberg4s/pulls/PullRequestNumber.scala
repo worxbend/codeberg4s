@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.pulls
 
-import com.worxbend.codeberg4s.PositiveId
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PositiveId, ValidationError}
 
 /** The number a repository gives a pull request — the `{index}` of `/repos/{owner}/{repo}/pulls/{index}`.
   *

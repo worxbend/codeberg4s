@@ -1,18 +1,11 @@
 package com.worxbend.codeberg4s.examples
 
-import com.worxbend.codeberg4s.CodebergClient
-import com.worxbend.codeberg4s.CodebergConfig
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
-import com.worxbend.codeberg4s.ServerVersion
-import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.repositories.Repository
+import com.worxbend.codeberg4s.{CodebergClient, CodebergConfig, Owner, RepoName, ServerVersion, ValidationError}
 
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.{Await, ExecutionContext}
 
 /** The smallest complete codeberg4s program: two anonymous reads against the public Codeberg instance.
   *
@@ -50,8 +43,9 @@ object HelloCodeberg:
   /** The repository this program reads: Forgejo's own, on Codeberg.
     *
     * `Owner.from` and `RepoName.from` return `Either` rather than the value, because a string containing `/` would
-    * forge a request path. `Owner("forgejo")` does not compile — the types are opaque and have no public apply. The two
-    * are combined in a `for`-comprehension, which is how validated values are usually assembled.
+    * forge a request path. Both names here are literals, so `Owner("forgejo")` would also do and would skip the
+    * `Either` entirely; `from` is shown because it is the shape a value read from a config file or an argument needs.
+    * The two are combined in a `for`-comprehension, which is how validated values are usually assembled.
     */
   private val target: Either[ValidationError, (Owner, RepoName)] =
     for

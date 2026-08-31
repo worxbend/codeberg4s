@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.pulls
 
-import com.worxbend.codeberg4s.repositories.BranchName
-import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.repositories.Repository
+import com.worxbend.codeberg4s.repositories.{BranchName, CommitSha, Repository}
 
 /** One end of a pull request: the branch it merges into, or the branch it merges from.
   *

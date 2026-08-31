@@ -1,19 +1,13 @@
 package com.worxbend.codeberg4s
 
-import com.worxbend.codeberg4s.client.FutureExec
-import com.worxbend.codeberg4s.client.FutureTimer
-import com.worxbend.codeberg4s.client.GuardedTelemetry
+import com.worxbend.codeberg4s.client.{FutureExec, FutureTimer, GuardedTelemetry}
 import com.worxbend.codeberg4s.codec.ApiErrorBodyCodec
-import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.BinaryHttpPort
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.Telemetry
+import com.worxbend.codeberg4s.core.{ApiPipeline, BinaryHttpPort, Exec, Telemetry}
 import com.worxbend.codeberg4s.issues.IssueApi
 import com.worxbend.codeberg4s.miscellaneous.MiscellaneousApi
 import com.worxbend.codeberg4s.notifications.NotificationApi
 import com.worxbend.codeberg4s.organizations.OrganizationApi
-import com.worxbend.codeberg4s.paging.PageNumber
-import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.paging.{PageNumber, PageParams}
 import com.worxbend.codeberg4s.pulls.PullRequestApi
 import com.worxbend.codeberg4s.repositories.RepositoryApi
 import com.worxbend.codeberg4s.repositories.actions.ActionDownloadApi
@@ -23,8 +17,7 @@ import com.worxbend.codeberg4s.users.UserApi
 
 import sttp.client4.Backend
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 import java.util.concurrent.atomic.AtomicBoolean
 

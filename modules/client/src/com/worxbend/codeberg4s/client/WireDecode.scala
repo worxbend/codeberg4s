@@ -1,9 +1,7 @@
 package com.worxbend.codeberg4s.client
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.core.Decode
-import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.core.ResponseBody
+import com.worxbend.codeberg4s.core.{Decode, DecodeFailure, ResponseBody}
 
 /** Joins the two halves of reading a response: parse the wire DTO, then project it into the domain.
   *

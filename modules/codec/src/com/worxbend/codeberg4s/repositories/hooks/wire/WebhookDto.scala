@@ -1,16 +1,9 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.hooks.HookConfig
-import com.worxbend.codeberg4s.repositories.hooks.HookId
-import com.worxbend.codeberg4s.repositories.hooks.HookType
-import com.worxbend.codeberg4s.repositories.hooks.Webhook
+import com.worxbend.codeberg4s.repositories.hooks.{HookConfig, HookId, HookType, Webhook}
 
 /** Forgejo's `Hook` model — one repository webhook.
   *

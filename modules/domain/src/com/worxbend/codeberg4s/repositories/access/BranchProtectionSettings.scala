@@ -90,7 +90,7 @@ object ApprovalCount:
   *   whether repository administrators are bound by the rule as well. Off, the rule is advisory for anyone who can turn
   *   it off
   */
-final case class BranchProtectionSettings(
+final case class BranchProtectionSettings private[codeberg4s] (
     enablePush: Option[Boolean],
     enablePushWhitelist: Option[Boolean],
     pushWhitelistUsernames: Option[Vector[Username]],

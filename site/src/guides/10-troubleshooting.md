@@ -16,7 +16,8 @@ then read the section it points at.
 | A count is zero and should not be | `Page.totalCount` was `None` and got treated as zero | [Pagination](./04-pagination.md) |
 | `RejectedExecutionException` from the scheduler | the client was used after `close()` | [Using a closed client](#using-a-closed-client) |
 | Compile error: "could not find an implicit ExecutionContext" | no `given ExecutionContext` in scope | [Getting started](./01-getting-started.md) |
-| Compile error: "Owner does not take parameters" | `Owner("x")` instead of `Owner.from("x")` | [Getting started](./01-getting-started.md) |
+| Compile error: "not a valid owner: …" | the literal really is invalid — a `/`, a control character, `.` or `..`, or stray surrounding whitespace, which the literal check refuses rather than trims | [Getting started](./01-getting-started.md) |
+| Compile error: "has to be a string literal; use `.from`" | `Owner(value)` on a run-time `String`; use `Owner.from(value)` and handle the `Either` | [Getting started](./01-getting-started.md) |
 
 ## First, print the failure
 

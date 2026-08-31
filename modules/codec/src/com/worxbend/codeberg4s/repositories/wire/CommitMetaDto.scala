@@ -1,13 +1,9 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.CommitRef
-import com.worxbend.codeberg4s.repositories.CommitSha
+import com.worxbend.codeberg4s.repositories.{CommitRef, CommitSha}
 
 /** Forgejo's `CommitMeta` — a commit or tree referenced by id.
   *

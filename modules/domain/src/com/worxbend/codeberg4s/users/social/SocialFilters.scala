@@ -2,8 +2,7 @@ package com.worxbend.codeberg4s.users.social
 
 import com.worxbend.codeberg4s.ValidationError
 
-import java.time.Instant
-import java.time.LocalDate
+import java.time.{Instant, LocalDate}
 
 /** The remote account `POST /user/activitypub/follow` is asked to follow.
   *
@@ -60,7 +59,7 @@ object RemoteFollowTarget:
   *   `yyyy-MM-dd`, so a [[java.time.LocalDate]] is exactly the right amount of information — an [[java.time.Instant]]
   *   here would carry a time of day the endpoint discards
   */
-final case class ActivityFeedQuery(onlyPerformedBy: Option[Boolean], date: Option[LocalDate]):
+final case class ActivityFeedQuery private[codeberg4s] (onlyPerformedBy: Option[Boolean], date: Option[LocalDate]):
 
   /** Restricts the feed to actions the account performed itself. */
   def performedByTheAccount: ActivityFeedQuery = copy(onlyPerformedBy = Some(true))
@@ -95,7 +94,7 @@ object ActivityFeedQuery:
   * @param before
   *   only entries updated at or before this instant
   */
-final case class TrackedTimeWindow(since: Option[Instant], before: Option[Instant]):
+final case class TrackedTimeWindow private[codeberg4s] (since: Option[Instant], before: Option[Instant]):
 
   /** Restricts the listing to entries updated at or after `moment`. */
   def updatedSince(moment: Instant): TrackedTimeWindow = copy(since = Some(moment))

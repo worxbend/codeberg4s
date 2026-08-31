@@ -3,18 +3,22 @@ package com.worxbend.codeberg4s.organizations.actions
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
-import com.worxbend.codeberg4s.repositories.actions.ActionRunJob
-import com.worxbend.codeberg4s.repositories.actions.ActionRunner
-import com.worxbend.codeberg4s.repositories.actions.ActionSecret
-import com.worxbend.codeberg4s.repositories.actions.ActionVariable
-import com.worxbend.codeberg4s.repositories.actions.RegisteredRunner
-import com.worxbend.codeberg4s.repositories.actions.RunnerRegistrationToken
-import com.worxbend.codeberg4s.repositories.actions.wire.ActionRunJobDto
-import com.worxbend.codeberg4s.repositories.actions.wire.ActionRunnerDto
-import com.worxbend.codeberg4s.repositories.actions.wire.ActionSecretDto
-import com.worxbend.codeberg4s.repositories.actions.wire.ActionVariableDto
-import com.worxbend.codeberg4s.repositories.actions.wire.RegisteredRunnerDto
-import com.worxbend.codeberg4s.repositories.actions.wire.RegistrationTokenDto
+import com.worxbend.codeberg4s.repositories.actions.wire.{
+  ActionRunJobDto,
+  ActionRunnerDto,
+  ActionSecretDto,
+  ActionVariableDto,
+  RegisteredRunnerDto,
+  RegistrationTokenDto
+}
+import com.worxbend.codeberg4s.repositories.actions.{
+  ActionRunJob,
+  ActionRunner,
+  ActionSecret,
+  ActionVariable,
+  RegisteredRunner,
+  RunnerRegistrationToken
+}
 
 /** Every response shape [[OrganizationActionApi]] can receive, decoded once and shared.
   *

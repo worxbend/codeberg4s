@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
-import com.worxbend.codeberg4s.PathSegment
-import com.worxbend.codeberg4s.SegmentLiteral
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PathSegment, SegmentLiteral, ValidationError}
 
 /** The name of a Git reference, whole or partial — `refs/heads/main`, `heads/main`, `tags/v1.2`, `main`.
   *
@@ -15,9 +13,9 @@ import com.worxbend.codeberg4s.ValidationError
   * segment produces `refs%2Fheads%2Fmain` and a `404`, because Forgejo matches the route with a wildcard. [[segments]]
   * is what the request builder appends, one segment at a time, so the slashes reach the wire as real separators.
   *
-  * Validation is therefore a security boundary rather than a formality — see
-  * [[com.worxbend.codeberg4s.repositories.PathSegment]]. A `..` segment survives percent-encoding untouched and would
-  * let a caller climb out of the route it was meant for, so it is rejected at construction and cannot reach a request.
+  * Validation is therefore a security boundary rather than a formality — see [[com.worxbend.codeberg4s.PathSegment]]. A
+  * `..` segment survives percent-encoding untouched and would let a caller climb out of the route it was meant for, so
+  * it is rejected at construction and cannot reach a request.
   */
 opaque type RefName = String
 

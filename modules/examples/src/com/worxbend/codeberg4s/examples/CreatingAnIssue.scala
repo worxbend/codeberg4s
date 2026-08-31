@@ -1,22 +1,11 @@
 package com.worxbend.codeberg4s.examples
 
-import com.worxbend.codeberg4s.BaseUri
-import com.worxbend.codeberg4s.CodebergClient
-import com.worxbend.codeberg4s.CodebergConfig
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
-import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.auth.ApiToken
-import com.worxbend.codeberg4s.auth.Auth
-import com.worxbend.codeberg4s.issues.CreateIssue
-import com.worxbend.codeberg4s.issues.Issue
+import com.worxbend.codeberg4s.auth.{ApiToken, Auth}
+import com.worxbend.codeberg4s.issues.{CreateIssue, Issue}
+import com.worxbend.codeberg4s.{BaseUri, CodebergClient, CodebergConfig, CodebergError, Owner, RepoName, ValidationError}
 
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /** A write path end to end: validate the inputs, build the command, create the issue, read it back.
   *
@@ -116,8 +105,10 @@ object CreatingAnIssue:
   /** Turns three strings into validated domain values and a command.
     *
     * Every smart constructor here returns `Either[ValidationError, _]`, so they compose in one `for`-comprehension and
-    * the first failure short-circuits with a stable field name — `"apiToken"`, `"owner"`, `"repoName"`, `"title"`. Note
-    * that `Owner("…")` does not compile: the identifier types are opaque and `from` is the only way in.
+    * the first failure short-circuits with a stable field name — `"apiToken"`, `"owner"`, `"repoName"`, `"title"`.
+    * `from` is the right constructor here precisely because these three values come from the environment: the
+    * compile-time form `Owner("forgejo")` only accepts a literal, and handing it a run-time `String` is itself a
+    * compile error.
     *
     * The optional base URI is folded in afterwards rather than in the comprehension, because "absent" and "invalid" are
     * different answers and only the second is an error.

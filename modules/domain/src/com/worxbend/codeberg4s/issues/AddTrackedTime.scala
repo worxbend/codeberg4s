@@ -26,7 +26,11 @@ import java.time.Instant
   * @param createdAt
   *   when the entry should be recorded as having been made, for an import that is replaying history
   */
-final case class AddTrackedTime(spent: FiniteDuration, userName: Option[String], createdAt: Option[Instant]):
+final case class AddTrackedTime private[codeberg4s] (
+    spent: FiniteDuration,
+    userName: Option[String],
+    createdAt: Option[Instant]
+):
 
   /** Attributes the time to `login` rather than to the authenticated account. */
   def attributedTo(login: String): AddTrackedTime = copy(userName = Some(login))

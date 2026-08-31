@@ -1,19 +1,14 @@
 package com.worxbend.codeberg4s.examples
 
-import com.worxbend.codeberg4s.BaseUri
-import com.worxbend.codeberg4s.CodebergClient
-import com.worxbend.codeberg4s.CodebergConfig
 import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.syntax.discard
 import com.worxbend.codeberg4s.transport.SttpHttpPort
+import com.worxbend.codeberg4s.{BaseUri, CodebergClient, CodebergConfig}
 
 import sttp.client4.Backend
 
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /** One HTTP connection pool, two clients, and an explicit answer to "who closes what".
   *

@@ -1,10 +1,7 @@
 package com.worxbend.codeberg4s.organizations.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.organizations.CreateTeam
-import com.worxbend.codeberg4s.organizations.EditTeam
-import com.worxbend.codeberg4s.organizations.TeamPermission
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
+import com.worxbend.codeberg4s.organizations.{CreateTeam, EditTeam, TeamPermission}
 
 /** Forgejo's `CreateTeamOption` and `EditTeamOption` request models — the bodies of `POST /orgs/{org}/teams` and
   * `PATCH /teams/{id}`.

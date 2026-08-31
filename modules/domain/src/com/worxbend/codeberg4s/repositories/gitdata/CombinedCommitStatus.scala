@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
-import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.repositories.Repository
+import com.worxbend.codeberg4s.repositories.{CommitSha, Repository}
 
 /** Every status on a commit, plus the instance's single verdict over all of them — `GET /commits/{ref}/status`.
   *

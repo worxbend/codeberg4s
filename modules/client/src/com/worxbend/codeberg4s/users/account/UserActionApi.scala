@@ -1,34 +1,31 @@
 package com.worxbend.codeberg4s.users.account
 
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.HttpMethod
-import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.CodebergRequest
-import com.worxbend.codeberg4s.core.CodebergRequest.read
-import com.worxbend.codeberg4s.core.CodebergRequest.remove
-import com.worxbend.codeberg4s.core.CodebergRequest.write
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RetryEligibility
-import com.worxbend.codeberg4s.paging.Page
-import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.actions.ActionRunJob
-import com.worxbend.codeberg4s.repositories.actions.ActionRunner
-import com.worxbend.codeberg4s.repositories.actions.ActionVariable
-import com.worxbend.codeberg4s.repositories.actions.CreateVariable
-import com.worxbend.codeberg4s.repositories.actions.RegisterRunner
-import com.worxbend.codeberg4s.repositories.actions.RegisteredRunner
-import com.worxbend.codeberg4s.repositories.actions.RunnerId
-import com.worxbend.codeberg4s.repositories.actions.RunnerLabel
-import com.worxbend.codeberg4s.repositories.actions.RunnerRegistrationToken
-import com.worxbend.codeberg4s.repositories.actions.RunnerVisibility
-import com.worxbend.codeberg4s.repositories.actions.SecretName
-import com.worxbend.codeberg4s.repositories.actions.SecretValue
-import com.worxbend.codeberg4s.repositories.actions.UpdateVariable
-import com.worxbend.codeberg4s.repositories.actions.VariableName
-import com.worxbend.codeberg4s.repositories.actions.wire.ActionQueries
-import com.worxbend.codeberg4s.repositories.actions.wire.RegisterRunnerOptionDto
-import com.worxbend.codeberg4s.repositories.actions.wire.SecretOptionDto
-import com.worxbend.codeberg4s.repositories.actions.wire.VariableOptionDto
+import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
+import com.worxbend.codeberg4s.paging.{Page, PageParams}
+import com.worxbend.codeberg4s.repositories.actions.wire.{
+  ActionQueries,
+  RegisterRunnerOptionDto,
+  SecretOptionDto,
+  VariableOptionDto
+}
+import com.worxbend.codeberg4s.repositories.actions.{
+  ActionRunJob,
+  ActionRunner,
+  ActionVariable,
+  CreateVariable,
+  RegisterRunner,
+  RegisteredRunner,
+  RunnerId,
+  RunnerLabel,
+  RunnerRegistrationToken,
+  RunnerVisibility,
+  SecretName,
+  SecretValue,
+  UpdateVariable,
+  VariableName
+}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod}
 
 import scala.concurrent.Future
 

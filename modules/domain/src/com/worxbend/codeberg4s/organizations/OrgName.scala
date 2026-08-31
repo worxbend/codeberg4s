@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.organizations
 
-import com.worxbend.codeberg4s.PathSegment
-import com.worxbend.codeberg4s.SegmentLiteral
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PathSegment, SegmentLiteral, ValidationError}
 
 /** The handle that names an organisation — the `{org}` of `/orgs/{org}`.
   *

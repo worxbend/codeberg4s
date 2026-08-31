@@ -1,15 +1,9 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.miscellaneous.NodeInfo
-import com.worxbend.codeberg4s.miscellaneous.NodeInfoServices
-import com.worxbend.codeberg4s.miscellaneous.NodeInfoSoftware
-import com.worxbend.codeberg4s.miscellaneous.NodeInfoUsage
-import com.worxbend.codeberg4s.miscellaneous.NodeInfoUsers
+import com.worxbend.codeberg4s.miscellaneous.{NodeInfo, NodeInfoServices, NodeInfoSoftware, NodeInfoUsage, NodeInfoUsers}
 
 /** Forgejo's `NodeInfo` model — the body of `GET /nodeinfo`.
   *

@@ -23,7 +23,7 @@ import com.worxbend.codeberg4s.repositories.FileContent
   * @param message
   *   the commit message for the revision this creates, absent to let Forgejo write its own
   */
-final case class CreateWikiPage(
+final case class CreateWikiPage private[codeberg4s] (
     title: WikiPageName,
     content: FileContent,
     message: Option[String],
@@ -72,7 +72,7 @@ object CreateWikiPage:
   * @param message
   *   the commit message for the revision this creates, absent to let Forgejo write its own
   */
-final case class EditWikiPage(
+final case class EditWikiPage private[codeberg4s] (
     renamedTo: Option[WikiPageName],
     content: FileContent,
     message: Option[String],

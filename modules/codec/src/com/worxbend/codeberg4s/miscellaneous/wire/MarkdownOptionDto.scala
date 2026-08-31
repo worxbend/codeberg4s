@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
 import com.worxbend.codeberg4s.miscellaneous.MarkdownRenderRequest
 
 /** Forgejo's `MarkdownOption` model — the '''request''' body of `POST /markdown`.

@@ -1,32 +1,37 @@
 package com.worxbend.codeberg4s.users.account
 
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.organizations.Team
 import com.worxbend.codeberg4s.organizations.wire.TeamDto
 import com.worxbend.codeberg4s.repositories.Repository
-import com.worxbend.codeberg4s.repositories.actions.ActionRunJob
-import com.worxbend.codeberg4s.repositories.actions.ActionRunner
-import com.worxbend.codeberg4s.repositories.actions.ActionVariable
-import com.worxbend.codeberg4s.repositories.actions.RegisteredRunner
-import com.worxbend.codeberg4s.repositories.actions.RunnerRegistrationToken
-import com.worxbend.codeberg4s.repositories.actions.wire.ActionRunJobDto
-import com.worxbend.codeberg4s.repositories.actions.wire.ActionRunnerDto
-import com.worxbend.codeberg4s.repositories.actions.wire.ActionVariableDto
-import com.worxbend.codeberg4s.repositories.actions.wire.RegisteredRunnerDto
-import com.worxbend.codeberg4s.repositories.actions.wire.RegistrationTokenDto
+import com.worxbend.codeberg4s.repositories.actions.wire.{
+  ActionRunJobDto,
+  ActionRunnerDto,
+  ActionVariableDto,
+  RegisteredRunnerDto,
+  RegistrationTokenDto
+}
+import com.worxbend.codeberg4s.repositories.actions.{
+  ActionRunJob,
+  ActionRunner,
+  ActionVariable,
+  RegisteredRunner,
+  RunnerRegistrationToken
+}
 import com.worxbend.codeberg4s.repositories.hooks.Webhook
 import com.worxbend.codeberg4s.repositories.hooks.wire.WebhookDto
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
-import com.worxbend.codeberg4s.users.account.wire.EmailDto
-import com.worxbend.codeberg4s.users.account.wire.OAuth2ApplicationDto
-import com.worxbend.codeberg4s.users.account.wire.QuotaInfoDto
-import com.worxbend.codeberg4s.users.account.wire.QuotaUsedArtifactDto
-import com.worxbend.codeberg4s.users.account.wire.QuotaUsedAttachmentDto
-import com.worxbend.codeberg4s.users.account.wire.QuotaUsedPackageDto
-import com.worxbend.codeberg4s.users.account.wire.UserSettingsDto
+import com.worxbend.codeberg4s.users.account.wire.{
+  EmailDto,
+  OAuth2ApplicationDto,
+  QuotaInfoDto,
+  QuotaUsedArtifactDto,
+  QuotaUsedAttachmentDto,
+  QuotaUsedPackageDto,
+  UserSettingsDto
+}
 
 /** Every response shape the five API classes of this package can receive, decoded once and shared.
   *

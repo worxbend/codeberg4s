@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps}
 import com.worxbend.codeberg4s.repositories.admin.WatchStatus
 
 /** Forgejo's `WatchInfo` model, field for field.

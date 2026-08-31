@@ -1,21 +1,12 @@
 package com.worxbend.codeberg4s.users.account
 
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.HttpMethod
-import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.CodebergRequest
-import com.worxbend.codeberg4s.core.CodebergRequest.read
-import com.worxbend.codeberg4s.core.CodebergRequest.remove
-import com.worxbend.codeberg4s.core.CodebergRequest.removeWithBody
-import com.worxbend.codeberg4s.core.CodebergRequest.write
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RetryEligibility
+import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, removeWithBody, write}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.organizations.Team
-import com.worxbend.codeberg4s.paging.Page
-import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.Repository
-import com.worxbend.codeberg4s.users.account.wire.AccountOptionDto
-import com.worxbend.codeberg4s.users.account.wire.AccountQueries
+import com.worxbend.codeberg4s.users.account.wire.{AccountOptionDto, AccountQueries}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod}
 
 import scala.concurrent.Future
 

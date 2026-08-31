@@ -122,10 +122,10 @@ Two things this exemption does **not** cover:
   the whole cost is one filter line for that model. Those filters are lines to
   write, not releases to renumber, because no external caller can have
   compiled against the member being filtered.
-- **Adding a case to a closed `enum`.** `CodebergError` has exactly five
+- **Adding a case to a closed `enum`.** `CodebergError` has exactly six
   cases — `Transport`, `Api`, `DecodingFailed`, `Validation`,
-  `RetriesExhausted` — and every consumer that matches on it exhaustively
-  stops compiling when a sixth appears. There is deliberately no `NotFound`
+  `RetriesExhausted`, `WalkTruncated` — and every consumer that matches on it
+  exhaustively stops compiling when a seventh appears. There is deliberately no `NotFound`
   and no `RateLimited`; a `404` is `Api(ctx, 404, body)` and a `429` is
   `Api(ctx, 429, body)` or a `RetriesExhausted` wrapping one. Keeping it that
   way is a compatibility decision, not only a modelling one.

@@ -55,9 +55,14 @@ close the backend, because you own it.
 
 ## Your first request
 
-Identifiers are opaque types with `Either`-returning smart constructors.
-`Owner("forgejo")` does not compile. This is not ceremony: a string containing
-a `/` would otherwise forge a request path.
+Identifiers are opaque types that validate what goes into them. This is not
+ceremony: a string containing a `/` would otherwise forge a request path.
+
+When you write the value down yourself, `Owner("forgejo")` is checked while the
+code compiles and hands you the `Owner` directly — `Owner("forgejo/forgejo")` is
+a compile error. When the value is only known at run time, `Owner.from(raw)`
+returns `Either[ValidationError, Owner]`, which is what the snippet below
+shows.
 
 ```scala mdoc:compile-only
 import com.worxbend.codeberg4s.{CodebergClient, Owner, RepoName, ValidationError}
@@ -151,9 +156,9 @@ def attemptRead(
   client.repos.attempt.get(owner, name)
 ```
 
-`CodebergError` has exactly five cases — `Transport`, `Api`, `DecodingFailed`,
-`Validation`, `RetriesExhausted`. **There is no `NotFound` and no
-`RateLimited`.** A `404` is `Api(ctx, 404, body)`; a `429` is
+`CodebergError` has exactly six cases — `Transport`, `Api`, `DecodingFailed`,
+`Validation`, `RetriesExhausted`, `WalkTruncated`. **There is no `NotFound` and
+no `RateLimited`.** A `404` is `Api(ctx, 404, body)`; a `429` is
 `Api(ctx, 429, body)`, or a `RetriesExhausted` wrapping one after the retry
 policy gives up. Matching on a case that does not exist is the most common
 mistake made against this library.

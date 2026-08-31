@@ -1,10 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.repositories.gitdata.ApplyDiffPatch
-import com.worxbend.codeberg4s.repositories.gitdata.GitAuthor
+import com.worxbend.codeberg4s.codec.{Json, JsonValue, Timestamps}
+import com.worxbend.codeberg4s.repositories.gitdata.{ApplyDiffPatch, GitAuthor}
 
 import java.time.Instant
 

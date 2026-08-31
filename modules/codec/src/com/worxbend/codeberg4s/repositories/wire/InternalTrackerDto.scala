@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.wire
 
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields}
 
 /** Forgejo's `InternalTracker` model — the `internal_tracker` object embedded in a repository.
   *

@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, JsonValue}
 import com.worxbend.codeberg4s.repositories.gitdata.EditorConfigDefinitions
 
 /** The body of `GET /repos/{owner}/{repo}/editorconfig/{filepath}` — a bare object of property names to values.

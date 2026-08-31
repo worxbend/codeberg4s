@@ -1,13 +1,9 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.miscellaneous.LicenseTemplateSummary
-import com.worxbend.codeberg4s.miscellaneous.TemplateName
+import com.worxbend.codeberg4s.miscellaneous.{LicenseTemplateSummary, TemplateName}
 
 /** Forgejo's `LicensesTemplateListEntry` model — one element of `GET /licenses`.
   *

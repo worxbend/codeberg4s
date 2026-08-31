@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.repositories.actions
 
-import com.worxbend.codeberg4s.PathSegment
-import com.worxbend.codeberg4s.SegmentLiteral
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PathSegment, SegmentLiteral, ValidationError}
 
 /** The identifier of a registered runner, as the runner endpoints take it in a path.
   *
@@ -19,8 +17,8 @@ object RunnerId:
   /** Parses a runner identifier from its string spelling.
     *
     * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, a value containing a
-    * control character, and the traversal segments `.` and `..` — see
-    * [[com.worxbend.codeberg4s.repositories.PathSegment]] for why that is a security boundary and not a convenience.
+    * control character, and the traversal segments `.` and `..` — see [[com.worxbend.codeberg4s.PathSegment]] for why
+    * that is a security boundary and not a convenience.
     *
     * @return
     *   the identifier, or a [[ValidationError]] on the `"runnerId"` field

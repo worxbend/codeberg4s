@@ -1,9 +1,6 @@
 package com.worxbend.codeberg4s.issues.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.WireValues
+import com.worxbend.codeberg4s.codec.{Json, JsonValue, Timestamps, WireValues}
 import com.worxbend.codeberg4s.issues.EditIssue
 
 /** Forgejo's `EditIssueOption` request model — the body of `PATCH /repos/{owner}/{repo}/issues/{index}`.

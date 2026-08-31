@@ -17,9 +17,10 @@ Two things shape everything else in these guides:
 - **Every call returns a `scala.concurrent.Future`.** No effect system is
   required of you, and none is added to your classpath.
   ([ADR-0005](../project/adr/0005-future-public-api.md) explains why.)
-- **Identifiers are validated types, not `String`s.** `Owner.from("forgejo")`
-  returns an `Either`, and there is no way to build an `Owner` that would forge
-  a request path.
+- **Identifiers are validated types, not `String`s.** A literal is checked at
+  compile time — `Owner("forgejo")` — and a run-time value goes through
+  `Owner.from`, which returns an `Either`. Neither can build an `Owner` that
+  would forge a request path.
 
 ## Adding the dependency
 
@@ -177,10 +178,14 @@ val target: Either[ValidationError, (Owner, RepoName)] =
   yield (owner, name)
 ```
 
-`Owner.from` and `RepoName.from` return `Either[ValidationError, …]`. There is no
-`Owner("forgejo")` constructor — that line does not compile — because a value
-that reached a request path unchecked could contain a `/` and address a
-different endpoint than the one you meant. The `for` comprehension above is
+`Owner.from` and `RepoName.from` return `Either[ValidationError, …]`, because a
+value that reached a request path unchecked could contain a `/` and address a
+different endpoint than the one you meant.
+
+The two names above are literals, so they do not need the `Either` at all:
+`Owner("forgejo")` is checked while the code compiles and is the `Owner`. The
+comprehension is shown with `from` because that is the shape you need for a
+value read from a config file or an argument. The `for` comprehension above is
 Scala's way of chaining several such checks: if any one of them fails, the whole
 expression is the first `Left` and nothing further runs.
 

@@ -1,17 +1,18 @@
 package com.worxbend.codeberg4s.organizations.wire
 
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.organizations.QuotaAssetSizes
-import com.worxbend.codeberg4s.organizations.QuotaAttachmentSizes
-import com.worxbend.codeberg4s.organizations.QuotaGitSizes
-import com.worxbend.codeberg4s.organizations.QuotaGroup
-import com.worxbend.codeberg4s.organizations.QuotaInfo
-import com.worxbend.codeberg4s.organizations.QuotaRepositorySizes
-import com.worxbend.codeberg4s.organizations.QuotaRule
-import com.worxbend.codeberg4s.organizations.QuotaSizes
-import com.worxbend.codeberg4s.organizations.QuotaUsage
+import com.worxbend.codeberg4s.organizations.{
+  QuotaAssetSizes,
+  QuotaAttachmentSizes,
+  QuotaGitSizes,
+  QuotaGroup,
+  QuotaInfo,
+  QuotaRepositorySizes,
+  QuotaRule,
+  QuotaSizes,
+  QuotaUsage
+}
 
 /** Forgejo's `QuotaInfo` model and the seven definitions nested inside it.
   *

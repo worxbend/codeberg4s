@@ -1,23 +1,12 @@
 package com.worxbend.codeberg4s.examples
 
-import com.worxbend.codeberg4s.CodebergClient
-import com.worxbend.codeberg4s.CodebergConfig
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
-import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.auth.Auth
-import com.worxbend.codeberg4s.issues.Issue
-import com.worxbend.codeberg4s.issues.IssueQuery
-import com.worxbend.codeberg4s.paging.Page
-import com.worxbend.codeberg4s.paging.PageNumber
-import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.paging.PageSize
+import com.worxbend.codeberg4s.issues.{Issue, IssueQuery}
+import com.worxbend.codeberg4s.paging.{Page, PageNumber, PageParams, PageSize}
+import com.worxbend.codeberg4s.{CodebergClient, CodebergConfig, Owner, RepoName, ValidationError}
 
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /** Walking a paginated listing correctly, and the one mistake that makes a walk silently wrong.
   *

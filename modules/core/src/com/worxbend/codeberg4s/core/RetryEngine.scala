@@ -1,15 +1,10 @@
 package com.worxbend.codeberg4s.core
 
-import com.worxbend.codeberg4s.CallContext
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.HttpMethod
-import com.worxbend.codeberg4s.TransportCause
 import com.worxbend.codeberg4s.core.Exec.flatMap
-import com.worxbend.codeberg4s.retry.Jitter
-import com.worxbend.codeberg4s.retry.RetryPolicy
+import com.worxbend.codeberg4s.retry.{Jitter, RetryPolicy}
+import com.worxbend.codeberg4s.{CallContext, CodebergError, HttpMethod, TransportCause}
 
-import scala.concurrent.duration.DurationLong
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationLong, FiniteDuration}
 
 /** Repeats a failed call according to a [[com.worxbend.codeberg4s.retry.RetryPolicy]].
   *

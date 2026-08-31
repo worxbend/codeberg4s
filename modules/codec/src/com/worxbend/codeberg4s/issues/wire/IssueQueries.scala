@@ -1,13 +1,14 @@
 package com.worxbend.codeberg4s.issues.wire
 
-import com.worxbend.codeberg4s.codec.PagingQuery
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.issues.CommentQuery
-import com.worxbend.codeberg4s.issues.IssueQuery
-import com.worxbend.codeberg4s.issues.IssueSearchQuery
-import com.worxbend.codeberg4s.issues.StateFilter
-import com.worxbend.codeberg4s.issues.TrackedTimeQuery
-import com.worxbend.codeberg4s.issues.UploadAttachment
+import com.worxbend.codeberg4s.codec.{PagingQuery, Timestamps}
+import com.worxbend.codeberg4s.issues.{
+  CommentQuery,
+  IssueQuery,
+  IssueSearchQuery,
+  StateFilter,
+  TrackedTimeQuery,
+  UploadAttachment
+}
 import com.worxbend.codeberg4s.paging.PageParams
 
 /** The query strings this group's listing endpoints send.

@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.wire
 
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields}
 import com.worxbend.codeberg4s.repositories.ArchiveDownloadCount
 
 /** Forgejo's `TagArchiveDownloadCount` — the `archive_download_count` object on a tag or a release.

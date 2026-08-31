@@ -2,8 +2,7 @@ package com.worxbend.codeberg4s.core
 
 import com.worxbend.codeberg4s.paging.PageNumber
 
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 import java.util.Locale
 

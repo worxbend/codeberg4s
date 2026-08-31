@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.issues
 
-import com.worxbend.codeberg4s.PositiveId
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PositiveId, ValidationError}
 
 /** The number a repository gives an issue — the `{index}` of `/repos/{owner}/{repo}/issues/{index}`.
   *

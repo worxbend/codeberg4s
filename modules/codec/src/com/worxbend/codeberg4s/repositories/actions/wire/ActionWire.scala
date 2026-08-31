@@ -2,8 +2,7 @@ package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.repositories.actions.ActionStatus
-import com.worxbend.codeberg4s.repositories.actions.WorkflowFileName
+import com.worxbend.codeberg4s.repositories.actions.{ActionStatus, WorkflowFileName}
 
 /** The three readings this group's DTOs share, written once because getting any of them wrong twice would be silent.
   *

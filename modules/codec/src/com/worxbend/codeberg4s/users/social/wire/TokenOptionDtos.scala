@@ -1,11 +1,8 @@
 package com.worxbend.codeberg4s.users.social.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
 import com.worxbend.codeberg4s.repositories.RepoSlug
-import com.worxbend.codeberg4s.users.social.CreateAccessToken
-import com.worxbend.codeberg4s.users.social.RemoteFollowTarget
-import com.worxbend.codeberg4s.users.social.TokenScope
+import com.worxbend.codeberg4s.users.social.{CreateAccessToken, RemoteFollowTarget, TokenScope}
 
 /** Forgejo's `CreateAccessTokenOption` request model — the body of `POST /users/{username}/tokens`.
   *

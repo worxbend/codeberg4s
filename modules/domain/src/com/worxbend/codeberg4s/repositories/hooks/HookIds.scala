@@ -1,9 +1,6 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
-import com.worxbend.codeberg4s.PathSegment
-import com.worxbend.codeberg4s.PositiveId
-import com.worxbend.codeberg4s.SegmentLiteral
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PathSegment, PositiveId, SegmentLiteral, ValidationError}
 
 /** The instance-wide identifier of one webhook — the `{id}` of `/repos/{owner}/{repo}/hooks/{id}`.
   *
@@ -52,8 +49,8 @@ object GitHookName:
   /** Parses a Git hook name.
     *
     * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, a value containing a
-    * control character, and the traversal segments `.` and `..` — see
-    * [[com.worxbend.codeberg4s.repositories.PathSegment]] for why that is a security boundary and not a convenience.
+    * control character, and the traversal segments `.` and `..` — see [[com.worxbend.codeberg4s.PathSegment]] for why
+    * that is a security boundary and not a convenience.
     *
     * @return
     *   the name, or a [[ValidationError]] on the `"gitHookName"` field

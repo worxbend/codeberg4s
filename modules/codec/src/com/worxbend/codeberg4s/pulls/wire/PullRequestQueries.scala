@@ -2,9 +2,7 @@ package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.pulls.DiffRequest
-import com.worxbend.codeberg4s.pulls.PullRequestQuery
-import com.worxbend.codeberg4s.pulls.UpdateStyle
+import com.worxbend.codeberg4s.pulls.{DiffRequest, PullRequestQuery, UpdateStyle}
 
 /** The query strings this group's listing endpoints send.
   *

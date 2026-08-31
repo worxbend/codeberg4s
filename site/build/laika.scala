@@ -47,7 +47,6 @@ import laika.helium.config.ColorQuintet
 import laika.helium.config.Favicon
 import laika.helium.config.HeliumIcon
 import laika.helium.config.IconLink
-import laika.helium.config.Teaser
 import laika.helium.config.TextLink
 import laika.io.syntax.*
 import laika.theme.ThemeProvider
@@ -128,36 +127,6 @@ object Palette:
     Color.hex("ffd479"), // literals and numbers
     Color.hex("a6e3a1"), // strings
     Color.hex("7fd3ff"), // type names
-  )
-
-/** The four claims the landing page is built around. They are the same four the README opens with, deliberately: a
-  * reader who arrives from either direction should be told the same thing.
-  */
-object Teasers:
-
-  val all: Seq[Teaser] = Seq(
-    Teaser(
-      "A Future API, and nothing else",
-      "The public API is scala.concurrent.Future. No effect system leaks into your code and none is added to your "
-        + "classpath — the dependency list is sttp client4 and jsoniter-scala.",
-    ),
-    Teaser(
-      "Two error rails",
-      "Every operation exists twice. client.repos.get fails the Future with a CodebergException; "
-        + "client.repos.attempt.get returns Either[CodebergError, Repository]. Same implementation underneath, so "
-        + "the two cannot drift.",
-    ),
-    Teaser(
-      "Illegal requests are unrepresentable",
-      "Owners, repository names, branches, tokens and page sizes are opaque types with Either-returning smart "
-        + "constructors. A value that would forge a request path is rejected before a client is involved.",
-    ),
-    Teaser(
-      "Pagination you cannot get wrong by accident",
-      "No operation returns an unbounded List. Every listing hands back a Page[A] whose nextPage comes from the "
-        + "RFC 5988 Link header — never from how many items came back, which is the trap Forgejo's silent limit "
-        + "clamp sets for you.",
-    ),
   )
 
 /** Command-line arguments, parsed rather than positional so the shell script reads clearly. */
@@ -298,7 +267,7 @@ object Site:
     // The design lives in site/assets/css/site.css, not here.
     //
     // Helium exposes its palette and its metrics as configuration — that is everything above — but not its component
-    // shapes: the header is a centred block, the teasers are bare text, a code block is a rectangle with no border.
+    // shapes: the header is a centred block, a code block is a rectangle with no border, a table has no rules.
     // Those are CSS, so they are changed in CSS, and `internalCSS` points at a directory in the input tree whose
     // stylesheets are linked after Helium's own. Later in the cascade, same specificity, so an override is an override
     // and nothing needs `!important`.
@@ -340,7 +309,7 @@ object Site:
       .site
       .pageNavigation(depth = 3)
 
-    // Everything below the header and the teaser rows is the prose of `site/src/landing-page.md`. That file has no
+    // Everything below the header is the prose of `site/src/landing-page.md`. That file has no
     // top-level heading of its own on purpose: `title` here already renders "codeberg4s" directly above it, and a
     // second `<h1>codeberg4s</h1>` under it said the same word twice.
     //
@@ -349,25 +318,29 @@ object Site:
     // that is not "scroll to the bottom and hope", and these three cover the three things anyone arrives wanting.
     withChrome.site
       .landingPage(
-        title              = Some(SiteInfo.title),
-        subtitle           = Some("A Scala 3 client for the Codeberg / Forgejo REST API v1"),
-        titleLinks         = Seq(
+        title          = Some(SiteInfo.title),
+        subtitle       = Some("A Scala 3 client for the Codeberg / Forgejo REST API v1"),
+        titleLinks     = Seq(
           ButtonLink.internal(Root / "getting-started.md", "Get started"),
           TextLink.internal(Root / "examples.md", "Examples"),
           TextLink.internal(Args.apiPath, "API reference"),
           IconLink.external(SiteInfo.sourceUrl, HeliumIcon.github),
         ),
-        latestReleases     = Seq(ReleaseLine.current(args.version)),
-        license            = Some(SiteInfo.licence),
+        latestReleases = Seq(ReleaseLine.current(args.version)),
+        license        = Some(SiteInfo.licence),
         // No `documentationLinks`. Helium renders them as a boxed panel in the header's right-hand column, and every
         // entry it would hold is already a button in `titleLinks` two inches to the left. Saying the same three things
         // twice in one header is worse than saying them once, and the panel was tall enough to leave the left-hand
         // column looking abandoned next to it.
-        projectLinks       = Seq(
+        projectLinks   = Seq(
           TextLink.external(SiteInfo.sourceUrl, "Source"),
           TextLink.external(s"${SiteInfo.sourceUrl}/issues", "Issues"),
         ),
-        teasers            = Teasers.all,
+        // No `teasers`. The four they held were the four bold paragraphs of `landing-page.md` in compressed form, so
+        // a reader met the same four claims twice on one screen. The prose is the version worth keeping: it is the one
+        // with the `Owner`/`Owner.from` contrast, the "pick one per call site" instruction and the link to the clamp
+        // hazard in it, and a Helium `Teaser` is a (title, description) pair rendered as plain text, so it can carry
+        // none of those. `teasers` defaults to `Nil`.
       )
       .site
       .footer(

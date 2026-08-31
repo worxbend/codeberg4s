@@ -1,20 +1,20 @@
 package com.worxbend.codeberg4s.issues
 
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.core.Decode
-import com.worxbend.codeberg4s.core.ResponseBody
-import com.worxbend.codeberg4s.issues.wire.AttachmentDto
-import com.worxbend.codeberg4s.issues.wire.CommentDto
-import com.worxbend.codeberg4s.issues.wire.IssueDeadlineDto
-import com.worxbend.codeberg4s.issues.wire.IssueDto
-import com.worxbend.codeberg4s.issues.wire.IssueSubscriptionDto
-import com.worxbend.codeberg4s.issues.wire.LabelDto
-import com.worxbend.codeberg4s.issues.wire.MilestoneDto
-import com.worxbend.codeberg4s.issues.wire.ReactionDto
-import com.worxbend.codeberg4s.issues.wire.TimelineCommentDto
-import com.worxbend.codeberg4s.issues.wire.TrackedTimeDto
+import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
+import com.worxbend.codeberg4s.core.{Decode, ResponseBody}
+import com.worxbend.codeberg4s.issues.wire.{
+  AttachmentDto,
+  CommentDto,
+  IssueDeadlineDto,
+  IssueDto,
+  IssueSubscriptionDto,
+  LabelDto,
+  MilestoneDto,
+  ReactionDto,
+  TimelineCommentDto,
+  TrackedTimeDto
+}
 import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 

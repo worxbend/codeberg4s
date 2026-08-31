@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.pulls.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.codec.WireValues
+import com.worxbend.codeberg4s.codec.{Json, JsonValue, WireValues}
 import com.worxbend.codeberg4s.pulls.NewReviewComment
 
 /** Forgejo's `CreatePullReviewComment` request model.

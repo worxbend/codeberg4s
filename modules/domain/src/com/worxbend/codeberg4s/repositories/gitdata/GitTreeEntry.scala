@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
-import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.repositories.ContentPath
+import com.worxbend.codeberg4s.repositories.{CommitSha, ContentPath}
 
 /** One entry of a tree listing — `GET /repos/{owner}/{repo}/git/trees/{sha}`.
   *

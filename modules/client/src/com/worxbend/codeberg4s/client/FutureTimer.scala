@@ -3,20 +3,18 @@ package com.worxbend.codeberg4s.client
 import com.worxbend.codeberg4s.core.Timer
 import com.worxbend.codeberg4s.syntax.discard
 
-import scala.concurrent.Future
-import scala.concurrent.Promise
-import scala.concurrent.duration.Duration
-import scala.concurrent.duration.FiniteDuration
-import scala.util.Failure
-import scala.util.Success
-import scala.util.Try
+import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.concurrent.{Future, Promise}
+import scala.util.{Failure, Success, Try}
 
-import java.util.concurrent.CancellationException
-import java.util.concurrent.Delayed
-import java.util.concurrent.RunnableScheduledFuture
-import java.util.concurrent.ScheduledThreadPoolExecutor
-import java.util.concurrent.ThreadFactory
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{
+  CancellationException,
+  Delayed,
+  RunnableScheduledFuture,
+  ScheduledThreadPoolExecutor,
+  ThreadFactory,
+  TimeUnit
+}
 
 /** The [[com.worxbend.codeberg4s.core.Timer]] the published client runs on.
   *

@@ -1,10 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.repositories.admin.CreatePushMirror
-import com.worxbend.codeberg4s.repositories.admin.MigrateRepository
-import com.worxbend.codeberg4s.repositories.admin.TransferRepository
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
+import com.worxbend.codeberg4s.repositories.admin.{CreatePushMirror, MigrateRepository, TransferRepository}
 
 /** Forgejo's `MigrateRepoOptions` request model — the body of `POST /repos/migrate`.
   *

@@ -1,14 +1,9 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.actions.ActionRun
-import com.worxbend.codeberg4s.repositories.actions.RunId
+import com.worxbend.codeberg4s.repositories.actions.{ActionRun, RunId}
 import com.worxbend.codeberg4s.users.wire.UserDto
 
 import scala.concurrent.duration.FiniteDuration

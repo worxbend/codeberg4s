@@ -2,9 +2,7 @@ package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.gitdata.CommitInclude
-import com.worxbend.codeberg4s.repositories.gitdata.CommitStatusQuery
-import com.worxbend.codeberg4s.repositories.gitdata.RefName
+import com.worxbend.codeberg4s.repositories.gitdata.{CommitInclude, CommitStatusQuery, RefName}
 
 /** The query strings the raw-git endpoints send.
   *

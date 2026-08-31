@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.issues
 
-import com.worxbend.codeberg4s.ContentType
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{ContentType, ValidationError}
 
 import java.time.Instant
 import java.util.Arrays

@@ -1,9 +1,6 @@
 package com.worxbend.codeberg4s.repositories.admin
 
-import com.worxbend.codeberg4s.PathSegment
-import com.worxbend.codeberg4s.PositiveId
-import com.worxbend.codeberg4s.SegmentLiteral
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PathSegment, PositiveId, SegmentLiteral, ValidationError}
 
 /** The instance-wide identifier of a repository — the `{id}` of `GET /repositories/{id}`.
   *
@@ -74,8 +71,7 @@ object ActivityId:
   * address the mirror afterwards. It is '''not''' the mirror's remote address and not the mirrored repository's name;
   * [[PushMirror.remoteName]] is where a caller gets one.
   *
-  * Validated as a single URI path segment, so it cannot forge a path — see
-  * [[com.worxbend.codeberg4s.repositories.PathSegment]].
+  * Validated as a single URI path segment, so it cannot forge a path — see [[com.worxbend.codeberg4s.PathSegment]].
   */
 opaque type MirrorName = String
 

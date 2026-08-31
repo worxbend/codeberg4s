@@ -1,10 +1,7 @@
 package com.worxbend.codeberg4s.organizations.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.organizations.CreateOrganization
-import com.worxbend.codeberg4s.organizations.EditOrganization
-import com.worxbend.codeberg4s.organizations.OrgName
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
+import com.worxbend.codeberg4s.organizations.{CreateOrganization, EditOrganization, OrgName}
 import com.worxbend.codeberg4s.users.account.AvatarImage
 
 /** Forgejo's `CreateOrgOption`, `EditOrgOption`, `RenameOrgOption` and `UpdateUserAvatarOption` request models.

@@ -1,16 +1,16 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.repositories.admin.ChangeFiles
-import com.worxbend.codeberg4s.repositories.admin.CommitDates
-import com.worxbend.codeberg4s.repositories.admin.CommitIdentity
-import com.worxbend.codeberg4s.repositories.admin.CommitOptions
-import com.worxbend.codeberg4s.repositories.admin.CreateFile
-import com.worxbend.codeberg4s.repositories.admin.DeleteFile
-import com.worxbend.codeberg4s.repositories.admin.FileOperation
-import com.worxbend.codeberg4s.repositories.admin.UpdateFile
+import com.worxbend.codeberg4s.codec.{Json, JsonValue, Timestamps}
+import com.worxbend.codeberg4s.repositories.admin.{
+  ChangeFiles,
+  CommitDates,
+  CommitIdentity,
+  CommitOptions,
+  CreateFile,
+  DeleteFile,
+  FileOperation,
+  UpdateFile
+}
 
 /** Forgejo's four contents-write request models — `CreateFileOptions`, `UpdateFileOptions`, `DeleteFileOptions` and
   * `ChangeFilesOptions`.

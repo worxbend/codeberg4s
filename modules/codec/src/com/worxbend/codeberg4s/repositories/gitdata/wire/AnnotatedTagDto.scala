@@ -1,16 +1,11 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.repositories.TagName
 import com.worxbend.codeberg4s.repositories.gitdata.AnnotatedTag
-import com.worxbend.codeberg4s.repositories.wire.ArchiveDownloadCountDto
-import com.worxbend.codeberg4s.repositories.wire.GitIdentityDto
-import com.worxbend.codeberg4s.repositories.wire.VerificationDto
+import com.worxbend.codeberg4s.repositories.wire.{ArchiveDownloadCountDto, GitIdentityDto, VerificationDto}
+import com.worxbend.codeberg4s.repositories.{CommitSha, TagName}
 
 /** Forgejo's `AnnotatedTag` model, field for field.
   *

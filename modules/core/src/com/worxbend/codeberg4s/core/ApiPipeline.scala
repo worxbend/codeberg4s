@@ -1,14 +1,9 @@
 package com.worxbend.codeberg4s.core
 
-import com.worxbend.codeberg4s.ApiErrorBody
-import com.worxbend.codeberg4s.CallContext
-import com.worxbend.codeberg4s.CodebergConfig
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.core.Exec.flatMap
-import com.worxbend.codeberg4s.core.Exec.map
-import com.worxbend.codeberg4s.paging.Page
-import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.core.Exec.{flatMap, map}
+import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.syntax.discard
+import com.worxbend.codeberg4s.{ApiErrorBody, CallContext, CodebergConfig, CodebergError}
 
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try

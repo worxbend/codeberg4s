@@ -1,23 +1,24 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.miscellaneous.PlainText
 import com.worxbend.codeberg4s.pulls.PullRequest
 import com.worxbend.codeberg4s.pulls.wire.PullRequestDto
 import com.worxbend.codeberg4s.repositories.Commit
-import com.worxbend.codeberg4s.repositories.gitdata.wire.AnnotatedTagDto
-import com.worxbend.codeberg4s.repositories.gitdata.wire.CombinedStatusDto
-import com.worxbend.codeberg4s.repositories.gitdata.wire.CommitStatusDto
-import com.worxbend.codeberg4s.repositories.gitdata.wire.CompareDto
-import com.worxbend.codeberg4s.repositories.gitdata.wire.EditorConfigDto
-import com.worxbend.codeberg4s.repositories.gitdata.wire.FileResponseDto
-import com.worxbend.codeberg4s.repositories.gitdata.wire.GitBlobDto
-import com.worxbend.codeberg4s.repositories.gitdata.wire.GitTreeDto
-import com.worxbend.codeberg4s.repositories.gitdata.wire.NoteDto
-import com.worxbend.codeberg4s.repositories.gitdata.wire.ReferenceDto
+import com.worxbend.codeberg4s.repositories.gitdata.wire.{
+  AnnotatedTagDto,
+  CombinedStatusDto,
+  CommitStatusDto,
+  CompareDto,
+  EditorConfigDto,
+  FileResponseDto,
+  GitBlobDto,
+  GitTreeDto,
+  NoteDto,
+  ReferenceDto
+}
 import com.worxbend.codeberg4s.repositories.wire.CommitDto
 
 /** Every response shape [[RepositoryGitApi]] can receive, decoded once and shared.

@@ -1,14 +1,9 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.hooks.IssueConfig
-import com.worxbend.codeberg4s.repositories.hooks.IssueConfigValidation
-import com.worxbend.codeberg4s.repositories.hooks.IssueContactLink
+import com.worxbend.codeberg4s.repositories.hooks.{IssueConfig, IssueConfigValidation, IssueContactLink}
 
 /** Forgejo's `IssueConfigContactLink` model — one alternative to opening an issue.
   *

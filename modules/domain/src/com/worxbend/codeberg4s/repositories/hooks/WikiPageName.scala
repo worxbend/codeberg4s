@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
-import com.worxbend.codeberg4s.PathSegment
-import com.worxbend.codeberg4s.SegmentLiteral
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PathSegment, SegmentLiteral, ValidationError}
 
 /** The name of a wiki page, as `GET /repos/{owner}/{repo}/wiki/page/{pageName}` spells it.
   *
@@ -11,10 +9,10 @@ import com.worxbend.codeberg4s.ValidationError
   * A wiki page is a file in a Git repository whose name is its title, so `Getting Started` and `Deployment/Kubernetes`
   * are both perfectly good names — the first because Forgejo maps spaces to dashes itself when it stores the file, the
   * second because a wiki has sub-pages. The slash is the reason this validates with
-  * [[com.worxbend.codeberg4s.repositories.PathSegment.segmented]] rather than
-  * [[com.worxbend.codeberg4s.repositories.PathSegment.from]], and the reason [[segments]] exists: exactly as for
-  * [[com.worxbend.codeberg4s.repositories.BranchName]], a slashed name has to reach the wire as a real separator, and a
-  * name percent-encoded whole into one segment would address a page that does not exist.
+  * [[com.worxbend.codeberg4s.PathSegment.segmented]] rather than [[com.worxbend.codeberg4s.PathSegment.from]], and the
+  * reason [[segments]] exists: exactly as for [[com.worxbend.codeberg4s.repositories.BranchName]], a slashed name has
+  * to reach the wire as a real separator, and a name percent-encoded whole into one segment would address a page that
+  * does not exist.
   *
   * That makes the validation a security boundary rather than a formality. A name is decomposed into segments here, and
   * the `.` and `..` segments that would climb out of the wiki route are rejected before any request is built.

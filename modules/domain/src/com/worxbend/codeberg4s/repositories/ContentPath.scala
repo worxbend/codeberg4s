@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.repositories
 
-import com.worxbend.codeberg4s.PathSegment
-import com.worxbend.codeberg4s.SegmentLiteral
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PathSegment, SegmentLiteral, ValidationError}
 
 /** A path to a file or directory inside a repository, as `GET /repos/{owner}/{repo}/contents/{filepath}` spells it.
   *

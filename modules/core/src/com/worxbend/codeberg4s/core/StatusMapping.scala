@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.core
 
-import com.worxbend.codeberg4s.ApiErrorBody
-import com.worxbend.codeberg4s.CallContext
-import com.worxbend.codeberg4s.CodebergError
+import com.worxbend.codeberg4s.{ApiErrorBody, CallContext, CodebergError}
 
 /** What an HTTP status means to this library.
   *

@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.repositories.access
 
-import com.worxbend.codeberg4s.PathSegment
-import com.worxbend.codeberg4s.SegmentLiteral
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PathSegment, SegmentLiteral, ValidationError}
 
 /** The name that addresses one branch protection rule — the `{name}` of
   * `/repos/{owner}/{repo}/branch_protections/{name}`, and the `rule_name` a rule reports.
@@ -42,9 +40,9 @@ object BranchRuleName:
   /** Parses a branch protection rule name.
     *
     * Trims surrounding whitespace. Rejects an empty or blank name, a name containing `/`, a name containing a control
-    * character, and the traversal segments `.` and `..` — see [[com.worxbend.codeberg4s.repositories.PathSegment]] for
-    * why that is a security boundary and not a convenience, and the type's own note for why the slash is rejected
-    * rather than encoded.
+    * character, and the traversal segments `.` and `..` — see [[com.worxbend.codeberg4s.PathSegment]] for why that is a
+    * security boundary and not a convenience, and the type's own note for why the slash is rejected rather than
+    * encoded.
     *
     * Glob characters are '''not''' rejected: `*` and `?` are what a rule name is made of, and they are legal in a URI
     * path segment.

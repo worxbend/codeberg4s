@@ -33,7 +33,7 @@ import java.time.Instant
   *   than an enum because it is a property of the issue being created, not an argument a reader has to decode at a call
   *   site — see [[CreateIssue.createdClosed]]
   */
-final case class CreateIssue(
+final case class CreateIssue private[codeberg4s] (
     title: String,
     body: Option[String],
     assignees: Vector[String],

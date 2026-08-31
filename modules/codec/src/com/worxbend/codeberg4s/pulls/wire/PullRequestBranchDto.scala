@@ -1,14 +1,11 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.pulls.PullRequestBranch
-import com.worxbend.codeberg4s.repositories.BranchName
-import com.worxbend.codeberg4s.repositories.CommitSha
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
+import com.worxbend.codeberg4s.repositories.{BranchName, CommitSha}
 
 /** Forgejo's `PRBranchInfo` model, field for field — the `base` and `head` objects of a pull request.
   *

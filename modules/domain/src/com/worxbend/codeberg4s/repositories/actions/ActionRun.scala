@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.actions
 
-import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.repositories.RepoSlug
+import com.worxbend.codeberg4s.repositories.{CommitSha, RepoSlug}
 import com.worxbend.codeberg4s.users.User
 
 import scala.concurrent.duration.FiniteDuration

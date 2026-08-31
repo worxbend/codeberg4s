@@ -2,33 +2,26 @@ package com.worxbend.codeberg4s.repositories.admin
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.core.Decode
-import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.issues.Issue
-import com.worxbend.codeberg4s.issues.TrackedTime
-import com.worxbend.codeberg4s.issues.wire.IssueDto
-import com.worxbend.codeberg4s.issues.wire.TrackedTimeDto
-import com.worxbend.codeberg4s.miscellaneous.PlainText
-import com.worxbend.codeberg4s.miscellaneous.SigningKey
-import com.worxbend.codeberg4s.repositories.Branch
-import com.worxbend.codeberg4s.repositories.ContentEntry
-import com.worxbend.codeberg4s.repositories.Repository
-import com.worxbend.codeberg4s.repositories.admin.wire.ActivityDto
-import com.worxbend.codeberg4s.repositories.admin.wire.FilesResponseDto
-import com.worxbend.codeberg4s.repositories.admin.wire.IssuePinsAllowedDto
-import com.worxbend.codeberg4s.repositories.admin.wire.LanguageStatisticsDto
-import com.worxbend.codeberg4s.repositories.admin.wire.PushMirrorDto
-import com.worxbend.codeberg4s.repositories.admin.wire.SyncForkInfoDto
-import com.worxbend.codeberg4s.repositories.admin.wire.TopicSearchEnvelopeDto
-import com.worxbend.codeberg4s.repositories.admin.wire.TopicSummaryDto
-import com.worxbend.codeberg4s.repositories.admin.wire.WatchInfoDto
+import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
+import com.worxbend.codeberg4s.core.{Decode, DecodeFailure}
+import com.worxbend.codeberg4s.issues.wire.{IssueDto, TrackedTimeDto}
+import com.worxbend.codeberg4s.issues.{Issue, TrackedTime}
+import com.worxbend.codeberg4s.miscellaneous.{PlainText, SigningKey}
+import com.worxbend.codeberg4s.repositories.admin.wire.{
+  ActivityDto,
+  FilesResponseDto,
+  IssuePinsAllowedDto,
+  LanguageStatisticsDto,
+  PushMirrorDto,
+  SyncForkInfoDto,
+  TopicSearchEnvelopeDto,
+  TopicSummaryDto,
+  WatchInfoDto
+}
 import com.worxbend.codeberg4s.repositories.gitdata.FileChange
 import com.worxbend.codeberg4s.repositories.gitdata.wire.FileResponseDto
-import com.worxbend.codeberg4s.repositories.wire.BranchDto
-import com.worxbend.codeberg4s.repositories.wire.ContentEntryDto
-import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
+import com.worxbend.codeberg4s.repositories.wire.{BranchDto, ContentEntryDto, RepositoryDto}
+import com.worxbend.codeberg4s.repositories.{Branch, ContentEntry, Repository}
 import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 

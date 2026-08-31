@@ -1,12 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.repositories.hooks.CreateHook
-import com.worxbend.codeberg4s.repositories.hooks.EditGitHook
-import com.worxbend.codeberg4s.repositories.hooks.EditHook
-import com.worxbend.codeberg4s.repositories.hooks.HookConfig
-import com.worxbend.codeberg4s.repositories.hooks.HookSecret
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
+import com.worxbend.codeberg4s.repositories.hooks.{CreateHook, EditGitHook, EditHook, HookConfig, HookSecret}
 
 /** Forgejo's `CreateHookOption`, `EditHookOption` and `EditGitHookOption` request models.
   *

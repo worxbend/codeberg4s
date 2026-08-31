@@ -1,9 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.repositories.access.CreateTagProtection
-import com.worxbend.codeberg4s.repositories.access.EditTagProtection
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
+import com.worxbend.codeberg4s.repositories.access.{CreateTagProtection, EditTagProtection}
 import com.worxbend.codeberg4s.users.Username
 
 /** Forgejo's `CreateTagProtectionOption` and `EditTagProtectionOption` request models — the bodies of `POST` on
