@@ -72,7 +72,7 @@ object ActivityId:
   * [[PushMirror.remoteName]] is where a caller gets one.
   *
   * Validated as a single URI path segment, so it cannot forge a path — see
-  * [[com.worxbend.codeberg4s.repositories.PathSegment]].
+  * [[com.worxbend.codeberg4s.PathSegment]].
   */
 opaque type MirrorName = String
 
