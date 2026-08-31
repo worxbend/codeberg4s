@@ -6,6 +6,9 @@ import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.issues.wire.EditIssueCommentOptionDto
@@ -253,14 +256,14 @@ object IssueCommentApi:
       query: CommentQuery,
       params: PageParams,
   ): CodebergRequest =
-    IssueRequests.read(
+    read(
       ListForRepositoryOperation,
       IssueRequests.issuesPath(owner, name) :+ "comments",
       IssueQueries.comments(query) ++ IssueQueries.paging(params),
     )
 
   private def getRequest(owner: Owner, name: RepoName, id: CommentId): CodebergRequest =
-    IssueRequests.read(GetOperation, IssueRequests.commentPath(owner, name, id), Nil)
+    read(GetOperation, IssueRequests.commentPath(owner, name, id), Nil)
 
   private def editRequest(
       owner: Owner,
@@ -268,7 +271,7 @@ object IssueCommentApi:
       id: CommentId,
       command: EditComment,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       EditOperation,
       HttpMethod.Patch,
       IssueRequests.commentPath(owner, name, id),
@@ -276,7 +279,7 @@ object IssueCommentApi:
     )
 
   private def deleteRequest(owner: Owner, name: RepoName, id: CommentId): CodebergRequest =
-    IssueRequests.remove(DeleteOperation, IssueRequests.commentPath(owner, name, id))
+    remove(DeleteOperation, IssueRequests.commentPath(owner, name, id))
 
   private def editDeprecatedRequest(
       owner: Owner,
@@ -285,7 +288,7 @@ object IssueCommentApi:
       id: CommentId,
       command: EditComment,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       EditDeprecatedOperation,
       HttpMethod.Patch,
       deprecatedPath(owner, name, number, id),
@@ -298,7 +301,7 @@ object IssueCommentApi:
       number: IssueNumber,
       id: CommentId,
   ): CodebergRequest =
-    IssueRequests.remove(DeleteDeprecatedOperation, deprecatedPath(owner, name, number, id))
+    remove(DeleteDeprecatedOperation, deprecatedPath(owner, name, number, id))
 
   private def deprecatedPath(
       owner: Owner,

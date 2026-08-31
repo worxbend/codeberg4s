@@ -6,6 +6,9 @@ import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.issues.wire.AddTimeOptionDto
@@ -312,7 +315,7 @@ object IssueTimeApi:
       query: TrackedTimeQuery,
       params: PageParams,
   ): CodebergRequest =
-    IssueRequests.read(
+    read(
       ListOperation,
       timesPath(owner, name, number),
       IssueQueries.trackedTimes(query) ++ IssueQueries.paging(params),
@@ -324,7 +327,7 @@ object IssueTimeApi:
       number: IssueNumber,
       command: AddTrackedTime,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       AddOperation,
       HttpMethod.Post,
       timesPath(owner, name, number),
@@ -337,10 +340,10 @@ object IssueTimeApi:
       number: IssueNumber,
       id: TrackedTimeId,
   ): CodebergRequest =
-    IssueRequests.remove(DeleteOperation, timesPath(owner, name, number) :+ id.value.toString)
+    remove(DeleteOperation, timesPath(owner, name, number) :+ id.value.toString)
 
   private def resetRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
-    IssueRequests.remove(ResetOperation, timesPath(owner, name, number))
+    remove(ResetOperation, timesPath(owner, name, number))
 
   private def timesPath(owner: Owner, name: RepoName, number: IssueNumber): List[String] =
     IssueRequests.issuePath(owner, name, number) :+ "times"

@@ -1,75 +1,17 @@
 package com.worxbend.codeberg4s.issues
 
-import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
-import com.worxbend.codeberg4s.core.CodebergRequest
-import com.worxbend.codeberg4s.core.RequestBody
 
-/** The request shapes and path prefixes every sub-API of the issue group builds on.
+/** The path prefixes every sub-API of the issue group builds on, so that `/repos/{owner}/{repo}/issues` is spelled once
+  * rather than eight times.
   *
-  * [[IssueApi]] predates this object and keeps its own private copies of the four builders it was written with; nothing
-  * here changes what those do. The seven sub-APIs share these instead, so that `/repos/{owner}/{repo}/issues` is
-  * spelled once rather than eight times and a `DELETE` with a body cannot accidentally become one without.
+  * The request shapes these paths are handed to live in the companion of
+  * [[com.worxbend.codeberg4s.core.CodebergRequest]], shared with the whole library.
   *
   * Internal to this group.
   */
 private[issues] object IssueRequests:
-
-  /** A `GET`, with a query that may be empty. */
-  def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = None,
-    )
-
-  /** A mutating call carrying a JSON body. */
-  def write(operation: String, method: HttpMethod, path: List[String], body: String): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Json(body)),
-    )
-
-  /** A mutating call carrying a JSON body and a query, which only the attachment uploads need. */
-  def upload(
-      operation: String,
-      path: List[String],
-      query: List[(String, String)],
-      body: RequestBody,
-  ): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Post,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = Some(body),
-    )
-
-  /** A `DELETE` with no body — the ordinary shape. */
-  def remove(operation: String, path: List[String]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Delete,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
-    )
-
-  /** A `DELETE` that carries a JSON body, which reactions, blocks, dependencies and label removals all need because
-    * what to remove is not in the URL. RFC 9110 permits this and defines no semantics for it; Forgejo defines its own.
-    */
-  def removeWithBody(operation: String, path: List[String], body: String): CodebergRequest =
-    write(operation, HttpMethod.Delete, path, body)
 
   /** `/repos/{owner}/{repo}`. */
   def repoPath(owner: Owner, name: RepoName): List[String] =

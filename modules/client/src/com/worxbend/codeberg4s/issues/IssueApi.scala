@@ -9,9 +9,13 @@ import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.bodiless
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.removeWithBody
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.issues.wire.CommentDto
 import com.worxbend.codeberg4s.issues.wire.CreateIssueCommentOptionDto
@@ -764,14 +768,14 @@ object IssueApi:
       exec.attempt(rail.timeline(owner, name, number, query, params))
 
   private def searchRequest(query: IssueSearchQuery, params: PageParams): CodebergRequest =
-    IssueRequests.read(
+    read(
       SearchOperation,
       List("repos", "issues", "search"),
       IssueQueries.search(query) ++ IssueQueries.paging(params),
     )
 
   private def deleteRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
-    IssueRequests.remove(DeleteOperation, issuePath(owner, name, number))
+    remove(DeleteOperation, issuePath(owner, name, number))
 
   private def setDeadlineRequest(
       owner: Owner,
@@ -779,7 +783,7 @@ object IssueApi:
       number: IssueNumber,
       dueDate: Instant,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       SetDeadlineOperation,
       HttpMethod.Post,
       issuePath(owner, name, number) :+ "deadline",
@@ -790,7 +794,7 @@ object IssueApi:
     bodiless(PinOperation, HttpMethod.Post, pinPath(owner, name, number))
 
   private def unpinRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
-    IssueRequests.remove(UnpinOperation, pinPath(owner, name, number))
+    remove(UnpinOperation, pinPath(owner, name, number))
 
   private def movePinRequest(
       owner: Owner,
@@ -806,7 +810,7 @@ object IssueApi:
       number: IssueNumber,
       params: PageParams,
   ): CodebergRequest =
-    IssueRequests.read(ListBlocksOperation, blocksPath(owner, name, number), IssueQueries.paging(params))
+    read(ListBlocksOperation, blocksPath(owner, name, number), IssueQueries.paging(params))
 
   private def addBlockRequest(
       owner: Owner,
@@ -814,7 +818,7 @@ object IssueApi:
       number: IssueNumber,
       blocked: IssueRef,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       AddBlockOperation,
       HttpMethod.Post,
       blocksPath(owner, name, number),
@@ -827,7 +831,7 @@ object IssueApi:
       number: IssueNumber,
       blocked: IssueRef,
   ): CodebergRequest =
-    IssueRequests.removeWithBody(
+    removeWithBody(
       RemoveBlockOperation,
       blocksPath(owner, name, number),
       IssueMetaDto.render(blocked),
@@ -839,7 +843,7 @@ object IssueApi:
       number: IssueNumber,
       params: PageParams,
   ): CodebergRequest =
-    IssueRequests.read(ListDependenciesOperation, dependenciesPath(owner, name, number), IssueQueries.paging(params))
+    read(ListDependenciesOperation, dependenciesPath(owner, name, number), IssueQueries.paging(params))
 
   private def addDependencyRequest(
       owner: Owner,
@@ -847,7 +851,7 @@ object IssueApi:
       number: IssueNumber,
       blocker: IssueRef,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       AddDependencyOperation,
       HttpMethod.Post,
       dependenciesPath(owner, name, number),
@@ -860,7 +864,7 @@ object IssueApi:
       number: IssueNumber,
       blocker: IssueRef,
   ): CodebergRequest =
-    IssueRequests.removeWithBody(
+    removeWithBody(
       RemoveDependencyOperation,
       dependenciesPath(owner, name, number),
       IssueMetaDto.render(blocker),
@@ -873,21 +877,10 @@ object IssueApi:
       query: CommentQuery,
       params: PageParams,
   ): CodebergRequest =
-    IssueRequests.read(
+    read(
       TimelineOperation,
       issuePath(owner, name, number) :+ "timeline",
       IssueQueries.comments(query) ++ IssueQueries.paging(params),
-    )
-
-  /** A mutating call with no payload at all, which pinning and moving a pin both are. */
-  private def bodiless(operation: String, method: HttpMethod, path: List[String]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
     )
 
   private def pinPath(owner: Owner, name: RepoName, number: IssueNumber): List[String] =
@@ -957,26 +950,6 @@ object IssueApi:
 
   private def getMilestoneRequest(owner: Owner, name: RepoName, id: MilestoneId): CodebergRequest =
     read(GetMilestoneOperation, milestonesPath(owner, name) :+ id.value.toString, Nil)
-
-  private def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = None,
-    )
-
-  private def write(operation: String, method: HttpMethod, path: List[String], body: String): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Json(body)),
-    )
 
   private def issuesPath(owner: Owner, name: RepoName): List[String] =
     List("repos", owner.value, name.value, "issues")

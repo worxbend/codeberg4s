@@ -6,6 +6,8 @@ import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.issues.wire.MilestoneOptionDto
@@ -153,7 +155,7 @@ object IssueMilestoneApi:
       exec.attempt(rail.delete(owner, name, id))
 
   private def createRequest(owner: Owner, name: RepoName, command: CreateMilestone): CodebergRequest =
-    IssueRequests.write(
+    write(
       CreateOperation,
       HttpMethod.Post,
       IssueRequests.repoPath(owner, name) :+ "milestones",
@@ -166,7 +168,7 @@ object IssueMilestoneApi:
       id: MilestoneId,
       command: EditMilestone,
   ): CodebergRequest =
-    IssueRequests.write(
+    write(
       EditOperation,
       HttpMethod.Patch,
       IssueRequests.milestonePath(owner, name, id),
@@ -174,4 +176,4 @@ object IssueMilestoneApi:
     )
 
   private def deleteRequest(owner: Owner, name: RepoName, id: MilestoneId): CodebergRequest =
-    IssueRequests.remove(DeleteOperation, IssueRequests.milestonePath(owner, name, id))
+    remove(DeleteOperation, IssueRequests.milestonePath(owner, name, id))

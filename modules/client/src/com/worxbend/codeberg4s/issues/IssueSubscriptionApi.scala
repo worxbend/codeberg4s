@@ -6,6 +6,7 @@ import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.RetryEligibility
@@ -201,10 +202,10 @@ object IssueSubscriptionApi:
       number: IssueNumber,
       params: PageParams,
   ): CodebergRequest =
-    IssueRequests.read(ListOperation, subscriptionsPath(owner, name, number), IssueQueries.paging(params))
+    read(ListOperation, subscriptionsPath(owner, name, number), IssueQueries.paging(params))
 
   private def checkRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
-    IssueRequests.read(CheckOperation, subscriptionsPath(owner, name, number) :+ "check", Nil)
+    read(CheckOperation, subscriptionsPath(owner, name, number) :+ "check", Nil)
 
   private def subscribeRequest(
       owner: Owner,
@@ -212,7 +213,7 @@ object IssueSubscriptionApi:
       number: IssueNumber,
       login: Owner,
   ): CodebergRequest =
-    bodiless(SubscribeOperation, HttpMethod.Put, subscriptionsPath(owner, name, number) :+ login.value)
+    emptyBody(SubscribeOperation, HttpMethod.Put, subscriptionsPath(owner, name, number) :+ login.value)
 
   private def unsubscribeRequest(
       owner: Owner,
@@ -220,9 +221,16 @@ object IssueSubscriptionApi:
       number: IssueNumber,
       login: Owner,
   ): CodebergRequest =
-    bodiless(UnsubscribeOperation, HttpMethod.Delete, subscriptionsPath(owner, name, number) :+ login.value)
+    emptyBody(UnsubscribeOperation, HttpMethod.Delete, subscriptionsPath(owner, name, number) :+ login.value)
 
-  private def bodiless(operation: String, method: HttpMethod, path: List[String]): CodebergRequest =
+  /** A mutating call carrying a deliberately empty body.
+    *
+    * Deliberately not [[com.worxbend.codeberg4s.core.CodebergRequest.bodiless]], which sends no body at all: these two
+    * routes are among the Forgejo endpoints [[com.worxbend.codeberg4s.core.RequestBody.Empty]] exists for, and the
+    * difference — a zero-length body with a `Content-Length: 0` header, against no body and no header — is visible to
+    * the server. Keeping the two under different names keeps the choice from being made by accident.
+    */
+  private def emptyBody(operation: String, method: HttpMethod, path: List[String]): CodebergRequest =
     CodebergRequest(
       operation = operation,
       method    = method,
