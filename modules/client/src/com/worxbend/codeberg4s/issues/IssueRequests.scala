@@ -29,10 +29,18 @@ private[issues] object IssueRequests:
   def commentPath(owner: Owner, name: RepoName, id: CommentId): List[String] =
     issuesPath(owner, name) ++ List("comments", id.value.toString)
 
+  /** `/repos/{owner}/{repo}/labels` — the labels a repository offers, not the ones on any one issue. */
+  def labelsPath(owner: Owner, name: RepoName): List[String] =
+    repoPath(owner, name) :+ "labels"
+
   /** `/repos/{owner}/{repo}/labels/{id}`. */
   def labelPath(owner: Owner, name: RepoName, id: LabelId): List[String] =
-    repoPath(owner, name) ++ List("labels", id.value.toString)
+    labelsPath(owner, name) :+ id.value.toString
+
+  /** `/repos/{owner}/{repo}/milestones`. */
+  def milestonesPath(owner: Owner, name: RepoName): List[String] =
+    repoPath(owner, name) :+ "milestones"
 
   /** `/repos/{owner}/{repo}/milestones/{id}`. */
   def milestonePath(owner: Owner, name: RepoName, id: MilestoneId): List[String] =
-    repoPath(owner, name) ++ List("milestones", id.value.toString)
+    milestonesPath(owner, name) :+ id.value.toString

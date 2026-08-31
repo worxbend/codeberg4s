@@ -158,7 +158,7 @@ object IssueMilestoneApi:
     write(
       CreateOperation,
       HttpMethod.Post,
-      IssueRequests.repoPath(owner, name) :+ "milestones",
+      IssueRequests.milestonesPath(owner, name),
       MilestoneOptionDto.renderCreate(command),
     )
 

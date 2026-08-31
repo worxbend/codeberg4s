@@ -22,9 +22,8 @@ import com.worxbend.codeberg4s.users.wire.UserDto
 /** Every response shape the issue group's sub-APIs can receive, decoded once and shared.
   *
   * The instances are stateless and immutable, so they are built as `val`s rather than per call, exactly as
-  * [[com.worxbend.codeberg4s.repositories.actions.RepositoryActionDecoders]] does. [[IssueApi]] itself predates this
-  * object and keeps its own private copies of the four decoders it was written with; nothing here changes what those
-  * do.
+  * [[com.worxbend.codeberg4s.repositories.actions.RepositoryActionDecoders]] does. [[IssueApi]] and every sub-API read
+  * their decoders from here, so a change to how one shape is decoded lands everywhere at once.
   *
   * ==Every listing in this group is a bare array==
   *
@@ -43,7 +42,15 @@ private[issues] object IssueDecoders:
   val issues: Decode[Vector[Issue]] =
     WireDecode.of(Json.decoder[Vector[IssueDto]])(dtos => IssueDto.toDomainAll(JsonPath.Root, dtos))
 
-  /** One comment object.
+  /** One comment object on an endpoint that always sends a body — posting a comment, where `201` is the only success.
+    *
+    * The difference from [[comment]] is only what an empty body means: nothing on those endpoints declares `204`, so a
+    * blank body is a malformed response and is reported as one rather than being read as "no comment".
+    */
+  val presentComment: Decode[Comment] =
+    WireDecode.of(Json.decoder[CommentDto])(_.toDomain)
+
+  /** One comment object, on the endpoints where an empty body is also a success.
     *
     * '''An empty body is a success here, not a decoding failure.''' Both the single-comment read and the comment edit
     * declare `204` alongside `200` in `spec/swagger.v1.json`, and Forgejo answers `204` when the row behind the id is
@@ -54,9 +61,7 @@ private[issues] object IssueDecoders:
     * fails. See [[com.worxbend.codeberg4s.repositories.actions.RepositoryActionDecoders]] for the same shape.
     */
   val comment: Decode[Option[Comment]] =
-    val present = WireDecode.of(Json.decoder[CommentDto])(_.toDomain)
-
-    (body: ResponseBody) => if body.isBlank then Right(None) else present(body).map(Some.apply)
+    (body: ResponseBody) => if body.isBlank then Right(None) else presentComment(body).map(Some.apply)
 
   /** A bare array of comment objects, as the repository-wide comment listing returns it. */
   val comments: Decode[Vector[Comment]] =
@@ -73,6 +78,10 @@ private[issues] object IssueDecoders:
   /** One milestone object. */
   val milestone: Decode[Milestone] =
     WireDecode.of(Json.decoder[MilestoneDto])(_.toDomain)
+
+  /** A bare array of milestone objects, as the repository's milestone listing returns it. */
+  val milestones: Decode[Vector[Milestone]] =
+    WireDecode.of(Json.decoder[Vector[MilestoneDto]])(dtos => MilestoneDto.toDomainAll(JsonPath.Root, dtos))
 
   /** One attachment object. */
   val attachment: Decode[IssueAttachment] =
