@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.repositories.gitdata.RefName
 
@@ -19,14 +20,14 @@ import java.time.format.DateTimeFormatter
   */
 private[codeberg4s] object AdminQueries:
 
-  /** The `page` and `limit` parameters for a paged listing.
+  /** The `page` and `limit` parameters of a paged listing.
     *
-    * '''Both, always''', for the reason [[com.worxbend.codeberg4s.issues.wire.IssueQueries.paging]] states: a limit
-    * sent without a page is silently ignored by some Forgejo endpoints, which is how a client accidentally pulls an
-    * unbounded collection.
+    * Both are always sent, and the pair is rendered by [[com.worxbend.codeberg4s.codec.PagingQuery.window]], which
+    * carries the measurement behind that rule: a `limit` sent without a `page` is silently ignored by some Forgejo
+    * endpoints, which is how a client accidentally pulls an unbounded collection.
     */
   def paging(params: PageParams): List[(String, String)] =
-    List("page" -> params.page.value.toString, "limit" -> params.size.value.toString)
+    PagingQuery.window(params)
 
   /** The `ref` parameter of the root contents listing.
     *

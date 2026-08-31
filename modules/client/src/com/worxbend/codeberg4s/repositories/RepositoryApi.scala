@@ -3,6 +3,7 @@ package com.worxbend.codeberg4s.repositories
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
 import com.worxbend.codeberg4s.core.CodebergRequest.read
@@ -415,6 +416,6 @@ object RepositoryApi:
     read(ListForksOperation, List("repos", owner.value, name.value, "forks"), window(params))
 
   /** Every operation in this group is a `GET` that carries no body and adds no header of its own. */
-  /** The `page` and `limit` parameters, in the order Forgejo's own `Link` header writes them. */
+  /** The `page` and `limit` window, rendered by [[com.worxbend.codeberg4s.codec.PagingQuery.window]]. */
   private def window(params: PageParams): List[(String, String)] =
-    List("page" -> params.page.value.toString, "limit" -> params.size.value.toString)
+    PagingQuery.window(params)

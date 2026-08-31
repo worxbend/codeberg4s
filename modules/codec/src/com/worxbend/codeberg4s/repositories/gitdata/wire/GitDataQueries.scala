@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.repositories.gitdata.CommitInclude
 import com.worxbend.codeberg4s.repositories.gitdata.CommitStatusQuery
@@ -20,21 +21,20 @@ private[codeberg4s] object GitDataQueries:
 
   /** The `page` and `limit` parameters, as almost every Forgejo listing spells them. */
   def paging(params: PageParams): List[(String, String)] =
-    List("page" -> params.page.value.toString, "limit" -> params.size.value.toString)
+    PagingQuery.window(params)
 
   /** The window of `GET /repos/{owner}/{repo}/git/trees/{sha}`, which spells the size `per_page`.
     *
     * '''This endpoint is the odd one out.''' Every other paged route in the library takes `limit`; the tree route
-    * declares `per_page` and ignores `limit` entirely, so sending the usual spelling here returns the instance's
-    * default page size and no error. That single word is the reason this function exists rather than [[paging]] being
-    * reused.
+    * declares `per_page` and ignores it entirely, which is why the window comes from
+    * [[com.worxbend.codeberg4s.codec.PagingQuery.perPageWindow]] and not from [[paging]].
     *
     * @param recursive
     *   whether to descend into subtrees; emitted only when `true`, since `false` is the instance's own default
     */
   def treeWindow(params: PageParams, recursive: Boolean): List[(String, String)] =
     Option.when(recursive)("recursive" -> "true").toList ++
-      List("page" -> params.page.value.toString, "per_page" -> params.size.value.toString)
+      PagingQuery.perPageWindow(params)
 
   /** The `stat`, `verification` and `files` parameters of `GET /repos/{owner}/{repo}/git/commits/{sha}`.
     *

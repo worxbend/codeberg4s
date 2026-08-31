@@ -4,6 +4,7 @@ import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
 import com.worxbend.codeberg4s.core.CodebergRequest.read
@@ -699,9 +700,9 @@ object RepositoryPublishingApi:
     )
 
   /** A `DELETE` with no body at all, which is what every deletion in this group is. */
-  /** `page` and `limit`, always both — `limit` alone is silently ignored by some Forgejo endpoints. */
+  /** The `page` and `limit` window, rendered by [[com.worxbend.codeberg4s.codec.PagingQuery.window]]. */
   private def window(params: PageParams): List[(String, String)] =
-    List("page" -> params.page.value.toString, "limit" -> params.size.value.toString)
+    PagingQuery.window(params)
 
   private def releasesPath(owner: Owner, name: RepoName): List[String] =
     List("repos", owner.value, name.value, "releases")

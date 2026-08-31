@@ -4,6 +4,7 @@ import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
 import com.worxbend.codeberg4s.core.CodebergRequest.read
@@ -313,14 +314,11 @@ object UserApi:
     read(KeysOperation, List("users", username.value, "keys"), pageQuery(params))
 
   /** A `GET` with no body and no extra headers, which is every operation in this group. */
-  /** `page` and `limit`, always together.
-    *
-    * Sending `limit` alone is not a smaller version of this: the golden-fixture manifest records list endpoints that
-    * ignore a lone `limit` and return the entire collection — 862 forks, 5233 stargazers — which is the unbounded fetch
-    * this library exists to prevent.
+  /** The `page` and `limit` window every listing here sends, rendered by
+    * [[com.worxbend.codeberg4s.codec.PagingQuery.window]].
     */
   private def pageQuery(params: PageParams): List[(String, String)] =
-    List(("page", params.page.value.toString), ("limit", params.size.value.toString))
+    PagingQuery.window(params)
 
   private val UserDecoder: Decode[User] =
     WireDecode.of(Json.decoder[UserDto])(_.toDomain)
