@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories
 
 import com.worxbend.codeberg4s.PathSegment
+import com.worxbend.codeberg4s.SegmentLiteral
 import com.worxbend.codeberg4s.ValidationError
 
 /** The name of a branch, as `GET /repos/{owner}/{repo}/branches/{branch}` spells it.
@@ -30,6 +31,16 @@ object BranchName:
     */
   def from(value: String): Either[ValidationError, BranchName] =
     PathSegment.segmented("branch", value)
+
+  /** Builds a branch name from a string literal, checked while the code compiles.
+    *
+    * `BranchName("...")` '''is''' the branch name, with no `Either` to unwrap: a literal is either valid or it is not,
+    * and an invalid one is a compile error pointing at the literal itself. The rules are [[from]]'s, minus the trim —
+    * surrounding whitespace is refused rather than removed. See [[com.worxbend.codeberg4s.SegmentLiteral]], and use
+    * [[from]] for a value known only at run time.
+    */
+  inline def apply[V <: String & Singleton](inline value: V): BranchName =
+    SegmentLiteral.segmented("branch", value)
 
   extension (branch: BranchName)
 

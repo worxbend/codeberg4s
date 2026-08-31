@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin
 
 import com.worxbend.codeberg4s.PathSegment
+import com.worxbend.codeberg4s.SegmentLiteral
 import com.worxbend.codeberg4s.ValidationError
 
 /** Validation shared by every identifier in this group that Forgejo expresses as a positive integer.
@@ -113,6 +114,16 @@ object MirrorName:
     */
   def from(value: String): Either[ValidationError, MirrorName] =
     PathSegment.from("mirrorName", value)
+
+  /** Builds a mirror name from a string literal, checked while the code compiles.
+    *
+    * `MirrorName("...")` '''is''' the mirror name, with no `Either` to unwrap: a literal is either valid or it is not,
+    * and an invalid one is a compile error pointing at the literal itself. The rules are [[from]]'s, minus the trim —
+    * surrounding whitespace is refused rather than removed. See [[com.worxbend.codeberg4s.SegmentLiteral]], and use
+    * [[from]] for a value known only at run time.
+    */
+  inline def apply[V <: String & Singleton](inline value: V): MirrorName =
+    SegmentLiteral.plain("mirrorName", value)
 
   extension (name: MirrorName)
 

@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.organizations
 
 import com.worxbend.codeberg4s.PathSegment
+import com.worxbend.codeberg4s.SegmentLiteral
 import com.worxbend.codeberg4s.ValidationError
 
 /** The handle that names an organisation — the `{org}` of `/orgs/{org}`.
@@ -45,6 +46,16 @@ object OrgName:
     */
   def from(value: String): Either[ValidationError, OrgName] =
     PathSegment.from(Field, value)
+
+  /** Builds an organisation name from a string literal, checked while the code compiles.
+    *
+    * `OrgName("...")` '''is''' the organisation name, with no `Either` to unwrap: a literal is either valid or it is
+    * not, and an invalid one is a compile error pointing at the literal itself. The rules are [[from]]'s, minus the
+    * trim — surrounding whitespace is refused rather than removed. See [[com.worxbend.codeberg4s.SegmentLiteral]], and
+    * use [[from]] for a value known only at run time.
+    */
+  inline def apply[V <: String & Singleton](inline value: V): OrgName =
+    SegmentLiteral.plain("orgName", value)
 
   extension (name: OrgName)
 

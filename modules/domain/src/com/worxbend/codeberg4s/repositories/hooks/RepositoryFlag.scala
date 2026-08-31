@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
 import com.worxbend.codeberg4s.PathSegment
+import com.worxbend.codeberg4s.SegmentLiteral
 import com.worxbend.codeberg4s.ValidationError
 
 /** One administrative flag attached to a repository — the `{flag}` of `/repos/{owner}/{repo}/flags/{flag}`.
@@ -36,6 +37,16 @@ object RepositoryFlag:
     */
   def from(value: String): Either[ValidationError, RepositoryFlag] =
     PathSegment.from("repositoryFlag", value)
+
+  /** Builds a flag from a string literal, checked while the code compiles.
+    *
+    * `RepositoryFlag("...")` '''is''' the flag, with no `Either` to unwrap: a literal is either valid or it is not, and
+    * an invalid one is a compile error pointing at the literal itself. The rules are [[from]]'s, minus the trim —
+    * surrounding whitespace is refused rather than removed. See [[com.worxbend.codeberg4s.SegmentLiteral]], and use
+    * [[from]] for a value known only at run time.
+    */
+  inline def apply[V <: String & Singleton](inline value: V): RepositoryFlag =
+    SegmentLiteral.plain("repositoryFlag", value)
 
   extension (flag: RepositoryFlag)
 

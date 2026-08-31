@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.publishing
 
 import com.worxbend.codeberg4s.PathSegment
+import com.worxbend.codeberg4s.SegmentLiteral
 import com.worxbend.codeberg4s.ValidationError
 
 /** One repository topic — `forge`, `forgejo`, `git`, `self-hosted` on `golden/repository/topics.json`.
@@ -34,6 +35,16 @@ object Topic:
     */
   def from(value: String): Either[ValidationError, Topic] =
     PathSegment.from("topic", value)
+
+  /** Builds a topic name from a string literal, checked while the code compiles.
+    *
+    * `Topic("...")` '''is''' the topic name, with no `Either` to unwrap: a literal is either valid or it is not, and an
+    * invalid one is a compile error pointing at the literal itself. The rules are [[from]]'s, minus the trim —
+    * surrounding whitespace is refused rather than removed. See [[com.worxbend.codeberg4s.SegmentLiteral]], and use
+    * [[from]] for a value known only at run time.
+    */
+  inline def apply[V <: String & Singleton](inline value: V): Topic =
+    SegmentLiteral.plain("topic", value)
 
   extension (topic: Topic)
 

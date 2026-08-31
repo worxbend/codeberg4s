@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions
 
 import com.worxbend.codeberg4s.PathSegment
+import com.worxbend.codeberg4s.SegmentLiteral
 import com.worxbend.codeberg4s.ValidationError
 
 /** The identifier of a registered runner, as the runner endpoints take it in a path.
@@ -26,6 +27,16 @@ object RunnerId:
     */
   def from(value: String): Either[ValidationError, RunnerId] =
     PathSegment.from("runnerId", value)
+
+  /** Builds a runner identifier from a string literal, checked while the code compiles.
+    *
+    * `RunnerId("...")` '''is''' the runner identifier, with no `Either` to unwrap: a literal is either valid or it is
+    * not, and an invalid one is a compile error pointing at the literal itself. The rules are [[from]]'s, minus the
+    * trim — surrounding whitespace is refused rather than removed. See [[com.worxbend.codeberg4s.SegmentLiteral]], and
+    * use [[from]] for a value known only at run time.
+    */
+  inline def apply[V <: String & Singleton](inline value: V): RunnerId =
+    SegmentLiteral.plain("runnerId", value)
 
   /** The identifier of the runner whose numeric `id` is `value`.
     *
@@ -66,6 +77,16 @@ object SecretName:
   def from(value: String): Either[ValidationError, SecretName] =
     PathSegment.from("secretName", value)
 
+  /** Builds a secret name from a string literal, checked while the code compiles.
+    *
+    * `SecretName("...")` '''is''' the secret name, with no `Either` to unwrap: a literal is either valid or it is not,
+    * and an invalid one is a compile error pointing at the literal itself. The rules are [[from]]'s, minus the trim —
+    * surrounding whitespace is refused rather than removed. See [[com.worxbend.codeberg4s.SegmentLiteral]], and use
+    * [[from]] for a value known only at run time.
+    */
+  inline def apply[V <: String & Singleton](inline value: V): SecretName =
+    SegmentLiteral.plain("secretName", value)
+
   extension (name: SecretName)
 
     /** The name as a string, ready to be used as one path segment. */
@@ -91,6 +112,16 @@ object VariableName:
     */
   def from(value: String): Either[ValidationError, VariableName] =
     PathSegment.from("variableName", value)
+
+  /** Builds a variable name from a string literal, checked while the code compiles.
+    *
+    * `VariableName("...")` '''is''' the variable name, with no `Either` to unwrap: a literal is either valid or it is
+    * not, and an invalid one is a compile error pointing at the literal itself. The rules are [[from]]'s, minus the
+    * trim — surrounding whitespace is refused rather than removed. See [[com.worxbend.codeberg4s.SegmentLiteral]], and
+    * use [[from]] for a value known only at run time.
+    */
+  inline def apply[V <: String & Singleton](inline value: V): VariableName =
+    SegmentLiteral.plain("variableName", value)
 
   extension (name: VariableName)
 
@@ -118,6 +149,16 @@ object WorkflowFileName:
     */
   def from(value: String): Either[ValidationError, WorkflowFileName] =
     PathSegment.from("workflowFileName", value)
+
+  /** Builds a workflow file name from a string literal, checked while the code compiles.
+    *
+    * `WorkflowFileName("...")` '''is''' the workflow file name, with no `Either` to unwrap: a literal is either valid
+    * or it is not, and an invalid one is a compile error pointing at the literal itself. The rules are [[from]]'s,
+    * minus the trim — surrounding whitespace is refused rather than removed. See
+    * [[com.worxbend.codeberg4s.SegmentLiteral]], and use [[from]] for a value known only at run time.
+    */
+  inline def apply[V <: String & Singleton](inline value: V): WorkflowFileName =
+    SegmentLiteral.plain("workflowFileName", value)
 
   extension (name: WorkflowFileName)
 

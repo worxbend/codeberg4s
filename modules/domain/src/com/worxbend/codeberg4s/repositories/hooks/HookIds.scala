@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
 import com.worxbend.codeberg4s.PathSegment
+import com.worxbend.codeberg4s.SegmentLiteral
 import com.worxbend.codeberg4s.ValidationError
 
 /** The instance-wide identifier of one webhook — the `{id}` of `/repos/{owner}/{repo}/hooks/{id}`.
@@ -61,6 +62,16 @@ object GitHookName:
     */
   def from(value: String): Either[ValidationError, GitHookName] =
     PathSegment.from("gitHookName", value)
+
+  /** Builds a Git hook name from a string literal, checked while the code compiles.
+    *
+    * `GitHookName("...")` '''is''' the Git hook name, with no `Either` to unwrap: a literal is either valid or it is
+    * not, and an invalid one is a compile error pointing at the literal itself. The rules are [[from]]'s, minus the
+    * trim — surrounding whitespace is refused rather than removed. See [[com.worxbend.codeberg4s.SegmentLiteral]], and
+    * use [[from]] for a value known only at run time.
+    */
+  inline def apply[V <: String & Singleton](inline value: V): GitHookName =
+    SegmentLiteral.plain("gitHookName", value)
 
   extension (name: GitHookName)
 

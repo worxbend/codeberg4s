@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
 import com.worxbend.codeberg4s.PathSegment
+import com.worxbend.codeberg4s.SegmentLiteral
 import com.worxbend.codeberg4s.ValidationError
 
 /** The name of a wiki page, as `GET /repos/{owner}/{repo}/wiki/page/{pageName}` spells it.
@@ -36,6 +37,16 @@ object WikiPageName:
     */
   def from(value: String): Either[ValidationError, WikiPageName] =
     PathSegment.segmented("pageName", value)
+
+  /** Builds a wiki page name from a string literal, checked while the code compiles.
+    *
+    * `WikiPageName("...")` '''is''' the wiki page name, with no `Either` to unwrap: a literal is either valid or it is
+    * not, and an invalid one is a compile error pointing at the literal itself. The rules are [[from]]'s, minus the
+    * trim — surrounding whitespace is refused rather than removed. See [[com.worxbend.codeberg4s.SegmentLiteral]], and
+    * use [[from]] for a value known only at run time.
+    */
+  inline def apply[V <: String & Singleton](inline value: V): WikiPageName =
+    SegmentLiteral.segmented("pageName", value)
 
   extension (name: WikiPageName)
 

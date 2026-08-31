@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories
 
 import com.worxbend.codeberg4s.PathSegment
+import com.worxbend.codeberg4s.SegmentLiteral
 import com.worxbend.codeberg4s.ValidationError
 
 /** A path to a file or directory inside a repository, as `GET /repos/{owner}/{repo}/contents/{filepath}` spells it.
@@ -25,6 +26,16 @@ object ContentPath:
     */
   def from(value: String): Either[ValidationError, ContentPath] =
     PathSegment.segmented("filepath", value)
+
+  /** Builds a repository-relative path from a string literal, checked while the code compiles.
+    *
+    * `ContentPath("...")` '''is''' the repository-relative path, with no `Either` to unwrap: a literal is either valid
+    * or it is not, and an invalid one is a compile error pointing at the literal itself. The rules are [[from]]'s,
+    * minus the trim — surrounding whitespace is refused rather than removed. See
+    * [[com.worxbend.codeberg4s.SegmentLiteral]], and use [[from]] for a value known only at run time.
+    */
+  inline def apply[V <: String & Singleton](inline value: V): ContentPath =
+    SegmentLiteral.segmented("filepath", value)
 
   extension (path: ContentPath)
 

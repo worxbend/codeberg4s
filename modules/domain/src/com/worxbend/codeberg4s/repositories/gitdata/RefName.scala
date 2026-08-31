@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
 import com.worxbend.codeberg4s.PathSegment
+import com.worxbend.codeberg4s.SegmentLiteral
 import com.worxbend.codeberg4s.ValidationError
 
 /** The name of a Git reference, whole or partial — `refs/heads/main`, `heads/main`, `tags/v1.2`, `main`.
@@ -33,6 +34,16 @@ object RefName:
     */
   def from(value: String): Either[ValidationError, RefName] =
     PathSegment.segmented("ref", value)
+
+  /** Builds a ref name from a string literal, checked while the code compiles.
+    *
+    * `RefName("...")` '''is''' the ref name, with no `Either` to unwrap: a literal is either valid or it is not, and an
+    * invalid one is a compile error pointing at the literal itself. The rules are [[from]]'s, minus the trim —
+    * surrounding whitespace is refused rather than removed. See [[com.worxbend.codeberg4s.SegmentLiteral]], and use
+    * [[from]] for a value known only at run time.
+    */
+  inline def apply[V <: String & Singleton](inline value: V): RefName =
+    SegmentLiteral.segmented("ref", value)
 
   extension (ref: RefName)
 

@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.users.social
 
 import com.worxbend.codeberg4s.PathSegment
+import com.worxbend.codeberg4s.SegmentLiteral
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.auth.ApiToken
 import com.worxbend.codeberg4s.repositories.RepoSlug
@@ -36,6 +37,16 @@ object AccessTokenName:
     */
   def from(value: String): Either[ValidationError, AccessTokenName] =
     PathSegment.from(Field, value)
+
+  /** Builds a token name from a string literal, checked while the code compiles.
+    *
+    * `AccessTokenName("...")` '''is''' the token name, with no `Either` to unwrap: a literal is either valid or it is
+    * not, and an invalid one is a compile error pointing at the literal itself. The rules are [[from]]'s, minus the
+    * trim — surrounding whitespace is refused rather than removed. See [[com.worxbend.codeberg4s.SegmentLiteral]], and
+    * use [[from]] for a value known only at run time.
+    */
+  inline def apply[V <: String & Singleton](inline value: V): AccessTokenName =
+    SegmentLiteral.plain("accessTokenName", value)
 
   extension (name: AccessTokenName)
 
