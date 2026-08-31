@@ -5,10 +5,7 @@ import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.paging.PageNumber
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.paging.PageSize
-import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.RepositoryApi
-import com.worxbend.codeberg4s.retry.Jitter
-import com.worxbend.codeberg4s.retry.RetryPolicy
 import com.worxbend.codeberg4s.syntax.discard
 import com.worxbend.codeberg4s.transport.SttpHttpPort
 
@@ -37,26 +34,22 @@ import java.util.concurrent.Executors
   * captures. The payloads below are therefore small hand-written bodies chosen to exercise the seams: what a caller
   * gets back, what each rail does with a failure, whether a retry really re-sends, and what `close` owns.
   */
-final class CodebergClientSuite extends FunSuite:
-
-  private given ExecutionContext = munitExecutionContext
+final class CodebergClientSuite extends FunSuite with ClientSuiteHarness:
 
   private val Handle: Owner = orFail(Owner.from("forgejo"))
 
   private val Name: RepoName = orFail(RepoName.from("forgejo"))
 
-  private val Instance: BaseUri = orFail(BaseUri.from("https://forge.example/api/v1"))
-
   test("version maps the instance's payload to a domain value"):
-    onStub(responding(200, CodebergClientSuite.VersionBody)): client =>
+    onClient(responding(200, CodebergClientSuite.VersionBody)): client =>
       client.version.get().map(version => assertEquals(version, CodebergClientSuite.ExpectedVersion))
 
   test("the typed rail returns the same version as a Right"):
-    onStub(responding(200, CodebergClientSuite.VersionBody)): client =>
+    onClient(responding(200, CodebergClientSuite.VersionBody)): client =>
       client.version.attempt.get().map(result => assertEquals(result, Right(CodebergClientSuite.ExpectedVersion)))
 
   test("repos.get maps the instance's payload to a domain repository"):
-    onStub(responding(200, CodebergClientSuite.RepositoryBody)): client =>
+    onClient(responding(200, CodebergClientSuite.RepositoryBody)): client =>
       client.repos.get(Handle, Name).map: repository =>
         assertEquals(repository.id, 12345L)
         assertEquals(repository.slug.value, "forgejo/forgejo")
@@ -67,19 +60,19 @@ final class CodebergClientSuite extends FunSuite:
   test("repos.get targets /repos/{owner}/{repo} on the configured instance"):
     val backend = RecordingBackend(responding(200, CodebergClientSuite.RepositoryBody))
 
-    onBackend(backend, configFor(Auth.Anonymous)): client =>
+    onClientWith(backend, configFor(Auth.Anonymous)): client =>
       client.repos
         .get(Handle, Name)
         .map(_ => assertEquals(dialled(backend), "https://forge.example/api/v1/repos/forgejo/forgejo"))
 
   test("a 404 fails the convenience rail with a CodebergException carrying the Api failure"):
-    onStub(responding(404, CodebergClientSuite.NotFoundBody)): client =>
+    onClient(responding(404, CodebergClientSuite.NotFoundBody)): client =>
       client.repos.get(Handle, Name).failed.map:
         case CodebergException(error) => assertEquals(summary(error), CodebergClientSuite.ExpectedNotFound)
         case other                    => fail(s"expected a CodebergException, got $other")
 
   test("a 404 reaches the typed rail as a Left reporting the very same failure"):
-    onStub(responding(404, CodebergClientSuite.NotFoundBody)): client =>
+    onClient(responding(404, CodebergClientSuite.NotFoundBody)): client =>
       for
         raised <- client.repos.get(Handle, Name).failed
         typed  <- client.repos.attempt.get(Handle, Name)
@@ -93,13 +86,13 @@ final class CodebergClientSuite extends FunSuite:
       )
     )
 
-    onBackend(backend, configFor(Auth.Anonymous)): client =>
+    onClientWith(backend, configFor(Auth.Anonymous)): client =>
       client.repos.get(Handle, Name).map: repository =>
         assertEquals(repository.slug.value, "forgejo/forgejo")
         assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
 
   test("a 200 whose payload does not fit the model becomes DecodingFailed, never an escaping codec exception"):
-    onStub(responding(200, CodebergClientSuite.UnexpectedBody)): client =>
+    onClient(responding(200, CodebergClientSuite.UnexpectedBody)): client =>
       client.repos.attempt.get(Handle, Name).map:
         case Left(CodebergError.DecodingFailed(_, snippet, path, _)) =>
           assertEquals(path.render, "$.id")
@@ -173,47 +166,22 @@ final class CodebergClientSuite extends FunSuite:
   test("a configured token appears in nothing the caller can see about a failure"):
     val config = configFor(Auth.Token(orFail(ApiToken.from(CodebergClientSuite.Secret))))
 
-    onBackend(responding(404, CodebergClientSuite.NotFoundBody), config): client =>
+    onClientWith(responding(404, CodebergClientSuite.NotFoundBody), config): client =>
       client.repos.get(Handle, Name).failed.map: thrown =>
         val rendered = List(thrown.getMessage, thrown.toString, thrown.getStackTrace.mkString(" ")).mkString(" | ")
 
         assert(!rendered.contains(CodebergClientSuite.Secret), rendered)
 
-  // --- assertions -----------------------------------------------------------
-
-  /** Both rails must report the same failure, so the choice between them is a choice of style and nothing else. */
-  private def assertRailsAgree(raised: Throwable, typed: Either[CodebergError, Repository]): Unit =
-    (raised, typed) match
-      case (CodebergException(convenience), Left(materialised)) =>
-        assertEquals(summary(materialised), summary(convenience))
-        assertEquals(summary(materialised), CodebergClientSuite.ExpectedNotFound)
-      case (convenience, materialised)                          =>
-        fail(s"the rails disagreed: $convenience versus $materialised")
-
-  /** An `Api` failure projected onto the parts that do not depend on wall-clock time, so two calls are comparable. */
-  private def summary(error: CodebergError): (String, Int, Option[String]) =
-    error match
-      case CodebergError.Api(ctx, status, body) => (ctx.operation, status, body.message)
-      case other                                => fail(s"expected an Api failure, got ${other.describe}")
-
   // --- fixtures -------------------------------------------------------------
 
   private def configFor(auth: Auth): CodebergConfig =
-    CodebergConfig(auth).copy(baseUri = Instance, retry = CodebergClientSuite.PromptRetry)
-
-  private def responding(status: Int, body: String): BackendStub[Future] =
-    BackendStub.asynchronousFuture.whenAnyRequest.thenRespond(ResponseStub.adjust(body, StatusCode(status)))
-
-  private def dialled(backend: RecordingBackend): String =
-    backend.allInteractions.headOption match
-      case Some((request, _)) => request.uri.toString
-      case None               => fail("no request reached the backend")
+    CodebergConfig(auth).copy(baseUri = Instance, retry = ClientSuiteHarness.PromptRetry)
 
   /** Runs `use` against an anonymous client on `backend`, closing the client whatever the outcome. */
-  private def onStub[A](backend: Backend[Future])(use: CodebergClient => Future[A]): Future[A] =
-    onBackend(backend, configFor(Auth.Anonymous))(use)
+  private def onClient[A](backend: Backend[Future])(use: CodebergClient => Future[A]): Future[A] =
+    onClientWith(backend, configFor(Auth.Anonymous))(use)
 
-  private def onBackend[A](backend: Backend[Future], config: CodebergConfig)(
+  private def onClientWith[A](backend: Backend[Future], config: CodebergConfig)(
       use: CodebergClient => Future[A]
   ): Future[A] =
     val client = CodebergClient.usingBackend(config, backend)
@@ -221,11 +189,6 @@ final class CodebergClientSuite extends FunSuite:
     use(client).transform: outcome =>
       client.close()
       outcome
-
-  private def orFail[A](result: Either[ValidationError, A]): A =
-    result match
-      case Right(value) => value
-      case Left(error)  => fail(s"invalid fixture: ${error.field} ${error.message}")
 
 /** The response bodies this suite stubs, kept out of the test bodies so each test reads as one behaviour. */
 object CodebergClientSuite:
@@ -269,12 +232,3 @@ object CodebergClientSuite:
 
   private val ExpectedNotFound: (String, Int, Option[String]) =
     (RepositoryApi.GetOperation, 404, Some("The target couldn't be found."))
-
-  /** Retries promptly and predictably: the default policy would make the retry test take a quarter of a second. */
-  private val PromptRetry: RetryPolicy = RetryPolicy(
-    maxAttempts       = 3,
-    baseDelay         = 1.milli,
-    maxDelay          = 5.millis,
-    jitter            = Jitter.None,
-    respectRetryAfter = false,
-  )

@@ -18,7 +18,7 @@ final class UserQuotaApiSuite extends AccountApiSuite:
 
   private val Subject: QuotaSubject = orFail(QuotaSubject.from("size:repos:public"))
 
-  private val QuotaRoot: String = s"$Root/quota"
+  private val QuotaRoot: String = s"$Endpoint/quota"
 
   test("the report is read from the group's root path, with no query at all"):
     val backend = RecordingBackend(responding(200, UserQuotaApiSuite.ReportBody))

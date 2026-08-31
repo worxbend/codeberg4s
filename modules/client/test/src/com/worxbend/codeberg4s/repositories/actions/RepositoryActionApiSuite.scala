@@ -1,41 +1,24 @@
 package com.worxbend.codeberg4s.repositories.actions
 
-import com.worxbend.codeberg4s.BaseUri
-import com.worxbend.codeberg4s.CodebergConfig
+import com.worxbend.codeberg4s.ClientSuiteHarness
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
 import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
-import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.auth.Auth
-import com.worxbend.codeberg4s.client.FutureExec
-import com.worxbend.codeberg4s.client.FutureTimer
-import com.worxbend.codeberg4s.codec.ApiErrorBodyCodec
 import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.Telemetry
 import com.worxbend.codeberg4s.paging.PageNumber
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.paging.PageSize
-import com.worxbend.codeberg4s.retry.Jitter
-import com.worxbend.codeberg4s.retry.RetryPolicy
-import com.worxbend.codeberg4s.transport.SttpHttpPort
 
 import sttp.client4.Backend
-import sttp.client4.Response
-import sttp.client4.testing.BackendStub
 import sttp.client4.testing.RecordingBackend
 import sttp.client4.testing.ResponseStub
-import sttp.client4.testing.StubBody
 import sttp.model.Header
 import sttp.model.StatusCode
 
 import munit.FunSuite
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
 
 /** [[RepositoryActionApi]] over a `BackendStub`: nothing in this suite opens a socket.
   *
@@ -46,9 +29,12 @@ import scala.concurrent.duration.DurationInt
   * '''No golden fixture backs this group.''' Every payload below was written from `spec/swagger.v1.json`; see the class
   * note on [[RepositoryActionApi]].
   */
-final class RepositoryActionApiSuite extends FunSuite:
+final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
 
-  private given ExecutionContext = munitExecutionContext
+  /** The prefix every asserted path starts with: the actions surface of the repository every path in this suite hangs
+    * off.
+    */
+  private val Endpoint: String = s"$Root/repos/forgejo/forgejo/actions"
 
   private val Handle: Owner = orFail(Owner.from("forgejo"))
 
@@ -68,24 +54,20 @@ final class RepositoryActionApiSuite extends FunSuite:
 
   private val Workflow: WorkflowFileName = orFail(WorkflowFileName.from("build.yml"))
 
-  private val Instance: BaseUri = orFail(BaseUri.from("https://forge.example/api/v1"))
-
-  private val Root: String = "https://forge.example/api/v1/repos/forgejo/forgejo/actions"
-
   // --- artifacts ------------------------------------------------------------
 
   test("actions.artifacts.list targets the repository's artifacts and pages them"):
     val backend = RecordingBackend(responding(200, "[]"))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .listArtifacts(Handle, Name, ArtifactQuery.Empty.named("coverage"), window(2, 25))
         .map: _ =>
-          assertEquals(pathOf(backend), s"$Root/artifacts")
+          assertEquals(pathOf(backend), s"$Endpoint/artifacts")
           assertEquals(queryOf(backend), List("name" -> "coverage", "page" -> "2", "limit" -> "25"))
 
   test("actions.artifacts.list ends where rel=next says it ends, not where a short page suggests"):
-    onStub(responding(200, RepositoryActionApiSuite.ArtifactListBody, RepositoryActionApiSuite.PagedHeaders)): api =>
+    onApi(responding(200, RepositoryActionApiSuite.ArtifactListBody, RepositoryActionApiSuite.PagedHeaders)): api =>
       api.listArtifacts(Handle, Name, ArtifactQuery.Empty, window(1, 30)).map: page =>
         assertEquals(page.size, 1)
         assertEquals(page.totalCount, Some(97))
@@ -93,7 +75,7 @@ final class RepositoryActionApiSuite extends FunSuite:
         assertEquals(page.isLast, false)
 
   test("a page past the end is an empty page, not a failure"):
-    onStub(responding(200, "[]")): api =>
+    onApi(responding(200, "[]")): api =>
       api.listArtifacts(Handle, Name, ArtifactQuery.Empty, PageParams.First).map: page =>
         assertEquals(page.items, Vector.empty[ActionArtifact])
         assertEquals(page.isLast, true)
@@ -101,25 +83,25 @@ final class RepositoryActionApiSuite extends FunSuite:
   test("a single-artifact read addresses the artifact by id"):
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.ArtifactBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.artifact(Handle, Name, Artifact).map: artifact =>
-        assertEquals(pathOf(backend), s"$Root/artifacts/881")
+        assertEquals(pathOf(backend), s"$Endpoint/artifacts/881")
         assertEquals(artifact.id.value, 881L)
         assertEquals(artifact.name, Some("coverage"))
 
   test("actions.artifacts.delete is a DELETE that reads no body"):
     val backend = RecordingBackend(responding(204, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.deleteArtifact(Handle, Name, Artifact).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
-        assertEquals(pathOf(backend), s"$Root/artifacts/881")
+        assertEquals(pathOf(backend), s"$Endpoint/artifacts/881")
 
   test("a delete by id is retried, because deleting a named resource twice leaves the same state"):
     val backend =
       RecordingBackend(cycling(ResponseStub.adjust("", StatusCode(503)), ResponseStub.adjust("", StatusCode(204))))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.deleteArtifact(Handle, Name, Artifact).map(_ => assertEquals(backend.allInteractions.size, 2))
 
   // --- runs -----------------------------------------------------------------
@@ -127,9 +109,9 @@ final class RepositoryActionApiSuite extends FunSuite:
   test("actions.runs.list unwraps the workflow_runs envelope, which no other listing here uses"):
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.RunListBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.listRuns(Handle, Name, ActionRunQuery.Empty, PageParams.First).map: page =>
-        assertEquals(pathOf(backend), s"$Root/runs")
+        assertEquals(pathOf(backend), s"$Endpoint/runs")
         assertEquals(page.items.map(_.id.value), Vector(4711L))
         assertEquals(page.items.flatMap(_.status), Vector(ActionStatus.Failure))
 
@@ -137,7 +119,7 @@ final class RepositoryActionApiSuite extends FunSuite:
     val backend = RecordingBackend(responding(200, """{"workflow_runs":[]}"""))
     val query   = ActionRunQuery.Empty.triggeredBy("push").withStatus(ActionStatus.Failure).onRef("refs/heads/main")
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .listRuns(Handle, Name, query, PageParams.First)
         .map: _ =>
@@ -153,7 +135,7 @@ final class RepositoryActionApiSuite extends FunSuite:
           )
 
   test("a bad entry of the run envelope reports its position under workflow_runs"):
-    onStub(responding(200, """{"workflow_runs":[{"id":1},{"title":"no id"}]}""")): api =>
+    onApi(responding(200, """{"workflow_runs":[{"id":1},{"title":"no id"}]}""")): api =>
       api.attempt.listRuns(Handle, Name, ActionRunQuery.Empty, PageParams.First).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) =>
           assertEquals(path.render, "$.workflow_runs[1].id")
@@ -162,24 +144,24 @@ final class RepositoryActionApiSuite extends FunSuite:
   test("a single-run read addresses the run by id"):
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.RunBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.run(Handle, Name, Run).map: run =>
-        assertEquals(pathOf(backend), s"$Root/runs/4711")
+        assertEquals(pathOf(backend), s"$Endpoint/runs/4711")
         assertEquals(run.id.value, 4711L)
 
   test("actions.runs.cancel POSTs to the run's cancel endpoint with no body"):
     val backend = RecordingBackend(responding(204, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.cancelRun(Handle, Name, Run).map: _ =>
         assertEquals(methodOf(backend), "POST")
-        assertEquals(pathOf(backend), s"$Root/runs/4711/cancel")
+        assertEquals(pathOf(backend), s"$Endpoint/runs/4711/cancel")
 
   test("actions.runs.cancel is never retried, because this library repeats no POST"):
     val backend =
       RecordingBackend(cycling(ResponseStub.adjust("", StatusCode(503)), ResponseStub.adjust("", StatusCode(204))))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.attempt
         .cancelRun(Handle, Name, Run)
         .map: outcome =>
@@ -189,17 +171,17 @@ final class RepositoryActionApiSuite extends FunSuite:
   test("actions.runs.artifacts.list scopes the artifact listing to one run"):
     val backend = RecordingBackend(responding(200, "[]"))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .listRunArtifacts(Handle, Name, Run, ArtifactQuery.Empty, PageParams.First)
-        .map(_ => assertEquals(pathOf(backend), s"$Root/runs/4711/artifacts"))
+        .map(_ => assertEquals(pathOf(backend), s"$Endpoint/runs/4711/artifacts"))
 
   test("actions.runs.jobs.list is a bare array and takes no paging parameters"):
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.JobListBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.listRunJobs(Handle, Name, Run).map: jobs =>
-        assertEquals(pathOf(backend), s"$Root/runs/4711/jobs")
+        assertEquals(pathOf(backend), s"$Endpoint/runs/4711/jobs")
         assertEquals(queryOf(backend), Nil)
         assertEquals(jobs.map(_.id.value), Vector(55L))
 
@@ -208,20 +190,20 @@ final class RepositoryActionApiSuite extends FunSuite:
   test("actions.jobs.logs returns the body verbatim, without parsing it as JSON"):
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.LogBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.jobLogs(Handle, Name, Job, None).map: log =>
-        assertEquals(pathOf(backend), s"$Root/jobs/55/logs")
+        assertEquals(pathOf(backend), s"$Endpoint/jobs/55/logs")
         assertEquals(queryOf(backend), Nil)
         assertEquals(log, RepositoryActionApiSuite.LogBody)
 
   test("a 206 partial log is a success, because every 2xx is"):
-    onStub(responding(206, "partial")): api =>
+    onApi(responding(206, "partial")): api =>
       api.jobLogs(Handle, Name, Job, None).map(log => assertEquals(log, "partial"))
 
   test("a named attempt is sent as a query parameter"):
     val backend = RecordingBackend(responding(200, "x"))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .jobLogs(Handle, Name, Job, Some(orFail(JobAttempt.from(3L))))
         .map(_ => assertEquals(queryOf(backend), List("attempt" -> "3")))
@@ -231,30 +213,30 @@ final class RepositoryActionApiSuite extends FunSuite:
   test("actions.runners.list always states the visibility it wants"):
     val backend = RecordingBackend(responding(200, "[]"))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .listRunners(Handle, Name, RunnerVisibility.AllVisible, PageParams.First)
         .map: _ =>
-          assertEquals(pathOf(backend), s"$Root/runners")
+          assertEquals(pathOf(backend), s"$Endpoint/runners")
           assertEquals(queryOf(backend), List("visible" -> "true", "page" -> "1", "limit" -> "30"))
 
   test("a single-runner read addresses the runner by its string id"):
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.RunnerBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.runner(Handle, Name, Runner).map: runner =>
-        assertEquals(pathOf(backend), s"$Root/runners/37")
+        assertEquals(pathOf(backend), s"$Endpoint/runners/37")
         assertEquals(runner.status, Some(RunnerStatus.Idle))
 
   test("actions.runners.register POSTs the rendered options and returns a masked token"):
     val backend = RecordingBackend(responding(201, RepositoryActionApiSuite.RegisteredBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .registerRunner(Handle, Name, orFail(RegisterRunner.named("build-box-3")).ephemeral)
         .map: registered =>
           assertEquals(methodOf(backend), "POST")
-          assertEquals(pathOf(backend), s"$Root/runners")
+          assertEquals(pathOf(backend), s"$Endpoint/runners")
           assertEquals(bodyOf(backend), """{"name":"build-box-3","ephemeral":true}""")
           assertEquals(registered.token.reveal, "QWERTY123")
           assertEquals(registered.token.toString, RunnerRegistrationToken.Redacted)
@@ -267,7 +249,7 @@ final class RepositoryActionApiSuite extends FunSuite:
       )
     )
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.attempt
         .registerRunner(Handle, Name, orFail(RegisterRunner.named("build-box-3")))
         .map(_ => assertEquals(backend.allInteractions.size, 1, "the POST was retried"))
@@ -275,7 +257,7 @@ final class RepositoryActionApiSuite extends FunSuite:
   test("a registration response that does not decode reports no part of the credential"):
     val truncated = RepositoryActionApiSuite.RegisteredBody.dropRight(1)
 
-    onBackend(RecordingBackend(responding(201, truncated))): api =>
+    onApi(RecordingBackend(responding(201, truncated))): api =>
       api.attempt.registerRunner(Handle, Name, orFail(RegisterRunner.named("build-box-3"))).map:
         case Left(error @ CodebergError.DecodingFailed(_, snippet, _, _)) =>
           assertEquals(snippet, ApiPipeline.redactedSnippet(truncated.length))
@@ -286,17 +268,17 @@ final class RepositoryActionApiSuite extends FunSuite:
   test("actions.runners.delete is a DELETE on the runner"):
     val backend = RecordingBackend(responding(204, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.deleteRunner(Handle, Name, Runner).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
-        assertEquals(pathOf(backend), s"$Root/runners/37")
+        assertEquals(pathOf(backend), s"$Endpoint/runners/37")
 
   test("actions.runners.registrationToken reads the token endpoint and masks what it returns"):
     val backend = RecordingBackend(responding(200, """{"token":"QWERTY123"}"""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.runnerRegistrationToken(Handle, Name).map: token =>
-        assertEquals(pathOf(backend), s"$Root/runners/registration-token")
+        assertEquals(pathOf(backend), s"$Endpoint/runners/registration-token")
         assertEquals(token.reveal, "QWERTY123")
         assertEquals(s"$token", RunnerRegistrationToken.Redacted)
 
@@ -304,9 +286,9 @@ final class RepositoryActionApiSuite extends FunSuite:
     val backend = RecordingBackend(responding(200, "[]"))
     val labels  = Vector(orFail(RunnerLabel.from("ubuntu-latest")), orFail(RunnerLabel.from("docker")))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.searchRunnerJobs(Handle, Name, labels).map: _ =>
-        assertEquals(pathOf(backend), s"$Root/runners/jobs")
+        assertEquals(pathOf(backend), s"$Endpoint/runners/jobs")
         assertEquals(queryOf(backend), List("labels" -> "ubuntu-latest,docker"))
 
   // --- tasks ----------------------------------------------------------------
@@ -314,11 +296,11 @@ final class RepositoryActionApiSuite extends FunSuite:
   test("actions.tasks.list unwraps the same envelope the run listing uses"):
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.TaskListBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .listTasks(Handle, Name, ActionTaskQuery.Empty.withStatus(ActionStatus.Success), PageParams.First)
         .map: page =>
-          assertEquals(pathOf(backend), s"$Root/tasks")
+          assertEquals(pathOf(backend), s"$Endpoint/tasks")
           assertEquals(queryOf(backend), List("status" -> "success", "page" -> "1", "limit" -> "30"))
           assertEquals(page.items.map(_.id.value), Vector(903L))
 
@@ -327,33 +309,33 @@ final class RepositoryActionApiSuite extends FunSuite:
   test("actions.secrets.list returns names and timestamps, and has nowhere to put a value"):
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.SecretListBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.listSecrets(Handle, Name, PageParams.First).map: page =>
-        assertEquals(pathOf(backend), s"$Root/secrets")
+        assertEquals(pathOf(backend), s"$Endpoint/secrets")
         assertEquals(page.items.map(_.name.value), Vector("DEPLOY_KEY"))
 
   test("actions.secrets.set PUTs the material under the key the spec names"):
     val backend = RecordingBackend(responding(204, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .setSecret(Handle, Name, Secret, orFail(SecretValue.from("hunter2")))
         .map: _ =>
           assertEquals(methodOf(backend), "PUT")
-          assertEquals(pathOf(backend), s"$Root/secrets/DEPLOY_KEY")
+          assertEquals(pathOf(backend), s"$Endpoint/secrets/DEPLOY_KEY")
           assertEquals(bodyOf(backend), """{"data":"hunter2"}""")
 
   test("actions.secrets.set is retried, because setting a named secret twice leaves the same state"):
     val backend =
       RecordingBackend(cycling(ResponseStub.adjust("", StatusCode(503)), ResponseStub.adjust("", StatusCode(201))))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .setSecret(Handle, Name, Secret, orFail(SecretValue.from("hunter2")))
         .map(_ => assertEquals(backend.allInteractions.size, 2, "the PUT was not retried"))
 
   test("a failed secret write never carries the material into the error a caller would log"):
-    onStub(responding(403, RepositoryActionApiSuite.ForbiddenBody)): api =>
+    onApi(responding(403, RepositoryActionApiSuite.ForbiddenBody)): api =>
       api.attempt
         .setSecret(Handle, Name, Secret, orFail(SecretValue.from("hunter2")))
         .map:
@@ -365,45 +347,45 @@ final class RepositoryActionApiSuite extends FunSuite:
   test("actions.secrets.delete addresses the secret by name"):
     val backend = RecordingBackend(responding(204, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.deleteSecret(Handle, Name, Secret).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
-        assertEquals(pathOf(backend), s"$Root/secrets/DEPLOY_KEY")
+        assertEquals(pathOf(backend), s"$Endpoint/secrets/DEPLOY_KEY")
 
   // --- variables ------------------------------------------------------------
 
   test("actions.variables.list returns values, unlike the secret listing"):
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.VariableListBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.listVariables(Handle, Name, PageParams.First).map: page =>
-        assertEquals(pathOf(backend), s"$Root/variables")
+        assertEquals(pathOf(backend), s"$Endpoint/variables")
         assertEquals(page.items.map(_.value), Vector("staging"))
 
   test("a single-variable read addresses the variable by name"):
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.VariableBody))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.variable(Handle, Name, Variable).map: variable =>
-        assertEquals(pathOf(backend), s"$Root/variables/ENVIRONMENT")
+        assertEquals(pathOf(backend), s"$Endpoint/variables/ENVIRONMENT")
         assertEquals(variable.value, "staging")
 
   test("actions.variables.create POSTs the value under the key the request model names"):
     val backend = RecordingBackend(responding(201, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .createVariable(Handle, Name, Variable, CreateVariable.of("staging"))
         .map: _ =>
           assertEquals(methodOf(backend), "POST")
-          assertEquals(pathOf(backend), s"$Root/variables/ENVIRONMENT")
+          assertEquals(pathOf(backend), s"$Endpoint/variables/ENVIRONMENT")
           assertEquals(bodyOf(backend), """{"value":"staging"}""")
 
   test("actions.variables.update PUTs the value, and is retried when it is not a rename"):
     val backend =
       RecordingBackend(cycling(ResponseStub.adjust("", StatusCode(503)), ResponseStub.adjust("", StatusCode(204))))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .updateVariable(Handle, Name, Variable, UpdateVariable.of("production"))
         .map: _ =>
@@ -416,7 +398,7 @@ final class RepositoryActionApiSuite extends FunSuite:
       RecordingBackend(cycling(ResponseStub.adjust("", StatusCode(503)), ResponseStub.adjust("", StatusCode(204))))
     val command = UpdateVariable.of("production").movedTo(orFail(VariableName.from("STAGE")))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.attempt
         .updateVariable(Handle, Name, Variable, command)
         .map: outcome =>
@@ -434,29 +416,29 @@ final class RepositoryActionApiSuite extends FunSuite:
   test("actions.variables.delete addresses the variable by name"):
     val backend = RecordingBackend(responding(204, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.deleteVariable(Handle, Name, Variable).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
-        assertEquals(pathOf(backend), s"$Root/variables/ENVIRONMENT")
+        assertEquals(pathOf(backend), s"$Endpoint/variables/ENVIRONMENT")
 
   // --- workflows ------------------------------------------------------------
 
   test("actions.workflows.dispatch POSTs the ref to the workflow's dispatches endpoint"):
     val backend = RecordingBackend(responding(204, ""))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api
         .dispatchWorkflow(Handle, Name, Workflow, orFail(DispatchWorkflow.on("refs/heads/main")))
         .map: outcome =>
           assertEquals(methodOf(backend), "POST")
-          assertEquals(pathOf(backend), s"$Root/workflows/build.yml/dispatches")
+          assertEquals(pathOf(backend), s"$Endpoint/workflows/build.yml/dispatches")
           assertEquals(bodyOf(backend), """{"ref":"refs/heads/main"}""")
           assertEquals(outcome, None)
 
   test("a dispatch that asked for run info gets a described run back"):
     val command = orFail(DispatchWorkflow.on("main")).withInput("environment", "staging").returningRunInfo
 
-    onStub(responding(201, RepositoryActionApiSuite.DispatchBody)): api =>
+    onApi(responding(201, RepositoryActionApiSuite.DispatchBody)): api =>
       api.dispatchWorkflow(Handle, Name, Workflow, command).map: outcome =>
         assertEquals(outcome.flatMap(_.id).map(_.value), Some(4711L))
         assertEquals(outcome.map(_.jobs), Some(Vector("build")))
@@ -465,7 +447,7 @@ final class RepositoryActionApiSuite extends FunSuite:
     val backend =
       RecordingBackend(cycling(ResponseStub.adjust("", StatusCode(503)), ResponseStub.adjust("", StatusCode(204))))
 
-    onBackend(backend): api =>
+    onApi(backend): api =>
       api.attempt
         .dispatchWorkflow(Handle, Name, Workflow, orFail(DispatchWorkflow.on("main")))
         .map(_ => assertEquals(backend.allInteractions.size, 1, "the POST was retried"))
@@ -473,137 +455,55 @@ final class RepositoryActionApiSuite extends FunSuite:
   // --- failures -------------------------------------------------------------
 
   test("a 404 fails the convenience rail with a CodebergException carrying the Api failure"):
-    onStub(responding(404, RepositoryActionApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, RepositoryActionApiSuite.NotFoundBody)): api =>
       api.run(Handle, Name, Run).failed.map:
         case CodebergException(error) =>
           assertEquals(summary(error), (RepositoryActionApi.GetRunOperation, 404, Some("GetActionRun")))
         case other                    => fail(s"expected a CodebergException, got $other")
 
   test("a 404 reaches the typed rail as a Left reporting the very same failure"):
-    onStub(responding(404, RepositoryActionApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, RepositoryActionApiSuite.NotFoundBody)): api =>
       for
         raised <- api.run(Handle, Name, Run).failed
         typed  <- api.attempt.run(Handle, Name, Run)
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on a secret listing failure as well, so the choice of rail is only a choice of style"):
-    onStub(responding(403, RepositoryActionApiSuite.ForbiddenBody)): api =>
+    onApi(responding(403, RepositoryActionApiSuite.ForbiddenBody)): api =>
       for
         raised <- api.listSecrets(Handle, Name, PageParams.First).failed
         typed  <- api.attempt.listSecrets(Handle, Name, PageParams.First)
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on a unit-returning write as well"):
-    onStub(responding(403, RepositoryActionApiSuite.ForbiddenBody)): api =>
+    onApi(responding(403, RepositoryActionApiSuite.ForbiddenBody)): api =>
       for
         raised <- api.deleteVariable(Handle, Name, Variable).failed
         typed  <- api.attempt.deleteVariable(Handle, Name, Variable)
       yield assertRailsAgree(raised, typed)
 
   test("a 400 is an Api failure too — Forgejo uses it for validation alongside 422"):
-    onStub(responding(400, RepositoryActionApiSuite.ValidationBody)): api =>
+    onApi(responding(400, RepositoryActionApiSuite.ValidationBody)): api =>
       api.attempt.listRuns(Handle, Name, ActionRunQuery.Empty, PageParams.First).map:
         case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 400)
         case other                                 => fail(s"expected an Api failure, got $other")
 
   test("a 200 whose payload does not fit the model becomes DecodingFailed, never an escaping codec exception"):
-    onStub(responding(200, """{"title":"no id"}""")): api =>
+    onApi(responding(200, """{"title":"no id"}""")): api =>
       api.attempt.run(Handle, Name, Run).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$.id")
         case other                                             => fail(s"expected a decoding failure, got $other")
 
   test("a failure carries the operation id of the endpoint it came from, so an alert can name it"):
-    onStub(responding(403, RepositoryActionApiSuite.ForbiddenBody)): api =>
+    onApi(responding(403, RepositoryActionApiSuite.ForbiddenBody)): api =>
       api.attempt.dispatchWorkflow(Handle, Name, Workflow, orFail(DispatchWorkflow.on("main"))).map: outcome =>
-        assertEquals(operation(outcome), RepositoryActionApi.DispatchWorkflowOperation)
-
-  // --- assertions -----------------------------------------------------------
-
-  private def assertRailsAgree[A](raised: Throwable, typed: Either[CodebergError, A]): Unit =
-    (raised, typed) match
-      case (CodebergException(convenience), Left(materialised)) =>
-        assertEquals(summary(materialised), summary(convenience))
-      case (convenience, materialised)                          =>
-        fail(s"the rails disagreed: $convenience versus $materialised")
-
-  private def summary(error: CodebergError): (String, Int, Option[String]) =
-    error match
-      case CodebergError.Api(ctx, status, body) => (ctx.operation, status, body.message)
-      case other                                => fail(s"expected an Api failure, got ${other.describe}")
-
-  private def operation[A](result: Either[CodebergError, A]): String =
-    result match
-      case Left(CodebergError.Api(ctx, _, _)) => ctx.operation
-      case other                              => fail(s"expected an Api failure, got $other")
+        assertEquals(operationOf(outcome), RepositoryActionApi.DispatchWorkflowOperation)
 
   // --- harness --------------------------------------------------------------
 
-  private def responding(status: Int, body: String): BackendStub[Future] =
-    responding(status, body, Nil)
-
-  private def responding(status: Int, body: String, headers: List[Header]): BackendStub[Future] =
-    BackendStub.asynchronousFuture.whenAnyRequest.thenRespond(ResponseStub.adjust(body, StatusCode(status), headers))
-
-  /** A backend that answers `first` once and `rest` from then on — how a retry is made observable. */
-  private def cycling(first: Response[StubBody], rest: Response[StubBody]): BackendStub[Future] =
-    BackendStub.asynchronousFuture.whenAnyRequest.thenRespondCyclic(first, rest)
-
-  private def dialled(backend: RecordingBackend): String =
-    backend.allInteractions.headOption match
-      case Some((request, _)) => request.uri.toString
-      case None               => fail("no request reached the backend")
-
-  /** The dialled URI without its query string, written with `indexOf` because universal equality is banned. */
-  private def pathOf(backend: RecordingBackend): String =
-    val uri   = dialled(backend)
-    val query = uri.indexOf('?')
-
-    if query < 0 then uri else uri.take(query)
-
-  private def queryOf(backend: RecordingBackend): List[(String, String)] =
-    backend.allInteractions.headOption match
-      case Some((request, _)) => request.uri.params.toSeq.toList
-      case None               => fail("no request reached the backend")
-
-  private def methodOf(backend: RecordingBackend): String =
-    backend.allInteractions.headOption match
-      case Some((request, _)) => request.method.method
-      case None               => fail("no request reached the backend")
-
-  private def bodyOf(backend: RecordingBackend): String =
-    backend.allInteractions.headOption match
-      case Some((request, _)) => request.body.show.stripPrefix("string: ")
-      case None               => fail("no request reached the backend")
-
-  private def window(page: Int, size: Int): PageParams =
-    PageParams(orFail(PageNumber.from(page)), orFail(PageSize.from(size)))
-
-  private def onStub[A](backend: Backend[Future])(use: RepositoryActionApi => Future[A]): Future[A] =
-    onBackend(backend)(use)
-
-  /** Builds the pipeline this group's API sits on, and releases the timer whatever the outcome. */
-  private def onBackend[A](backend: Backend[Future])(use: RepositoryActionApi => Future[A]): Future[A] =
-    given Exec[Future] = FutureExec()
-
-    val config = CodebergConfig(Auth.Anonymous).copy(baseUri = Instance, retry = RepositoryActionApiSuite.PromptRetry)
-    val timer  = FutureTimer()
-
-    val pipeline = ApiPipeline[Future](
-      SttpHttpPort(backend, config),
-      config,
-      timer,
-      Telemetry.noOp[Future],
-      ApiErrorBodyCodec.parse,
-    )
-
-    use(RepositoryActionApi(pipeline)).transform: outcome =>
-      timer.close()
-      outcome
-
-  private def orFail[A](result: Either[ValidationError, A]): A =
-    result match
-      case Right(value) => value
-      case Left(error)  => fail(s"invalid fixture: ${error.field} ${error.message}")
+  /** Builds the API under test on a pipeline over `backend`, releasing the timer whatever happens. */
+  private def onApi[A](backend: Backend[Future])(use: RepositoryActionApi => Future[A]): Future[A] =
+    onPipeline(backend)(pipeline => use(RepositoryActionApi(pipeline)))
 
 /** The response bodies this suite stubs, kept out of the test bodies so each test reads as one behaviour.
   *
@@ -661,12 +561,3 @@ object RepositoryActionApiSuite:
 
   private val ValidationBody: String =
     """{"message":"ListActionRuns","url":"https://codeberg.org/api/swagger","errors":["invalid status"]}"""
-
-  /** Retries promptly and predictably: the default policy would make the retry tests take a quarter of a second. */
-  private val PromptRetry: RetryPolicy = RetryPolicy(
-    maxAttempts       = 3,
-    baseDelay         = 1.milli,
-    maxDelay          = 5.millis,
-    jitter            = Jitter.None,
-    respectRetryAfter = false,
-  )

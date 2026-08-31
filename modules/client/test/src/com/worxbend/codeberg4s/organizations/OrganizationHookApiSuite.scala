@@ -100,7 +100,7 @@ final class OrganizationHookApiSuite extends FunSuite with OrganizationStubs:
     onApi(backend): api =>
       api.hooks.attempt
         .create(Org, CreateHook.to(HookType.Forgejo, "https://ci.example/forgejo", HookContentType.Json))
-        .map(_ => assertEquals(callCount(backend), 1, "the hook create was repeated"))
+        .map(_ => assertEquals(attemptsOn(backend), 1, "the hook create was repeated"))
 
   test("orgs.hooks.edit is retried, because a hook id is a row id the instance never reuses"):
     val backend = RecordingBackend(flakyThen(200, OrganizationHookApiSuite.HookBody))
@@ -108,13 +108,13 @@ final class OrganizationHookApiSuite extends FunSuite with OrganizationStubs:
     onApi(backend): api =>
       api.hooks
         .edit(Org, Hook, EditHook.Empty.activated)
-        .map(_ => assertEquals(callCount(backend), 2, "the 503 was not retried"))
+        .map(_ => assertEquals(attemptsOn(backend), 2, "the 503 was not retried"))
 
   test("orgs.hooks.delete is retried, on the same argument as the edit"):
     val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
-      api.hooks.delete(Org, Hook).map(_ => assertEquals(callCount(backend), 2, "the 503 was not retried"))
+      api.hooks.delete(Org, Hook).map(_ => assertEquals(attemptsOn(backend), 2, "the 503 was not retried"))
 
   // --- secrets --------------------------------------------------------------
 

@@ -102,7 +102,7 @@ final class OrganizationLabelApiSuite extends FunSuite with OrganizationStubs:
     onApi(backend): api =>
       api.labels.attempt
         .create(Org, CreateLabel.of(orFail(LabelName.from("bug")), orFail(LabelColor.from("eb6420"))))
-        .map(_ => assertEquals(callCount(backend), 1, "the label create was repeated"))
+        .map(_ => assertEquals(attemptsOn(backend), 1, "the label create was repeated"))
 
   test("orgs.labels.edit is never retried, because a repeat would clobber somebody else's rename"):
     val backend = RecordingBackend(flakyThen(200, OrganizationLabelApiSuite.LabelBody))
@@ -110,13 +110,13 @@ final class OrganizationLabelApiSuite extends FunSuite with OrganizationStubs:
     onApi(backend): api =>
       api.labels.attempt
         .edit(Org, Bug, EditLabel.Empty.archived(true))
-        .map(_ => assertEquals(callCount(backend), 1, "the label edit was repeated"))
+        .map(_ => assertEquals(attemptsOn(backend), 1, "the label edit was repeated"))
 
   test("orgs.labels.delete is retried, because a label id is a row id the instance never reuses"):
     val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
-      api.labels.delete(Org, Bug).map(_ => assertEquals(callCount(backend), 2, "the 503 was not retried"))
+      api.labels.delete(Org, Bug).map(_ => assertEquals(attemptsOn(backend), 2, "the 503 was not retried"))
 
   // --- payloads and failures ------------------------------------------------
 

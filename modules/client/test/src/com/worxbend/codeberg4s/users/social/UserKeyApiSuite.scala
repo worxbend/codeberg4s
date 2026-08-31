@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.users.social
 
+import com.worxbend.codeberg4s.ClientSuiteHarness
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
 import com.worxbend.codeberg4s.paging.PageParams
@@ -21,7 +22,7 @@ import scala.concurrent.Future
   * '''No golden fixture backs this group.''' Every payload below was written from `spec/swagger.v1.json`; see the class
   * note on [[UserKeyApi]].
   */
-final class UserKeyApiSuite extends FunSuite with SocialApiHarness:
+final class UserKeyApiSuite extends FunSuite with ClientSuiteHarness:
 
   private val Handle: Username = orFail(Username.from("earl-warren"))
 
@@ -133,7 +134,7 @@ final class UserKeyApiSuite extends FunSuite with SocialApiHarness:
         assertEquals(token.value, "d3adb33f")
 
   test("a blank verification token is a decoding failure, not a token-shaped emptiness"):
-    onStub(responding(200, "   ")): api =>
+    onApi(responding(200, "   ")): api =>
       api.attempt.verificationToken().map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$")
         case other                                             => fail(s"expected a decoding failure, got $other")
@@ -154,7 +155,7 @@ final class UserKeyApiSuite extends FunSuite with SocialApiHarness:
           assertEquals(attemptsOn(backend), 1, "the POST was retried")
 
   test("a successful verification returns the key marked verified"):
-    onStub(responding(201, UserKeyApiSuite.VerifiedGpgKeyBody)): api =>
+    onApi(responding(201, UserKeyApiSuite.VerifiedGpgKeyBody)): api =>
       val token = orFail(GpgKeyToken.from("d3adb33f"))
       val claim = token.signedWith(orFail(OpenPgpKeyId.from("3AA5C34371567BD2")), orFail(ArmoredSignature.from("SIG")))
 
@@ -163,56 +164,54 @@ final class UserKeyApiSuite extends FunSuite with SocialApiHarness:
   // --- failures -------------------------------------------------------------
 
   test("a 401 fails the convenience rail with a CodebergException carrying the Api failure"):
-    onStub(responding(401, UserKeyApiSuite.UnauthorizedBody)): api =>
+    onApi(responding(401, UserKeyApiSuite.UnauthorizedBody)): api =>
       api.gpgKeys(PageParams.First).failed.map:
         case CodebergException(error) =>
           assertEquals(summary(error), (UserKeyApi.GpgKeysOperation, 401, Some("token is required")))
         case other                    => fail(s"expected a CodebergException, got $other")
 
   test("a 401 reaches the typed rail as a Left reporting the very same failure"):
-    onStub(responding(401, UserKeyApiSuite.UnauthorizedBody)): api =>
+    onApi(responding(401, UserKeyApiSuite.UnauthorizedBody)): api =>
       for
         raised <- api.gpgKeys(PageParams.First).failed
         typed  <- api.attempt.gpgKeys(PageParams.First)
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on a unit-returning delete as well"):
-    onStub(responding(404, UserKeyApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, UserKeyApiSuite.NotFoundBody)): api =>
       for
         raised <- api.deleteGpgKey(Gpg).failed
         typed  <- api.attempt.deleteGpgKey(Gpg)
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on the plain-text endpoint too"):
-    onStub(responding(403, UserKeyApiSuite.ForbiddenBody)): api =>
+    onApi(responding(403, UserKeyApiSuite.ForbiddenBody)): api =>
       for
         raised <- api.verificationToken().failed
         typed  <- api.attempt.verificationToken()
       yield assertRailsAgree(raised, typed)
 
   test("a 422 is an Api failure, which is how a signature that did not verify arrives"):
-    onStub(responding(422, UserKeyApiSuite.ValidationBody)): api =>
+    onApi(responding(422, UserKeyApiSuite.ValidationBody)): api =>
       api.attempt.createGpgKey(orFail(CreateGpgKey.of("BLOCK"))).map:
         case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 422)
         case other                                 => fail(s"expected an Api failure, got $other")
 
   test("a 200 whose payload does not fit the model becomes DecodingFailed, never an escaping codec exception"):
-    onStub(responding(200, """{"key_id": "3AA5C34371567BD2"}""")): api =>
+    onApi(responding(200, """{"key_id": "3AA5C34371567BD2"}""")): api =>
       api.attempt.gpgKey(Gpg).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$.id")
         case other                                             => fail(s"expected a decoding failure, got $other")
 
   test("a failure carries the operation id of the endpoint it came from, so an alert can name it"):
-    onStub(responding(403, UserKeyApiSuite.ForbiddenBody)): api =>
+    onApi(responding(403, UserKeyApiSuite.ForbiddenBody)): api =>
       api.attempt.deleteKey(Ssh).map(outcome => assertEquals(operationOf(outcome), UserKeyApi.DeleteKeyOperation))
 
   // --- harness --------------------------------------------------------------
 
+  /** Builds the API under test on a pipeline over `backend`, releasing the timer whatever happens. */
   private def onApi[A](backend: Backend[Future])(use: UserKeyApi => Future[A]): Future[A] =
-    onBackend(backend)(UserKeyApi(_))(use)
-
-  private def onStub[A](backend: Backend[Future])(use: UserKeyApi => Future[A]): Future[A] =
-    onApi(backend)(use)
+    onPipeline(backend)(pipeline => use(UserKeyApi(pipeline)))
 
 /** The response bodies this suite stubs, hand-written from `spec/swagger.v1.json`; see the class note. */
 object UserKeyApiSuite:

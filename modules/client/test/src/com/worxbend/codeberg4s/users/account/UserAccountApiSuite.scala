@@ -39,7 +39,7 @@ final class UserAccountApiSuite extends AccountApiSuite:
 
     onApi(backend): api =>
       api.settings().map: settings =>
-        assertEquals(pathOf(backend), s"$Root/settings")
+        assertEquals(pathOf(backend), s"$Endpoint/settings")
         assertEquals(queryOf(backend), Nil)
         assertEquals(settings.fullName, Some("A Maintainer"))
         assertEquals(settings.hidesEmail, true)
@@ -50,12 +50,12 @@ final class UserAccountApiSuite extends AccountApiSuite:
     onApi(backend): api =>
       api.updateSettings(UpdateUserSettings.Empty.hidingActivity).map: settings =>
         assertEquals(methodOf(backend), "PATCH")
-        assertEquals(pathOf(backend), s"$Root/settings")
+        assertEquals(pathOf(backend), s"$Endpoint/settings")
         assertEquals(bodyOf(backend), """{"hide_activity":true}""")
         assertEquals(settings.hidesActivity, false)
 
   test("the settings update is retried, because it names one identity and states what it wants"):
-    val backend = RecordingBackend(failingThenSucceeding(200, UserAccountApiSuite.SettingsBody))
+    val backend = RecordingBackend(flakyThen(200, UserAccountApiSuite.SettingsBody))
 
     onApi(backend): api =>
       api.updateSettings(UpdateUserSettings.Empty.hidingActivity).map(_ => assertEquals(attemptsOn(backend), 2))
@@ -68,11 +68,11 @@ final class UserAccountApiSuite extends AccountApiSuite:
     onApi(backend): api =>
       api.updateAvatar(image).map: _ =>
         assertEquals(methodOf(backend), "POST")
-        assertEquals(pathOf(backend), s"$Root/avatar")
+        assertEquals(pathOf(backend), s"$Endpoint/avatar")
         assertEquals(bodyOf(backend), s"""{"image":"$blob"}""")
 
   test("the avatar update is never retried, because it is a POST"):
-    val backend = RecordingBackend(failingThenSucceeding(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api.attempt.updateAvatar(image).map(_ => assertEquals(attemptsOn(backend), 1, "the POST was retried"))
@@ -83,10 +83,10 @@ final class UserAccountApiSuite extends AccountApiSuite:
     onApi(backend): api =>
       api.deleteAvatar().map: _ =>
         assertEquals(methodOf(backend), "DELETE")
-        assertEquals(pathOf(backend), s"$Root/avatar")
+        assertEquals(pathOf(backend), s"$Endpoint/avatar")
 
   test("the avatar delete is retried, because it asks for a state rather than for an object"):
-    val backend = RecordingBackend(failingThenSucceeding(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api.deleteAvatar().map(_ => assertEquals(attemptsOn(backend), 2))
@@ -98,7 +98,7 @@ final class UserAccountApiSuite extends AccountApiSuite:
 
     onApi(backend): api =>
       api.emails().map: addresses =>
-        assertEquals(pathOf(backend), s"$Root/emails")
+        assertEquals(pathOf(backend), s"$Endpoint/emails")
         assertEquals(queryOf(backend), Nil)
         assertEquals(addresses.map(_.address.value), Vector("maintainer@example.org"))
         assertEquals(addresses.map(_.isPrimary), Vector(true))
@@ -109,12 +109,12 @@ final class UserAccountApiSuite extends AccountApiSuite:
     onApi(backend): api =>
       api.addEmails(Address, Second).map: addresses =>
         assertEquals(methodOf(backend), "POST")
-        assertEquals(pathOf(backend), s"$Root/emails")
+        assertEquals(pathOf(backend), s"$Endpoint/emails")
         assertEquals(bodyOf(backend), """{"emails":["maintainer@example.org","second@example.org"]}""")
         assertEquals(addresses.length, 1)
 
   test("adding an address is never retried, because a repeat turns a success into a 422"):
-    val backend = RecordingBackend(failingThenSucceeding(201, UserAccountApiSuite.EmailListBody))
+    val backend = RecordingBackend(flakyThen(201, UserAccountApiSuite.EmailListBody))
 
     onApi(backend): api =>
       api.attempt.addEmails(Address).map(_ => assertEquals(attemptsOn(backend), 1, "the POST was retried"))
@@ -125,11 +125,11 @@ final class UserAccountApiSuite extends AccountApiSuite:
     onApi(backend): api =>
       api.deleteEmails(Address).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
-        assertEquals(pathOf(backend), s"$Root/emails")
+        assertEquals(pathOf(backend), s"$Endpoint/emails")
         assertEquals(bodyOf(backend), """{"emails":["maintainer@example.org"]}""")
 
   test("removing an address is retried, because it is idempotent by address"):
-    val backend = RecordingBackend(failingThenSucceeding(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api.deleteEmails(Address).map(_ => assertEquals(attemptsOn(backend), 2))
@@ -141,7 +141,7 @@ final class UserAccountApiSuite extends AccountApiSuite:
 
     onApi(backend): api =>
       api.repositories(RepositoryOrder.Default, window(2, 20)).map: _ =>
-        assertEquals(pathOf(backend), s"$Root/repos")
+        assertEquals(pathOf(backend), s"$Endpoint/repos")
         assertEquals(queryOf(backend), List("page" -> "2", "limit" -> "20"))
 
   test("a stated ordering is sent after the paging parameters"):
@@ -166,12 +166,12 @@ final class UserAccountApiSuite extends AccountApiSuite:
     onApi(backend): api =>
       api.createRepository(CreateRepository.named(orFail(RepoName.from("codeberg4s")))).map: repository =>
         assertEquals(methodOf(backend), "POST")
-        assertEquals(pathOf(backend), s"$Root/repos")
+        assertEquals(pathOf(backend), s"$Endpoint/repos")
         assertEquals(bodyOf(backend), """{"name":"codeberg4s","private":false,"template":false,"auto_init":false}""")
         assertEquals(repository.slug.name.value, "codeberg4s")
 
   test("creating a repository is never retried, because a repeat cannot be told apart from a name clash"):
-    val backend = RecordingBackend(failingThenSucceeding(201, UserAccountApiSuite.RepoBody))
+    val backend = RecordingBackend(flakyThen(201, UserAccountApiSuite.RepoBody))
 
     onApi(backend): api =>
       api.attempt
@@ -185,7 +185,7 @@ final class UserAccountApiSuite extends AccountApiSuite:
 
     onApi(backend): api =>
       api.teams(PageParams.First).map: page =>
-        assertEquals(pathOf(backend), s"$Root/teams")
+        assertEquals(pathOf(backend), s"$Endpoint/teams")
         assertEquals(queryOf(backend), List("page" -> "1", "limit" -> "30"))
         assertEquals(page.items.map(_.name), Vector("maintainers"))
         assertEquals(page.items.flatMap(_.organization).map(_.name.value), Vector("forgejo"))

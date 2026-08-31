@@ -35,7 +35,7 @@ final class UserActionApiSuite extends AccountApiSuite:
 
   private val Variable: VariableName = orFail(VariableName.from("ENVIRONMENT"))
 
-  private val ActionsRoot: String = s"$Root/actions"
+  private val ActionsRoot: String = s"$Endpoint/actions"
 
   // --- runners --------------------------------------------------------------
 
@@ -78,7 +78,7 @@ final class UserActionApiSuite extends AccountApiSuite:
         assertEquals(registered.token.toString, RunnerRegistrationToken.Redacted)
 
   test("registering a runner is never retried, because a repeat registers a second one"):
-    val backend = RecordingBackend(failingThenSucceeding(201, UserActionApiSuite.RegisteredBody))
+    val backend = RecordingBackend(flakyThen(201, UserActionApiSuite.RegisteredBody))
 
     onApi(backend): api =>
       api.attempt
@@ -94,7 +94,7 @@ final class UserActionApiSuite extends AccountApiSuite:
         assertEquals(pathOf(backend), s"$ActionsRoot/runners/37")
 
   test("deleting a runner is retried, because a row id is never reused"):
-    val backend = RecordingBackend(failingThenSucceeding(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api.deleteRunner(Runner).map(_ => assertEquals(attemptsOn(backend), 2))
@@ -138,13 +138,13 @@ final class UserActionApiSuite extends AccountApiSuite:
         assertEquals(bodyOf(backend), """{"data":"hunter2"}""")
 
   test("setting a secret is retried, because it is an assignment that ends in the requested state"):
-    val backend = RecordingBackend(failingThenSucceeding(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api.setSecret(Secret, orFail(SecretValue.from("hunter2"))).map(_ => assertEquals(attemptsOn(backend), 2))
 
   test("deleting a secret is never retried, because the name is reusable and the act is destructive"):
-    val backend = RecordingBackend(failingThenSucceeding(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api.attempt.deleteSecret(Secret).map(_ => assertEquals(attemptsOn(backend), 1, "the DELETE was retried"))
@@ -177,7 +177,7 @@ final class UserActionApiSuite extends AccountApiSuite:
         assertEquals(variable.value, "staging")
 
   test("creating a variable POSTs its value and is never retried"):
-    val backend = RecordingBackend(failingThenSucceeding(201, ""))
+    val backend = RecordingBackend(flakyThen(201, ""))
 
     onApi(backend): api =>
       api.attempt
@@ -193,13 +193,13 @@ final class UserActionApiSuite extends AccountApiSuite:
         assertEquals(bodyOf(backend), """{"value":"staging"}""")
 
   test("an update that only sets a value is retried, because it is an assignment"):
-    val backend = RecordingBackend(failingThenSucceeding(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api.updateVariable(Variable, UpdateVariable.of("production")).map(_ => assertEquals(attemptsOn(backend), 2))
 
   test("an update that renames is never retried, because a repeat addresses a name that is gone"):
-    val backend = RecordingBackend(failingThenSucceeding(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
     val command = UpdateVariable.of("production").movedTo(orFail(VariableName.from("STAGE")))
 
     onApi(backend): api =>
@@ -220,7 +220,7 @@ final class UserActionApiSuite extends AccountApiSuite:
     )
 
   test("deleting a variable is never retried, for the reason deleting a secret is not"):
-    val backend = RecordingBackend(failingThenSucceeding(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api.attempt.deleteVariable(Variable).map(_ => assertEquals(attemptsOn(backend), 1, "the DELETE was retried"))

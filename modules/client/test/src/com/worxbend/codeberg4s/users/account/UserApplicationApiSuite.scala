@@ -22,7 +22,7 @@ final class UserApplicationApiSuite extends AccountApiSuite:
 
   private val Application: OAuth2ApplicationId = orFail(OAuth2ApplicationId.from(7L))
 
-  private val ApplicationsRoot: String = s"$Root/applications/oauth2"
+  private val ApplicationsRoot: String = s"$Endpoint/applications/oauth2"
 
   private def definition: OAuth2ApplicationDefinition =
     orFail(OAuth2ApplicationDefinition.named("deploy-bot")).redirectingTo("https://ci.example/cb").confidential
@@ -83,7 +83,7 @@ final class UserApplicationApiSuite extends AccountApiSuite:
         assert(!application.toString.contains("gto_"), s"the generated toString leaked it: $application")
 
   test("creating an application is never retried, because a repeat mints a second unusable credential"):
-    val backend = RecordingBackend(failingThenSucceeding(201, UserApplicationApiSuite.CreatedBody))
+    val backend = RecordingBackend(flakyThen(201, UserApplicationApiSuite.CreatedBody))
 
     onApi(backend): api =>
       api.attempt.create(definition).map(_ => assertEquals(attemptsOn(backend), 1, "the POST was retried"))
@@ -101,7 +101,7 @@ final class UserApplicationApiSuite extends AccountApiSuite:
         )
 
   test("updating an application is never retried, because a repeat may re-issue and invalidate a credential"):
-    val backend = RecordingBackend(failingThenSucceeding(200, UserApplicationApiSuite.ReadBody))
+    val backend = RecordingBackend(flakyThen(200, UserApplicationApiSuite.ReadBody))
 
     onApi(backend): api =>
       api.attempt
@@ -117,7 +117,7 @@ final class UserApplicationApiSuite extends AccountApiSuite:
         assertEquals(pathOf(backend), s"$ApplicationsRoot/7")
 
   test("deleting an application is retried, because a row id is never reused"):
-    val backend = RecordingBackend(failingThenSucceeding(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api.delete(Application).map(_ => assertEquals(attemptsOn(backend), 2))

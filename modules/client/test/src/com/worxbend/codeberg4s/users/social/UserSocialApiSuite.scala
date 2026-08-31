@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.users.social
 
+import com.worxbend.codeberg4s.ClientSuiteHarness
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
 import com.worxbend.codeberg4s.Owner
@@ -28,7 +29,7 @@ import java.time.LocalDate
   * '''No golden fixture backs this group.''' Every payload below was written from `spec/swagger.v1.json`; see the class
   * note on [[UserSocialApi]].
   */
-final class UserSocialApiSuite extends FunSuite with SocialApiHarness:
+final class UserSocialApiSuite extends FunSuite with ClientSuiteHarness:
 
   private val Handle: Username = orFail(Username.from("earl-warren"))
 
@@ -57,7 +58,7 @@ final class UserSocialApiSuite extends FunSuite with SocialApiHarness:
         assertEquals(page.items.map(_.login), Vector("earl-warren"))
 
   test("a listing ends where rel=next says it ends, not where a short page suggests"):
-    onStub(responding(200, UserSocialApiSuite.UserListBody, UserSocialApiSuite.PagedHeaders)): api =>
+    onApi(responding(200, UserSocialApiSuite.UserListBody, UserSocialApiSuite.PagedHeaders)): api =>
       api.followers(window(1, 30)).map: page =>
         assertEquals(page.size, 1)
         assertEquals(page.totalCount, Some(97))
@@ -65,7 +66,7 @@ final class UserSocialApiSuite extends FunSuite with SocialApiHarness:
         assertEquals(page.isLast, false)
 
   test("a page past the end is an empty page, not a failure"):
-    onStub(responding(200, "[]")): api =>
+    onApi(responding(200, "[]")): api =>
       api.following(PageParams.First).map(page => assertEquals(page.isLast, true))
 
   test("following an account is a PUT with no body"):
@@ -102,7 +103,7 @@ final class UserSocialApiSuite extends FunSuite with SocialApiHarness:
         assertEquals(following, true)
 
   test("a 404 from the follow check means no, and is not a failure on either rail"):
-    onStub(responding(404, UserSocialApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, UserSocialApiSuite.NotFoundBody)): api =>
       for
         direct <- api.isFollowing(Target)
         typed  <- api.attempt.isFollowing(Target)
@@ -111,7 +112,7 @@ final class UserSocialApiSuite extends FunSuite with SocialApiHarness:
         assertEquals(typed, Right(false))
 
   test("a 403 from the follow check is still a failure, so an unreadable account is not a negative answer"):
-    onStub(responding(403, UserSocialApiSuite.ForbiddenBody)): api =>
+    onApi(responding(403, UserSocialApiSuite.ForbiddenBody)): api =>
       api.attempt.isFollowing(Target).map: outcome =>
         assert(outcome.isLeft, s"a 403 was reported as 'not following': $outcome")
 
@@ -172,8 +173,8 @@ final class UserSocialApiSuite extends FunSuite with SocialApiHarness:
 
   test("the star check answers yes on 204 and no on 404"):
     for
-      yes <- onStub(responding(204, ""))(_.isStarred(Repo, Name))
-      no  <- onStub(responding(404, UserSocialApiSuite.NotFoundBody))(_.isStarred(Repo, Name))
+      yes <- onApi(responding(204, ""))(_.isStarred(Repo, Name))
+      no  <- onApi(responding(404, UserSocialApiSuite.NotFoundBody))(_.isStarred(Repo, Name))
     yield
       assertEquals(yes, true)
       assertEquals(no, false)
@@ -275,56 +276,54 @@ final class UserSocialApiSuite extends FunSuite with SocialApiHarness:
   // --- failures -------------------------------------------------------------
 
   test("a 403 fails the convenience rail with a CodebergException carrying the Api failure"):
-    onStub(responding(403, UserSocialApiSuite.ForbiddenBody)): api =>
+    onApi(responding(403, UserSocialApiSuite.ForbiddenBody)): api =>
       api.followers(PageParams.First).failed.map:
         case CodebergException(error) =>
           assertEquals(summary(error), (UserSocialApi.FollowersOperation, 403, Some(UserSocialApiSuite.ForbiddenText)))
         case other                    => fail(s"expected a CodebergException, got $other")
 
   test("a 403 reaches the typed rail as a Left reporting the very same failure"):
-    onStub(responding(403, UserSocialApiSuite.ForbiddenBody)): api =>
+    onApi(responding(403, UserSocialApiSuite.ForbiddenBody)): api =>
       for
         raised <- api.followers(PageParams.First).failed
         typed  <- api.attempt.followers(PageParams.First)
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on a unit-returning write as well, so the choice of rail is only a choice of style"):
-    onStub(responding(403, UserSocialApiSuite.ForbiddenBody)): api =>
+    onApi(responding(403, UserSocialApiSuite.ForbiddenBody)): api =>
       for
         raised <- api.block(Target).failed
         typed  <- api.attempt.block(Target)
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on the status-only check too"):
-    onStub(responding(401, UserSocialApiSuite.UnauthorizedBody)): api =>
+    onApi(responding(401, UserSocialApiSuite.UnauthorizedBody)): api =>
       for
         raised <- api.isStarred(Repo, Name).failed
         typed  <- api.attempt.isStarred(Repo, Name)
       yield assertRailsAgree(raised, typed)
 
   test("a 400 is an Api failure too — Forgejo uses it for validation alongside 422"):
-    onStub(responding(400, UserSocialApiSuite.ValidationBody)): api =>
+    onApi(responding(400, UserSocialApiSuite.ValidationBody)): api =>
       api.attempt.blocked(PageParams.First).map:
         case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 400)
         case other                                 => fail(s"expected an Api failure, got $other")
 
   test("a 200 whose payload does not fit the model becomes DecodingFailed, never an escaping codec exception"):
-    onStub(responding(200, """[{"created_at": null}]""")): api =>
+    onApi(responding(200, """[{"created_at": null}]""")): api =>
       api.attempt.blocked(PageParams.First).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$[0].block_id")
         case other                                             => fail(s"expected a decoding failure, got $other")
 
   test("a failure carries the operation id of the endpoint it came from, so an alert can name it"):
-    onStub(responding(403, UserSocialApiSuite.ForbiddenBody)): api =>
+    onApi(responding(403, UserSocialApiSuite.ForbiddenBody)): api =>
       api.attempt.heatmap(Handle).map(outcome => assertEquals(operationOf(outcome), UserSocialApi.HeatmapOperation))
 
   // --- harness --------------------------------------------------------------
 
+  /** Builds the API under test on a pipeline over `backend`, releasing the timer whatever happens. */
   private def onApi[A](backend: Backend[Future])(use: UserSocialApi => Future[A]): Future[A] =
-    onBackend(backend)(UserSocialApi(_))(use)
-
-  private def onStub[A](backend: Backend[Future])(use: UserSocialApi => Future[A]): Future[A] =
-    onApi(backend)(use)
+    onPipeline(backend)(pipeline => use(UserSocialApi(pipeline)))
 
 /** The response bodies this suite stubs, kept out of the test bodies so each test reads as one behaviour.
   *

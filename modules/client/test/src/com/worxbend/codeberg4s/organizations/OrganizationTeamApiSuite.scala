@@ -164,7 +164,7 @@ final class OrganizationTeamApiSuite extends FunSuite with OrganizationStubs:
     onApi(backend): api =>
       api.teamAdmin.attempt
         .create(Org, CreateTeam.named(Reviewers))
-        .map(_ => assertEquals(callCount(backend), 1, "the team create was repeated"))
+        .map(_ => assertEquals(attemptsOn(backend), 1, "the team create was repeated"))
 
   test("orgs.teams.edit is never retried, because EditTeamOption's required name makes every edit a rename"):
     val backend = RecordingBackend(flakyThen(200, OrganizationTeamApiSuite.TeamBody))
@@ -172,13 +172,13 @@ final class OrganizationTeamApiSuite extends FunSuite with OrganizationStubs:
     onApi(backend): api =>
       api.teamAdmin.attempt
         .edit(Maintainers, EditTeam.named(Reviewers))
-        .map(_ => assertEquals(callCount(backend), 1, "the team edit was repeated"))
+        .map(_ => assertEquals(attemptsOn(backend), 1, "the team edit was repeated"))
 
   test("orgs.teams.delete is retried, because a team id is a row id the instance never reuses"):
     val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
-      api.teamAdmin.delete(Maintainers).map(_ => assertEquals(callCount(backend), 2, "the 503 was not retried"))
+      api.teamAdmin.delete(Maintainers).map(_ => assertEquals(attemptsOn(backend), 2, "the 503 was not retried"))
 
   test("both team-membership writes are retried, because each states an end condition about one named team"):
     val added   = RecordingBackend(flakyThen(204, ""))
@@ -188,8 +188,8 @@ final class OrganizationTeamApiSuite extends FunSuite with OrganizationStubs:
       _ <- onApi(added)(api => api.teamAdmin.addMember(Maintainers, Account))
       _ <- onApi(removed)(api => api.teamAdmin.removeMember(Maintainers, Account))
     yield
-      assertEquals(callCount(added), 2, "the membership add was not retried")
-      assertEquals(callCount(removed), 2, "the membership removal was not retried")
+      assertEquals(attemptsOn(added), 2, "the membership add was not retried")
+      assertEquals(attemptsOn(removed), 2, "the membership removal was not retried")
 
   test("neither team-repository write is retried, because the subject is a renameable org/repo pair"):
     val added   = RecordingBackend(flakyThen(204, ""))
@@ -199,8 +199,8 @@ final class OrganizationTeamApiSuite extends FunSuite with OrganizationStubs:
       _ <- onApi(added)(api => api.teamAdmin.attempt.addRepository(Maintainers, Org, Repo))
       _ <- onApi(removed)(api => api.teamAdmin.attempt.removeRepository(Maintainers, Org, Repo))
     yield
-      assertEquals(callCount(added), 1, "the repository grant was repeated")
-      assertEquals(callCount(removed), 1, "the repository revocation was repeated")
+      assertEquals(attemptsOn(added), 1, "the repository grant was repeated")
+      assertEquals(attemptsOn(removed), 1, "the repository revocation was repeated")
 
   // --- failures -------------------------------------------------------------
 
