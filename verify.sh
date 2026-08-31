@@ -310,6 +310,52 @@ boundary_violation 'modules/domain/src modules/core/src modules/codec/src module
 $boundaries_ok || fail "architecture boundaries"
 echo "  boundaries clean"
 
+# Every `Attempt` mirror must delegate to the rail method of the SAME NAME.
+#
+# AttemptParitySuite already checks the two rails structurally — same names,
+# same erased parameters, the return type wrapped in Either. What it cannot
+# check is the one line inside each mirror, because nothing it does invokes
+# one. A mirror that delegates to the wrong rail method passes every check it
+# makes, as long as the target shares the parameter list and element type.
+#
+# That is not hypothetical. `IssueSubscriptionApi.Attempt.subscribe` and
+# `.unsubscribe` both read `(Owner, RepoName, IssueNumber, Owner)` returning
+# `Future[Either[CodebergError, Unit]]`, and the same shape recurs across the
+# follow/unfollow and star/unstar families. Editing a copied neighbour is how
+# a new operation gets written here, so swapping one word is the likeliest
+# mistake in the likeliest change.
+#
+# MEASURED: with `unsubscribe` delegating to `subscribe`, AttemptParitySuite
+# passed all six of its tests and the whole 3604-test suite stayed green. This
+# check failed, naming the file and line. It is a grep because the invariant is
+# a source-level one — the mirrors are hand-written by design — and because
+# invoking 437 mirrors reflectively would need a synthesised argument for every
+# parameter type in the library, which is a larger and more brittle thing than
+# the bug it would catch.
+mirrors_checked=0
+mirror_violations=""
+while IFS= read -r line; do
+  file=${line%%:*}
+  rest=${line#*:}
+  lineno=${rest%%:*}
+  target=$(sed -n "${lineno}p" "$file" | sed -E 's/.*exec\.attempt\(rail\.([A-Za-z0-9_]+).*/\1/')
+  # The nearest `def` at or above this line is the mirror this call belongs to.
+  owner=$(sed -n "1,${lineno}p" "$file" | grep -oE '^[[:space:]]*(override )?def [A-Za-z0-9_]+' | tail -1 |
+    sed -E 's/.*def //')
+  mirrors_checked=$((mirrors_checked + 1))
+  if [[ "$owner" != "$target" ]]; then
+    mirror_violations+="    $file:$lineno: Attempt.$owner delegates to rail.$target"$'\n'
+  fi
+done < <(grep -rInE 'exec\.attempt\(rail\.' modules/client/src --include='*.scala')
+
+if [[ -n "$mirror_violations" ]]; then
+  printf '\033[31m  %s\033[0m\n' 'an Attempt mirror delegates to a differently named rail operation'
+  printf '%s' "$mirror_violations"
+  fail "Attempt rail delegation"
+fi
+(( mirrors_checked > 0 )) || fail "Attempt delegation check found no mirrors — the pattern is stale"
+echo "  $mirrors_checked Attempt mirrors delegate to their own rail operation"
+
 # ---------------------------------------------------------------------------
 announce "Coverage"
 for module in "${COVERED_MODULES[@]}"; do
