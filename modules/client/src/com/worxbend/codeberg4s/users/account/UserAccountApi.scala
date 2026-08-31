@@ -241,8 +241,8 @@ final class UserAccountApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     * @param order
     *   how to sort the result; [[RepositoryOrder.Default]] sends no `order_by` and takes the instance's own ordering
     */
-  def repositories(order: RepositoryOrder, page: PageParams): Future[Page[Repository]] =
-    pipeline.callPage(UserAccountApi.repositoriesRequest(order, page), page)(using UserAccountDecoders.repositories)
+  def repositories(order: RepositoryOrder, params: PageParams): Future[Page[Repository]] =
+    pipeline.callPage(UserAccountApi.repositoriesRequest(order, params), params)(using UserAccountDecoders.repositories)
 
   /** Creates a repository owned by the account — `POST /user/repos`.
     *
@@ -280,8 +280,8 @@ final class UserAccountApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     * '''Failures.''' The group contract above. [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] means an
     * element carried no `id` or `name`, reported at `$[n]`.
     */
-  def teams(page: PageParams): Future[Page[Team]] =
-    pipeline.callPage(UserAccountApi.teamsRequest(page), page)(using UserAccountDecoders.teams)
+  def teams(params: PageParams): Future[Page[Team]] =
+    pipeline.callPage(UserAccountApi.teamsRequest(params), params)(using UserAccountDecoders.teams)
 
 /** The requests this group issues, its operation ids, and its typed rail. */
 object UserAccountApi:
@@ -352,16 +352,16 @@ object UserAccountApi:
       exec.attempt(rail.deleteEmails(first, rest*))
 
     /** [[UserAccountApi.repositories]] with its failure as a value. */
-    def repositories(order: RepositoryOrder, page: PageParams): Future[Either[CodebergError, Page[Repository]]] =
-      exec.attempt(rail.repositories(order, page))
+    def repositories(order: RepositoryOrder, params: PageParams): Future[Either[CodebergError, Page[Repository]]] =
+      exec.attempt(rail.repositories(order, params))
 
     /** [[UserAccountApi.createRepository]] with its failure as a value. */
     def createRepository(command: CreateRepository): Future[Either[CodebergError, Repository]] =
       exec.attempt(rail.createRepository(command))
 
     /** [[UserAccountApi.teams]] with its failure as a value. */
-    def teams(page: PageParams): Future[Either[CodebergError, Page[Team]]] =
-      exec.attempt(rail.teams(page))
+    def teams(params: PageParams): Future[Either[CodebergError, Page[Team]]] =
+      exec.attempt(rail.teams(params))
 
   private def settingsRequest: CodebergRequest =
     AccountRequests.read(SettingsOperation, settingsPath, Nil)
@@ -399,11 +399,11 @@ object UserAccountApi:
   private def deleteEmailsRequest(addresses: Vector[EmailAddress]): CodebergRequest =
     AccountRequests.removeWithBody(DeleteEmailsOperation, emailsPath, AccountOptionDto.renderEmails(addresses))
 
-  private def repositoriesRequest(order: RepositoryOrder, page: PageParams): CodebergRequest =
+  private def repositoriesRequest(order: RepositoryOrder, params: PageParams): CodebergRequest =
     AccountRequests.read(
       RepositoriesOperation,
       repositoriesPath,
-      AccountQueries.paging(page) ++ AccountQueries.repositoryOrder(order),
+      AccountQueries.paging(params) ++ AccountQueries.repositoryOrder(order),
     )
 
   private def createRepositoryRequest(command: CreateRepository): CodebergRequest =
@@ -414,8 +414,8 @@ object UserAccountApi:
       AccountOptionDto.renderRepository(command),
     )
 
-  private def teamsRequest(page: PageParams): CodebergRequest =
-    AccountRequests.read(TeamsOperation, AccountRequests.path("teams"), AccountQueries.paging(page))
+  private def teamsRequest(params: PageParams): CodebergRequest =
+    AccountRequests.read(TeamsOperation, AccountRequests.path("teams"), AccountQueries.paging(params))
 
   private def settingsPath: List[String] =
     AccountRequests.path("settings")

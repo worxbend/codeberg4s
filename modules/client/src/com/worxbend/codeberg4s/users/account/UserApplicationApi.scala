@@ -86,8 +86,8 @@ final class UserApplicationApi private[codeberg4s] (pipeline: ApiPipeline[Future
     *
     * '''Failures.''' The group contract above.
     */
-  def list(page: PageParams): Future[Page[OAuth2Application]] =
-    pipeline.callPage(UserApplicationApi.listRequest(page), page)(using UserAccountDecoders.applications)
+  def list(params: PageParams): Future[Page[OAuth2Application]] =
+    pipeline.callPage(UserApplicationApi.listRequest(params), params)(using UserAccountDecoders.applications)
 
   /** Reads one of the account's applications — `GET /user/applications/oauth2/{id}`.
     *
@@ -188,8 +188,8 @@ object UserApplicationApi:
   final class Attempt private[codeberg4s] (rail: UserApplicationApi)(using exec: Exec[Future]):
 
     /** [[UserApplicationApi.list]] with its failure as a value. */
-    def list(page: PageParams): Future[Either[CodebergError, Page[OAuth2Application]]] =
-      exec.attempt(rail.list(page))
+    def list(params: PageParams): Future[Either[CodebergError, Page[OAuth2Application]]] =
+      exec.attempt(rail.list(params))
 
     /** [[UserApplicationApi.get]] with its failure as a value. */
     def get(id: OAuth2ApplicationId): Future[Either[CodebergError, OAuth2Application]] =
@@ -210,8 +210,8 @@ object UserApplicationApi:
     def delete(id: OAuth2ApplicationId): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.delete(id))
 
-  private def listRequest(page: PageParams): CodebergRequest =
-    AccountRequests.read(ListOperation, applicationsPath, AccountQueries.paging(page))
+  private def listRequest(params: PageParams): CodebergRequest =
+    AccountRequests.read(ListOperation, applicationsPath, AccountQueries.paging(params))
 
   private def getRequest(id: OAuth2ApplicationId): CodebergRequest =
     AccountRequests.read(GetOperation, applicationPath(id), Nil)

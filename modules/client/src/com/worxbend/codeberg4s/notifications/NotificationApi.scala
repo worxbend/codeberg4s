@@ -106,8 +106,8 @@ final class NotificationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
     * @param page
     *   which window to fetch, and how large
     */
-  def list(query: NotificationQuery, page: PageParams): Future[Page[NotificationThread]] =
-    pipeline.callPage(NotificationApi.listRequest(query, page), page)(using NotificationApi.ThreadsDecoder)
+  def list(query: NotificationQuery, params: PageParams): Future[Page[NotificationThread]] =
+    pipeline.callPage(NotificationApi.listRequest(query, params), params)(using NotificationApi.ThreadsDecoder)
 
   /** Marks the authenticated user's notification threads read — `PUT /notifications`.
     *
@@ -185,9 +185,9 @@ final class NotificationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
       owner: Owner,
       name: RepoName,
       query: NotificationQuery,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[NotificationThread]] =
-    pipeline.callPage(NotificationApi.listRepositoryRequest(owner, name, query, page), page)(using
+    pipeline.callPage(NotificationApi.listRepositoryRequest(owner, name, query, params), params)(using
       NotificationApi.ThreadsDecoder)
 
   /** Marks the authenticated user's threads for one repository read — `PUT /repos/{owner}/{repo}/notifications`.
@@ -236,9 +236,9 @@ object NotificationApi:
     /** [[NotificationApi.list]] with its failure as a value. */
     def list(
         query: NotificationQuery,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[NotificationThread]]] =
-      exec.attempt(rail.list(query, page))
+      exec.attempt(rail.list(query, params))
 
     /** [[NotificationApi.markAllRead]] with its failure as a value. */
     def markAllRead(): Future[Either[CodebergError, Unit]] =
@@ -261,9 +261,9 @@ object NotificationApi:
         owner: Owner,
         name: RepoName,
         query: NotificationQuery,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[NotificationThread]]] =
-      exec.attempt(rail.listRepository(owner, name, query, page))
+      exec.attempt(rail.listRepository(owner, name, query, params))
 
     /** [[NotificationApi.markRepositoryRead]] with its failure as a value. */
     def markRepositoryRead(owner: Owner, name: RepoName): Future[Either[CodebergError, Unit]] =
@@ -274,11 +274,11 @@ object NotificationApi:
     */
   private val NotificationsPath: List[String] = List("notifications")
 
-  private def listRequest(query: NotificationQuery, page: PageParams): CodebergRequest =
+  private def listRequest(query: NotificationQuery, params: PageParams): CodebergRequest =
     read(
       ListOperation,
       NotificationsPath,
-      NotificationQueries.notifications(query) ++ NotificationQueries.paging(page),
+      NotificationQueries.notifications(query) ++ NotificationQueries.paging(params),
     )
 
   private val markAllReadRequest: CodebergRequest =
@@ -297,12 +297,12 @@ object NotificationApi:
       owner: Owner,
       name: RepoName,
       query: NotificationQuery,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
     read(
       ListRepositoryOperation,
       repositoryNotificationsPath(owner, name),
-      NotificationQueries.notifications(query) ++ NotificationQueries.paging(page),
+      NotificationQueries.notifications(query) ++ NotificationQueries.paging(params),
     )
 
   private def markRepositoryReadRequest(owner: Owner, name: RepoName): CodebergRequest =

@@ -282,8 +282,8 @@ final class RepositoryAccessApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     *
     * '''Failures.''' The group contract above.
     */
-  def listCollaborators(owner: Owner, name: RepoName, page: PageParams): Future[Page[User]] =
-    pipeline.callPage(RepositoryAccessApi.listCollaboratorsRequest(owner, name, page), page)(using
+  def listCollaborators(owner: Owner, name: RepoName, params: PageParams): Future[Page[User]] =
+    pipeline.callPage(RepositoryAccessApi.listCollaboratorsRequest(owner, name, params), params)(using
       RepositoryAccessDecoders.collaborators)
 
   /** Asks whether an account is a collaborator — `GET /repos/{owner}/{repo}/collaborators/{collaborator}`.
@@ -390,9 +390,9 @@ final class RepositoryAccessApi private[codeberg4s] (pipeline: ApiPipeline[Futur
       owner: Owner,
       name: RepoName,
       query: DeployKeyQuery,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[DeployKey]] =
-    pipeline.callPage(RepositoryAccessApi.listDeployKeysRequest(owner, name, query, page), page)(using
+    pipeline.callPage(RepositoryAccessApi.listDeployKeysRequest(owner, name, query, params), params)(using
       RepositoryAccessDecoders.deployKeys)
 
   /** Reads one deploy key — `GET /repos/{owner}/{repo}/keys/{id}`.
@@ -670,9 +670,9 @@ object RepositoryAccessApi:
     def listCollaborators(
         owner: Owner,
         name: RepoName,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[User]]] =
-      exec.attempt(rail.listCollaborators(owner, name, page))
+      exec.attempt(rail.listCollaborators(owner, name, params))
 
     /** [[RepositoryAccessApi.checkCollaborator]] with its failure as a value.
       *
@@ -716,9 +716,9 @@ object RepositoryAccessApi:
         owner: Owner,
         name: RepoName,
         query: DeployKeyQuery,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[DeployKey]]] =
-      exec.attempt(rail.listDeployKeys(owner, name, query, page))
+      exec.attempt(rail.listDeployKeys(owner, name, query, params))
 
     /** The single-key read on [[RepositoryAccessApi]], with its failure as a value. */
     def deployKey(owner: Owner, name: RepoName, id: DeployKeyId): Future[Either[CodebergError, DeployKey]] =
@@ -820,8 +820,8 @@ object RepositoryAccessApi:
   private def deleteTagProtectionRequest(owner: Owner, name: RepoName, id: TagProtectionId): CodebergRequest =
     remove(DeleteTagProtectionOperation, tagProtectionPath(owner, name, id))
 
-  private def listCollaboratorsRequest(owner: Owner, name: RepoName, page: PageParams): CodebergRequest =
-    read(ListCollaboratorsOperation, collaboratorsPath(owner, name), AccessQueries.paging(page))
+  private def listCollaboratorsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
+    read(ListCollaboratorsOperation, collaboratorsPath(owner, name), AccessQueries.paging(params))
 
   private def checkCollaboratorRequest(owner: Owner, name: RepoName, collaborator: Username): CodebergRequest =
     read(CheckCollaboratorOperation, collaboratorPath(owner, name, collaborator), Nil)
@@ -849,12 +849,12 @@ object RepositoryAccessApi:
       owner: Owner,
       name: RepoName,
       query: DeployKeyQuery,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
     read(
       ListDeployKeysOperation,
       deployKeysPath(owner, name),
-      AccessQueries.deployKeys(query) ++ AccessQueries.paging(page),
+      AccessQueries.deployKeys(query) ++ AccessQueries.paging(params),
     )
 
   private def deployKeyRequest(owner: Owner, name: RepoName, id: DeployKeyId): CodebergRequest =

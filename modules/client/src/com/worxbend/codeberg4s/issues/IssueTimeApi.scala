@@ -145,9 +145,10 @@ final class IssueTimeApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usi
       name: RepoName,
       number: IssueNumber,
       query: TrackedTimeQuery,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[TrackedTime]] =
-    pipeline.callPage(IssueTimeApi.listRequest(owner, name, number, query, page), page)(using IssueDecoders.trackedTimes)
+    pipeline.callPage(IssueTimeApi.listRequest(owner, name, number, query, params), params)(using
+      IssueDecoders.trackedTimes)
 
   /** Files worked time against an issue — `POST /repos/{owner}/{repo}/issues/{index}/times`.
     *
@@ -249,9 +250,9 @@ object IssueTimeApi:
         name: RepoName,
         number: IssueNumber,
         query: TrackedTimeQuery,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[TrackedTime]]] =
-      exec.attempt(rail.list(owner, name, number, query, page))
+      exec.attempt(rail.list(owner, name, number, query, params))
 
     /** [[IssueTimeApi.add]] with its failure as a value. */
     def add(
@@ -309,12 +310,12 @@ object IssueTimeApi:
       name: RepoName,
       number: IssueNumber,
       query: TrackedTimeQuery,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
     IssueRequests.read(
       ListOperation,
       timesPath(owner, name, number),
-      IssueQueries.trackedTimes(query) ++ IssueQueries.paging(page),
+      IssueQueries.trackedTimes(query) ++ IssueQueries.paging(params),
     )
 
   private def addRequest(

@@ -77,8 +77,8 @@ final class RepositoryWikiApi private[codeberg4s] (pipeline: ApiPipeline[Future]
     *
     * '''Failures.''' The group contract above.
     */
-  def listPages(owner: Owner, name: RepoName, page: PageParams): Future[Page[WikiPageMeta]] =
-    pipeline.callPage(RepositoryWikiApi.listPagesRequest(owner, name, page), page)(using
+  def listPages(owner: Owner, name: RepoName, params: PageParams): Future[Page[WikiPageMeta]] =
+    pipeline.callPage(RepositoryWikiApi.listPagesRequest(owner, name, params), params)(using
       RepositoryHookDecoders.wikiPages)
 
   /** Reads one wiki page with its content — `GET /repos/{owner}/{repo}/wiki/page/{pageName}`.
@@ -178,9 +178,9 @@ final class RepositoryWikiApi private[codeberg4s] (pipeline: ApiPipeline[Future]
       owner: Owner,
       name: RepoName,
       pageName: WikiPageName,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[WikiCommit]] =
-    pipeline.callPage(RepositoryWikiApi.revisionsRequest(owner, name, pageName, page), page)(using
+    pipeline.callPage(RepositoryWikiApi.revisionsRequest(owner, name, pageName, params), params)(using
       RepositoryHookDecoders.wikiRevisions)
 
 /** The requests this group issues, its operation ids, and its typed rail. */
@@ -216,9 +216,9 @@ object RepositoryWikiApi:
     def listPages(
         owner: Owner,
         name: RepoName,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[WikiPageMeta]]] =
-      exec.attempt(rail.listPages(owner, name, page))
+      exec.attempt(rail.listPages(owner, name, params))
 
     /** The single-page read on [[RepositoryWikiApi]], with its failure as a value. */
     def page(owner: Owner, name: RepoName, pageName: WikiPageName): Future[Either[CodebergError, WikiPage]] =
@@ -250,12 +250,12 @@ object RepositoryWikiApi:
         owner: Owner,
         name: RepoName,
         pageName: WikiPageName,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[WikiCommit]]] =
-      exec.attempt(rail.revisions(owner, name, pageName, page))
+      exec.attempt(rail.revisions(owner, name, pageName, params))
 
-  private def listPagesRequest(owner: Owner, name: RepoName, page: PageParams): CodebergRequest =
-    HookRequests.read(ListPagesOperation, wikiPath(owner, name) :+ "pages", HookQueries.paging(page))
+  private def listPagesRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
+    HookRequests.read(ListPagesOperation, wikiPath(owner, name) :+ "pages", HookQueries.paging(params))
 
   private def pageRequest(owner: Owner, name: RepoName, pageName: WikiPageName): CodebergRequest =
     HookRequests.read(GetPageOperation, pagePath(owner, name, pageName), Nil)
@@ -288,12 +288,12 @@ object RepositoryWikiApi:
       owner: Owner,
       name: RepoName,
       pageName: WikiPageName,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
     HookRequests.read(
       ListRevisionsOperation,
       wikiPath(owner, name) ++ ("revisions" :: pageName.segments),
-      HookQueries.revisionPaging(page),
+      HookQueries.revisionPaging(params),
     )
 
   private def wikiPath(owner: Owner, name: RepoName): List[String] =

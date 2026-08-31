@@ -79,8 +79,8 @@ final class IssueSubscriptionApi private[codeberg4s] (pipeline: ApiPipeline[Futu
     *
     * '''Failures.''' The group contract above.
     */
-  def list(owner: Owner, name: RepoName, number: IssueNumber, page: PageParams): Future[Page[User]] =
-    pipeline.callPage(IssueSubscriptionApi.listRequest(owner, name, number, page), page)(using IssueDecoders.users)
+  def list(owner: Owner, name: RepoName, number: IssueNumber, params: PageParams): Future[Page[User]] =
+    pipeline.callPage(IssueSubscriptionApi.listRequest(owner, name, number, params), params)(using IssueDecoders.users)
 
   /** Reports whether the authenticated account follows an issue —
     * `GET /repos/{owner}/{repo}/issues/{index}/subscriptions/check`.
@@ -165,9 +165,9 @@ object IssueSubscriptionApi:
         owner: Owner,
         name: RepoName,
         number: IssueNumber,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[User]]] =
-      exec.attempt(rail.list(owner, name, number, page))
+      exec.attempt(rail.list(owner, name, number, params))
 
     /** [[IssueSubscriptionApi.check]] with its failure as a value. */
     def check(
@@ -199,9 +199,9 @@ object IssueSubscriptionApi:
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    IssueRequests.read(ListOperation, subscriptionsPath(owner, name, number), IssueQueries.paging(page))
+    IssueRequests.read(ListOperation, subscriptionsPath(owner, name, number), IssueQueries.paging(params))
 
   private def checkRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
     IssueRequests.read(CheckOperation, subscriptionsPath(owner, name, number) :+ "check", Nil)

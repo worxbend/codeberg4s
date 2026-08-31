@@ -88,9 +88,9 @@ final class IssueReactionApi private[codeberg4s] (pipeline: ApiPipeline[Future])
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[Reaction]] =
-    pipeline.callPage(IssueReactionApi.listOnIssueRequest(owner, name, number, page), page)(using
+    pipeline.callPage(IssueReactionApi.listOnIssueRequest(owner, name, number, params), params)(using
       IssueDecoders.reactions)
 
   /** Reacts to an issue — `POST /repos/{owner}/{repo}/issues/{index}/reactions`.
@@ -218,9 +218,9 @@ object IssueReactionApi:
         owner: Owner,
         name: RepoName,
         number: IssueNumber,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[Reaction]]] =
-      exec.attempt(rail.listOnIssue(owner, name, number, page))
+      exec.attempt(rail.listOnIssue(owner, name, number, params))
 
     /** [[IssueReactionApi.addToIssue]] with its failure as a value. */
     def addToIssue(
@@ -270,9 +270,9 @@ object IssueReactionApi:
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    IssueRequests.read(ListOnIssueOperation, issueReactionsPath(owner, name, number), IssueQueries.paging(page))
+    IssueRequests.read(ListOnIssueOperation, issueReactionsPath(owner, name, number), IssueQueries.paging(params))
 
   private def addToIssueRequest(
       owner: Owner,

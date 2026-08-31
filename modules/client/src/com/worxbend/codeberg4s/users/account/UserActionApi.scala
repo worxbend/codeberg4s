@@ -115,8 +115,8 @@ final class UserActionApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     *   whether to include runners inherited from the instance, or only the account's own — see
     *   [[com.worxbend.codeberg4s.repositories.actions.RunnerVisibility]] for why this is not a `Boolean`
     */
-  def listRunners(visibility: RunnerVisibility, page: PageParams): Future[Page[ActionRunner]] =
-    pipeline.callPage(UserActionApi.listRunnersRequest(visibility, page), page)(using UserAccountDecoders.runners)
+  def listRunners(visibility: RunnerVisibility, params: PageParams): Future[Page[ActionRunner]] =
+    pipeline.callPage(UserActionApi.listRunnersRequest(visibility, params), params)(using UserAccountDecoders.runners)
 
   /** Reads one of the account's runners — `GET /user/actions/runners/{runner_id}`.
     *
@@ -242,8 +242,8 @@ final class UserActionApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     *
     * '''Failures.''' The group contract above.
     */
-  def listVariables(page: PageParams): Future[Page[ActionVariable]] =
-    pipeline.callPage(UserActionApi.listVariablesRequest(page), page)(using UserAccountDecoders.variables)
+  def listVariables(params: PageParams): Future[Page[ActionVariable]] =
+    pipeline.callPage(UserActionApi.listVariablesRequest(params), params)(using UserAccountDecoders.variables)
 
   /** Reads one of the account's variables — `GET /user/actions/variables/{variablename}`.
     *
@@ -355,9 +355,9 @@ object UserActionApi:
     /** [[UserActionApi.listRunners]] with its failure as a value. */
     def listRunners(
         visibility: RunnerVisibility,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[ActionRunner]]] =
-      exec.attempt(rail.listRunners(visibility, page))
+      exec.attempt(rail.listRunners(visibility, params))
 
     /** The single-runner read on [[UserActionApi]], with its failure as a value. */
     def runner(id: RunnerId): Future[Either[CodebergError, ActionRunner]] =
@@ -388,8 +388,8 @@ object UserActionApi:
       exec.attempt(rail.deleteSecret(secret))
 
     /** [[UserActionApi.listVariables]] with its failure as a value. */
-    def listVariables(page: PageParams): Future[Either[CodebergError, Page[ActionVariable]]] =
-      exec.attempt(rail.listVariables(page))
+    def listVariables(params: PageParams): Future[Either[CodebergError, Page[ActionVariable]]] =
+      exec.attempt(rail.listVariables(params))
 
     /** The single-variable read on [[UserActionApi]], with its failure as a value. */
     def variable(name: VariableName): Future[Either[CodebergError, ActionVariable]] =
@@ -417,11 +417,11 @@ object UserActionApi:
   private[account] def updateVariableEligibility(command: UpdateVariable): RetryEligibility =
     if command.renamedTo.isEmpty then RetryEligibility.AlwaysRetry else RetryEligibility.Never
 
-  private def listRunnersRequest(visibility: RunnerVisibility, page: PageParams): CodebergRequest =
+  private def listRunnersRequest(visibility: RunnerVisibility, params: PageParams): CodebergRequest =
     AccountRequests.read(
       ListRunnersOperation,
       runnersPath,
-      ActionQueries.runners(visibility) ++ ActionQueries.paging(page),
+      ActionQueries.runners(visibility) ++ ActionQueries.paging(params),
     )
 
   private def runnerRequest(id: RunnerId): CodebergRequest =
@@ -450,8 +450,8 @@ object UserActionApi:
   private def deleteSecretRequest(secret: SecretName): CodebergRequest =
     AccountRequests.remove(DeleteSecretOperation, secretPath(secret))
 
-  private def listVariablesRequest(page: PageParams): CodebergRequest =
-    AccountRequests.read(ListVariablesOperation, variablesPath, ActionQueries.paging(page))
+  private def listVariablesRequest(params: PageParams): CodebergRequest =
+    AccountRequests.read(ListVariablesOperation, variablesPath, ActionQueries.paging(params))
 
   private def variableRequest(name: VariableName): CodebergRequest =
     AccountRequests.read(GetVariableOperation, variablePath(name), Nil)

@@ -125,8 +125,8 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     * @param page
     *   which window to fetch, and how large
     */
-  def list(owner: Owner, name: RepoName, query: PullRequestQuery, page: PageParams): Future[Page[PullRequest]] =
-    pipeline.callPage(PullRequestApi.listRequest(owner, name, query, page), page)(using PullRequestApi.PullsDecoder)
+  def list(owner: Owner, name: RepoName, query: PullRequestQuery, params: PageParams): Future[Page[PullRequest]] =
+    pipeline.callPage(PullRequestApi.listRequest(owner, name, query, params), params)(using PullRequestApi.PullsDecoder)
 
   /** Reads one pull request — `GET /repos/{owner}/{repo}/pulls/{index}`.
     *
@@ -257,9 +257,9 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
       owner: Owner,
       name: RepoName,
       number: PullRequestNumber,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[Review]] =
-    pipeline.callPage(PullRequestApi.reviewsRequest(owner, name, number, page), page)(using
+    pipeline.callPage(PullRequestApi.reviewsRequest(owner, name, number, params), params)(using
       PullRequestApi.ReviewsDecoder)
 
   /** Lists the commits a pull request would bring — `GET /repos/{owner}/{repo}/pulls/{index}/commits`.
@@ -285,9 +285,9 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
       owner: Owner,
       name: RepoName,
       number: PullRequestNumber,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[Commit]] =
-    pipeline.callPage(PullRequestApi.commitsRequest(owner, name, number, page), page)(using
+    pipeline.callPage(PullRequestApi.commitsRequest(owner, name, number, params), params)(using
       PullRequestApi.CommitsDecoder)
 
   /** Lists the files a pull request changes — `GET /repos/{owner}/{repo}/pulls/{index}/files`.
@@ -308,9 +308,10 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
       owner: Owner,
       name: RepoName,
       number: PullRequestNumber,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[ChangedFile]] =
-    pipeline.callPage(PullRequestApi.filesRequest(owner, name, number, page), page)(using PullRequestApi.FilesDecoder)
+    pipeline.callPage(PullRequestApi.filesRequest(owner, name, number, params), params)(using
+      PullRequestApi.FilesDecoder)
 
   /** Lists the repository's pinned pull requests — `GET /repos/{owner}/{repo}/pulls/pinned`.
     *
@@ -876,9 +877,9 @@ object PullRequestApi:
         owner: Owner,
         name: RepoName,
         query: PullRequestQuery,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[PullRequest]]] =
-      exec.attempt(rail.list(owner, name, query, page))
+      exec.attempt(rail.list(owner, name, query, params))
 
     /** The single-pull-request read on [[PullRequestApi]], with its failure as a value. */
     def get(
@@ -919,27 +920,27 @@ object PullRequestApi:
         owner: Owner,
         name: RepoName,
         number: PullRequestNumber,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[Review]]] =
-      exec.attempt(rail.listReviews(owner, name, number, page))
+      exec.attempt(rail.listReviews(owner, name, number, params))
 
     /** [[PullRequestApi.listCommits]] with its failure as a value. */
     def listCommits(
         owner: Owner,
         name: RepoName,
         number: PullRequestNumber,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[Commit]]] =
-      exec.attempt(rail.listCommits(owner, name, number, page))
+      exec.attempt(rail.listCommits(owner, name, number, params))
 
     /** [[PullRequestApi.listFiles]] with its failure as a value. */
     def listFiles(
         owner: Owner,
         name: RepoName,
         number: PullRequestNumber,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[ChangedFile]]] =
-      exec.attempt(rail.listFiles(owner, name, number, page))
+      exec.attempt(rail.listFiles(owner, name, number, params))
 
     /** [[PullRequestApi.listPinned]] with its failure as a value. */
     def listPinned(owner: Owner, name: RepoName): Future[Either[CodebergError, Vector[PullRequest]]] =
@@ -1113,9 +1114,9 @@ object PullRequestApi:
       owner: Owner,
       name: RepoName,
       query: PullRequestQuery,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    read(ListOperation, pullsPath(owner, name), PullRequestQueries.pulls(query) ++ PullRequestQueries.paging(page))
+    read(ListOperation, pullsPath(owner, name), PullRequestQueries.pulls(query) ++ PullRequestQueries.paging(params))
 
   private def getRequest(owner: Owner, name: RepoName, number: PullRequestNumber): CodebergRequest =
     read(GetOperation, pullPath(owner, name, number), Nil)
@@ -1153,25 +1154,25 @@ object PullRequestApi:
       owner: Owner,
       name: RepoName,
       number: PullRequestNumber,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    read(ListReviewsOperation, pullPath(owner, name, number) :+ "reviews", PullRequestQueries.paging(page))
+    read(ListReviewsOperation, pullPath(owner, name, number) :+ "reviews", PullRequestQueries.paging(params))
 
   private def commitsRequest(
       owner: Owner,
       name: RepoName,
       number: PullRequestNumber,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    read(ListCommitsOperation, pullPath(owner, name, number) :+ "commits", PullRequestQueries.paging(page))
+    read(ListCommitsOperation, pullPath(owner, name, number) :+ "commits", PullRequestQueries.paging(params))
 
   private def filesRequest(
       owner: Owner,
       name: RepoName,
       number: PullRequestNumber,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    read(ListFilesOperation, pullPath(owner, name, number) :+ "files", PullRequestQueries.paging(page))
+    read(ListFilesOperation, pullPath(owner, name, number) :+ "files", PullRequestQueries.paging(params))
 
   private def pinnedRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(ListPinnedOperation, pullsPath(owner, name) :+ "pinned", Nil)

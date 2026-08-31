@@ -200,8 +200,8 @@ final class RepositoryPublishingApi private[codeberg4s] (pipeline: ApiPipeline[F
     *
     * '''Failures.''' The group contract above.
     */
-  def listAssets(owner: Owner, name: RepoName, id: ReleaseId, page: PageParams): Future[Page[ReleaseAsset]] =
-    pipeline.callPage(RepositoryPublishingApi.listAssetsRequest(owner, name, id, page), page)(using
+  def listAssets(owner: Owner, name: RepoName, id: ReleaseId, params: PageParams): Future[Page[ReleaseAsset]] =
+    pipeline.callPage(RepositoryPublishingApi.listAssetsRequest(owner, name, id, params), params)(using
       PublishingDecoders.assets)
 
   /** Uploads a file and attaches it to a release — `POST /repos/{owner}/{repo}/releases/{id}/assets`.
@@ -505,9 +505,9 @@ object RepositoryPublishingApi:
         owner: Owner,
         name: RepoName,
         id: ReleaseId,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[ReleaseAsset]]] =
-      exec.attempt(rail.listAssets(owner, name, id, page))
+      exec.attempt(rail.listAssets(owner, name, id, params))
 
     /** [[RepositoryPublishingApi.uploadAsset]] with its failure as a value. */
     def uploadAsset(
@@ -611,9 +611,9 @@ object RepositoryPublishingApi:
       owner: Owner,
       name: RepoName,
       id: ReleaseId,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    read(ListAssetsOperation, assetsPath(owner, name, id), window(page))
+    read(ListAssetsOperation, assetsPath(owner, name, id), window(params))
 
   private def uploadAssetRequest(
       owner: Owner,

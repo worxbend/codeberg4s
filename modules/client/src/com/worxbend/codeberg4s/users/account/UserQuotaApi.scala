@@ -110,8 +110,8 @@ final class UserQuotaApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usi
     *
     * '''Failures.''' The group contract above.
     */
-  def artifacts(page: PageParams): Future[Page[QuotaUsedArtifact]] =
-    pipeline.callPage(UserQuotaApi.artifactsRequest(page), page)(using UserAccountDecoders.quotaArtifacts)
+  def artifacts(params: PageParams): Future[Page[QuotaUsedArtifact]] =
+    pipeline.callPage(UserQuotaApi.artifactsRequest(params), params)(using UserAccountDecoders.quotaArtifacts)
 
   /** Lists the attachments counting towards the account's quota — `GET /user/quota/attachments`.
     *
@@ -119,8 +119,8 @@ final class UserQuotaApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usi
     *
     * '''Failures.''' The group contract above.
     */
-  def attachments(page: PageParams): Future[Page[QuotaUsedAttachment]] =
-    pipeline.callPage(UserQuotaApi.attachmentsRequest(page), page)(using UserAccountDecoders.quotaAttachments)
+  def attachments(params: PageParams): Future[Page[QuotaUsedAttachment]] =
+    pipeline.callPage(UserQuotaApi.attachmentsRequest(params), params)(using UserAccountDecoders.quotaAttachments)
 
   /** Lists the package versions counting towards the account's quota — `GET /user/quota/packages`.
     *
@@ -131,8 +131,8 @@ final class UserQuotaApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usi
     *
     * '''Failures.''' The group contract above.
     */
-  def packages(page: PageParams): Future[Page[QuotaUsedPackage]] =
-    pipeline.callPage(UserQuotaApi.packagesRequest(page), page)(using UserAccountDecoders.quotaPackages)
+  def packages(params: PageParams): Future[Page[QuotaUsedPackage]] =
+    pipeline.callPage(UserQuotaApi.packagesRequest(params), params)(using UserAccountDecoders.quotaPackages)
 
 /** The requests this group issues, its operation ids, and its typed rail. */
 object UserQuotaApi:
@@ -169,16 +169,16 @@ object UserQuotaApi:
       exec.attempt(rail.check(subject))
 
     /** [[UserQuotaApi.artifacts]] with its failure as a value. */
-    def artifacts(page: PageParams): Future[Either[CodebergError, Page[QuotaUsedArtifact]]] =
-      exec.attempt(rail.artifacts(page))
+    def artifacts(params: PageParams): Future[Either[CodebergError, Page[QuotaUsedArtifact]]] =
+      exec.attempt(rail.artifacts(params))
 
     /** [[UserQuotaApi.attachments]] with its failure as a value. */
-    def attachments(page: PageParams): Future[Either[CodebergError, Page[QuotaUsedAttachment]]] =
-      exec.attempt(rail.attachments(page))
+    def attachments(params: PageParams): Future[Either[CodebergError, Page[QuotaUsedAttachment]]] =
+      exec.attempt(rail.attachments(params))
 
     /** [[UserQuotaApi.packages]] with its failure as a value. */
-    def packages(page: PageParams): Future[Either[CodebergError, Page[QuotaUsedPackage]]] =
-      exec.attempt(rail.packages(page))
+    def packages(params: PageParams): Future[Either[CodebergError, Page[QuotaUsedPackage]]] =
+      exec.attempt(rail.packages(params))
 
   private def infoRequest: CodebergRequest =
     AccountRequests.read(InfoOperation, quotaPath, Nil)
@@ -186,14 +186,14 @@ object UserQuotaApi:
   private def checkRequest(subject: QuotaSubject): CodebergRequest =
     AccountRequests.read(CheckOperation, quotaPath :+ "check", AccountQueries.quotaCheck(subject))
 
-  private def artifactsRequest(page: PageParams): CodebergRequest =
-    AccountRequests.read(ArtifactsOperation, quotaPath :+ "artifacts", AccountQueries.paging(page))
+  private def artifactsRequest(params: PageParams): CodebergRequest =
+    AccountRequests.read(ArtifactsOperation, quotaPath :+ "artifacts", AccountQueries.paging(params))
 
-  private def attachmentsRequest(page: PageParams): CodebergRequest =
-    AccountRequests.read(AttachmentsOperation, quotaPath :+ "attachments", AccountQueries.paging(page))
+  private def attachmentsRequest(params: PageParams): CodebergRequest =
+    AccountRequests.read(AttachmentsOperation, quotaPath :+ "attachments", AccountQueries.paging(params))
 
-  private def packagesRequest(page: PageParams): CodebergRequest =
-    AccountRequests.read(PackagesOperation, quotaPath :+ "packages", AccountQueries.paging(page))
+  private def packagesRequest(params: PageParams): CodebergRequest =
+    AccountRequests.read(PackagesOperation, quotaPath :+ "packages", AccountQueries.paging(params))
 
   private def quotaPath: List[String] =
     AccountRequests.path("quota")

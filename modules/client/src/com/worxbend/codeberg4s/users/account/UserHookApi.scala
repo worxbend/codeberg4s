@@ -90,8 +90,8 @@ final class UserHookApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usin
     *
     * '''Failures.''' The group contract above.
     */
-  def list(page: PageParams): Future[Page[Webhook]] =
-    pipeline.callPage(UserHookApi.listRequest(page), page)(using UserAccountDecoders.webhooks)
+  def list(params: PageParams): Future[Page[Webhook]] =
+    pipeline.callPage(UserHookApi.listRequest(params), params)(using UserAccountDecoders.webhooks)
 
   /** Reads one of the account's webhooks — `GET /user/hooks/{id}`.
     *
@@ -177,8 +177,8 @@ object UserHookApi:
   final class Attempt private[codeberg4s] (rail: UserHookApi)(using exec: Exec[Future]):
 
     /** [[UserHookApi.list]] with its failure as a value. */
-    def list(page: PageParams): Future[Either[CodebergError, Page[Webhook]]] =
-      exec.attempt(rail.list(page))
+    def list(params: PageParams): Future[Either[CodebergError, Page[Webhook]]] =
+      exec.attempt(rail.list(params))
 
     /** [[UserHookApi.get]] with its failure as a value. */
     def get(id: HookId): Future[Either[CodebergError, Webhook]] =
@@ -196,8 +196,8 @@ object UserHookApi:
     def delete(id: HookId): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.delete(id))
 
-  private def listRequest(page: PageParams): CodebergRequest =
-    AccountRequests.read(ListOperation, hooksPath, AccountQueries.paging(page))
+  private def listRequest(params: PageParams): CodebergRequest =
+    AccountRequests.read(ListOperation, hooksPath, AccountQueries.paging(params))
 
   private def getRequest(id: HookId): CodebergRequest =
     AccountRequests.read(GetOperation, hookPath(id), Nil)

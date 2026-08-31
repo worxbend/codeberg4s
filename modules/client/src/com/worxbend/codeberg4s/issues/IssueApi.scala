@@ -122,8 +122,8 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     * @param page
     *   which window to fetch, and how large
     */
-  def list(owner: Owner, name: RepoName, query: IssueQuery, page: PageParams): Future[Page[Issue]] =
-    pipeline.callPage(IssueApi.listRequest(owner, name, query, page), page)(using IssueApi.IssuesDecoder)
+  def list(owner: Owner, name: RepoName, query: IssueQuery, params: PageParams): Future[Page[Issue]] =
+    pipeline.callPage(IssueApi.listRequest(owner, name, query, params), params)(using IssueApi.IssuesDecoder)
 
   /** Reads one issue — `GET /repos/{owner}/{repo}/issues/{index}`.
     *
@@ -189,8 +189,8 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     * '''Failures.''' The group contract above, plus `500`, which the spec declares for this operation and which arrives
     * as [[com.worxbend.codeberg4s.CodebergError.Api]] like any other status.
     */
-  def listComments(owner: Owner, name: RepoName, number: IssueNumber, page: PageParams): Future[Page[Comment]] =
-    pipeline.callPage(IssueApi.listCommentsRequest(owner, name, number, page), page)(using IssueApi.CommentsDecoder)
+  def listComments(owner: Owner, name: RepoName, number: IssueNumber, params: PageParams): Future[Page[Comment]] =
+    pipeline.callPage(IssueApi.listCommentsRequest(owner, name, number, params), params)(using IssueApi.CommentsDecoder)
 
   /** Comments on an issue — `POST /repos/{owner}/{repo}/issues/{index}/comments`.
     *
@@ -220,8 +220,8 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     *
     * '''Failures.''' The group contract above.
     */
-  def listLabels(owner: Owner, name: RepoName, page: PageParams): Future[Page[Label]] =
-    pipeline.callPage(IssueApi.listLabelsRequest(owner, name, page), page)(using IssueApi.LabelsDecoder)
+  def listLabels(owner: Owner, name: RepoName, params: PageParams): Future[Page[Label]] =
+    pipeline.callPage(IssueApi.listLabelsRequest(owner, name, params), params)(using IssueApi.LabelsDecoder)
 
   /** Creates a label on a repository — `POST /repos/{owner}/{repo}/labels`.
     *
@@ -247,8 +247,9 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     *   which milestones to include. Explicit rather than optional here, unlike [[IssueQuery.state]], because the
     *   endpoint has no other filter worth naming and Forgejo's silent default of open-only surprises callers
     */
-  def listMilestones(owner: Owner, name: RepoName, state: StateFilter, page: PageParams): Future[Page[Milestone]] =
-    pipeline.callPage(IssueApi.listMilestonesRequest(owner, name, state, page), page)(using IssueApi.MilestonesDecoder)
+  def listMilestones(owner: Owner, name: RepoName, state: StateFilter, params: PageParams): Future[Page[Milestone]] =
+    pipeline.callPage(IssueApi.listMilestonesRequest(owner, name, state, params), params)(using
+      IssueApi.MilestonesDecoder)
 
   /** Reads one milestone — `GET /repos/{owner}/{repo}/milestones/{id}`.
     *
@@ -283,8 +284,8 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     * @param query
     *   the filters to apply; [[IssueSearchQuery.Empty]] asks for the instance's default, which is open issues
     */
-  def search(query: IssueSearchQuery, page: PageParams): Future[Page[Issue]] =
-    pipeline.callPage(IssueApi.searchRequest(query, page), page)(using IssueDecoders.issues)
+  def search(query: IssueSearchQuery, params: PageParams): Future[Page[Issue]] =
+    pipeline.callPage(IssueApi.searchRequest(query, params), params)(using IssueDecoders.issues)
 
   /** Deletes an issue — `DELETE /repos/{owner}/{repo}/issues/{index}`.
     *
@@ -391,9 +392,9 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[Issue]] =
-    pipeline.callPage(IssueApi.listBlocksRequest(owner, name, number, page), page)(using IssueDecoders.issues)
+    pipeline.callPage(IssueApi.listBlocksRequest(owner, name, number, params), params)(using IssueDecoders.issues)
 
   /** Declares that this issue blocks another — `POST /repos/{owner}/{repo}/issues/{index}/blocks`.
     *
@@ -453,9 +454,9 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[Issue]] =
-    pipeline.callPage(IssueApi.listDependenciesRequest(owner, name, number, page), page)(using IssueDecoders.issues)
+    pipeline.callPage(IssueApi.listDependenciesRequest(owner, name, number, params), params)(using IssueDecoders.issues)
 
   /** Declares that this issue depends on another — `POST /repos/{owner}/{repo}/issues/{index}/dependencies`.
     *
@@ -515,9 +516,9 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
       name: RepoName,
       number: IssueNumber,
       query: CommentQuery,
-      page: PageParams,
+      params: PageParams,
   ): Future[Page[TimelineEvent]] =
-    pipeline.callPage(IssueApi.timelineRequest(owner, name, number, query, page), page)(using IssueDecoders.timeline)
+    pipeline.callPage(IssueApi.timelineRequest(owner, name, number, query, params), params)(using IssueDecoders.timeline)
 
 /** The requests this group issues, its operation ids, and its typed rail. */
 object IssueApi:
@@ -605,9 +606,9 @@ object IssueApi:
         owner: Owner,
         name: RepoName,
         query: IssueQuery,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[Issue]]] =
-      exec.attempt(rail.list(owner, name, query, page))
+      exec.attempt(rail.list(owner, name, query, params))
 
     /** The single-issue read on [[IssueApi]], with its failure as a value. */
     def get(owner: Owner, name: RepoName, number: IssueNumber): Future[Either[CodebergError, Issue]] =
@@ -631,9 +632,9 @@ object IssueApi:
         owner: Owner,
         name: RepoName,
         number: IssueNumber,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[Comment]]] =
-      exec.attempt(rail.listComments(owner, name, number, page))
+      exec.attempt(rail.listComments(owner, name, number, params))
 
     /** [[IssueApi.createComment]] with its failure as a value. */
     def createComment(
@@ -645,8 +646,8 @@ object IssueApi:
       exec.attempt(rail.createComment(owner, name, number, command))
 
     /** [[IssueApi.listLabels]] with its failure as a value. */
-    def listLabels(owner: Owner, name: RepoName, page: PageParams): Future[Either[CodebergError, Page[Label]]] =
-      exec.attempt(rail.listLabels(owner, name, page))
+    def listLabels(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Label]]] =
+      exec.attempt(rail.listLabels(owner, name, params))
 
     /** [[IssueApi.createLabel]] with its failure as a value. */
     def createLabel(owner: Owner, name: RepoName, command: CreateLabel): Future[Either[CodebergError, Label]] =
@@ -657,17 +658,17 @@ object IssueApi:
         owner: Owner,
         name: RepoName,
         state: StateFilter,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[Milestone]]] =
-      exec.attempt(rail.listMilestones(owner, name, state, page))
+      exec.attempt(rail.listMilestones(owner, name, state, params))
 
     /** [[IssueApi.getMilestone]] with its failure as a value. */
     def getMilestone(owner: Owner, name: RepoName, id: MilestoneId): Future[Either[CodebergError, Milestone]] =
       exec.attempt(rail.getMilestone(owner, name, id))
 
     /** [[IssueApi.search]] with its failure as a value. */
-    def search(query: IssueSearchQuery, page: PageParams): Future[Either[CodebergError, Page[Issue]]] =
-      exec.attempt(rail.search(query, page))
+    def search(query: IssueSearchQuery, params: PageParams): Future[Either[CodebergError, Page[Issue]]] =
+      exec.attempt(rail.search(query, params))
 
     /** [[IssueApi.delete]] with its failure as a value. */
     def delete(owner: Owner, name: RepoName, number: IssueNumber): Future[Either[CodebergError, Unit]] =
@@ -704,9 +705,9 @@ object IssueApi:
         owner: Owner,
         name: RepoName,
         number: IssueNumber,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[Issue]]] =
-      exec.attempt(rail.listBlocks(owner, name, number, page))
+      exec.attempt(rail.listBlocks(owner, name, number, params))
 
     /** [[IssueApi.addBlock]] with its failure as a value. */
     def addBlock(
@@ -731,9 +732,9 @@ object IssueApi:
         owner: Owner,
         name: RepoName,
         number: IssueNumber,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[Issue]]] =
-      exec.attempt(rail.listDependencies(owner, name, number, page))
+      exec.attempt(rail.listDependencies(owner, name, number, params))
 
     /** [[IssueApi.addDependency]] with its failure as a value. */
     def addDependency(
@@ -759,15 +760,15 @@ object IssueApi:
         name: RepoName,
         number: IssueNumber,
         query: CommentQuery,
-        page: PageParams,
+        params: PageParams,
     ): Future[Either[CodebergError, Page[TimelineEvent]]] =
-      exec.attempt(rail.timeline(owner, name, number, query, page))
+      exec.attempt(rail.timeline(owner, name, number, query, params))
 
-  private def searchRequest(query: IssueSearchQuery, page: PageParams): CodebergRequest =
+  private def searchRequest(query: IssueSearchQuery, params: PageParams): CodebergRequest =
     IssueRequests.read(
       SearchOperation,
       List("repos", "issues", "search"),
-      IssueQueries.search(query) ++ IssueQueries.paging(page),
+      IssueQueries.search(query) ++ IssueQueries.paging(params),
     )
 
   private def deleteRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
@@ -804,9 +805,9 @@ object IssueApi:
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    IssueRequests.read(ListBlocksOperation, blocksPath(owner, name, number), IssueQueries.paging(page))
+    IssueRequests.read(ListBlocksOperation, blocksPath(owner, name, number), IssueQueries.paging(params))
 
   private def addBlockRequest(
       owner: Owner,
@@ -837,9 +838,9 @@ object IssueApi:
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    IssueRequests.read(ListDependenciesOperation, dependenciesPath(owner, name, number), IssueQueries.paging(page))
+    IssueRequests.read(ListDependenciesOperation, dependenciesPath(owner, name, number), IssueQueries.paging(params))
 
   private def addDependencyRequest(
       owner: Owner,
@@ -871,12 +872,12 @@ object IssueApi:
       name: RepoName,
       number: IssueNumber,
       query: CommentQuery,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
     IssueRequests.read(
       TimelineOperation,
       issuePath(owner, name, number) :+ "timeline",
-      IssueQueries.comments(query) ++ IssueQueries.paging(page),
+      IssueQueries.comments(query) ++ IssueQueries.paging(params),
     )
 
   /** A mutating call with no payload at all, which pinning and moving a pin both are. */
@@ -899,8 +900,8 @@ object IssueApi:
   private def dependenciesPath(owner: Owner, name: RepoName, number: IssueNumber): List[String] =
     issuePath(owner, name, number) :+ "dependencies"
 
-  private def listRequest(owner: Owner, name: RepoName, query: IssueQuery, page: PageParams): CodebergRequest =
-    read(ListOperation, issuesPath(owner, name), IssueQueries.issues(query) ++ IssueQueries.paging(page))
+  private def listRequest(owner: Owner, name: RepoName, query: IssueQuery, params: PageParams): CodebergRequest =
+    read(ListOperation, issuesPath(owner, name), IssueQueries.issues(query) ++ IssueQueries.paging(params))
 
   private def getRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
     read(GetOperation, issuePath(owner, name, number), Nil)
@@ -920,9 +921,9 @@ object IssueApi:
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
-    read(ListCommentsOperation, issuePath(owner, name, number) :+ "comments", IssueQueries.paging(page))
+    read(ListCommentsOperation, issuePath(owner, name, number) :+ "comments", IssueQueries.paging(params))
 
   private def createCommentRequest(
       owner: Owner,
@@ -937,8 +938,8 @@ object IssueApi:
       CreateIssueCommentOptionDto.render(command),
     )
 
-  private def listLabelsRequest(owner: Owner, name: RepoName, page: PageParams): CodebergRequest =
-    read(ListLabelsOperation, labelsPath(owner, name), IssueQueries.paging(page))
+  private def listLabelsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
+    read(ListLabelsOperation, labelsPath(owner, name), IssueQueries.paging(params))
 
   private def createLabelRequest(owner: Owner, name: RepoName, command: CreateLabel): CodebergRequest =
     write(CreateLabelOperation, HttpMethod.Post, labelsPath(owner, name), CreateLabelOptionDto.render(command))
@@ -947,12 +948,12 @@ object IssueApi:
       owner: Owner,
       name: RepoName,
       state: StateFilter,
-      page: PageParams,
+      params: PageParams,
   ): CodebergRequest =
     read(
       ListMilestonesOperation,
       milestonesPath(owner, name),
-      IssueQueries.milestones(state) ++ IssueQueries.paging(page),
+      IssueQueries.milestones(state) ++ IssueQueries.paging(params),
     )
 
   private def getMilestoneRequest(owner: Owner, name: RepoName, id: MilestoneId): CodebergRequest =
