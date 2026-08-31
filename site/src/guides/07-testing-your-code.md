@@ -62,7 +62,7 @@ final class ReleaseChecker(client: CodebergClient)(using ExecutionContext):
 
   def latestTag(owner: Owner, name: RepoName): Future[Option[String]] =
     client.repos
-      .listReleases(owner, name, com.worxbend.codeberg4s.paging.PageParams.First)
+      .releases(owner, name, com.worxbend.codeberg4s.paging.PageParams.First)
       .map(page => page.items.headOption.map(_.tagName.value))
 ```
 

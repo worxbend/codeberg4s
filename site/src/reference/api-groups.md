@@ -47,9 +47,9 @@ base URI really points at an API root.
 repository, or that reaches into a specialised corner of one, is in a nested
 group.
 
-**11 operations:** `get`, `search`, `listBranches`, `getBranch`, `listTags`,
-`listCommits`, `listReleases`, `getRelease`, `listTopics`, `getContents`,
-`listForks`
+**11 operations:** `get`, `search`, `branches`, `getBranch`, `tags`,
+`commits`, `releases`, `getRelease`, `topics`, `getContents`,
+`forks`
 
 `getContents` is the one union in the API: the same path answers a file object
 or an array of directory entries, so it decodes to an ADT rather than to a

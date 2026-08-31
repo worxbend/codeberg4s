@@ -166,7 +166,7 @@ import scala.concurrent.Future
 
 val latestTags: Future[Vector[String]] =
   client.repos
-    .listReleases(owner, name, PageParams.First)
+    .releases(owner, name, PageParams.First)
     .map(page => page.items.map((release: Release) => release.tagName.value))
 ```
 

@@ -113,7 +113,7 @@ final class RepositoryPublishingApi private[codeberg4s] (pipeline: ApiPipeline[F
   /** Reads the newest published release — `GET /repos/{owner}/{repo}/releases/latest`.
     *
     * '''"Latest" is Forgejo's answer, not this library's.''' It excludes drafts and prereleases, so a repository whose
-    * only releases are prereleases answers `404` here while `client.repos.listReleases` returns them. That is the
+    * only releases are prereleases answers `404` here while `client.repos.releases` returns them. That is the
     * endpoint's own contract and is not worked around.
     *
     * '''Failures.''' The group contract above; `404` additionally covers "the repository exists and has no release that
@@ -289,8 +289,8 @@ final class RepositoryPublishingApi private[codeberg4s] (pipeline: ApiPipeline[F
 
   /** Reads one tag — `GET /repos/{owner}/{repo}/tags/{tag}`.
     *
-    * The same `Tag` model `client.repos.listTags` returns, one at a time. The tag reaches the wire as several path
-    * segments when it contains `/`, as in [[releaseByTag]].
+    * The same `Tag` model `client.repos.tags` returns, one at a time. The tag reaches the wire as several path segments
+    * when it contains `/`, as in [[releaseByTag]].
     *
     * '''Failures.''' The group contract above.
     */

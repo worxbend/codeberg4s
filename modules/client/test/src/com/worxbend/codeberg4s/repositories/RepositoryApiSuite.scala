@@ -46,10 +46,10 @@ final class RepositoryApiSuite extends FunSuite:
     dialling(RepositoryApiSuite.SearchBody)(_.repos.search("forgejo", FirstPage)): uri =>
       assertEquals(uri, "https://forge.example/api/v1/repos/search?q=forgejo&page=1&limit=30")
 
-  test("listBranches dials the branches collection with the requested window"):
+  test("branches dials the branches collection with the requested window"):
     val second = PageParams(FirstPage.page.next, orFail(PageSize.from(50)))
 
-    dialling("[]")(_.repos.listBranches(Handle, Name, second)): uri =>
+    dialling("[]")(_.repos.branches(Handle, Name, second)): uri =>
       assertEquals(uri, "https://forge.example/api/v1/repos/forgejo/forgejo/branches?page=2&limit=50")
 
   test("getBranch sends a slashed branch name as real path segments, because Forgejo routes it that way"):
@@ -70,24 +70,24 @@ final class RepositoryApiSuite extends FunSuite:
     dialling(RepositoryApiSuite.ReleaseBody)(_.repos.getRelease(Handle, Name, id)): uri =>
       assertEquals(uri, "https://forge.example/api/v1/repos/forgejo/forgejo/releases/11189746")
 
-  test("listTags dials the tags collection"):
-    dialling("[]")(_.repos.listTags(Handle, Name, FirstPage)): uri =>
+  test("tags dials the tags collection"):
+    dialling("[]")(_.repos.tags(Handle, Name, FirstPage)): uri =>
       assertEquals(uri, "https://forge.example/api/v1/repos/forgejo/forgejo/tags?page=1&limit=30")
 
-  test("listCommits dials the commits collection"):
-    dialling("[]")(_.repos.listCommits(Handle, Name, FirstPage)): uri =>
+  test("commits dials the commits collection"):
+    dialling("[]")(_.repos.commits(Handle, Name, FirstPage)): uri =>
       assertEquals(uri, "https://forge.example/api/v1/repos/forgejo/forgejo/commits?page=1&limit=30")
 
-  test("listReleases dials the releases collection"):
-    dialling("[]")(_.repos.listReleases(Handle, Name, FirstPage)): uri =>
+  test("releases dials the releases collection"):
+    dialling("[]")(_.repos.releases(Handle, Name, FirstPage)): uri =>
       assertEquals(uri, "https://forge.example/api/v1/repos/forgejo/forgejo/releases?page=1&limit=30")
 
-  test("listForks dials the forks collection"):
-    dialling("[]")(_.repos.listForks(Handle, Name, FirstPage)): uri =>
+  test("forks dials the forks collection"):
+    dialling("[]")(_.repos.forks(Handle, Name, FirstPage)): uri =>
       assertEquals(uri, "https://forge.example/api/v1/repos/forgejo/forgejo/forks?page=1&limit=30")
 
-  test("listTopics dials the topics collection"):
-    dialling(RepositoryApiSuite.TopicsBody)(_.repos.listTopics(Handle, Name, FirstPage)): uri =>
+  test("topics dials the topics collection"):
+    dialling(RepositoryApiSuite.TopicsBody)(_.repos.topics(Handle, Name, FirstPage)): uri =>
       assertEquals(uri, "https://forge.example/api/v1/repos/forgejo/forgejo/topics?page=1&limit=30")
 
   // --- paging ---------------------------------------------------------------
@@ -99,7 +99,7 @@ final class RepositoryApiSuite extends FunSuite:
     )
 
     onStub(responding(200, RepositoryApiSuite.OneTag, headers)): client =>
-      client.repos.listTags(Handle, Name, PageParams(FirstPage.page, orFail(PageSize.from(50)))).map: page =>
+      client.repos.tags(Handle, Name, PageParams(FirstPage.page, orFail(PageSize.from(50)))).map: page =>
         assertEquals(page.size, 1, "one item against a window of fifty")
         assertEquals(page.nextPage.map(_.value), Some(2), "a short page is not the last page")
         assertEquals(page.isLast, false)
@@ -107,19 +107,19 @@ final class RepositoryApiSuite extends FunSuite:
 
   test("a response with no Link header is the last page"):
     onStub(responding(200, RepositoryApiSuite.OneTag, Nil)): client =>
-      client.repos.listTags(Handle, Name, FirstPage).map: page =>
+      client.repos.tags(Handle, Name, FirstPage).map: page =>
         assertEquals(page.isLast, true)
         assertEquals(page.totalCount, None, "an absent x-total-count is unknown, not zero")
 
   test("a page past the end is an empty page rather than a failure"):
     onStub(responding(200, "[]", Nil)): client =>
-      client.repos.listBranches(Handle, Name, FirstPage).map: page =>
+      client.repos.branches(Handle, Name, FirstPage).map: page =>
         assertEquals(page.items, Vector.empty[Branch])
         assertEquals(page.isLast, true)
 
   test("the requested window is kept on the page, so the caller can resume"):
     onStub(responding(200, "[]", Nil)): client =>
-      client.repos.listBranches(Handle, Name, FirstPage).map(page => assertEquals(page.params, FirstPage))
+      client.repos.branches(Handle, Name, FirstPage).map(page => assertEquals(page.params, FirstPage))
 
   // --- payloads -------------------------------------------------------------
 
@@ -128,9 +128,9 @@ final class RepositoryApiSuite extends FunSuite:
       client.repos.search("forgejo", FirstPage).map: page =>
         assertEquals(page.items.map(_.slug.value), Vector("forgejo/forgejo"))
 
-  test("listTopics unwraps the topics envelope into a page of names"):
+  test("topics unwraps the topics envelope into a page of names"):
     onStub(responding(200, RepositoryApiSuite.TopicsBody, Nil)): client =>
-      client.repos.listTopics(Handle, Name, FirstPage).map: page =>
+      client.repos.topics(Handle, Name, FirstPage).map: page =>
         assertEquals(page.items, Vector("forge", "git"))
 
   test("getContents answers the object arm as a file"):
@@ -177,7 +177,7 @@ final class RepositoryApiSuite extends FunSuite:
 
   test("a failing listing carries its own operation id, so alerts can tell the endpoints apart"):
     onStub(responding(404, RepositoryApiSuite.NotFoundBody, Nil)): client =>
-      client.repos.attempt.listCommits(Handle, Name, FirstPage).map: result =>
+      client.repos.attempt.commits(Handle, Name, FirstPage).map: result =>
         assertEquals(operationOf(result), Some(RepositoryApi.ListCommitsOperation))
 
   // --- assertions -----------------------------------------------------------
