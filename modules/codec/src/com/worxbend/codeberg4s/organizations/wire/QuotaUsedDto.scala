@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.organizations.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -8,7 +9,6 @@ import com.worxbend.codeberg4s.organizations.QuotaArtifact
 import com.worxbend.codeberg4s.organizations.QuotaAttachment
 import com.worxbend.codeberg4s.organizations.QuotaAttachmentContext
 import com.worxbend.codeberg4s.organizations.QuotaPackage
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 /** Forgejo's `QuotaUsedArtifact`, `QuotaUsedAttachment` and `QuotaUsedPackage` models — the elements of the three quota
   * usage listings.
@@ -51,7 +51,7 @@ object QuotaArtifactDto:
 
   /** Converts a decoded array. The element path is discarded; see the object note. */
   def toDomainAll(base: JsonPath, dtos: Vector[QuotaArtifactDto]): Either[DecodeFailure, Vector[QuotaArtifact]] =
-    Elements.convert(base, dtos)((dto, _) => dto.toDomain)
+    ArrayElements.convert(base, dtos)((dto, _) => dto.toDomain)
 
 /** The `contained_in` object of `QuotaUsedAttachment` — an inline object in the spec with no definition of its own. */
 final case class QuotaAttachmentContextDto(apiUrl: Option[String], htmlUrl: Option[String]):
@@ -102,7 +102,7 @@ object QuotaAttachmentDto:
 
   /** Converts a decoded array. The element path is discarded; see the object note. */
   def toDomainAll(base: JsonPath, dtos: Vector[QuotaAttachmentDto]): Either[DecodeFailure, Vector[QuotaAttachment]] =
-    Elements.convert(base, dtos)((dto, _) => dto.toDomain)
+    ArrayElements.convert(base, dtos)((dto, _) => dto.toDomain)
 
 /** Forgejo's `QuotaUsedPackage` model, field for field. */
 final case class QuotaPackageDto(
@@ -143,4 +143,4 @@ object QuotaPackageDto:
 
   /** Converts a decoded array. The element path is discarded; see the object note. */
   def toDomainAll(base: JsonPath, dtos: Vector[QuotaPackageDto]): Either[DecodeFailure, Vector[QuotaPackage]] =
-    Elements.convert(base, dtos)((dto, _) => dto.toDomain)
+    ArrayElements.convert(base, dtos)((dto, _) => dto.toDomain)

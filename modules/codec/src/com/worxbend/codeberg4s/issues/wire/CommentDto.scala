@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
@@ -95,4 +96,4 @@ object CommentDto:
 
   /** Converts a decoded array of comments, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[CommentDto]): Either[DecodeFailure, Vector[Comment]] =
-    WireElements.at(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

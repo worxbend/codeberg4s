@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.notifications.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
@@ -10,7 +11,6 @@ import com.worxbend.codeberg4s.notifications.NotificationSubject
 import com.worxbend.codeberg4s.notifications.NotificationThread
 import com.worxbend.codeberg4s.notifications.NotificationThreadId
 import com.worxbend.codeberg4s.repositories.Repository
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 
 /** Forgejo's `NotificationThread` model, field for field.
@@ -33,8 +33,8 @@ import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
   *
   * `repository` recurses into the repository group's own DTO rather than a reduced copy — `docs/LEDGER.md` gives
   * `Repository` to that group and calls a fork a review-blocking defect — and [[toDomainAll]] reuses that group's
-  * [[com.worxbend.codeberg4s.repositories.wire.Elements]] for the same reason. The dependency exists either way,
-  * because the embedded repository already brings it.
+  * [[com.worxbend.codeberg4s.codec.ArrayElements]] for the same reason. The dependency exists either way, because the
+  * embedded repository already brings it.
   */
 final case class NotificationThreadDto(
     id: Option[Long],
@@ -114,4 +114,4 @@ object NotificationThreadDto:
       base: JsonPath,
       dtos: Vector[NotificationThreadDto],
   ): Either[DecodeFailure, Vector[NotificationThread]] =
-    Elements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

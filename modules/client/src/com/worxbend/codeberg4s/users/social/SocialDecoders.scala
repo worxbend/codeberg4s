@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.users.social
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -12,7 +13,6 @@ import com.worxbend.codeberg4s.miscellaneous.PlainText
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.admin.RepositoryActivity
 import com.worxbend.codeberg4s.repositories.admin.wire.ActivityDto
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 import com.worxbend.codeberg4s.users.PublicKey
 import com.worxbend.codeberg4s.users.User
@@ -50,12 +50,12 @@ private[social] object SocialDecoders:
   /** A bare array of user objects, as every follower and following listing returns it. */
   val users: Decode[Vector[User]] =
     WireDecode.vector(Json.decoder[Vector[UserDto]]): (at, dtos) =>
-      Elements.convert(at, dtos)(_.toDomainAt(_))
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** A bare array of repository objects, as the starred and watched listings return them. */
   val repositories: Decode[Vector[Repository]] =
     WireDecode.vector(Json.decoder[Vector[RepositoryDto]]): (at, dtos) =>
-      Elements.convert(at, dtos)(_.toDomainAt(_))
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** A bare array of block entries. */
   val blockedUsers: Decode[Vector[BlockedUser]] =

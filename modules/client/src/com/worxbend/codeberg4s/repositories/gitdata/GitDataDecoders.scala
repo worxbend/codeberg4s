@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.miscellaneous.PlainText
@@ -18,7 +19,6 @@ import com.worxbend.codeberg4s.repositories.gitdata.wire.GitTreeDto
 import com.worxbend.codeberg4s.repositories.gitdata.wire.NoteDto
 import com.worxbend.codeberg4s.repositories.gitdata.wire.ReferenceDto
 import com.worxbend.codeberg4s.repositories.wire.CommitDto
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 /** Every response shape [[RepositoryGitApi]] can receive, decoded once and shared.
   *
@@ -45,7 +45,7 @@ private[gitdata] object GitDataDecoders:
   /** A bare array of `GitBlob` objects, as the multi-blob read returns it. */
   val blobs: Decode[Vector[GitBlob]] =
     WireDecode.vector(Json.decoder[Vector[GitBlobDto]]): (at, dtos) =>
-      Elements.convert(at, dtos)(_.toDomainAt(_))
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** The `{"sha", "tree", …}` envelope, unwrapped to the entries it carries. */
   val treeEntries: Decode[Vector[GitTreeEntry]] =
@@ -62,7 +62,7 @@ private[gitdata] object GitDataDecoders:
   /** A bare array of `Reference` objects. */
   val references: Decode[Vector[GitReference]] =
     WireDecode.vector(Json.decoder[Vector[ReferenceDto]]): (at, dtos) =>
-      Elements.convert(at, dtos)(_.toDomainAt(_))
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** One `AnnotatedTag` object. */
   val annotatedTag: Decode[AnnotatedTag] =
@@ -75,7 +75,7 @@ private[gitdata] object GitDataDecoders:
   /** A bare array of `CommitStatus` objects. */
   val commitStatuses: Decode[Vector[CommitStatus]] =
     WireDecode.vector(Json.decoder[Vector[CommitStatusDto]]): (at, dtos) =>
-      Elements.convert(at, dtos)(_.toDomainAt(_))
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** One `PullRequest` object, reusing the pull-request wave's model rather than a reduced copy of it. */
   val pullRequest: Decode[PullRequest] =

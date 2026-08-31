@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.users.account
 
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.organizations.Team
@@ -18,7 +19,6 @@ import com.worxbend.codeberg4s.repositories.actions.wire.RegisteredRunnerDto
 import com.worxbend.codeberg4s.repositories.actions.wire.RegistrationTokenDto
 import com.worxbend.codeberg4s.repositories.hooks.Webhook
 import com.worxbend.codeberg4s.repositories.hooks.wire.WebhookDto
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 import com.worxbend.codeberg4s.users.account.wire.EmailDto
 import com.worxbend.codeberg4s.users.account.wire.OAuth2ApplicationDto
@@ -112,7 +112,7 @@ private[account] object UserAccountDecoders:
   /** A bare array of repository objects, as the account's repository listing returns it. */
   val repositories: Decode[Vector[Repository]] =
     WireDecode.vector(Json.decoder[Vector[RepositoryDto]]): (at, dtos) =>
-      Elements.convert(at, dtos)(_.toDomainAt(_))
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** A bare array of team objects, as the account's team listing returns it. */
   val teams: Decode[Vector[Team]] =

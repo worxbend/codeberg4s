@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
@@ -8,7 +9,6 @@ import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.admin.MirrorName
 import com.worxbend.codeberg4s.repositories.admin.PushMirror
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 /** Forgejo's `PushMirror` model, field for field.
   *
@@ -110,4 +110,4 @@ object PushMirrorDto:
 
   /** Converts a whole array, each element failing at its own index. */
   def toDomainAll(base: JsonPath, dtos: Vector[PushMirrorDto]): Either[DecodeFailure, Vector[PushMirror]] =
-    Elements.convert(base, dtos)((dto, at) => dto.toDomainAt(at))
+    ArrayElements.convert(base, dtos)((dto, at) => dto.toDomainAt(at))

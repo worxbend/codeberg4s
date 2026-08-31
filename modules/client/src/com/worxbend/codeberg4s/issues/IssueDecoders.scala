@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.issues
 
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.ResponseBody
@@ -14,7 +15,6 @@ import com.worxbend.codeberg4s.issues.wire.MilestoneDto
 import com.worxbend.codeberg4s.issues.wire.ReactionDto
 import com.worxbend.codeberg4s.issues.wire.TimelineCommentDto
 import com.worxbend.codeberg4s.issues.wire.TrackedTimeDto
-import com.worxbend.codeberg4s.issues.wire.WireElements
 import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 
@@ -114,7 +114,7 @@ private[issues] object IssueDecoders:
     */
   val users: Decode[Vector[User]] =
     WireDecode.vector(Json.decoder[Vector[UserDto]]): (at, dtos) =>
-      WireElements.at(at, dtos)(_.toDomainAt(_))
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** One tracked-time entry, as adding time returns it. */
   val trackedTime: Decode[TrackedTime] =

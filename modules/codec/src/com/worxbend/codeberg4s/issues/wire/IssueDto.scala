@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
@@ -124,7 +125,7 @@ final case class IssueDto(
     user.fold(Right(None))(dto => dto.toDomainAt(at.field("user")).map(Some.apply))
 
   private def assigneesAt(at: JsonPath): Either[DecodeFailure, Vector[User]] =
-    WireElements.at(at.field("assignees"), assignees)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(at.field("assignees"), assignees)((dto, path) => dto.toDomainAt(path))
 
   private def milestoneAt(at: JsonPath): Either[DecodeFailure, Option[Milestone]] =
     milestone.fold(Right(None))(dto => dto.toDomainAt(at.field("milestone")).map(Some.apply))
@@ -173,4 +174,4 @@ object IssueDto:
 
   /** Converts a decoded array of issues, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[IssueDto]): Either[DecodeFailure, Vector[Issue]] =
-    WireElements.at(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.repositories.admin
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -27,7 +28,6 @@ import com.worxbend.codeberg4s.repositories.gitdata.FileChange
 import com.worxbend.codeberg4s.repositories.gitdata.wire.FileResponseDto
 import com.worxbend.codeberg4s.repositories.wire.BranchDto
 import com.worxbend.codeberg4s.repositories.wire.ContentEntryDto
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
@@ -136,4 +136,4 @@ private[admin] object RepositoryAdminDecoders:
   private def listOf[D, A](wire: Decode[Vector[D]])(
       one: (D, JsonPath) => Either[DecodeFailure, A]
   ): Decode[Vector[A]] =
-    WireDecode.single(wire)(dtos => Elements.convert(JsonPath.Root, dtos)(one))
+    WireDecode.single(wire)(dtos => ArrayElements.convert(JsonPath.Root, dtos)(one))

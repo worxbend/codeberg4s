@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
@@ -86,7 +87,7 @@ final case class ReleaseDto(
       identifier <- Wire.validated(at, "id", id)(ReleaseId.from)
       tag        <- Wire.validated(at, "tag_name", tagName)(TagName.from)
       publisher  <- authorAt(at)
-      attached   <- Elements.convert(at.field("assets"), assets)((dto, path) => dto.toDomainAt(path))
+      attached   <- ArrayElements.convert(at.field("assets"), assets)((dto, path) => dto.toDomainAt(path))
     yield Release(
       id                = identifier,
       tagName           = tag,

@@ -1,12 +1,12 @@
 package com.worxbend.codeberg4s.users.account.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.users.account.ClientSecret
 import com.worxbend.codeberg4s.users.account.OAuth2Application
 import com.worxbend.codeberg4s.users.account.OAuth2ApplicationId
@@ -95,4 +95,4 @@ object OAuth2ApplicationDto:
       base: JsonPath,
       dtos: Vector[OAuth2ApplicationDto],
   ): Either[DecodeFailure, Vector[OAuth2Application]] =
-    Elements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.organizations.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
@@ -9,7 +10,6 @@ import com.worxbend.codeberg4s.organizations.Organization
 import com.worxbend.codeberg4s.organizations.Team
 import com.worxbend.codeberg4s.organizations.TeamId
 import com.worxbend.codeberg4s.organizations.TeamPermission
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 /** Forgejo's `Team` model, field for field.
   *
@@ -104,7 +104,7 @@ object TeamDto:
 
   /** Converts a decoded array of teams, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[TeamDto]): Either[DecodeFailure, Vector[Team]] =
-    Elements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
 
   /** The `units_map` object as unit name to raw level, dropping any entry whose value is not a string. */
   private def rawLevels(fields: JsonFields): Map[String, String] =

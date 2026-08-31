@@ -2,11 +2,11 @@ package com.worxbend.codeberg4s.repositories.publishing
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.repositories.ReleaseAsset
 import com.worxbend.codeberg4s.repositories.Tag
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.ReleaseAssetDto
 import com.worxbend.codeberg4s.repositories.wire.TagDto
 
@@ -48,4 +48,4 @@ private[publishing] object PublishingDecoders:
     */
   val assets: Decode[Vector[ReleaseAsset]] =
     WireDecode.vector(Json.decoder[Vector[ReleaseAssetDto]]): (at, dtos) =>
-      Elements.convert(at, dtos)(_.toDomainAt(_))
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))

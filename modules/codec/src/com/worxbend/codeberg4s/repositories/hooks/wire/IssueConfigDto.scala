@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
@@ -8,7 +9,6 @@ import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.hooks.IssueConfig
 import com.worxbend.codeberg4s.repositories.hooks.IssueConfigValidation
 import com.worxbend.codeberg4s.repositories.hooks.IssueContactLink
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 /** Forgejo's `IssueConfigContactLink` model — one alternative to opening an issue.
   *
@@ -66,7 +66,7 @@ final case class IssueConfigDto(
     * receives a link with a missing half.
     */
   def toDomainAt(at: JsonPath): Either[DecodeFailure, IssueConfig] =
-    Elements
+    ArrayElements
       .convert(at.field(IssueConfigDto.ContactLinksKey), contactLinks)((dto, path) => dto.toDomainAt(path))
       .map(links => IssueConfig(blankIssuesEnabled = blankIssuesEnabled, contactLinks = links))
 

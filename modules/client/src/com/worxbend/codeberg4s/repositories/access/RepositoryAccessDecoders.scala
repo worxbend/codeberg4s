@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access
 
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.organizations.Team
@@ -9,7 +10,6 @@ import com.worxbend.codeberg4s.repositories.access.wire.BranchProtectionDto
 import com.worxbend.codeberg4s.repositories.access.wire.CollaboratorAccessDto
 import com.worxbend.codeberg4s.repositories.access.wire.DeployKeyDto
 import com.worxbend.codeberg4s.repositories.access.wire.TagProtectionDto
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
 
@@ -60,7 +60,7 @@ private[access] object RepositoryAccessDecoders:
     */
   val collaborators: Decode[Vector[User]] =
     WireDecode.vector(Json.decoder[Vector[UserDto]]): (at, dtos) =>
-      Elements.convert(at, dtos)(_.toDomainAt(_))
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** The `{permission, role_name, user}` object the collaborator permission endpoint answers. */
   val collaboratorAccess: Decode[CollaboratorAccess] =

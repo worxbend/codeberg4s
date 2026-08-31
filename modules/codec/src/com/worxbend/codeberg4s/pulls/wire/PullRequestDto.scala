@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
@@ -9,7 +10,6 @@ import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.Milestone
 import com.worxbend.codeberg4s.issues.wire.LabelDto
 import com.worxbend.codeberg4s.issues.wire.MilestoneDto
-import com.worxbend.codeberg4s.issues.wire.WireElements
 import com.worxbend.codeberg4s.pulls.PullRequest
 import com.worxbend.codeberg4s.pulls.PullRequestBranch
 import com.worxbend.codeberg4s.pulls.PullRequestNumber
@@ -163,7 +163,7 @@ final case class PullRequestDto(
     dto.fold(Right(None))(value => value.toDomainAt(at.field(field)).map(Some.apply))
 
   private def usersAt(at: JsonPath, field: String, dtos: Vector[UserDto]): Either[DecodeFailure, Vector[User]] =
-    WireElements.at(at.field(field), dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(at.field(field), dtos)((dto, path) => dto.toDomainAt(path))
 
   private def milestoneAt(at: JsonPath): Either[DecodeFailure, Option[Milestone]] =
     milestone.fold(Right(None))(dto => dto.toDomainAt(at.field("milestone")).map(Some.apply))
@@ -229,4 +229,4 @@ object PullRequestDto:
 
   /** Converts a decoded array of pull requests, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[PullRequestDto]): Either[DecodeFailure, Vector[PullRequest]] =
-    WireElements.at(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

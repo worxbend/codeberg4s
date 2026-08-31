@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
@@ -82,4 +83,4 @@ object LabelDto:
 
   /** Converts a decoded array of labels, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[LabelDto]): Either[DecodeFailure, Vector[Label]] =
-    WireElements.at(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

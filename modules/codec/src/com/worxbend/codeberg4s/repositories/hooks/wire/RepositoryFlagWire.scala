@@ -1,11 +1,11 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.hooks.RepositoryFlag
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 /** The two directions of the repository flag routes, which have no model of their own.
   *
@@ -29,7 +29,7 @@ private[codeberg4s] object RepositoryFlagWire:
     * list would hide that.
     */
   def toDomainAll(base: JsonPath, values: Vector[String]): Either[DecodeFailure, Vector[RepositoryFlag]] =
-    Elements.convert(base, values): (value, path) =>
+    ArrayElements.convert(base, values): (value, path) =>
       RepositoryFlag.from(value).left.map(error => DecodeFailure(path, error.message))
 
   /** Renders `flags` as the JSON body of `PUT /repos/{owner}/{repo}/flags`.

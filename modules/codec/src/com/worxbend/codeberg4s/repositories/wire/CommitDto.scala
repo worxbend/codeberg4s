@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
@@ -65,8 +66,8 @@ final case class CommitDto(
       details       <- detailsAt(at)
       authorUser    <- userAt(at, "author", author)
       committerUser <- userAt(at, "committer", committer)
-      parentRefs    <- Elements.convert(at.field("parents"), parents)((dto, path) => dto.toDomainAt(path))
-      changed       <- Elements.convert(at.field("files"), files)((dto, path) => dto.toDomainAt(path))
+      parentRefs    <- ArrayElements.convert(at.field("parents"), parents)((dto, path) => dto.toDomainAt(path))
+      changed       <- ArrayElements.convert(at.field("files"), files)((dto, path) => dto.toDomainAt(path))
     yield Commit(
       sha       = identifier,
       url       = url,

@@ -2,12 +2,12 @@ package com.worxbend.codeberg4s.repositories
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.wire.BranchDto
 import com.worxbend.codeberg4s.repositories.wire.CommitDto
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.ReleaseDto
 import com.worxbend.codeberg4s.repositories.wire.RepositoryContentDto
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
@@ -38,7 +38,7 @@ private[repositories] object RepositoryDecoders:
   /** The `{"ok", "data"}` envelope the search endpoint returns. */
   val searchResults: Decode[Vector[Repository]] =
     WireDecode.single(Json.decoder[SearchEnvelopeDto[RepositoryDto]]): envelope =>
-      Elements.convert(JsonPath.Root.field("data"), envelope.data)((dto, at) => dto.toDomainAt(at))
+      ArrayElements.convert(JsonPath.Root.field("data"), envelope.data)((dto, at) => dto.toDomainAt(at))
 
   /** One branch object. */
   val branch: Decode[Branch] =
@@ -76,4 +76,4 @@ private[repositories] object RepositoryDecoders:
   private def listOf[D, A](wire: Decode[Vector[D]])(
       one: (D, JsonPath) => Either[DecodeFailure, A]
   ): Decode[Vector[A]] =
-    WireDecode.single(wire)(dtos => Elements.convert(JsonPath.Root, dtos)(one))
+    WireDecode.single(wire)(dtos => ArrayElements.convert(JsonPath.Root, dtos)(one))

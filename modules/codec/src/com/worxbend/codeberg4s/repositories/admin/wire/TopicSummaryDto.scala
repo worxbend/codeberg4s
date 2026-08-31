@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
@@ -8,7 +9,6 @@ import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.admin.TopicId
 import com.worxbend.codeberg4s.repositories.admin.TopicSummary
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 /** Forgejo's `TopicResponse` model, field for field.
   *
@@ -75,7 +75,7 @@ object TopicSummaryDto:
 
   /** Converts a whole array, each element failing at its own index. */
   def toDomainAll(base: JsonPath, dtos: Vector[TopicSummaryDto]): Either[DecodeFailure, Vector[TopicSummary]] =
-    Elements.convert(base, dtos)((dto, at) => dto.toDomainAt(at))
+    ArrayElements.convert(base, dtos)((dto, at) => dto.toDomainAt(at))
 
 /** The `{"topics": [...]}` envelope `GET /topics/search` answers with.
   *

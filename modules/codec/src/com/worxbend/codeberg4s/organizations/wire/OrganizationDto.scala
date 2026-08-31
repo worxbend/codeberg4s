@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.organizations.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
@@ -8,7 +9,6 @@ import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.organizations.OrgName
 import com.worxbend.codeberg4s.organizations.Organization
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.users.UserVisibility
 
 /** Forgejo's `Organization` model, field for field.
@@ -106,4 +106,4 @@ object OrganizationDto:
 
   /** Converts a decoded array of organisations, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[OrganizationDto]): Either[DecodeFailure, Vector[Organization]] =
-    Elements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

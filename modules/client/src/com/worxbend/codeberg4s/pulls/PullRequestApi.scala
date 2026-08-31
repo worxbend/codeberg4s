@@ -5,6 +5,7 @@ import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
@@ -34,7 +35,6 @@ import com.worxbend.codeberg4s.pulls.wire.SubmitPullReviewOptionsDto
 import com.worxbend.codeberg4s.repositories.BranchName
 import com.worxbend.codeberg4s.repositories.Commit
 import com.worxbend.codeberg4s.repositories.wire.CommitDto
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 import scala.concurrent.Future
 
@@ -1432,7 +1432,7 @@ object PullRequestApi:
 
   private val CommitsDecoder: Decode[Vector[Commit]] =
     WireDecode.vector(Json.decoder[Vector[CommitDto]]): (at, dtos) =>
-      Elements.convert(at, dtos)(_.toDomainAt(_))
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   private val FilesDecoder: Decode[Vector[ChangedFile]] =
     WireDecode.vector(Json.decoder[Vector[ChangedFileDto]])(ChangedFileDto.toDomainAll)

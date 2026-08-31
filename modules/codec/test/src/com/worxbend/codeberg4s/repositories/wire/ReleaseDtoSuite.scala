@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.GoldenFixtures
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.repositories.ArchiveDownloadCount
@@ -109,6 +110,6 @@ final class ReleaseDtoSuite extends FunSuite with GoldenFixtures:
     Json.decode[Vector[ReleaseDto]](golden(fixture)) match
       case Left(failure) => fail(s"$fixture did not decode: ${failure.path.render} ${failure.message}")
       case Right(dtos)   =>
-        Elements.convert(JsonPath.Root, dtos)((dto, at) => dto.toDomainAt(at)) match
+        ArrayElements.convert(JsonPath.Root, dtos)((dto, at) => dto.toDomainAt(at)) match
           case Right(releases) => releases
           case Left(failure)   => fail(s"$fixture did not convert: ${failure.path.render} ${failure.message}")

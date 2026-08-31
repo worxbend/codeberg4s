@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.users.social.wire
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.auth.ApiToken
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
@@ -9,7 +10,6 @@ import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.wire.RepositoryMetaDto
 import com.worxbend.codeberg4s.repositories.RepoSlug
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.users.social.AccessToken
 import com.worxbend.codeberg4s.users.social.AccessTokenId
 import com.worxbend.codeberg4s.users.social.AccessTokenName
@@ -155,4 +155,4 @@ object AccessTokenDto:
 
   /** Converts a decoded array of tokens, reporting the position of whichever element failed. Never reads `sha1`. */
   def toDomainAll(base: JsonPath, dtos: Vector[AccessTokenDto]): Either[DecodeFailure, Vector[AccessToken]] =
-    Elements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

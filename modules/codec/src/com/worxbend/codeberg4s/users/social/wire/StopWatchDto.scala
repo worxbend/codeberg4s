@@ -3,13 +3,13 @@ package com.worxbend.codeberg4s.users.social.wire
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.RepoSlug
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.users.social.StopWatch
 
 import scala.concurrent.duration.DurationLong
@@ -119,7 +119,7 @@ object StopWatchDto:
 
   /** Converts a decoded array of stopwatches, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[StopWatchDto]): Either[DecodeFailure, Vector[StopWatch]] =
-    Elements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
 
   /** The wire's seconds as a duration. One line, in one place, so the unit is never re-derived. */
   def asDuration(seconds: Long): FiniteDuration =

@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
@@ -10,7 +11,6 @@ import com.worxbend.codeberg4s.repositories.CommitRef
 import com.worxbend.codeberg4s.repositories.CommitSha
 import com.worxbend.codeberg4s.repositories.gitdata.FileCommit
 import com.worxbend.codeberg4s.repositories.wire.CommitMetaDto
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.GitIdentityDto
 
 /** Forgejo's `FileCommitResponse` — the commit an editing endpoint reports it wrote.
@@ -59,7 +59,7 @@ final case class FileCommitDto(
     for
       identifier <- Wire.validated(at, "sha", sha)(CommitSha.from)
       root       <- treeAt(at)
-      ancestors  <- Elements.convert(at.field("parents"), parents)((dto, path) => dto.toDomainAt(path))
+      ancestors  <- ArrayElements.convert(at.field("parents"), parents)((dto, path) => dto.toDomainAt(path))
     yield FileCommit(
       sha       = identifier,
       message   = message,

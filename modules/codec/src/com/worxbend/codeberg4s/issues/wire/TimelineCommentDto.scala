@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
@@ -192,4 +193,4 @@ object TimelineCommentDto:
 
   /** Converts a decoded array of timeline entries, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[TimelineCommentDto]): Either[DecodeFailure, Vector[TimelineEvent]] =
-    WireElements.at(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

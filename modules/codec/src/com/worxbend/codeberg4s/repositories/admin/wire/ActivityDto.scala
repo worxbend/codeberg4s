@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
@@ -12,7 +13,6 @@ import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.admin.ActivityId
 import com.worxbend.codeberg4s.repositories.admin.ActivityOperation
 import com.worxbend.codeberg4s.repositories.admin.RepositoryActivity
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
@@ -142,4 +142,4 @@ object ActivityDto:
 
   /** Converts a whole array, each element failing at its own index. */
   def toDomainAll(base: JsonPath, dtos: Vector[ActivityDto]): Either[DecodeFailure, Vector[RepositoryActivity]] =
-    Elements.convert(base, dtos)((dto, at) => dto.toDomainAt(at))
+    ArrayElements.convert(base, dtos)((dto, at) => dto.toDomainAt(at))

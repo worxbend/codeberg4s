@@ -1,13 +1,13 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.miscellaneous.LicenseTemplateSummary
 import com.worxbend.codeberg4s.miscellaneous.TemplateName
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 /** Forgejo's `LicensesTemplateListEntry` model — one element of `GET /licenses`.
   *
@@ -63,4 +63,4 @@ object LicenseTemplateSummaryDto:
       base: JsonPath,
       dtos: Vector[LicenseTemplateSummaryDto],
   ): Either[DecodeFailure, Vector[LicenseTemplateSummary]] =
-    Elements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

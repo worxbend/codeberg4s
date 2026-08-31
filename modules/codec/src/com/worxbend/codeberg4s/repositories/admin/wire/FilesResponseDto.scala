@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.core.DecodeFailure
@@ -8,7 +9,6 @@ import com.worxbend.codeberg4s.repositories.admin.FileChangeSet
 import com.worxbend.codeberg4s.repositories.gitdata.FileCommit
 import com.worxbend.codeberg4s.repositories.gitdata.wire.FileCommitDto
 import com.worxbend.codeberg4s.repositories.wire.ContentEntryDto
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.VerificationDto
 
 /** Forgejo's `FilesResponse` — what `POST /repos/{owner}/{repo}/contents` answers with.
@@ -42,7 +42,7 @@ final case class FilesResponseDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, FileChangeSet] =
     for
       written <- commitAt(at)
-      entries <- Elements.convert(at.field("files"), files)((dto, path) => dto.toDomainAt(path))
+      entries <- ArrayElements.convert(at.field("files"), files)((dto, path) => dto.toDomainAt(path))
     yield FileChangeSet(commit = written, files = entries, verification = verification.map(_.toDomain))
 
   /** [[toDomainAt]] for a payload that is the whole response body. */

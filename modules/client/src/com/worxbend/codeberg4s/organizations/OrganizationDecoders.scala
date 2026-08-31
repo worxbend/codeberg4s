@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.organizations
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.issues.Label
@@ -19,7 +20,6 @@ import com.worxbend.codeberg4s.repositories.admin.RepositoryActivity
 import com.worxbend.codeberg4s.repositories.admin.wire.ActivityDto
 import com.worxbend.codeberg4s.repositories.hooks.Webhook
 import com.worxbend.codeberg4s.repositories.hooks.wire.WebhookDto
-import com.worxbend.codeberg4s.repositories.wire.Elements
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto
@@ -73,12 +73,12 @@ private[organizations] object OrganizationDecoders:
   /** A bare array of user objects, as the member and team-member listings return it. */
   val users: Decode[Vector[User]] =
     WireDecode.vector(Json.decoder[Vector[UserDto]]): (at, dtos) =>
-      Elements.convert(at, dtos)(_.toDomainAt(_))
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** A bare array of repository objects, as the organisation and team repository listings return it. */
   val repositories: Decode[Vector[Repository]] =
     WireDecode.vector(Json.decoder[Vector[RepositoryDto]]): (at, dtos) =>
-      Elements.convert(at, dtos)(_.toDomainAt(_))
+      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
 
   /** One user object, as `GET /teams/{id}/members/{username}` returns it. */
   val user: Decode[User] =
@@ -91,7 +91,7 @@ private[organizations] object OrganizationDecoders:
   /** The `{"ok", "data"}` envelope the team search returns; see the object note. */
   val teamSearchResults: Decode[Vector[Team]] =
     WireDecode.single(Json.decoder[SearchEnvelopeDto[TeamDto]]): envelope =>
-      Elements.convert(JsonPath.Root.field("data"), envelope.data)((dto, at) => dto.toDomainAt(at))
+      ArrayElements.convert(JsonPath.Root.field("data"), envelope.data)((dto, at) => dto.toDomainAt(at))
 
   /** One webhook object, as the organisation hook routes return it. */
   val webhook: Decode[Webhook] =

@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.ArrayElements
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
 import com.worxbend.codeberg4s.codec.Timestamps
@@ -10,7 +11,6 @@ import com.worxbend.codeberg4s.repositories.hooks.HookConfig
 import com.worxbend.codeberg4s.repositories.hooks.HookId
 import com.worxbend.codeberg4s.repositories.hooks.HookType
 import com.worxbend.codeberg4s.repositories.hooks.Webhook
-import com.worxbend.codeberg4s.repositories.wire.Elements
 
 /** Forgejo's `Hook` model — one repository webhook.
   *
@@ -107,4 +107,4 @@ object WebhookDto:
 
   /** Converts a decoded array of hooks, reporting the position of whichever element failed. */
   def toDomainAll(base: JsonPath, dtos: Vector[WebhookDto]): Either[DecodeFailure, Vector[Webhook]] =
-    Elements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
+    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
