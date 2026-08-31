@@ -53,6 +53,29 @@ readonly COVERED_MODULES=(modules.domain modules.core modules.codec)
 # change that adds one group fails, and a change that removes ten is told to
 # bank the win by lowering this number.
 #
+# MEASURED, NOT RECALLED: `scripts/cpd.sh --report` on 2026-08-31 against
+# modules/{domain,core,codec,transport,client}/src with PMD 7.26.0 at 40
+# tokens — 161 groups over 615 locations (448 in codec, 129 in client, 35 in
+# domain, 3 in core, none in transport).
+#
+# THIS NUMBER IS NOT COMPARABLE TO ANY MEASUREMENT BELOW, and the drop from
+# 363 was not earned by deleting code alone. `.scalafix.conf` used to set
+# `groupedImports = Explode`, one import per line. Promoting the shared codec
+# helpers gave 108 files in `codec` the same seven-line preamble, and PMD has
+# no import filter for Scala, so it counted every pair of those preambles as
+# duplication. The raw count reached 408 while duplication that contains real
+# code fell from 222 groups to 183 — measured at both commits with the same
+# tool. 324 of the 408 held nothing but a package clause and imports.
+#
+# Switching to `groupedImports = Merge` collapses each preamble to one line
+# per package, and what is left is duplication of code rather than of file
+# headers. So the count below is specific to `Merge` as well as to PMD 7.26.0
+# at 40 tokens: re-exploding imports would push it back over 300 without a
+# line of logic being copied anywhere.
+#
+# Earlier measurements, kept as history — read them as a series only among
+# themselves, not against the number above:
+#
 # MEASURED, NOT RECALLED: `scripts/cpd.sh --report` on 2026-08-09 against
 # modules/{domain,core,codec,transport,client}/src with PMD 7.26.0 at 40
 # tokens — 363 groups over 1342 locations (762 in codec, 535 in client, 39 in
@@ -84,7 +107,7 @@ readonly COVERED_MODULES=(modules.domain modules.core modules.codec)
 #
 # Deliberately not overridable from the environment: moving the baseline has to
 # appear in a diff, with a commit message saying why.
-readonly CPD_BASELINE_GROUPS=363
+readonly CPD_BASELINE_GROUPS=161
 
 with_slow=false
 nightly=false
