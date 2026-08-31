@@ -1,17 +1,15 @@
-package com.worxbend.codeberg4s.issues.wire
+package com.worxbend.codeberg4s.codec
 
-import com.worxbend.codeberg4s.codec.JsonValue
-
-/** Builds the JSON scalars and arrays this group's request bodies are made of.
+/** Builds the JSON scalars and arrays a request body is made of.
   *
   * [[JsonValue.Num]] puts a whole number into the document model's `Long` case, so an `int64` identifier reaches the
   * wire exactly — a document model that held a `Double`, as an earlier one did, represents integers exactly only up to
   * 2^53. Building the scalars here rather than at each call site means the conversion happens once.
   *
-  * Internal to this group's wire package, and a candidate to move into `com.worxbend.codeberg4s.codec` once a second
-  * endpoint group writes a request body.
+  * The `domain → wire` counterpart of [[Wire]], which reads the other way. Every endpoint group that sends a body uses
+  * it, so the spelling of an `int64` field is decided here rather than once per group.
   */
-private[codeberg4s] object WireNumbers:
+private[codeberg4s] object WireValues:
 
   /** One identifier as a JSON number. */
   def identifier(value: Long): JsonValue =

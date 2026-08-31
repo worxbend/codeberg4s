@@ -2,7 +2,7 @@ package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.issues.wire.WireNumbers
+import com.worxbend.codeberg4s.codec.WireValues
 import com.worxbend.codeberg4s.pulls.NewReviewComment
 
 /** Forgejo's `CreatePullReviewComment` request model.
@@ -33,7 +33,7 @@ private[codeberg4s] object NewReviewCommentDto:
     List(
       Some("body" -> JsonValue.Str(comment.body)),
       Some("path" -> JsonValue.Str(comment.path)),
-      comment.newPosition.map(line     => "new_position" -> WireNumbers.identifier(line)),
-      comment.oldPosition.map(line     => "old_position" -> WireNumbers.identifier(line)),
-      comment.extraLinesCount.map(span => "extra_lines_count" -> WireNumbers.identifier(span)),
+      comment.newPosition.map(line     => "new_position" -> WireValues.identifier(line)),
+      comment.oldPosition.map(line     => "old_position" -> WireValues.identifier(line)),
+      comment.extraLinesCount.map(span => "extra_lines_count" -> WireValues.identifier(span)),
     ).flatten

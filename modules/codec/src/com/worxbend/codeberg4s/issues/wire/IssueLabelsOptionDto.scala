@@ -3,6 +3,7 @@ package com.worxbend.codeberg4s.issues.wire
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.codec.JsonValue
 import com.worxbend.codeberg4s.codec.Timestamps
+import com.worxbend.codeberg4s.codec.WireValues
 import com.worxbend.codeberg4s.issues.LabelRef
 import com.worxbend.codeberg4s.issues.LabelRemoval
 import com.worxbend.codeberg4s.issues.LabelUpdate
@@ -49,5 +50,5 @@ private[codeberg4s] object IssueLabelsOptionDto:
 
   private def reference(label: LabelRef): JsonValue =
     label match
-      case LabelRef.ById(id)     => WireNumbers.identifier(id.value)
+      case LabelRef.ById(id)     => WireValues.identifier(id.value)
       case LabelRef.ByName(name) => JsonValue.Str(name.value)

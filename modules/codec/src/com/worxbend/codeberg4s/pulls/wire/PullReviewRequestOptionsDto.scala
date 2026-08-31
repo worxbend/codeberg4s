@@ -2,7 +2,7 @@ package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.issues.wire.WireNumbers
+import com.worxbend.codeberg4s.codec.WireValues
 import com.worxbend.codeberg4s.pulls.ReviewRequest
 
 /** Forgejo's `PullReviewRequestOptions` request model — the body of '''both''' the `POST` and the `DELETE` on
@@ -25,6 +25,6 @@ private[codeberg4s] object PullReviewRequestOptionsDto:
 
   private def fields(request: ReviewRequest): List[(String, JsonValue)] =
     List(
-      Option.when(request.reviewers.nonEmpty)("reviewers"  -> WireNumbers.strings(request.reviewers.map(_.value))),
-      Option.when(request.teams.nonEmpty)("team_reviewers" -> WireNumbers.strings(request.teams)),
+      Option.when(request.reviewers.nonEmpty)("reviewers"  -> WireValues.strings(request.reviewers.map(_.value))),
+      Option.when(request.teams.nonEmpty)("team_reviewers" -> WireValues.strings(request.teams)),
     ).flatten
