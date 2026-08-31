@@ -3,11 +3,9 @@ package com.worxbend.codeberg4s.codec
 import scala.annotation.tailrec
 import scala.util.Try
 
-import java.time.Instant
-import java.time.OffsetDateTime
-import java.time.Year
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.time.{Instant, OffsetDateTime, Year}
 
 /** Turns Forgejo's timestamp strings into instants, sentinels included.
   *

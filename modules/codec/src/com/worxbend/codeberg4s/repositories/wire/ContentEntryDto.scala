@@ -1,17 +1,9 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.repositories.ContentEntry
-import com.worxbend.codeberg4s.repositories.ContentKind
-import com.worxbend.codeberg4s.repositories.ContentMeta
-import com.worxbend.codeberg4s.repositories.ContentPath
-import com.worxbend.codeberg4s.repositories.FileContent
+import com.worxbend.codeberg4s.repositories.{CommitSha, ContentEntry, ContentKind, ContentMeta, ContentPath, FileContent}
 
 /** Forgejo's `ContentsResponse` — one entry of a repository's contents.
   *

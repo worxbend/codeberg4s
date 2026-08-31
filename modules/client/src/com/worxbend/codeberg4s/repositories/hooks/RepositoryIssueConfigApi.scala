@@ -1,12 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
-import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.CodebergRequest
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RetryEligibility
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
+import com.worxbend.codeberg4s.{CodebergError, Owner, RepoName}
 
 import scala.concurrent.Future
 

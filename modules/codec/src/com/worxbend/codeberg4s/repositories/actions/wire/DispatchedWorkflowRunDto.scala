@@ -1,10 +1,8 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.actions.DispatchedWorkflowRun
-import com.worxbend.codeberg4s.repositories.actions.RunId
+import com.worxbend.codeberg4s.repositories.actions.{DispatchedWorkflowRun, RunId}
 
 /** Forgejo's `DispatchWorkflowRun` model — what a dispatch reports when it was asked to report anything.
   *

@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.pulls
 
-import com.worxbend.codeberg4s.PositiveId
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PositiveId, ValidationError}
 
 /** The instance-wide identifier of a [[ReviewComment]] — the `{comment}` of
   * `/repos/{owner}/{repo}/pulls/{index}/reviews/{id}/comments/{comment}`.

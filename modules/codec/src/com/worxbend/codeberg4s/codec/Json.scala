@@ -1,14 +1,9 @@
 package com.worxbend.codeberg4s.codec
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.core.Decode
-import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.core.ResponseBody
+import com.worxbend.codeberg4s.core.{Decode, DecodeFailure, ResponseBody}
 
-import com.github.plokhotnyuk.jsoniter_scala.core.ReaderConfig
-import com.github.plokhotnyuk.jsoniter_scala.core.readFromArray
-import com.github.plokhotnyuk.jsoniter_scala.core.readFromString
-import com.github.plokhotnyuk.jsoniter_scala.core.writeToString
+import com.github.plokhotnyuk.jsoniter_scala.core.{ReaderConfig, readFromArray, readFromString, writeToString}
 
 import scala.util.control.NonFatal
 

@@ -1,12 +1,9 @@
 package com.worxbend.codeberg4s.notifications.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.notifications.NotificationSubject
-import com.worxbend.codeberg4s.notifications.NotificationSubjectType
+import com.worxbend.codeberg4s.notifications.{NotificationSubject, NotificationSubjectType}
 
 /** Forgejo's `NotificationSubject` model, field for field.
   *

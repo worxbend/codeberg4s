@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.issues
 
-import com.worxbend.codeberg4s.PositiveId
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PositiveId, ValidationError}
 
 /** The instance-wide identifier of an [[IssueAttachment]] — the `{attachment_id}` of
   * `/repos/{owner}/{repo}/issues/{index}/assets/{attachment_id}` and of the matching comment route.

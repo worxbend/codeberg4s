@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.users.account.wire
 
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.account.UserSettings
 

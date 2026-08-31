@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.publishing.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
 import com.worxbend.codeberg4s.repositories.publishing.GenerateRepository
 
 /** Forgejo's `GenerateRepoOption` request model — the body of `POST /repos/{template_owner}/{template_repo}/generate`.

@@ -2,13 +2,10 @@ package com.worxbend.codeberg4s.repositories.publishing
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
 import com.worxbend.codeberg4s.core.Decode
-import com.worxbend.codeberg4s.repositories.ReleaseAsset
-import com.worxbend.codeberg4s.repositories.Tag
-import com.worxbend.codeberg4s.repositories.wire.ReleaseAssetDto
-import com.worxbend.codeberg4s.repositories.wire.TagDto
+import com.worxbend.codeberg4s.repositories.wire.{ReleaseAssetDto, TagDto}
+import com.worxbend.codeberg4s.repositories.{ReleaseAsset, Tag}
 
 /** The response shapes [[RepositoryPublishingApi]] can receive that no other group already decodes.
   *

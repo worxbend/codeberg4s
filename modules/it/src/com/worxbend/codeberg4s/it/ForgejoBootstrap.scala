@@ -2,18 +2,10 @@ package com.worxbend.codeberg4s.it
 
 import com.worxbend.codeberg4s.BaseUri
 import com.worxbend.codeberg4s.auth.ApiToken
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
 
-import sttp.client4.DefaultSyncBackend
-import sttp.client4.Request
-import sttp.client4.Response
-import sttp.client4.SyncBackend
-import sttp.client4.asStringAlways
-import sttp.client4.basicRequest
-import sttp.model.HeaderNames
-import sttp.model.MediaType
-import sttp.model.Uri
+import sttp.client4.{DefaultSyncBackend, Request, Response, SyncBackend, asStringAlways, basicRequest}
+import sttp.model.{HeaderNames, MediaType, Uri}
 
 /** The few calls that put a freshly started Forgejo into a state worth testing against.
   *

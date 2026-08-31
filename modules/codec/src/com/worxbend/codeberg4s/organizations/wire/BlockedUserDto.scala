@@ -1,14 +1,9 @@
 package com.worxbend.codeberg4s.organizations.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.organizations.BlockId
-import com.worxbend.codeberg4s.organizations.BlockedUser
+import com.worxbend.codeberg4s.organizations.{BlockId, BlockedUser}
 
 /** Forgejo's `BlockedUser` model, field for field — both of its fields.
   *

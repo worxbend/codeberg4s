@@ -1,18 +1,11 @@
 package com.worxbend.codeberg4s.examples
 
-import com.worxbend.codeberg4s.CodebergClient
-import com.worxbend.codeberg4s.CodebergConfig
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
-import com.worxbend.codeberg4s.ServerVersion
-import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.repositories.Repository
+import com.worxbend.codeberg4s.{CodebergClient, CodebergConfig, Owner, RepoName, ServerVersion, ValidationError}
 
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.{Await, ExecutionContext}
 
 /** The smallest complete codeberg4s program: two anonymous reads against the public Codeberg instance.
   *

@@ -1,13 +1,9 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.hooks.GitHook
-import com.worxbend.codeberg4s.repositories.hooks.GitHookName
+import com.worxbend.codeberg4s.repositories.hooks.{GitHook, GitHookName}
 
 /** Forgejo's `GitHook` model — one script the instance runs when a push arrives.
   *

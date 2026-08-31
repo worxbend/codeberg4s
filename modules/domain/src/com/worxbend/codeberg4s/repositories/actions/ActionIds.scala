@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.actions
 
-import com.worxbend.codeberg4s.PositiveId
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PositiveId, ValidationError}
 
 /** The instance-wide identifier of one Actions run — the `{run_id}` of `/repos/{owner}/{repo}/actions/runs/{run_id}`.
   *

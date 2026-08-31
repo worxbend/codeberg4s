@@ -1,15 +1,9 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.issues.AttachmentId
-import com.worxbend.codeberg4s.issues.AttachmentKind
-import com.worxbend.codeberg4s.issues.IssueAttachment
+import com.worxbend.codeberg4s.issues.{AttachmentId, AttachmentKind, IssueAttachment}
 
 /** Forgejo's `Attachment` model, field for field — the response of all ten attachment endpoints in this group.
   *

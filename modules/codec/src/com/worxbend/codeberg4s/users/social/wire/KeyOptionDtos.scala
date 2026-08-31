@@ -1,10 +1,7 @@
 package com.worxbend.codeberg4s.users.social.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.users.social.CreateGpgKey
-import com.worxbend.codeberg4s.users.social.CreateSshKey
-import com.worxbend.codeberg4s.users.social.VerifyGpgKey
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
+import com.worxbend.codeberg4s.users.social.{CreateGpgKey, CreateSshKey, VerifyGpgKey}
 
 /** Forgejo's `CreateKeyOption` request model — the body of `POST /user/keys`.
   *

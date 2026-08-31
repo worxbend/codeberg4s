@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.pulls
 
-import com.worxbend.codeberg4s.issues.LabelId
-import com.worxbend.codeberg4s.issues.MilestoneId
-import com.worxbend.codeberg4s.issues.StateFilter
+import com.worxbend.codeberg4s.issues.{LabelId, MilestoneId, StateFilter}
 import com.worxbend.codeberg4s.repositories.BranchName
 
 /** The filters `GET /repos/{owner}/{repo}/pulls` accepts, as one value rather than as seven parameters.

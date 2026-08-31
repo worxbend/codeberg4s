@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
-import com.worxbend.codeberg4s.repositories.Commit
-import com.worxbend.codeberg4s.repositories.CommitFile
+import com.worxbend.codeberg4s.repositories.{Commit, CommitFile}
 
 /** What separates two refs — `GET /repos/{owner}/{repo}/compare/{basehead}`.
   *

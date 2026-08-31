@@ -1,14 +1,9 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.issues.Label
-import com.worxbend.codeberg4s.issues.LabelColor
-import com.worxbend.codeberg4s.issues.LabelId
+import com.worxbend.codeberg4s.issues.{Label, LabelColor, LabelId}
 
 /** Forgejo's `Label` model, field for field.
   *

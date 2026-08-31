@@ -1,23 +1,12 @@
 package com.worxbend.codeberg4s.notifications
 
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.HttpMethod
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.CodebergRequest
-import com.worxbend.codeberg4s.core.CodebergRequest.bodiless
-import com.worxbend.codeberg4s.core.CodebergRequest.read
-import com.worxbend.codeberg4s.core.Decode
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RetryEligibility
-import com.worxbend.codeberg4s.notifications.wire.NotificationCountDto
-import com.worxbend.codeberg4s.notifications.wire.NotificationQueries
-import com.worxbend.codeberg4s.notifications.wire.NotificationThreadDto
-import com.worxbend.codeberg4s.paging.Page
-import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RetryEligibility}
+import com.worxbend.codeberg4s.notifications.wire.{NotificationCountDto, NotificationQueries, NotificationThreadDto}
+import com.worxbend.codeberg4s.paging.{Page, PageParams}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
 
 import scala.concurrent.Future
 

@@ -1,25 +1,21 @@
 package com.worxbend.codeberg4s.repositories
 
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.codec.PagingQuery
-import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.CodebergRequest
 import com.worxbend.codeberg4s.core.CodebergRequest.read
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RetryEligibility
-import com.worxbend.codeberg4s.paging.Page
-import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
+import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.access.RepositoryAccessApi
 import com.worxbend.codeberg4s.repositories.actions.RepositoryActionApi
 import com.worxbend.codeberg4s.repositories.admin.RepositoryAdminApi
 import com.worxbend.codeberg4s.repositories.gitdata.RepositoryGitApi
-import com.worxbend.codeberg4s.repositories.hooks.RepositoryFlagApi
-import com.worxbend.codeberg4s.repositories.hooks.RepositoryHookApi
-import com.worxbend.codeberg4s.repositories.hooks.RepositoryIssueConfigApi
-import com.worxbend.codeberg4s.repositories.hooks.RepositoryWikiApi
+import com.worxbend.codeberg4s.repositories.hooks.{
+  RepositoryFlagApi,
+  RepositoryHookApi,
+  RepositoryIssueConfigApi,
+  RepositoryWikiApi
+}
 import com.worxbend.codeberg4s.repositories.publishing.RepositoryPublishingApi
+import com.worxbend.codeberg4s.{CodebergError, Owner, RepoName}
 
 import scala.concurrent.Future
 

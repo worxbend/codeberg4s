@@ -1,8 +1,7 @@
 package com.worxbend.codeberg4s.pulls
 
 import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.issues.LabelId
-import com.worxbend.codeberg4s.issues.MilestoneId
+import com.worxbend.codeberg4s.issues.{LabelId, MilestoneId}
 import com.worxbend.codeberg4s.repositories.BranchName
 
 import java.time.Instant

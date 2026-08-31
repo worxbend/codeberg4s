@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.retry
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
 
 /** When and how often a failed call is attempted again.
   *

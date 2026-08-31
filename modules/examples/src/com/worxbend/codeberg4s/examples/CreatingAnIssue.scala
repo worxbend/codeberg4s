@@ -1,22 +1,11 @@
 package com.worxbend.codeberg4s.examples
 
-import com.worxbend.codeberg4s.BaseUri
-import com.worxbend.codeberg4s.CodebergClient
-import com.worxbend.codeberg4s.CodebergConfig
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
-import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.auth.ApiToken
-import com.worxbend.codeberg4s.auth.Auth
-import com.worxbend.codeberg4s.issues.CreateIssue
-import com.worxbend.codeberg4s.issues.Issue
+import com.worxbend.codeberg4s.auth.{ApiToken, Auth}
+import com.worxbend.codeberg4s.issues.{CreateIssue, Issue}
+import com.worxbend.codeberg4s.{BaseUri, CodebergClient, CodebergConfig, CodebergError, Owner, RepoName, ValidationError}
 
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /** A write path end to end: validate the inputs, build the command, create the issue, read it back.
   *

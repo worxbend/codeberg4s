@@ -2,19 +2,11 @@ package com.worxbend.codeberg4s.users.social.wire
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.auth.ApiToken
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.wire.RepositoryMetaDto
 import com.worxbend.codeberg4s.repositories.RepoSlug
-import com.worxbend.codeberg4s.users.social.AccessToken
-import com.worxbend.codeberg4s.users.social.AccessTokenId
-import com.worxbend.codeberg4s.users.social.AccessTokenName
-import com.worxbend.codeberg4s.users.social.CreatedAccessToken
-import com.worxbend.codeberg4s.users.social.TokenScope
+import com.worxbend.codeberg4s.users.social.{AccessToken, AccessTokenId, AccessTokenName, CreatedAccessToken, TokenScope}
 
 /** Forgejo's `AccessToken` model, field for field.
   *

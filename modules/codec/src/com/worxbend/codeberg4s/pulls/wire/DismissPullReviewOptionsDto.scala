@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.pulls.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
 import com.worxbend.codeberg4s.pulls.DismissReview
 
 /** Forgejo's `DismissPullReviewOptions` request model — the body of

@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields}
 import com.worxbend.codeberg4s.repositories.admin.LanguageBreakdown
 
 /** Forgejo's `LanguageStatistics` response — a bare object with no fixed keys.

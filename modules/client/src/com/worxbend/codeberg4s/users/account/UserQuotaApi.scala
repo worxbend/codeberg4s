@@ -1,13 +1,9 @@
 package com.worxbend.codeberg4s.users.account
 
 import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.CodebergRequest
 import com.worxbend.codeberg4s.core.CodebergRequest.read
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RetryEligibility
-import com.worxbend.codeberg4s.paging.Page
-import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
+import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.users.account.wire.AccountQueries
 
 import scala.concurrent.Future

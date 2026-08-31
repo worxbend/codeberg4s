@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
 import com.worxbend.codeberg4s.repositories.access.CollaboratorPermission
 
 /** Forgejo's `AddCollaboratorOption` request model — the body of

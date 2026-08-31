@@ -1,12 +1,13 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.repositories.admin.CreateRepository
-import com.worxbend.codeberg4s.repositories.admin.EditRepository
-import com.worxbend.codeberg4s.repositories.admin.ExternalTrackerSettings
-import com.worxbend.codeberg4s.repositories.admin.ExternalWikiSettings
-import com.worxbend.codeberg4s.repositories.admin.InternalTrackerSettings
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
+import com.worxbend.codeberg4s.repositories.admin.{
+  CreateRepository,
+  EditRepository,
+  ExternalTrackerSettings,
+  ExternalWikiSettings,
+  InternalTrackerSettings
+}
 
 /** Forgejo's `CreateRepoOption` and `EditRepoOption` request models — the bodies of `POST /user/repos` and
   * `PATCH /repos/{owner}/{repo}`.

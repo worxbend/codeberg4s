@@ -1,15 +1,9 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.actions.ActionArtifact
-import com.worxbend.codeberg4s.repositories.actions.ArtifactId
-import com.worxbend.codeberg4s.repositories.actions.RunId
+import com.worxbend.codeberg4s.repositories.actions.{ActionArtifact, ArtifactId, RunId}
 
 /** Forgejo's `ActionArtifact` model, field for field.
   *

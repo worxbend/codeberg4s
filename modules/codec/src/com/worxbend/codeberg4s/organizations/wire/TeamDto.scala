@@ -1,14 +1,9 @@
 package com.worxbend.codeberg4s.organizations.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.organizations.Team
-import com.worxbend.codeberg4s.organizations.TeamId
-import com.worxbend.codeberg4s.organizations.TeamPermission
+import com.worxbend.codeberg4s.organizations.{Team, TeamId, TeamPermission}
 
 /** Forgejo's `Team` model, field for field.
   *

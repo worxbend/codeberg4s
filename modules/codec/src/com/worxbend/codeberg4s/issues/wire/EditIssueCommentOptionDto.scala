@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.issues.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.codec.Timestamps
+import com.worxbend.codeberg4s.codec.{Json, JsonValue, Timestamps}
 import com.worxbend.codeberg4s.issues.EditComment
 
 /** Forgejo's `EditIssueCommentOption` request model — the body of `PATCH /repos/{owner}/{repo}/issues/comments/{id}`

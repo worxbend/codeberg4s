@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.issues.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
 import com.worxbend.codeberg4s.issues.CreateLabel
 
 /** Forgejo's `CreateLabelOption` request model — the body of `POST /repos/{owner}/{repo}/labels`.

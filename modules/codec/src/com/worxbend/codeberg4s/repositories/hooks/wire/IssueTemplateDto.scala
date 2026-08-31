@@ -1,14 +1,9 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.hooks.IssueFormField
-import com.worxbend.codeberg4s.repositories.hooks.IssueFormFieldType
-import com.worxbend.codeberg4s.repositories.hooks.IssueTemplate
+import com.worxbend.codeberg4s.repositories.hooks.{IssueFormField, IssueFormFieldType, IssueTemplate}
 
 /** Forgejo's `IssueFormField` model — one control of an issue form template.
   *

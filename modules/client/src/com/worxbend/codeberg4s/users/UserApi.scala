@@ -1,32 +1,23 @@
 package com.worxbend.codeberg4s.users
 
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.PagingQuery
-import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.codec.{Json, PagingQuery}
 import com.worxbend.codeberg4s.core.CodebergRequest.read
-import com.worxbend.codeberg4s.core.Decode
-import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RetryEligibility
-import com.worxbend.codeberg4s.paging.Page
-import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, DecodeFailure, Exec, RetryEligibility}
+import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
-import com.worxbend.codeberg4s.users.account.UserAccountApi
-import com.worxbend.codeberg4s.users.account.UserActionApi
-import com.worxbend.codeberg4s.users.account.UserApplicationApi
-import com.worxbend.codeberg4s.users.account.UserHookApi
-import com.worxbend.codeberg4s.users.account.UserQuotaApi
-import com.worxbend.codeberg4s.users.social.UserKeyApi
-import com.worxbend.codeberg4s.users.social.UserSocialApi
-import com.worxbend.codeberg4s.users.social.UserTokenApi
-import com.worxbend.codeberg4s.users.wire.PublicKeyDto
-import com.worxbend.codeberg4s.users.wire.UserDto
+import com.worxbend.codeberg4s.users.account.{
+  UserAccountApi,
+  UserActionApi,
+  UserApplicationApi,
+  UserHookApi,
+  UserQuotaApi
+}
+import com.worxbend.codeberg4s.users.social.{UserKeyApi, UserSocialApi, UserTokenApi}
+import com.worxbend.codeberg4s.users.wire.{PublicKeyDto, UserDto}
 import com.worxbend.codeberg4s.wire.SearchEnvelopeDto
+import com.worxbend.codeberg4s.{CodebergError, JsonPath}
 
 import scala.concurrent.Future
 

@@ -2,11 +2,8 @@ package com.worxbend.codeberg4s.users.social
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.core.Decode
-import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.core.ResponseBody
+import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
+import com.worxbend.codeberg4s.core.{Decode, DecodeFailure, ResponseBody}
 import com.worxbend.codeberg4s.issues.TrackedTime
 import com.worxbend.codeberg4s.issues.wire.TrackedTimeDto
 import com.worxbend.codeberg4s.miscellaneous.PlainText
@@ -14,15 +11,15 @@ import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.admin.RepositoryActivity
 import com.worxbend.codeberg4s.repositories.admin.wire.ActivityDto
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
-import com.worxbend.codeberg4s.users.PublicKey
-import com.worxbend.codeberg4s.users.User
-import com.worxbend.codeberg4s.users.social.wire.AccessTokenDto
-import com.worxbend.codeberg4s.users.social.wire.BlockedUserDto
-import com.worxbend.codeberg4s.users.social.wire.GpgKeyDto
-import com.worxbend.codeberg4s.users.social.wire.HeatmapEntryDto
-import com.worxbend.codeberg4s.users.social.wire.StopWatchDto
-import com.worxbend.codeberg4s.users.wire.PublicKeyDto
-import com.worxbend.codeberg4s.users.wire.UserDto
+import com.worxbend.codeberg4s.users.social.wire.{
+  AccessTokenDto,
+  BlockedUserDto,
+  GpgKeyDto,
+  HeatmapEntryDto,
+  StopWatchDto
+}
+import com.worxbend.codeberg4s.users.wire.{PublicKeyDto, UserDto}
+import com.worxbend.codeberg4s.users.{PublicKey, User}
 
 /** Every response shape [[UserSocialApi]], [[UserKeyApi]] and [[UserTokenApi]] can receive, decoded once and shared.
   *

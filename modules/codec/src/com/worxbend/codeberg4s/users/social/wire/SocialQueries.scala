@@ -1,10 +1,8 @@
 package com.worxbend.codeberg4s.users.social.wire
 
-import com.worxbend.codeberg4s.codec.PagingQuery
-import com.worxbend.codeberg4s.codec.Timestamps
+import com.worxbend.codeberg4s.codec.{PagingQuery, Timestamps}
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.users.social.ActivityFeedQuery
-import com.worxbend.codeberg4s.users.social.TrackedTimeWindow
+import com.worxbend.codeberg4s.users.social.{ActivityFeedQuery, TrackedTimeWindow}
 
 import java.time.format.DateTimeFormatter
 

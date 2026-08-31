@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.notifications
 
-import com.worxbend.codeberg4s.PositiveId
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PositiveId, ValidationError}
 
 /** The instance-wide identifier of a [[NotificationThread]] — the `{id}` of `/notifications/threads/{id}`.
   *

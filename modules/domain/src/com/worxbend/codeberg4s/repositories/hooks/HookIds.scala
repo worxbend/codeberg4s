@@ -1,9 +1,6 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
-import com.worxbend.codeberg4s.PathSegment
-import com.worxbend.codeberg4s.PositiveId
-import com.worxbend.codeberg4s.SegmentLiteral
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PathSegment, PositiveId, SegmentLiteral, ValidationError}
 
 /** The instance-wide identifier of one webhook — the `{id}` of `/repos/{owner}/{repo}/hooks/{id}`.
   *

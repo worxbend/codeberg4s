@@ -1,8 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin
 
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.organizations.TeamId
+import com.worxbend.codeberg4s.{Owner, RepoName}
 
 /** Everything `POST /repos/migrate` may be told, as one value.
   *

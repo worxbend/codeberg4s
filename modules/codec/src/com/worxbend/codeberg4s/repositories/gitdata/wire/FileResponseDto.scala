@@ -1,13 +1,10 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.gitdata.FileChange
-import com.worxbend.codeberg4s.repositories.wire.ContentEntryDto
-import com.worxbend.codeberg4s.repositories.wire.VerificationDto
+import com.worxbend.codeberg4s.repositories.wire.{ContentEntryDto, VerificationDto}
 
 /** Forgejo's `FileResponse` — what `POST /repos/{owner}/{repo}/diffpatch` answers with.
   *

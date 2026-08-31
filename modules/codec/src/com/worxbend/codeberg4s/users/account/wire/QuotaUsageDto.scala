@@ -1,14 +1,14 @@
 package com.worxbend.codeberg4s.users.account.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.users.account.AttachmentContainer
-import com.worxbend.codeberg4s.users.account.QuotaUsedArtifact
-import com.worxbend.codeberg4s.users.account.QuotaUsedAttachment
-import com.worxbend.codeberg4s.users.account.QuotaUsedPackage
+import com.worxbend.codeberg4s.users.account.{
+  AttachmentContainer,
+  QuotaUsedArtifact,
+  QuotaUsedAttachment,
+  QuotaUsedPackage
+}
 
 /** Forgejo's `QuotaUsedArtifact` model — one artifact counting towards the quota.
   *

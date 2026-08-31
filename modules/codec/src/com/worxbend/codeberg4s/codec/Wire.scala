@@ -1,8 +1,7 @@
 package com.worxbend.codeberg4s.codec
 
-import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.core.DecodeFailure
+import com.worxbend.codeberg4s.{JsonPath, ValidationError}
 
 /** The `wire → domain` half of a DTO conversion.
   *

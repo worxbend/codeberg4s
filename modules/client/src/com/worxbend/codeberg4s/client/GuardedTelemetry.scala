@@ -1,15 +1,11 @@
 package com.worxbend.codeberg4s.client
 
-import com.worxbend.codeberg4s.CallContext
-import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.core.Telemetry
+import com.worxbend.codeberg4s.{CallContext, CodebergError}
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.util.Failure
-import scala.util.Success
-import scala.util.Try
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
+import scala.util.{Failure, Success, Try}
 
 import java.util.concurrent.ExecutionException
 

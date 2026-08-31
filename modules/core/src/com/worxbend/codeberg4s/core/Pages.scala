@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.core
 
-import com.worxbend.codeberg4s.paging.Page
-import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.paging.{Page, PageParams}
 
 /** Turns a decoded item list plus a response's paging headers into a [[com.worxbend.codeberg4s.paging.Page]].
   *

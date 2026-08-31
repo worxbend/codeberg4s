@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
-import com.worxbend.codeberg4s.PathSegment
-import com.worxbend.codeberg4s.SegmentLiteral
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PathSegment, SegmentLiteral, ValidationError}
 
 /** The name of a Git reference, whole or partial — `refs/heads/main`, `heads/main`, `tags/v1.2`, `main`.
   *

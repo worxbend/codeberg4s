@@ -1,14 +1,9 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.access.DeployKey
-import com.worxbend.codeberg4s.repositories.access.DeployKeyId
+import com.worxbend.codeberg4s.repositories.access.{DeployKey, DeployKeyId}
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 
 /** The wire spelling of every property a deploy key has, written down exactly once.

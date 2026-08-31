@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.wire
 
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields}
 import com.worxbend.codeberg4s.repositories.CommitVerification
 
 /** Forgejo's `PayloadCommitVerification` — the `verification` object on a commit.

@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.issues
 
-import com.worxbend.codeberg4s.PositiveId
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PositiveId, ValidationError}
 
 /** The instance-wide identifier of a [[Label]] — the `{id}` of `/repos/{owner}/{repo}/labels/{id}`.
   *

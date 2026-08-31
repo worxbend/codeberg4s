@@ -1,8 +1,7 @@
 package com.worxbend.codeberg4s.repositories.publishing
 
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.repositories.BranchName
+import com.worxbend.codeberg4s.{Owner, RepoName}
 
 /** Everything `POST /repos/{template_owner}/{template_repo}/generate` may be told, as one value.
   *

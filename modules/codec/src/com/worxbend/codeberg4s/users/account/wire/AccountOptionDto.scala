@@ -1,16 +1,17 @@
 package com.worxbend.codeberg4s.users.account.wire
 
 import com.worxbend.codeberg4s.RepoName
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
 import com.worxbend.codeberg4s.repositories.BranchName
-import com.worxbend.codeberg4s.users.account.AvatarImage
-import com.worxbend.codeberg4s.users.account.CreateRepository
-import com.worxbend.codeberg4s.users.account.EmailAddress
-import com.worxbend.codeberg4s.users.account.OAuth2ApplicationDefinition
-import com.worxbend.codeberg4s.users.account.ObjectFormat
-import com.worxbend.codeberg4s.users.account.TrustModel
-import com.worxbend.codeberg4s.users.account.UpdateUserSettings
+import com.worxbend.codeberg4s.users.account.{
+  AvatarImage,
+  CreateRepository,
+  EmailAddress,
+  OAuth2ApplicationDefinition,
+  ObjectFormat,
+  TrustModel,
+  UpdateUserSettings
+}
 
 /** Every request body the `/user` account endpoints send, rendered in one place.
   *

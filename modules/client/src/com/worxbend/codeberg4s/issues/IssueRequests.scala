@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.issues
 
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
+import com.worxbend.codeberg4s.{Owner, RepoName}
 
 /** The path prefixes every sub-API of the issue group builds on, so that `/repos/{owner}/{repo}/issues` is spelled once
   * rather than eight times.

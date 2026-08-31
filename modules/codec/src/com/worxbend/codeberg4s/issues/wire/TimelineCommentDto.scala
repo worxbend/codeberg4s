@@ -1,14 +1,9 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.issues.CommentId
-import com.worxbend.codeberg4s.issues.TimelineEvent
+import com.worxbend.codeberg4s.issues.{CommentId, TimelineEvent}
 import com.worxbend.codeberg4s.users.wire.UserDto
 
 /** Forgejo's `TimelineComment` model — one element of `GET /repos/{owner}/{repo}/issues/{index}/timeline`.

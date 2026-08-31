@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
-import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.repositories.GitIdentity
+import com.worxbend.codeberg4s.repositories.{CommitSha, GitIdentity}
 
 /** One revision of a wiki page — a commit in the repository's `.wiki` Git repository.
   *

@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.issues.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.codec.WireValues
+import com.worxbend.codeberg4s.codec.{Json, JsonValue, WireValues}
 import com.worxbend.codeberg4s.issues.IssueRef
 
 /** Forgejo's `IssueMeta` request model — the body of all six blocking and dependency calls.

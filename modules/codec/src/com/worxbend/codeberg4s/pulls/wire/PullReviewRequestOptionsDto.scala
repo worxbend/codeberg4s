@@ -1,8 +1,6 @@
 package com.worxbend.codeberg4s.pulls.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.codec.WireValues
+import com.worxbend.codeberg4s.codec.{Json, JsonValue, WireValues}
 import com.worxbend.codeberg4s.pulls.ReviewRequest
 
 /** Forgejo's `PullReviewRequestOptions` request model — the body of '''both''' the `POST` and the `DELETE` on

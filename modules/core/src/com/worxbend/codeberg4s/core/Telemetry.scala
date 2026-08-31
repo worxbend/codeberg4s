@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.core
 
-import com.worxbend.codeberg4s.CallContext
-import com.worxbend.codeberg4s.CodebergError
+import com.worxbend.codeberg4s.{CallContext, CodebergError}
 
 /** Observation hooks for applications that want to see what the client is doing.
   *

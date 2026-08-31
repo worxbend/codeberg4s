@@ -1,10 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.issues.CreateMilestone
-import com.worxbend.codeberg4s.issues.EditMilestone
+import com.worxbend.codeberg4s.codec.{Json, JsonValue, Timestamps}
+import com.worxbend.codeberg4s.issues.{CreateMilestone, EditMilestone}
 
 /** Forgejo's `CreateMilestoneOption` and `EditMilestoneOption` request models — the bodies of
   * `POST /repos/{owner}/{repo}/milestones` and `PATCH /repos/{owner}/{repo}/milestones/{id}`.

@@ -1,14 +1,9 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.Commit
-import com.worxbend.codeberg4s.repositories.CommitSha
+import com.worxbend.codeberg4s.repositories.{Commit, CommitSha}
 import com.worxbend.codeberg4s.users.wire.UserDto
 
 /** Forgejo's `Commit` model, field for field.

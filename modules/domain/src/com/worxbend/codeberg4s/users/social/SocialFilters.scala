@@ -2,8 +2,7 @@ package com.worxbend.codeberg4s.users.social
 
 import com.worxbend.codeberg4s.ValidationError
 
-import java.time.Instant
-import java.time.LocalDate
+import java.time.{Instant, LocalDate}
 
 /** The remote account `POST /user/activitypub/follow` is asked to follow.
   *

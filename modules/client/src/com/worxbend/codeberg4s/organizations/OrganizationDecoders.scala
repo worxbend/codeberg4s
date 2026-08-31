@@ -2,19 +2,20 @@ package com.worxbend.codeberg4s.organizations
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.issues.Label
 import com.worxbend.codeberg4s.issues.wire.LabelDto
-import com.worxbend.codeberg4s.organizations.wire.BlockedUserDto
-import com.worxbend.codeberg4s.organizations.wire.OrganizationDto
-import com.worxbend.codeberg4s.organizations.wire.OrganizationPermissionsDto
-import com.worxbend.codeberg4s.organizations.wire.QuotaArtifactDto
-import com.worxbend.codeberg4s.organizations.wire.QuotaAttachmentDto
-import com.worxbend.codeberg4s.organizations.wire.QuotaInfoDto
-import com.worxbend.codeberg4s.organizations.wire.QuotaPackageDto
-import com.worxbend.codeberg4s.organizations.wire.TeamDto
+import com.worxbend.codeberg4s.organizations.wire.{
+  BlockedUserDto,
+  OrganizationDto,
+  OrganizationPermissionsDto,
+  QuotaArtifactDto,
+  QuotaAttachmentDto,
+  QuotaInfoDto,
+  QuotaPackageDto,
+  TeamDto
+}
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.admin.RepositoryActivity
 import com.worxbend.codeberg4s.repositories.admin.wire.ActivityDto

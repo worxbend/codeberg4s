@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.issues.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
 import com.worxbend.codeberg4s.issues.ReactionContent
 
 /** Forgejo's `EditReactionOption` request model — the body of every reaction call, whether it adds or removes.

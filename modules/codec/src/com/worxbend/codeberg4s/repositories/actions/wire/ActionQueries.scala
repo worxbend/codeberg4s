@@ -2,12 +2,14 @@ package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.actions.ActionRunQuery
-import com.worxbend.codeberg4s.repositories.actions.ActionTaskQuery
-import com.worxbend.codeberg4s.repositories.actions.ArtifactQuery
-import com.worxbend.codeberg4s.repositories.actions.JobAttempt
-import com.worxbend.codeberg4s.repositories.actions.RunnerLabel
-import com.worxbend.codeberg4s.repositories.actions.RunnerVisibility
+import com.worxbend.codeberg4s.repositories.actions.{
+  ActionRunQuery,
+  ActionTaskQuery,
+  ArtifactQuery,
+  JobAttempt,
+  RunnerLabel,
+  RunnerVisibility
+}
 
 /** The query strings this group's endpoints send.
   *

@@ -1,14 +1,9 @@
 package com.worxbend.codeberg4s.notifications.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.notifications.NotificationThread
-import com.worxbend.codeberg4s.notifications.NotificationThreadId
+import com.worxbend.codeberg4s.notifications.{NotificationThread, NotificationThreadId}
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 
 /** Forgejo's `NotificationThread` model, field for field.

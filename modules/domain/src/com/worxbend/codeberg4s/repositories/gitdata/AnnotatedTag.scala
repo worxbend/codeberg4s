@@ -1,10 +1,6 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
-import com.worxbend.codeberg4s.repositories.ArchiveDownloadCount
-import com.worxbend.codeberg4s.repositories.CommitSha
-import com.worxbend.codeberg4s.repositories.CommitVerification
-import com.worxbend.codeberg4s.repositories.GitIdentity
-import com.worxbend.codeberg4s.repositories.TagName
+import com.worxbend.codeberg4s.repositories.{ArchiveDownloadCount, CommitSha, CommitVerification, GitIdentity, TagName}
 
 /** A Git tag '''object''' — `GET /repos/{owner}/{repo}/git/tags/{sha}`.
   *

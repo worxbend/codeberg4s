@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.access
 
-import com.worxbend.codeberg4s.PositiveId
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PositiveId, ValidationError}
 
 /** The identifier of one tag protection rule — the `{id}` of `/repos/{owner}/{repo}/tag_protections/{id}`.
   *

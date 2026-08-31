@@ -1,10 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
-import com.worxbend.codeberg4s.repositories.admin.AvatarImage
-import com.worxbend.codeberg4s.repositories.admin.CreateBranch
-import com.worxbend.codeberg4s.repositories.admin.RenameBranch
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
+import com.worxbend.codeberg4s.repositories.admin.{AvatarImage, CreateBranch, RenameBranch}
 
 /** Forgejo's `CreateBranchRepoOption` and `UpdateBranchRepoOption` request models — the bodies of
   * `POST /repos/{owner}/{repo}/branches` and `PATCH /repos/{owner}/{repo}/branches/{branch}`.

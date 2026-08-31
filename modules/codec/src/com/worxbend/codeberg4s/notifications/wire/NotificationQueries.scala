@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.notifications.wire
 
-import com.worxbend.codeberg4s.codec.PagingQuery
-import com.worxbend.codeberg4s.codec.Timestamps
+import com.worxbend.codeberg4s.codec.{PagingQuery, Timestamps}
 import com.worxbend.codeberg4s.notifications.NotificationQuery
 import com.worxbend.codeberg4s.paging.PageParams
 

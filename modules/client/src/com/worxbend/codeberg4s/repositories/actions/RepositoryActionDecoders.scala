@@ -3,20 +3,21 @@ package com.worxbend.codeberg4s.repositories.actions
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.core.Decode
-import com.worxbend.codeberg4s.core.ResponseBody
+import com.worxbend.codeberg4s.core.{Decode, ResponseBody}
 import com.worxbend.codeberg4s.miscellaneous.PlainText
-import com.worxbend.codeberg4s.repositories.actions.wire.ActionArtifactDto
-import com.worxbend.codeberg4s.repositories.actions.wire.ActionRunDto
-import com.worxbend.codeberg4s.repositories.actions.wire.ActionRunJobDto
-import com.worxbend.codeberg4s.repositories.actions.wire.ActionRunnerDto
-import com.worxbend.codeberg4s.repositories.actions.wire.ActionSecretDto
-import com.worxbend.codeberg4s.repositories.actions.wire.ActionTaskDto
-import com.worxbend.codeberg4s.repositories.actions.wire.ActionVariableDto
-import com.worxbend.codeberg4s.repositories.actions.wire.DispatchedWorkflowRunDto
-import com.worxbend.codeberg4s.repositories.actions.wire.RegisteredRunnerDto
-import com.worxbend.codeberg4s.repositories.actions.wire.RegistrationTokenDto
-import com.worxbend.codeberg4s.repositories.actions.wire.WorkflowRunsEnvelopeDto
+import com.worxbend.codeberg4s.repositories.actions.wire.{
+  ActionArtifactDto,
+  ActionRunDto,
+  ActionRunJobDto,
+  ActionRunnerDto,
+  ActionSecretDto,
+  ActionTaskDto,
+  ActionVariableDto,
+  DispatchedWorkflowRunDto,
+  RegisteredRunnerDto,
+  RegistrationTokenDto,
+  WorkflowRunsEnvelopeDto
+}
 
 /** Every response shape [[RepositoryActionApi]] can receive, decoded once and shared.
   *

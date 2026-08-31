@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonValue
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
 
 /** Forgejo's `NoteOptions` request model — the body of `POST /repos/{owner}/{repo}/git/notes/{sha}`.
   *

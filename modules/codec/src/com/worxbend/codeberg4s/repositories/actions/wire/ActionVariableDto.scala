@@ -1,13 +1,9 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.actions.ActionVariable
-import com.worxbend.codeberg4s.repositories.actions.VariableName
+import com.worxbend.codeberg4s.repositories.actions.{ActionVariable, VariableName}
 
 /** Forgejo's `ActionVariable` model, field for field.
   *

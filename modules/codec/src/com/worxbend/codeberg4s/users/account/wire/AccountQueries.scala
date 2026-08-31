@@ -2,8 +2,7 @@ package com.worxbend.codeberg4s.users.account.wire
 
 import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.users.account.QuotaSubject
-import com.worxbend.codeberg4s.users.account.RepositoryOrder
+import com.worxbend.codeberg4s.users.account.{QuotaSubject, RepositoryOrder}
 
 /** The query strings the `/user` account endpoints send.
   *

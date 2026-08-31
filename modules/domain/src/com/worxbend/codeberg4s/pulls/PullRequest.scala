@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.pulls
 
-import com.worxbend.codeberg4s.issues.Label
-import com.worxbend.codeberg4s.issues.Milestone
+import com.worxbend.codeberg4s.issues.{Label, Milestone}
 import com.worxbend.codeberg4s.repositories.CommitSha
 import com.worxbend.codeberg4s.users.User
 

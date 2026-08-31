@@ -1,15 +1,9 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.Release
-import com.worxbend.codeberg4s.repositories.ReleaseId
-import com.worxbend.codeberg4s.repositories.TagName
+import com.worxbend.codeberg4s.repositories.{Release, ReleaseId, TagName}
 import com.worxbend.codeberg4s.users.wire.UserDto
 
 /** Forgejo's `Release` model, field for field.

@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.users.social
 
-import com.worxbend.codeberg4s.PositiveId
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PositiveId, ValidationError}
 
 /** The row identifier of one registered SSH key — the `{id}` of `/user/keys/{id}`.
   *

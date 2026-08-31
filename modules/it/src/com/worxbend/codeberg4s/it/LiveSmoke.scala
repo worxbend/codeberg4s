@@ -1,10 +1,8 @@
 package com.worxbend.codeberg4s.it
 
-import com.worxbend.codeberg4s.BaseUri
-import com.worxbend.codeberg4s.CodebergConfig
-import com.worxbend.codeberg4s.auth.ApiToken
-import com.worxbend.codeberg4s.auth.Auth
+import com.worxbend.codeberg4s.auth.{ApiToken, Auth}
 import com.worxbend.codeberg4s.retry.RetryPolicy
+import com.worxbend.codeberg4s.{BaseUri, CodebergConfig}
 
 /** The switch and the configuration for the opt-in smoke suite against the public `codeberg.org`.
   *

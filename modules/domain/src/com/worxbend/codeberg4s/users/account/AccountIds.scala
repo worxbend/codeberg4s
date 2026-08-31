@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.users.account
 
-import com.worxbend.codeberg4s.PositiveId
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PositiveId, ValidationError}
 
 /** The instance-wide identifier of one OAuth2 application — the `{id}` of `/user/applications/oauth2/{id}`.
   *

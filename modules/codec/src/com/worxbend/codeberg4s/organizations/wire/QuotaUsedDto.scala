@@ -1,14 +1,9 @@
 package com.worxbend.codeberg4s.organizations.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.organizations.QuotaArtifact
-import com.worxbend.codeberg4s.organizations.QuotaAttachment
-import com.worxbend.codeberg4s.organizations.QuotaAttachmentContext
-import com.worxbend.codeberg4s.organizations.QuotaPackage
+import com.worxbend.codeberg4s.organizations.{QuotaArtifact, QuotaAttachment, QuotaAttachmentContext, QuotaPackage}
 
 /** Forgejo's `QuotaUsedArtifact`, `QuotaUsedAttachment` and `QuotaUsedPackage` models — the elements of the three quota
   * usage listings.

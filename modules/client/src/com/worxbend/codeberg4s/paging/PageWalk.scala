@@ -1,11 +1,9 @@
 package com.worxbend.codeberg4s.paging
 
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.CodebergException
+import com.worxbend.codeberg4s.{CodebergError, CodebergException}
 
 import scala.collection.immutable.VectorBuilder
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 /** Walks a paged endpoint without every listing having to grow its own `listAll`.
   *

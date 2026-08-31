@@ -1,17 +1,10 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.issues.wire.LabelDto
-import com.worxbend.codeberg4s.issues.wire.MilestoneDto
-import com.worxbend.codeberg4s.pulls.PullRequest
-import com.worxbend.codeberg4s.pulls.PullRequestNumber
-import com.worxbend.codeberg4s.pulls.PullRequestState
+import com.worxbend.codeberg4s.issues.wire.{LabelDto, MilestoneDto}
+import com.worxbend.codeberg4s.pulls.{PullRequest, PullRequestNumber, PullRequestState}
 import com.worxbend.codeberg4s.repositories.CommitSha
 import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.users.wire.UserDto

@@ -1,20 +1,19 @@
 package com.worxbend.codeberg4s.examples
 
-import com.worxbend.codeberg4s.CodebergClient
-import com.worxbend.codeberg4s.CodebergConfig
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.CodebergException
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
-import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.repositories.Repository
+import com.worxbend.codeberg4s.{
+  CodebergClient,
+  CodebergConfig,
+  CodebergError,
+  CodebergException,
+  Owner,
+  RepoName,
+  ValidationError
+}
 
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /** The two error rails, side by side on the same failing call, and every case of the error ADT.
   *

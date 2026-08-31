@@ -1,10 +1,8 @@
 package com.worxbend.codeberg4s.issues.wire
 
-import com.worxbend.codeberg4s.Owner
-import com.worxbend.codeberg4s.RepoName
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields}
 import com.worxbend.codeberg4s.repositories.RepoSlug
+import com.worxbend.codeberg4s.{Owner, RepoName}
 
 /** Forgejo's `RepositoryMeta` model — the four-key object an `Issue` carries under `repository`.
   *

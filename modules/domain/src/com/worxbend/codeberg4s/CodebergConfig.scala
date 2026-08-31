@@ -4,8 +4,7 @@ import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.paging.PageSize
 import com.worxbend.codeberg4s.retry.RetryPolicy
 
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 /** Everything a client needs to talk to one Forgejo deployment.
   *

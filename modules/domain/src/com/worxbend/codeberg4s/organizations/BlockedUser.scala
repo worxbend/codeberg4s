@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.organizations
 
-import com.worxbend.codeberg4s.PositiveId
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{PositiveId, ValidationError}
 
 import java.time.Instant
 

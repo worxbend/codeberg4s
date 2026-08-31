@@ -1,16 +1,9 @@
 package com.worxbend.codeberg4s.users.social.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.users.social.GpgKey
-import com.worxbend.codeberg4s.users.social.GpgKeyEmail
-import com.worxbend.codeberg4s.users.social.GpgKeyId
-import com.worxbend.codeberg4s.users.social.OpenPgpKeyId
+import com.worxbend.codeberg4s.users.social.{GpgKey, GpgKeyEmail, GpgKeyId, OpenPgpKeyId}
 
 /** Forgejo's `GPGKeyEmail` model — an address a GPG key claims, and whether the instance confirmed it.
   *

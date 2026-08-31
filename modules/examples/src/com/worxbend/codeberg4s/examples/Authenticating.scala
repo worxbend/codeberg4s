@@ -1,17 +1,11 @@
 package com.worxbend.codeberg4s.examples
 
-import com.worxbend.codeberg4s.CodebergClient
-import com.worxbend.codeberg4s.CodebergConfig
-import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.auth.ApiToken
-import com.worxbend.codeberg4s.auth.Auth
-import com.worxbend.codeberg4s.auth.Password
+import com.worxbend.codeberg4s.auth.{ApiToken, Auth, Password}
 import com.worxbend.codeberg4s.users.User
+import com.worxbend.codeberg4s.{CodebergClient, CodebergConfig, ValidationError}
 
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.{Await, ExecutionContext}
 
 /** The three ways this library authenticates, and what happens when the credential is malformed.
   *

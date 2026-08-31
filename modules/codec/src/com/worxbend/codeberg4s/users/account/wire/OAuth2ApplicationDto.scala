@@ -1,15 +1,9 @@
 package com.worxbend.codeberg4s.users.account.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.ArrayElements
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.users.account.ClientSecret
-import com.worxbend.codeberg4s.users.account.OAuth2Application
-import com.worxbend.codeberg4s.users.account.OAuth2ApplicationId
+import com.worxbend.codeberg4s.users.account.{ClientSecret, OAuth2Application, OAuth2ApplicationId}
 
 /** Forgejo's `OAuth2Application` model, field for field.
   *

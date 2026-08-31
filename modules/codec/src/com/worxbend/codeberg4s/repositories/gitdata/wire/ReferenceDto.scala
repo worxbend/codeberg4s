@@ -1,12 +1,9 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
-import com.worxbend.codeberg4s.codec.Wire
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.gitdata.GitReference
-import com.worxbend.codeberg4s.repositories.gitdata.RefName
+import com.worxbend.codeberg4s.repositories.gitdata.{GitReference, RefName}
 
 /** Forgejo's `Reference` model, field for field.
   *

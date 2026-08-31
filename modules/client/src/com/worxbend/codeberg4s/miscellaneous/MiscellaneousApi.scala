@@ -1,30 +1,26 @@
 package com.worxbend.codeberg4s.miscellaneous
 
-import com.worxbend.codeberg4s.CodebergError
-import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.core.ApiPipeline
-import com.worxbend.codeberg4s.core.CodebergRequest
 import com.worxbend.codeberg4s.core.CodebergRequest.read
-import com.worxbend.codeberg4s.core.Decode
-import com.worxbend.codeberg4s.core.Exec
-import com.worxbend.codeberg4s.core.RequestBody
-import com.worxbend.codeberg4s.core.RetryEligibility
-import com.worxbend.codeberg4s.miscellaneous.wire.GitignoreTemplateDto
-import com.worxbend.codeberg4s.miscellaneous.wire.LicenseTemplateDto
-import com.worxbend.codeberg4s.miscellaneous.wire.LicenseTemplateSummaryDto
-import com.worxbend.codeberg4s.miscellaneous.wire.MarkdownOptionDto
-import com.worxbend.codeberg4s.miscellaneous.wire.MarkupOptionDto
-import com.worxbend.codeberg4s.miscellaneous.wire.NodeInfoDto
-import com.worxbend.codeberg4s.miscellaneous.wire.ServerApiSettingsDto
-import com.worxbend.codeberg4s.miscellaneous.wire.ServerAttachmentSettingsDto
-import com.worxbend.codeberg4s.miscellaneous.wire.ServerRepositorySettingsDto
-import com.worxbend.codeberg4s.miscellaneous.wire.ServerUiSettingsDto
-import com.worxbend.codeberg4s.miscellaneous.wire.TemplateLabelDto
-import com.worxbend.codeberg4s.miscellaneous.wire.TemplateNamesDto
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RequestBody, RetryEligibility}
+import com.worxbend.codeberg4s.miscellaneous.wire.{
+  GitignoreTemplateDto,
+  LicenseTemplateDto,
+  LicenseTemplateSummaryDto,
+  MarkdownOptionDto,
+  MarkupOptionDto,
+  NodeInfoDto,
+  ServerApiSettingsDto,
+  ServerAttachmentSettingsDto,
+  ServerRepositorySettingsDto,
+  ServerUiSettingsDto,
+  TemplateLabelDto,
+  TemplateNamesDto
+}
 import com.worxbend.codeberg4s.repositories.actions.ActionRun
 import com.worxbend.codeberg4s.repositories.actions.wire.ActionRunDto
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod}
 
 import scala.concurrent.Future
 

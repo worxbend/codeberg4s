@@ -1,13 +1,8 @@
 package com.worxbend.codeberg4s.users.account.wire
 
-import com.worxbend.codeberg4s.codec.JsonDecoder
-import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.users.account.QuotaGroup
-import com.worxbend.codeberg4s.users.account.QuotaInfo
-import com.worxbend.codeberg4s.users.account.QuotaRule
-import com.worxbend.codeberg4s.users.account.QuotaSubject
-import com.worxbend.codeberg4s.users.account.QuotaUsedSize
+import com.worxbend.codeberg4s.users.account.{QuotaGroup, QuotaInfo, QuotaRule, QuotaSubject, QuotaUsedSize}
 
 /** Forgejo's `QuotaInfo` model, and the four definitions nested inside it.
   *
