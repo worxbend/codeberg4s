@@ -101,6 +101,23 @@ changed deliberately *before* the freeze, and anyone who built against a
 Every item here is a breaking change against the `0.1.0-SNAPSHOT` builds, taken
 now because the tag is what freezes the surface.
 
+- **Command and query types can no longer be built without validation.**
+  Thirteen types paired a validating `of` with a public case-class
+  constructor, so `apply` and `copy` bypassed the check the Scaladoc
+  promised — `AddTrackedTime(1500.millis, …)` was accepted and then sent as
+  one second, because the codec truncates on the stated assumption that the
+  domain type refuses sub-second durations. Their constructors are now
+  `private[codeberg4s]`, matching the 131 response models. Build them with
+  `of` and adjust them with the `with…` builders. The types:
+  `AddTrackedTime`, `CreateComment`, `CreateIssue`, `CreateMilestone`,
+  `EditComment`, `CreatePullRequest`, `BranchProtectionSettings`,
+  `CreateDeployKey`, `DeployKeyQuery`, `CreateWikiPage`, `EditWikiPage`,
+  `ActivityFeedQuery`, `TrackedTimeWindow`.
+- **`organizations.BlockedUser` and `organizations.BlockId` are gone.** The
+  organisation and account block lists return the same two-property Forgejo
+  model, and it was declared twice. Import
+  `com.worxbend.codeberg4s.users.social.BlockedUser` and `BlockId`; the type
+  is identical. `OrganizationApi.blockedUsers` is unchanged.
 - **`Owner` and `RepoName` moved to the package root.** They were in
   `com.worxbend.codeberg4s.repositories`, which meant the two types needed
   before *any* request could be made lived in a sub-package a caller had no
