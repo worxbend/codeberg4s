@@ -38,9 +38,7 @@ items came back. That distinction is not pedantry; see
 ## Quick start
 
 ```scala mdoc:compile-only
-import com.worxbend.codeberg4s.{CodebergClient, CodebergConfig}
-import com.worxbend.codeberg4s.auth.Auth
-import com.worxbend.codeberg4s.repositories.{Owner, RepoName}
+import com.worxbend.codeberg4s.*
 import scala.concurrent.ExecutionContext.Implicits.global
 
 val client = CodebergClient(CodebergConfig(Auth.Anonymous))
