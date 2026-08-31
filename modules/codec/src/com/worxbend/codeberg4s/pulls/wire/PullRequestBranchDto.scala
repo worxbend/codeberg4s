@@ -3,6 +3,7 @@ package com.worxbend.codeberg4s.pulls.wire
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.codec.JsonDecoder
 import com.worxbend.codeberg4s.codec.JsonFields
+import com.worxbend.codeberg4s.codec.Wire
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.pulls.PullRequestBranch
 import com.worxbend.codeberg4s.repositories.BranchName
@@ -54,7 +55,7 @@ final case class PullRequestBranchDto(
     */
   def toDomainAt(at: JsonPath): Either[DecodeFailure, PullRequestBranch] =
     for
-      tip        <- PullWire.optional(at, "sha", sha)(CommitSha.from)
+      tip        <- Wire.optional(at, "sha", sha)(CommitSha.from)
       repository <- repositoryAt(at)
     yield PullRequestBranch(
       label        = label,

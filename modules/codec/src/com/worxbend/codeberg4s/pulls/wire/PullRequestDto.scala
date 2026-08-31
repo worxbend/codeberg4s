@@ -105,8 +105,8 @@ final case class PullRequestDto(
       headline   <- Wire.required(at, "title", title)
       author     <- userAt(at, "user", user)
       merger     <- userAt(at, "merged_by", mergedBy)
-      mergeSha   <- PullWire.optional(at, "merge_commit_sha", mergeCommitSha)(CommitSha.from)
-      ancestor   <- PullWire.optional(at, "merge_base", mergeBase)(CommitSha.from)
+      mergeSha   <- Wire.optional(at, "merge_commit_sha", mergeCommitSha)(CommitSha.from)
+      ancestor   <- Wire.optional(at, "merge_base", mergeBase)(CommitSha.from)
       lifecycle  <- Wire.validated(at, "state", state)(value =>
                       PullRequestState.from(
                         state       = value,

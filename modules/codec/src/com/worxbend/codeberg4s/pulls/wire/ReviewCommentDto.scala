@@ -27,9 +27,9 @@ import com.worxbend.codeberg4s.users.wire.UserDto
   *
   * ==The two commit ids are strict, the review id is not==
   *
-  * `commit_id` and `original_commit_id` go through [[PullWire.optional]]: legitimately absent, and a
-  * present-but-unparseable object id is reported at its own path rather than dropped, for the reason [[PullWire]]
-  * gives.
+  * `commit_id` and `original_commit_id` go through [[com.worxbend.codeberg4s.codec.Wire.optional]]: legitimately
+  * absent, and a present-but-unparseable object id is reported at its own path rather than dropped, for the reason
+  * [[com.worxbend.codeberg4s.codec.Wire.optional]] gives.
   *
   * `pull_request_review_id` is deliberately treated differently. Forgejo's Go struct types it as a plain `int64` with
   * no `omitempty`, so a comment that is not yet attached to a submitted review serialises it as `0` — which
@@ -64,9 +64,9 @@ final case class ReviewCommentDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, ReviewComment] =
     for
       identifier <- Wire.validated(at, "id", id)(ReviewCommentId.from)
-      review     <- PullWire.optional(at, "pull_request_review_id", pullRequestReviewId.filter(_ > 0L))(ReviewId.from)
-      pinned     <- PullWire.optional(at, "commit_id", commitId)(CommitSha.from)
-      original   <- PullWire.optional(at, "original_commit_id", originalCommitId)(CommitSha.from)
+      review     <- Wire.optional(at, "pull_request_review_id", pullRequestReviewId.filter(_ > 0L))(ReviewId.from)
+      pinned     <- Wire.optional(at, "commit_id", commitId)(CommitSha.from)
+      original   <- Wire.optional(at, "original_commit_id", originalCommitId)(CommitSha.from)
       author     <- userAt(at, "user", user)
       resolvedBy <- userAt(at, "resolver", resolver)
     yield ReviewComment(
