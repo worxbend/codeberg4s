@@ -153,10 +153,10 @@ object AttemptParitySuite:
 
   /** The public operations a class declares: public, non-synthetic methods returning `Future`, keyed for matching.
     *
-    * Filtering on the `Future` return type is what separates operations from the other public members of a rail —
-    * the `attempt` accessor and the sub-API accessors return API classes, not futures. Synthetic and bridge methods
-    * are compiler plumbing, and `name$default$n` methods carry default-argument values, so none of them are
-    * operations either.
+    * Filtering on the `Future` return type is what separates operations from the other public members of a rail — the
+    * `attempt` accessor and the sub-API accessors return API classes, not futures. Synthetic and bridge methods are
+    * compiler plumbing, and `name$default$n` methods carry default-argument values, so none of them are operations
+    * either.
     */
   private def operations(cls: Class[?]): Map[Key, Method] =
     cls.getDeclaredMethods.toList
@@ -181,8 +181,8 @@ object AttemptParitySuite:
 
   /** Every API class reachable from [[CodebergClient]] through public accessors returning `*Api` types.
     *
-    * This is the registry's completeness oracle: sub-APIs such as `client.issues.comments` are found transitively, so
-    * a newly added group shows up here before anyone remembers to register it above.
+    * This is the registry's completeness oracle: sub-APIs such as `client.issues.comments` are found transitively, so a
+    * newly added group shows up here before anyone remembers to register it above.
     */
   private def reachableApis: Set[Class[?]] =
     def apiAccessors(cls: Class[?]): Set[Class[?]] =
