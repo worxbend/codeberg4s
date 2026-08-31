@@ -4,6 +4,9 @@ import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.paging.Page
@@ -197,19 +200,19 @@ object UserHookApi:
       exec.attempt(rail.delete(id))
 
   private def listRequest(params: PageParams): CodebergRequest =
-    AccountRequests.read(ListOperation, hooksPath, AccountQueries.paging(params))
+    read(ListOperation, hooksPath, AccountQueries.paging(params))
 
   private def getRequest(id: HookId): CodebergRequest =
-    AccountRequests.read(GetOperation, hookPath(id), Nil)
+    read(GetOperation, hookPath(id), Nil)
 
   private def createRequest(command: CreateHook): CodebergRequest =
-    AccountRequests.write(CreateOperation, HttpMethod.Post, hooksPath, HookOptionDto.renderCreate(command))
+    write(CreateOperation, HttpMethod.Post, hooksPath, HookOptionDto.renderCreate(command))
 
   private def editRequest(id: HookId, command: EditHook): CodebergRequest =
-    AccountRequests.write(EditOperation, HttpMethod.Patch, hookPath(id), HookOptionDto.renderEdit(command))
+    write(EditOperation, HttpMethod.Patch, hookPath(id), HookOptionDto.renderEdit(command))
 
   private def deleteRequest(id: HookId): CodebergRequest =
-    AccountRequests.remove(DeleteOperation, hookPath(id))
+    remove(DeleteOperation, hookPath(id))
 
   private def hooksPath: List[String] =
     AccountRequests.path("hooks")

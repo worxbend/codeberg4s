@@ -4,6 +4,10 @@ import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.removeWithBody
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.organizations.Team
@@ -200,7 +204,7 @@ final class UserAccountApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     *
     * '''This `DELETE` carries a body''', which is unusual and is the only one in the library: the addresses to remove
     * are named in a `DeleteEmailOption` and nowhere else, so there is no other way to issue the call. See
-    * [[AccountRequests.removeWithBody]].
+    * [[removeWithBody]].
     *
     * '''Retried''', because the request is idempotent by address: it names the exact values to remove, and after any
     * number of attempts those addresses are not on the account. Nothing is created, and — unlike a delete addressed by
@@ -364,10 +368,10 @@ object UserAccountApi:
       exec.attempt(rail.teams(params))
 
   private def settingsRequest: CodebergRequest =
-    AccountRequests.read(SettingsOperation, settingsPath, Nil)
+    read(SettingsOperation, settingsPath, Nil)
 
   private def updateSettingsRequest(command: UpdateUserSettings): CodebergRequest =
-    AccountRequests.write(
+    write(
       UpdateSettingsOperation,
       HttpMethod.Patch,
       settingsPath,
@@ -375,7 +379,7 @@ object UserAccountApi:
     )
 
   private def updateAvatarRequest(image: AvatarImage): CodebergRequest =
-    AccountRequests.write(
+    write(
       UpdateAvatarOperation,
       HttpMethod.Post,
       avatarPath,
@@ -383,13 +387,13 @@ object UserAccountApi:
     )
 
   private def deleteAvatarRequest: CodebergRequest =
-    AccountRequests.remove(DeleteAvatarOperation, avatarPath)
+    remove(DeleteAvatarOperation, avatarPath)
 
   private def emailsRequest: CodebergRequest =
-    AccountRequests.read(EmailsOperation, emailsPath, Nil)
+    read(EmailsOperation, emailsPath, Nil)
 
   private def addEmailsRequest(addresses: Vector[EmailAddress]): CodebergRequest =
-    AccountRequests.write(
+    write(
       AddEmailsOperation,
       HttpMethod.Post,
       emailsPath,
@@ -397,17 +401,17 @@ object UserAccountApi:
     )
 
   private def deleteEmailsRequest(addresses: Vector[EmailAddress]): CodebergRequest =
-    AccountRequests.removeWithBody(DeleteEmailsOperation, emailsPath, AccountOptionDto.renderEmails(addresses))
+    removeWithBody(DeleteEmailsOperation, emailsPath, AccountOptionDto.renderEmails(addresses))
 
   private def repositoriesRequest(order: RepositoryOrder, params: PageParams): CodebergRequest =
-    AccountRequests.read(
+    read(
       RepositoriesOperation,
       repositoriesPath,
       AccountQueries.paging(params) ++ AccountQueries.repositoryOrder(order),
     )
 
   private def createRepositoryRequest(command: CreateRepository): CodebergRequest =
-    AccountRequests.write(
+    write(
       CreateRepositoryOperation,
       HttpMethod.Post,
       repositoriesPath,
@@ -415,7 +419,7 @@ object UserAccountApi:
     )
 
   private def teamsRequest(params: PageParams): CodebergRequest =
-    AccountRequests.read(TeamsOperation, AccountRequests.path("teams"), AccountQueries.paging(params))
+    read(TeamsOperation, AccountRequests.path("teams"), AccountQueries.paging(params))
 
   private def settingsPath: List[String] =
     AccountRequests.path("settings")

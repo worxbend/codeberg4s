@@ -4,6 +4,9 @@ import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.paging.Page
@@ -418,17 +421,17 @@ object UserActionApi:
     if command.renamedTo.isEmpty then RetryEligibility.AlwaysRetry else RetryEligibility.Never
 
   private def listRunnersRequest(visibility: RunnerVisibility, params: PageParams): CodebergRequest =
-    AccountRequests.read(
+    read(
       ListRunnersOperation,
       runnersPath,
       ActionQueries.runners(visibility) ++ ActionQueries.paging(params),
     )
 
   private def runnerRequest(id: RunnerId): CodebergRequest =
-    AccountRequests.read(GetRunnerOperation, runnerPath(id), Nil)
+    read(GetRunnerOperation, runnerPath(id), Nil)
 
   private def registerRunnerRequest(command: RegisterRunner): CodebergRequest =
-    AccountRequests.write(
+    write(
       RegisterRunnerOperation,
       HttpMethod.Post,
       runnersPath,
@@ -436,28 +439,28 @@ object UserActionApi:
     )
 
   private def deleteRunnerRequest(id: RunnerId): CodebergRequest =
-    AccountRequests.remove(DeleteRunnerOperation, runnerPath(id))
+    remove(DeleteRunnerOperation, runnerPath(id))
 
   private def runnerRegistrationTokenRequest: CodebergRequest =
-    AccountRequests.read(RunnerRegistrationTokenOperation, runnersPath :+ "registration-token", Nil)
+    read(RunnerRegistrationTokenOperation, runnersPath :+ "registration-token", Nil)
 
   private def searchRunnerJobsRequest(labels: Vector[RunnerLabel]): CodebergRequest =
-    AccountRequests.read(SearchRunnerJobsOperation, runnersPath :+ "jobs", ActionQueries.runnerJobs(labels))
+    read(SearchRunnerJobsOperation, runnersPath :+ "jobs", ActionQueries.runnerJobs(labels))
 
   private def setSecretRequest(secret: SecretName, value: SecretValue): CodebergRequest =
-    AccountRequests.write(SetSecretOperation, HttpMethod.Put, secretPath(secret), SecretOptionDto.render(value))
+    write(SetSecretOperation, HttpMethod.Put, secretPath(secret), SecretOptionDto.render(value))
 
   private def deleteSecretRequest(secret: SecretName): CodebergRequest =
-    AccountRequests.remove(DeleteSecretOperation, secretPath(secret))
+    remove(DeleteSecretOperation, secretPath(secret))
 
   private def listVariablesRequest(params: PageParams): CodebergRequest =
-    AccountRequests.read(ListVariablesOperation, variablesPath, ActionQueries.paging(params))
+    read(ListVariablesOperation, variablesPath, ActionQueries.paging(params))
 
   private def variableRequest(name: VariableName): CodebergRequest =
-    AccountRequests.read(GetVariableOperation, variablePath(name), Nil)
+    read(GetVariableOperation, variablePath(name), Nil)
 
   private def createVariableRequest(name: VariableName, command: CreateVariable): CodebergRequest =
-    AccountRequests.write(
+    write(
       CreateVariableOperation,
       HttpMethod.Post,
       variablePath(name),
@@ -465,7 +468,7 @@ object UserActionApi:
     )
 
   private def updateVariableRequest(name: VariableName, command: UpdateVariable): CodebergRequest =
-    AccountRequests.write(
+    write(
       UpdateVariableOperation,
       HttpMethod.Put,
       variablePath(name),
@@ -473,7 +476,7 @@ object UserActionApi:
     )
 
   private def deleteVariableRequest(name: VariableName): CodebergRequest =
-    AccountRequests.remove(DeleteVariableOperation, variablePath(name))
+    remove(DeleteVariableOperation, variablePath(name))
 
   private def runnersPath: List[String] =
     AccountRequests.path("actions", "runners")

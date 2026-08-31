@@ -4,6 +4,9 @@ import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.core.CodebergRequest
+import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.remove
+import com.worxbend.codeberg4s.core.CodebergRequest.write
 import com.worxbend.codeberg4s.core.Exec
 import com.worxbend.codeberg4s.core.RetryEligibility
 import com.worxbend.codeberg4s.paging.Page
@@ -211,13 +214,13 @@ object UserApplicationApi:
       exec.attempt(rail.delete(id))
 
   private def listRequest(params: PageParams): CodebergRequest =
-    AccountRequests.read(ListOperation, applicationsPath, AccountQueries.paging(params))
+    read(ListOperation, applicationsPath, AccountQueries.paging(params))
 
   private def getRequest(id: OAuth2ApplicationId): CodebergRequest =
-    AccountRequests.read(GetOperation, applicationPath(id), Nil)
+    read(GetOperation, applicationPath(id), Nil)
 
   private def createRequest(definition: OAuth2ApplicationDefinition): CodebergRequest =
-    AccountRequests.write(
+    write(
       CreateOperation,
       HttpMethod.Post,
       applicationsPath,
@@ -225,7 +228,7 @@ object UserApplicationApi:
     )
 
   private def updateRequest(id: OAuth2ApplicationId, definition: OAuth2ApplicationDefinition): CodebergRequest =
-    AccountRequests.write(
+    write(
       UpdateOperation,
       HttpMethod.Patch,
       applicationPath(id),
@@ -233,7 +236,7 @@ object UserApplicationApi:
     )
 
   private def deleteRequest(id: OAuth2ApplicationId): CodebergRequest =
-    AccountRequests.remove(DeleteOperation, applicationPath(id))
+    remove(DeleteOperation, applicationPath(id))
 
   private def applicationsPath: List[String] =
     AccountRequests.path("applications", "oauth2")
