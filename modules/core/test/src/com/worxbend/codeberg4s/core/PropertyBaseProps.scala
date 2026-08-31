@@ -10,8 +10,9 @@ import org.scalacheck.rng.Seed
   *
   * '''The tag.''' Every property in this module carries [[Property]], whose value is the exact string `"Property"`.
   * `verify.sh` runs the unit gate with `--exclude-tags=Property` and munit's tag filter compares against the tag's
-  * value, so any other spelling silently leaves these suites inside the routine run. Nothing enforces this
-  * mechanically: a property written without `.tag(Property)` rejoins the default gate.
+  * value, so any other spelling silently leaves these suites inside the routine run. The tag is applied by
+  * [[munitTests]] below rather than trusted to every author, so a property written without `.tag(Property)` is still
+  * excluded; the explicit tags kept on the existing properties are redundant with that override, not load-bearing.
   *
   * '''The seed.''' Pinned, so a counterexample found on one machine is reproducible on the next. The module's test
   * modules do not share code, so this trait is a near-copy of the one in `domain`; that is the build's structure, not
@@ -21,6 +22,14 @@ trait PropertyBase extends ScalaCheckSuite:
 
   /** The tag excluded by `verify.sh`. Put it on every property in this module. */
   protected val Property: Tag = Tag(PropertyBase.TagName)
+
+  /** Tags every test declared in a subclass with [[Property]], whether or not its author remembered to.
+    *
+    * munit builds the suite's test list first and filters it by tag afterwards, so adding the tag here is equivalent to
+    * writing `.tag(Property)` on each declaration — and unlike the convention, it cannot be forgotten. `tags` is a
+    * `Set`, so re-tagging an already-tagged property changes nothing.
+    */
+  override def munitTests(): Seq[munit.Test] = super.munitTests().map(_.tag(Property))
 
   override def scalaCheckInitialSeed: String = Seed(PropertyBase.SeedValue).toBase64
 

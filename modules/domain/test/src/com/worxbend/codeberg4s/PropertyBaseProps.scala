@@ -11,8 +11,9 @@ import org.scalacheck.rng.Seed
   * '''The tag.''' Every property in this module carries [[Property]], whose value is the exact string `"Property"`.
   * That spelling is load-bearing: `verify.sh` runs the unit gate with `--exclude-tags=Property`, and munit's tag filter
   * compares against the tag's value, so a tag spelled anything else leaves the property suites inside the routine run —
-  * which is precisely what `docs/CONSTITUTION_MAPPING.md` says must not happen. Nothing enforces the tag mechanically:
-  * a property written without `.tag(Property)` silently rejoins the default gate.
+  * which is precisely what `docs/CONSTITUTION_MAPPING.md` says must not happen. The tag is applied by [[munitTests]]
+  * below rather than trusted to every author, so a property written without `.tag(Property)` is still excluded; the
+  * explicit tags kept on the existing properties are redundant with that override, not load-bearing.
   *
   * '''The seed.''' `scalaCheckInitialSeed` is pinned, so every run explores the same values in the same order.
   * ScalaCheck's own default seeds from the system clock, which turns a genuine counterexample into a flake that the
@@ -22,6 +23,14 @@ trait PropertyBase extends ScalaCheckSuite:
 
   /** The tag excluded by `verify.sh`. Put it on every property in this module. */
   protected val Property: Tag = Tag(PropertyBase.TagName)
+
+  /** Tags every test declared in a subclass with [[Property]], whether or not its author remembered to.
+    *
+    * munit builds the suite's test list first and filters it by tag afterwards, so adding the tag here is equivalent to
+    * writing `.tag(Property)` on each declaration — and unlike the convention, it cannot be forgotten. `tags` is a
+    * `Set`, so re-tagging an already-tagged property changes nothing.
+    */
+  override def munitTests(): Seq[munit.Test] = super.munitTests().map(_.tag(Property))
 
   override def scalaCheckInitialSeed: String = Seed(PropertyBase.SeedValue).toBase64
 
