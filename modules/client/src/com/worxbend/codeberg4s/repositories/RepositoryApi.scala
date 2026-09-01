@@ -14,7 +14,7 @@ import com.worxbend.codeberg4s.repositories.hooks.{
   RepositoryIssueConfigApi,
   RepositoryWikiApi
 }
-import com.worxbend.codeberg4s.repositories.publishing.RepositoryPublishingApi
+import com.worxbend.codeberg4s.repositories.publishing.{RepositoryPublishingApi, Topic}
 import com.worxbend.codeberg4s.{CodebergError, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
@@ -226,9 +226,11 @@ final class RepositoryApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     * The body is `{"topics": [...]}` rather than an array, which is handled here. The endpoint declares `page` and
     * `limit`, so the result is a page like every other listing.
     *
-    * '''Failures.''' As [[get]]. [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] is reachable only for a body
-    * that is not a JSON object at all — a topic is free text, so nothing inside the envelope can fail to convert.
-    * Retried under [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]].
+    * '''Failures.''' As [[get]], plus [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] when the body is not a
+    * JSON object at all, or when one of the names inside the envelope is not a valid
+    * [[com.worxbend.codeberg4s.repositories.publishing.Topic]] — blank, or carrying something that could not go back
+    * into a request path. The failing element is reported by position, as `$.topics[2]`. Retried under
+    * [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]].
     *
     * @param owner
     *   the user or organisation that owns the repository
@@ -237,7 +239,7 @@ final class RepositoryApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     * @param params
     *   the page to fetch and how many topics it may hold
     */
-  def topics(owner: Owner, name: RepoName, params: PageParams): Future[Page[String]] =
+  def topics(owner: Owner, name: RepoName, params: PageParams): Future[Page[Topic]] =
     pipeline.callPage(RepositoryApi.topicsRequest(owner, name, params), params)(using RepositoryDecoders.topics)
 
   /** Reads a file or a directory — `GET /repos/{owner}/{repo}/contents/{filepath}`.
@@ -363,7 +365,7 @@ object RepositoryApi:
       exec.attempt(rail.getRelease(owner, name, id))
 
     /** [[RepositoryApi.topics]] with its failure as a value. */
-    def topics(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[String]]] =
+    def topics(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Topic]]] =
       exec.attempt(rail.topics(owner, name, params))
 
     /** [[RepositoryApi.getContents]] with its failure as a value. */

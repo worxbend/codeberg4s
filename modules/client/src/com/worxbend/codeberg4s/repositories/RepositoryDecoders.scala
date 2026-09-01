@@ -4,6 +4,7 @@ import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.core.Decode
+import com.worxbend.codeberg4s.repositories.publishing.Topic
 import com.worxbend.codeberg4s.repositories.wire.{
   BranchDto,
   CommitDto,
@@ -64,9 +65,9 @@ private[repositories] object RepositoryDecoders:
   val releases: Decode[Vector[Release]] =
     WireDecode.vector(Json.decoder[Vector[ReleaseDto]])
 
-  /** The `{"topics"}` envelope, unwrapped to the names it carries. */
-  val topics: Decode[Vector[String]] =
-    WireDecode.single(Json.decoder[TopicNamesDto])(dto => Right(dto.toDomain))
+  /** The `{"topics"}` envelope, unwrapped to the names it carries, each one validated as a `Topic`. */
+  val topics: Decode[Vector[Topic]] =
+    WireDecode.single(Json.decoder[TopicNamesDto])(_.toDomain)
 
   /** Either arm of the contents union — see [[com.worxbend.codeberg4s.repositories.RepositoryContent]]. */
   val contents: Decode[RepositoryContent] =

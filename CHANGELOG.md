@@ -25,6 +25,21 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **`repos.topics` returns a `Page[Topic]`, not a `Page[String]`.** The write
+  side of the same endpoint group already spoke `Topic` —
+  `repos.publishing.replaceTopics` takes a `Vector[Topic]`, `addTopic` and
+  `removeTopic` take one — so reading a repository's topics back as strings
+  meant a caller that wanted to add to the set it had just read had to put
+  every name through `Topic.from` again. `TopicNamesDto.toDomain` now validates
+  each name where the envelope is read.
+
+  **Breaking:** `client.repos.topics(...)` (and its `.attempt` mirror) now
+  answers `Page[Topic]`. Call `.value` on an element for its text. A name that
+  cannot be a `Topic` — blank, or carrying something that could not go back
+  into a request path — is now a `DecodingFailed` naming the element's own
+  position, `$.topics[2]`; the method could previously fail only on a body that
+  was not a JSON object at all.
+
 - **`User.login` is an `Owner`, not a `String`.** The handle is what every
   endpoint that addresses a user or a repository takes, and until now a caller
   who had just read a `User` had to push its `login` back through `Owner.from`

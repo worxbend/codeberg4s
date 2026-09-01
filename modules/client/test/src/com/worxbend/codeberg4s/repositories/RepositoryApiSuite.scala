@@ -133,7 +133,13 @@ final class RepositoryApiSuite extends FunSuite:
   test("topics unwraps the topics envelope into a page of names"):
     onStub(responding(200, RepositoryApiSuite.TopicsBody, Nil)): client =>
       client.repos.topics(Handle, Name, FirstPage).map: page =>
-        assertEquals(page.items, Vector("forge", "git"))
+        assertEquals(page.items.map(_.value), Vector("forge", "git"))
+
+  test("a topic name that could not go back into a request path is a decoding failure"):
+    onStub(responding(200, """{"topics": ["forge", "bad/name"]}""", Nil)): client =>
+      client.repos.attempt.topics(Handle, Name, FirstPage).map:
+        case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$.topics[1]")
+        case other                                             => fail(s"expected a decoding failure, got $other")
 
   test("getContents answers the object arm as a file"):
     onStub(responding(200, RepositoryApiSuite.FileBody, Nil)): client =>
