@@ -63,10 +63,7 @@ final case class CollaboratorAccessDto(
     )
 
   private def accountAt(at: JsonPath): Either[DecodeFailure, User] =
-    for
-      dto     <- Wire.required(at, CollaboratorWire.User, user)
-      account <- dto.toDomainAt(at.field(CollaboratorWire.User))
-    yield account
+    Wire.requiredNested(at, CollaboratorWire.User, user)(_.toDomainAt(_))
 
 object CollaboratorAccessDto:
 

@@ -90,3 +90,22 @@ object Wire:
     dto match
       case None        => Right(None)
       case Some(value) => convert(value, at.field(field)).map(Some.apply)
+
+  /** Converts a nested DTO the domain cannot do without, rooting its own failures at the field it was read from.
+    *
+    * The non-optional counterpart of [[nested]]: the field must be present, and the DTO it holds is converted at
+    * `at.field(field)`, so a failure inside a repository's owner reads `$.owner.login` rather than `$.login`. Written
+    * out longhand — `required` followed by `toDomainAt(at.field(field))` — the field name has to be repeated, and
+    * passing `at` instead of `at.field(field)` misreports the path with nothing to catch it.
+    *
+    * @param at
+    *   the path of the '''enclosing''' model being converted
+    * @param field
+    *   the '''wire''' (snake_case) field name the nested model was read from
+    * @return
+    *   the converted model, a failure at `at.field(field)` when the field is absent, or the nested failure
+    */
+  def requiredNested[A, B](at: JsonPath, field: String, dto: Option[A])(
+      convert: (A, JsonPath) => Either[DecodeFailure, B]
+  ): Either[DecodeFailure, B] =
+    required(at, field, dto).flatMap(convert(_, at.field(field)))

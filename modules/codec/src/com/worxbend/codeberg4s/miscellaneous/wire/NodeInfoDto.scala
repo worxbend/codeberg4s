@@ -53,8 +53,7 @@ final case class NodeInfoDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, NodeInfo] =
     for
       schema        <- Wire.required(at, "version", version)
-      softwareDto   <- Wire.required(at, "software", software)
-      softwareValue <- softwareDto.toDomainAt(at.field("software"))
+      softwareValue <- Wire.requiredNested(at, "software", software)(_.toDomainAt(_))
     yield NodeInfo(
       version              = schema,
       software             = softwareValue,

@@ -57,8 +57,7 @@ final case class BranchDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, Branch] =
     for
       branchName <- Wire.validated(at, "name", name)(BranchName.from)
-      commitDto  <- Wire.required(at, "commit", commit)
-      tip        <- commitDto.toDomainAt(at.field("commit"))
+      tip        <- Wire.requiredNested(at, "commit", commit)(_.toDomainAt(_))
     yield Branch(
       name                          = branchName,
       commit                        = tip,
