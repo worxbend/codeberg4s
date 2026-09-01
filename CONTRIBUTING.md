@@ -64,6 +64,7 @@ onto the table above.
 ./verify.sh              # format, lint, compile, unit tests, boundaries, coverage
 ./verify.sh --with-slow  # plus duplication and CRAP analysis
 ./verify.sh --nightly    # plus mutation testing
+./verify.sh --properties # ONLY the ScalaCheck property suites, nothing else
 ```
 
 **`./verify.sh` is the single source of truth for what CI checks.** Both
@@ -329,7 +330,20 @@ shared model.
   `modules/<module>/test/src/…`, and run under munit.
 - **Property suites carry the `Property` munit tag** and are excluded from the
   routine gate, coverage, mutation and complexity runs. That separation is
-  deliberate; do not remove the tag to get a suite into the default run.
+  deliberate; do not remove the tag to get a suite into the default run. They
+  are still executed — by their own mode, which runs them and nothing else, and
+  by the `Property suites` job in `.github/workflows/nightly.yml`:
+
+  ```bash
+  ./verify.sh --properties
+  ./mill modules.core.test --include-tags=Property   # one module only
+  ```
+
+  Mill scopes the arguments after a target to that target alone, so a
+  `--include-tags` (or `--exclude-tags`) written once at the end of a `+`-joined
+  chain reaches the last module and no other. `verify.sh` repeats the flag per
+  target for that reason, and asserts afterwards that a `*Props` suite really
+  reported tests.
 - **`modules/it` is the environmentally-unsuitable boundary** — Docker or the
   live network — and `verify.sh` never runs it. Both its suites tag every test
   `Integration`. The live suite is read-only by construction and must stay that

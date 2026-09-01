@@ -28,7 +28,7 @@ distinguishes four things:
 | DRY tool (`dry4*`)                  | **PMD 7.26.0 CPD**, scalameta-based Scala module, wrapped by `scripts/cpd.sh`    | **Wired, gate red** |
 | CRAP tool (`crap4*`)                | `scripts/crap.sc` — CRAP = `comp² × (1 − cov)³ + comp`, from the scoverage XML  | Wired; **complexity is a documented proxy, not a CFG analysis** |
 | Integration / environmentally unsuitable boundary | `modules/it`, Testcontainers-Forgejo plus an opt-in live smoke suite, excluded from the default run | Wired  |
-| Property tests separated            | `Property` munit tag, excluded by `verify.sh --exclude-tags=Property`            | Wired; suites exist in `domain` only |
+| Property tests separated            | `Property` munit tag; excluded from every other mode, run by `verify.sh --properties` | Wired; 9 suites across `domain`, `core` and `codec` |
 | Acceptance Pipeline (APS, Gherkin)  | `gherkin-parser` / `gherkin-mutator` from unclebob/Acceptance-Pipeline-Specification | **Not scaffolded** |
 | Speclj / Clojure defaults           | n/a — Clojure-only rules                                                        | n/a    |
 | "Avoid Maven for Java tests"        | Analogue: acceptance work would get a dedicated runner module, not `mill modules.__.test` | n/a while APS is dormant |

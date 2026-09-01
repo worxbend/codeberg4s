@@ -9,16 +9,23 @@
 #   ./verify.sh              fast gate: format, lint, compile, unit tests, coverage
 #   ./verify.sh --with-slow  also runs duplication and CRAP analysis
 #   ./verify.sh --nightly    also runs mutation testing
+#   ./verify.sh --properties runs ONLY the ScalaCheck property suites
 #
 # --with-slow gates duplication against a recorded baseline (CPD_BASELINE_GROUPS
 # below) and fails only when duplication rises. --nightly is expected to fail at
 # the mutation step until Stryker4s is declared in build.mill; scripts/mutate.sh
 # refuses to report a score it did not produce.
 #
-# Never included in any mode: modules/it (needs Docker or the live network) and
-# ScalaCheck property suites (the `Property` munit tag). Both are
-# environmentally unsuitable or deliberately separated per the constitution —
-# see docs/CONSTITUTION_MAPPING.md.
+# Never included in any mode: modules/it, which needs Docker or the live
+# network.
+#
+# The ScalaCheck property suites (the `Property` munit tag) are separated rather
+# than excluded outright: no mode above runs them, and `--properties` runs
+# nothing else. Separation is what the constitution asks for — property tests
+# stay out of the routine gate, out of coverage and out of mutation runs — but
+# separation only means something if something still executes them, so
+# `--properties` is a mode of its own and the nightly workflow gives it a job of
+# its own. See docs/CONSTITUTION_MAPPING.md.
 
 set -euo pipefail
 
@@ -112,10 +119,12 @@ readonly CPD_BASELINE_GROUPS=156
 
 with_slow=false
 nightly=false
+properties=false
 for arg in "$@"; do
   case "$arg" in
     --with-slow) with_slow=true ;;
     --nightly) with_slow=true; nightly=true ;;
+    --properties) properties=true ;;
     # Print the header block above, whatever length it has grown to — a fixed
     # line range goes stale the first time someone documents a new flag.
     -h|--help) awk 'NR > 2 && /^#/ { sub(/^# ?/, ""); print; next } NR > 2 { exit }' "$0"; exit 0 ;;
@@ -141,6 +150,61 @@ fail() {
   printf '\n\033[31mverify.sh FAILED at step %d: %s\033[0m\n' "$step" "$1" >&2
   exit 1
 }
+
+# ---------------------------------------------------------------------------
+if $properties; then
+  # The mirror image of the routine gate: every unit module, `Property` and
+  # nothing but `Property`. It runs on its own rather than as an extra step of
+  # the default gate because the constitution asks for property tests to be kept
+  # out of ordinary verification, coverage, mutation and complexity runs — and
+  # because these suites are slow enough that folding them in would change what
+  # `./verify.sh` costs on every commit.
+  announce "Property suites (the Property tag only)"
+
+  # --include-tags is repeated per module for the same reason --exclude-tags is
+  # below: Mill scopes the arguments after a target to THAT target only, so a
+  # single trailing flag reaches the last module in the chain and no other. Got
+  # wrong once already, in the opposite direction.
+  property_targets=()
+  for target in "${UNIT_MODULES[@]}"; do
+    [[ ${#property_targets[@]} -eq 0 ]] || property_targets+=("+")
+    property_targets+=("$target" --include-tags=Property)
+  done
+
+  property_log="$work_dir/properties.log"
+  set -o pipefail
+  "$MILL" "${property_targets[@]}" 2>&1 |
+    sed 's/\x1b\[[0-9;]*m//g' | tee "$property_log"
+  property_status=${PIPESTATUS[0]}
+  set +o pipefail
+  [[ "$property_status" -eq 0 ]] || fail "property suites"
+
+  property_failed=$(grep -oE 'finished: [0-9]+ failed' "$property_log" |
+    awk '{ sum += $2 } END { print sum + 0 }')
+  [[ "$property_failed" -eq 0 ]] || fail "$property_failed properties failed"
+
+  # A run that executed nothing exits 0 and prints only "ignored" lines, so the
+  # count is asserted rather than assumed. This is the `leaked` check of the
+  # routine gate read backwards: there a *Props suite with a non-zero total
+  # meant the exclusion had failed, here a *Props suite with a non-zero total is
+  # the only evidence that the inclusion worked.
+  property_executed=$(grep -oE 'finished: [0-9]+ failed, [0-9]+ ignored, [0-9]+ total' "$property_log" |
+    awk '{ sum += $6 } END { print sum + 0 }')
+  props_ran=$(grep -oE 'Test run [A-Za-z0-9_.]*Props finished: [0-9]+ failed, [0-9]+ ignored, [0-9]+ total' "$property_log" |
+    awk '$(NF - 1) != 0 { print $3 }' | sort -u)
+  if [[ "$property_executed" -eq 0 || -z "$props_ran" ]]; then
+    printf '\033[31m  the property run executed %s test(s) and no *Props suite reported one.\033[0m\n' \
+      "$property_executed" >&2
+    printf '  Each module in the chain needs its own --include-tags=Property; Mill\n' >&2
+    printf '  applies a trailing one to the last target only.\n' >&2
+    fail "no property suite ran"
+  fi
+  printf '  %s properties executed across %s suite(s)\n' \
+    "$property_executed" "$(wc -l <<<"$props_ran")"
+
+  printf '\n\033[32m✓ verify.sh --properties passed in %ds\033[0m\n' "$(($(date +%s) - start_time))"
+  exit 0
+fi
 
 # ---------------------------------------------------------------------------
 announce "Format check (scalafmt)"

@@ -59,6 +59,32 @@ jobs:
       - name: Full analysis
         run: ./verify.sh --nightly
 
+  properties:
+    name: Property suites
+    # A job of its own, not a step of `full-analysis`. That job is expected to
+    # end red at the mutation step (see above), and a step added after it would
+    # never run; a step added before it would be reported under a name that says
+    # "mutation testing" when it failed. The property suites are the only thing
+    # that runs these tests at all, so their result has to be readable on its
+    # own.
+    if: ${{ !github.event.repository.fork }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/scala-toolchain
+        with:
+          cache-prefix: coursier-properties
+
+      # `--properties` runs the ScalaCheck suites and nothing else: the routine
+      # gate excludes the `Property` tag, so without this job the suites would
+      # be compiled by CI and executed by nobody. The script asserts that a
+      # `*Props` suite actually reported tests, so a mis-scoped tag filter fails
+      # here rather than passing green with an empty run.
+      - name: Property suites
+        run: ./verify.sh --properties
+
   spec-drift:
     name: Spec drift
     if: ${{ !github.event.repository.fork }}
