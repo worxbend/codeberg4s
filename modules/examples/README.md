@@ -28,7 +28,7 @@ what to set and exits normally rather than throwing.
 | `HelloCodeberg`    | nothing                                                      | no      | the smallest complete program: config, call, await, close           |
 | `Authenticating`   | `CODEBERG_TOKEN` (optional)                                  | no      | `Auth.Anonymous`, `Auth.Token`, `Auth.Basic`, and a rejected token  |
 | `HandlingErrors`   | nothing                                                      | no      | both rails on one call, and every `CodebergError` case               |
-| `WalkingPages`     | nothing                                                      | no      | pagination driven by `Page.nextPage`, plus a bounded fold           |
+| `WalkingPages`     | nothing                                                      | no      | pagination driven by `Page.nextPage`, a bounded fold, then the same fold through `PageWalk` from `client.firstPage` |
 | `CreatingAnIssue`  | `CODEBERG_TOKEN`, `CODEBERG_OWNER`, `CODEBERG_REPO`, `CODEBERG_BASE_URI` (optional) | **yes** | a write path end to end                       |
 | `ObservingRequests`| nothing                                                      | no      | implementing the `Telemetry` port                                   |
 | `SharingABackend`  | `CODEBERG_BASE_URI` (optional)                               | no      | `usingBackend`, and who closes what                                 |
@@ -37,8 +37,10 @@ what to set and exits normally rather than throwing.
 afterwards. Point it at a scratch repository you own.
 
 Everything else talks anonymously to `https://codeberg.org` and needs outbound
-network access. `WalkingPages` deliberately bounds itself to three pages so an
-example does not spend a shared instance's rate-limit budget.
+network access. `WalkingPages` deliberately bounds its hand-rolled walks to three
+pages so an example does not spend a shared instance's rate-limit budget; its
+`PageWalk` section walks a whole listing, so it walks the repository's labels
+rather than its issues.
 
 ## Printing
 

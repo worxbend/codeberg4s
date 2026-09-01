@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.examples
 
 import com.worxbend.codeberg4s.issues.{Issue, IssueQuery}
+import com.worxbend.codeberg4s.paging.PageWalk
 import com.worxbend.codeberg4s.{
   Auth,
   CodebergClient,
@@ -48,21 +49,33 @@ import scala.concurrent.{Await, ExecutionContext, Future}
   * a `listAll`, because a repository can hold tens of thousands of issues and buffering them all is a decision the
   * caller has to make on purpose rather than one a method name makes for them.
   *
-  * So the walk is written out below by hand. That is the point of this program: whatever helper you eventually wrap it
-  * in, the helper is doing exactly this, and the terminator is the part it has to get right. Reading the nine lines
-  * once is how you can tell a correct wrapper from one that stops on page one.
+  * So the walk is written out below by hand, because the loop is the mechanism and reading the nine lines once is how
+  * you can tell a correct walk from one that stops on page one.
+  *
+  * [[com.worxbend.codeberg4s.paging.PageWalk]] is that same mechanism packaged: `PageWalk.all` gathers every item,
+  * `PageWalk.fold` threads a state through the pages, `PageWalk.foreach` runs an effect per page, and all three
+  * terminate on `nextPage` exactly as the loop below does. It also does the one thing a hand-rolled loop does not: at
+  * its own page cap ([[com.worxbend.codeberg4s.paging.PageWalk.MaxPages]], 10 000 pages) it '''fails''' with
+  * [[com.worxbend.codeberg4s.CodebergError.WalkTruncated]], carrying the number of pages visited and the window to
+  * resume from, rather than handing back a short answer that looks exactly like a complete one. The third section of
+  * `main` runs a fold through it.
   */
 object WalkingPages:
 
   private val AwaitLimit: FiniteDuration = 5.minutes
 
-  /** How many pages either walk will read before stopping.
+  /** How many pages either hand-rolled walk will read before stopping.
     *
     * A bound, not a page count: `forgejo/forgejo` has hundreds of pages of issues, this is an example, and an example
     * that spends someone else's rate-limit budget on a full walk is a bad example. Real code either drops the bound or
     * derives it from what the caller asked for.
+    *
+    * [[com.worxbend.codeberg4s.paging.PageWalk]] carries a cap of its own, [[PageWalk.MaxPages]], and it is a very
+    * different number: 10 000 pages, a safety net against a server that never stops offering a next page rather than a
+    * budget for an example. That is why the third section below walks the repository's labels — a listing that fits in
+    * a page or two — instead of pointing an uncapped walk at every issue.
     */
-  private val MaxPages: Int = 3
+  private val ExamplePageCap: Int = 3
 
   /** The listing this program walks. Both names are literals, so the compiler checks them and hands back the
     * identifiers themselves; `Owner.from` is for a value known only at run time.
@@ -89,12 +102,36 @@ object WalkingPages:
         params => client.issues.list(owner, name, IssueQuery.Empty, params)
 
       ExampleConsole.heading("walk — one line per page, driven by nextPage")
-      Await.result(describeEachPage(issues, start, MaxPages), AwaitLimit)
+      Await.result(describeEachPage(issues, start, ExamplePageCap), AwaitLimit)
 
       ExampleConsole.heading("bounded fold — carries a count, never the items")
-      val counts = Await.result(foldPages(issues, start, Counts.Zero, MaxPages, Counts.add), AwaitLimit)
+      val counts = Await.result(foldPages(issues, start, Counts.Zero, ExamplePageCap, Counts.add), AwaitLimit)
       ExampleConsole.line(s"  $counts")
+
+      ExampleConsole.heading("the same fold, driven by PageWalk")
+
+      // client.firstPage is page one at this client's configured
+      // defaultPageSize, so a client built with a smaller page size walks in
+      // smaller pages without a single call site changing. PageParams.First
+      // is the config-free equivalent for when no client is in hand.
+      val walked = Await.result(countLabels(client), AwaitLimit)
+      ExampleConsole.line(s"  $walked")
     finally client.close()
+
+  /** Counts every label on the repository with [[PageWalk.fold]] — the loop below, written once in the library.
+    *
+    * The fold sees whole pages rather than single items, so this one carries two numbers and drops each page as soon as
+    * it has been counted, exactly as `foldPages` does. What it adds is the failure at the cap: if `forgejo/forgejo`
+    * somehow had more than [[PageWalk.MaxPages]] pages of labels, this `Future` would fail with
+    * [[com.worxbend.codeberg4s.CodebergError.WalkTruncated]] instead of quietly returning a partial count.
+    */
+  private def countLabels(client: CodebergClient)(using ExecutionContext): Future[String] =
+    val counted: Future[(Int, Int)] =
+      PageWalk.fold(client.firstPage, (0, 0))(params => client.issues.listLabels(owner, name, params)):
+        case ((pages, labels), page) => (pages + 1, labels + page.items.size)
+
+    counted.map: (pages, labels) =>
+      s"$labels labels across $pages page(s), walked to the end by PageWalk.fold"
 
   /** Reads pages until the response stops offering one, printing what each page said about the walk.
     *
