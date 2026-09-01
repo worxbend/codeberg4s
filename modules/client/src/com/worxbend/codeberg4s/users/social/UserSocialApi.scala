@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.users.social
 
-import com.worxbend.codeberg4s.core.CodebergRequest.read
-import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RequestBody, RetryEligibility}
+import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, write}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.issues.TrackedTime
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.Repository
@@ -562,10 +562,10 @@ object UserSocialApi:
     read(FollowingOperation, List("user", "following"), SocialQueries.paging(params))
 
   private def followRequest(username: Username): CodebergRequest =
-    empty(FollowOperation, HttpMethod.Put, followingPath(username))
+    bodiless(FollowOperation, HttpMethod.Put, followingPath(username))
 
   private def unfollowRequest(username: Username): CodebergRequest =
-    empty(UnfollowOperation, HttpMethod.Delete, followingPath(username))
+    bodiless(UnfollowOperation, HttpMethod.Delete, followingPath(username))
 
   private def isFollowingRequest(username: Username): CodebergRequest =
     read(IsFollowingOperation, followingPath(username), Nil)
@@ -574,13 +574,11 @@ object UserSocialApi:
     read(FollowsOperation, List("users", username.value, "following", target.value), Nil)
 
   private def followRemoteRequest(target: RemoteFollowTarget): CodebergRequest =
-    CodebergRequest(
-      operation = FollowRemoteOperation,
-      method    = HttpMethod.Post,
-      path      = List("user", "activitypub", "follow"),
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Json(RemoteFollowOptionDto.render(target))),
+    write(
+      FollowRemoteOperation,
+      HttpMethod.Post,
+      List("user", "activitypub", "follow"),
+      RemoteFollowOptionDto.render(target),
     )
 
   private def starredRequest(params: PageParams): CodebergRequest =
@@ -590,10 +588,10 @@ object UserSocialApi:
     read(StarredByOperation, List("users", username.value, "starred"), SocialQueries.paging(params))
 
   private def starRequest(owner: Owner, name: RepoName): CodebergRequest =
-    empty(StarOperation, HttpMethod.Put, starredPath(owner, name))
+    bodiless(StarOperation, HttpMethod.Put, starredPath(owner, name))
 
   private def unstarRequest(owner: Owner, name: RepoName): CodebergRequest =
-    empty(UnstarOperation, HttpMethod.Delete, starredPath(owner, name))
+    bodiless(UnstarOperation, HttpMethod.Delete, starredPath(owner, name))
 
   private def isStarredRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(IsStarredOperation, starredPath(owner, name), Nil)
@@ -605,10 +603,10 @@ object UserSocialApi:
     read(SubscriptionsOfOperation, List("users", username.value, "subscriptions"), SocialQueries.paging(params))
 
   private def blockRequest(username: Username): CodebergRequest =
-    empty(BlockOperation, HttpMethod.Put, List("user", "block", username.value))
+    bodiless(BlockOperation, HttpMethod.Put, List("user", "block", username.value))
 
   private def unblockRequest(username: Username): CodebergRequest =
-    empty(UnblockOperation, HttpMethod.Put, List("user", "unblock", username.value))
+    bodiless(UnblockOperation, HttpMethod.Put, List("user", "unblock", username.value))
 
   private def blockedRequest(params: PageParams): CodebergRequest =
     read(BlockedOperation, List("user", "list_blocked"), SocialQueries.paging(params))
@@ -642,20 +640,3 @@ object UserSocialApi:
 
   private def starredPath(owner: Owner, name: RepoName): List[String] =
     List("user", "starred", owner.value, name.value)
-
-  /** A `GET` with no body and no extra headers. */
-  /** A mutating request whose whole meaning is its method and path.
-    *
-    * Every `PUT` and `DELETE` in this group is one of these: Forgejo takes the subject from the path and declares no
-    * body at all, so nothing is sent and [[com.worxbend.codeberg4s.core.RequestBody.Empty]] would be a claim the spec
-    * does not make.
-    */
-  private def empty(operation: String, method: HttpMethod, path: List[String]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
-    )

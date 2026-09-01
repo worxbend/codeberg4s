@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.users.social
 
-import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RequestBody, RetryEligibility}
+import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.users.Username
 import com.worxbend.codeberg4s.users.social.wire.{CreateAccessTokenOptionDto, SocialQueries}
@@ -210,34 +211,13 @@ object UserTokenApi:
       exec.attempt(rail.delete(username, token))
 
   private def listRequest(username: Username, params: PageParams): CodebergRequest =
-    CodebergRequest(
-      operation = ListOperation,
-      method    = HttpMethod.Get,
-      path      = tokensPath(username),
-      query     = SocialQueries.paging(params),
-      headers   = Nil,
-      body      = None,
-    )
+    read(ListOperation, tokensPath(username), SocialQueries.paging(params))
 
   private def createRequest(username: Username, command: CreateAccessToken): CodebergRequest =
-    CodebergRequest(
-      operation = CreateOperation,
-      method    = HttpMethod.Post,
-      path      = tokensPath(username),
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Json(CreateAccessTokenOptionDto.render(command))),
-    )
+    write(CreateOperation, HttpMethod.Post, tokensPath(username), CreateAccessTokenOptionDto.render(command))
 
   private def deleteRequest(username: Username, token: AccessTokenRef): CodebergRequest =
-    CodebergRequest(
-      operation = DeleteOperation,
-      method    = HttpMethod.Delete,
-      path      = tokensPath(username) :+ token.pathSegment,
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
-    )
+    remove(DeleteOperation, tokensPath(username) :+ token.pathSegment)
 
   private def tokensPath(username: Username): List[String] =
     List("users", username.value, "tokens")

@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.repositories.access
 
-import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
+import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.organizations.Team
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
@@ -873,14 +873,7 @@ object RepositoryAccessApi:
 
   /** The team grant, which carries no body at all; see [[RepositoryAccessApi.addTeam]]. */
   private def addTeamRequest(owner: Owner, name: RepoName, team: TeamName): CodebergRequest =
-    CodebergRequest(
-      operation = AddTeamOperation,
-      method    = HttpMethod.Put,
-      path      = teamPath(owner, name, team),
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
-    )
+    bodiless(AddTeamOperation, HttpMethod.Put, teamPath(owner, name, team))
 
   private def deleteTeamRequest(owner: Owner, name: RepoName, team: TeamName): CodebergRequest =
     remove(DeleteTeamOperation, teamPath(owner, name, team))

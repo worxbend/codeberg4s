@@ -2,8 +2,8 @@ package com.worxbend.codeberg4s.pulls
 
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
-import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
-import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RequestBody, RetryEligibility}
+import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, empty, read, remove, write}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.miscellaneous.PlainText
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.pulls.wire.{
@@ -1200,7 +1200,12 @@ object PullRequestApi:
       number: PullRequestNumber,
       style: UpdateStyle,
   ): CodebergRequest =
-    post(UpdateBranchOperation, pullPath(owner, name, number) :+ "update", PullRequestQueries.update(style), None)
+    bodiless(
+      UpdateBranchOperation,
+      HttpMethod.Post,
+      pullPath(owner, name, number) :+ "update",
+      PullRequestQueries.update(style),
+    )
 
   private def requestReviewsRequest(
       owner: Owner,
@@ -1297,12 +1302,7 @@ object PullRequestApi:
       number: PullRequestNumber,
       review: ReviewId,
   ): CodebergRequest =
-    post(
-      UndismissReviewOperation,
-      reviewPath(owner, name, number, review) :+ "undismissals",
-      Nil,
-      Some(RequestBody.Empty),
-    )
+    empty(UndismissReviewOperation, HttpMethod.Post, reviewPath(owner, name, number, review) :+ "undismissals")
 
   private def reviewCommentsRequest(
       owner: Owner,
@@ -1343,26 +1343,6 @@ object PullRequestApi:
       comment: ReviewCommentId,
   ): CodebergRequest =
     remove(DeleteReviewCommentOperation, reviewCommentPath(owner, name, number, review, comment))
-
-  /** The two `POST`s in this group that carry no JSON body, which no shared builder covers.
-    *
-    * `update` is the only mutation here with query parameters, and `undismissals` is the only one that wants
-    * [[com.worxbend.codeberg4s.core.RequestBody.Empty]] rather than no body at all.
-    */
-  private def post(
-      operation: String,
-      path: List[String],
-      query: List[(String, String)],
-      body: Option[RequestBody],
-  ): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Post,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = body,
-    )
 
   private def pullsPath(owner: Owner, name: RepoName): List[String] =
     List("repos", owner.value, name.value, "pulls")

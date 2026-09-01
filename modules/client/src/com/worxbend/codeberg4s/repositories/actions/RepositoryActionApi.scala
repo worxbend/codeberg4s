@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.repositories.actions
 
-import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
+import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, CodebergResponse, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.actions.wire.{
@@ -866,14 +866,7 @@ object RepositoryActionApi:
     remove(DeleteRunOperation, runPath(owner, name, id))
 
   private def cancelRunRequest(owner: Owner, name: RepoName, id: RunId): CodebergRequest =
-    CodebergRequest(
-      operation = CancelRunOperation,
-      method    = HttpMethod.Post,
-      path      = runPath(owner, name, id) :+ "cancel",
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
-    )
+    bodiless(CancelRunOperation, HttpMethod.Post, runPath(owner, name, id) :+ "cancel")
 
   private def listRunArtifactsRequest(
       owner: Owner,

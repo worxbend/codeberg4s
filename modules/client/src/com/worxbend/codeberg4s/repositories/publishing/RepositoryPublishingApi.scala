@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.publishing
 
 import com.worxbend.codeberg4s.codec.PagingQuery
-import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
+import com.worxbend.codeberg4s.core.CodebergRequest.{empty, read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RequestBody, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.publishing.wire.{
@@ -619,13 +619,11 @@ object RepositoryPublishingApi:
       id: ReleaseId,
       upload: UploadAsset,
   ): CodebergRequest =
-    CodebergRequest(
-      operation = UploadAssetOperation,
-      method    = HttpMethod.Post,
-      path      = assetsPath(owner, name, id),
-      query     = upload.name.map(stored => "name" -> stored).toList,
-      headers   = Nil,
-      body      = Some(RequestBody.Multipart(AssetFieldName, upload.fileName, upload.content, upload.mediaType)),
+    CodebergRequest.upload(
+      UploadAssetOperation,
+      assetsPath(owner, name, id),
+      upload.name.map(stored => "name" -> stored).toList,
+      RequestBody.Multipart(AssetFieldName, upload.fileName, upload.content, upload.mediaType),
     )
 
   private def getAssetRequest(owner: Owner, name: RepoName, id: ReleaseId, asset: AssetId): CodebergRequest =
@@ -661,14 +659,7 @@ object RepositoryPublishingApi:
     write(ReplaceTopicsOperation, HttpMethod.Put, topicsPath(owner, name), RepoTopicOptionsDto.render(topics))
 
   private def addTopicRequest(owner: Owner, name: RepoName, topic: Topic): CodebergRequest =
-    CodebergRequest(
-      operation = AddTopicOperation,
-      method    = HttpMethod.Put,
-      path      = topicsPath(owner, name) :+ topic.value,
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Empty),
-    )
+    empty(AddTopicOperation, HttpMethod.Put, topicsPath(owner, name) :+ topic.value)
 
   private def removeTopicRequest(owner: Owner, name: RepoName, topic: Topic): CodebergRequest =
     remove(RemoveTopicOperation, topicsPath(owner, name) :+ topic.value)

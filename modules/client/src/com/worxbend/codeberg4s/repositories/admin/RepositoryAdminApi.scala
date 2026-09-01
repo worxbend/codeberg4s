@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.repositories.admin
 
-import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, removeWithBody, write}
+import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, remove, removeWithBody, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.issues.wire.IssueQueries
 import com.worxbend.codeberg4s.issues.{Issue, TrackedTime, TrackedTimeQuery}
@@ -1174,16 +1174,16 @@ object RepositoryAdminApi:
     )
 
   private def acceptTransferRequest(owner: Owner, name: RepoName): CodebergRequest =
-    post(AcceptTransferOperation, repoPath(owner, name) ++ List("transfer", "accept"))
+    bodiless(AcceptTransferOperation, HttpMethod.Post, repoPath(owner, name) ++ List("transfer", "accept"))
 
   private def rejectTransferRequest(owner: Owner, name: RepoName): CodebergRequest =
-    post(RejectTransferOperation, repoPath(owner, name) ++ List("transfer", "reject"))
+    bodiless(RejectTransferOperation, HttpMethod.Post, repoPath(owner, name) ++ List("transfer", "reject"))
 
   private def convertRequest(owner: Owner, name: RepoName): CodebergRequest =
-    post(ConvertOperation, repoPath(owner, name) :+ "convert")
+    bodiless(ConvertOperation, HttpMethod.Post, repoPath(owner, name) :+ "convert")
 
   private def syncMirrorRequest(owner: Owner, name: RepoName): CodebergRequest =
-    post(SyncMirrorOperation, repoPath(owner, name) :+ "mirror-sync")
+    bodiless(SyncMirrorOperation, HttpMethod.Post, repoPath(owner, name) :+ "mirror-sync")
 
   private def pushMirrorsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
     read(ListPushMirrorsOperation, pushMirrorsPath(owner, name), AdminQueries.paging(params))
@@ -1198,7 +1198,7 @@ object RepositoryAdminApi:
     remove(DeletePushMirrorOperation, pushMirrorsPath(owner, name) :+ mirror.value)
 
   private def syncPushMirrorsRequest(owner: Owner, name: RepoName): CodebergRequest =
-    post(SyncPushMirrorsOperation, repoPath(owner, name) :+ "push_mirrors-sync")
+    bodiless(SyncPushMirrorsOperation, HttpMethod.Post, repoPath(owner, name) :+ "push_mirrors-sync")
 
   private def forkSyncInfoRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(ForkSyncInfoOperation, syncForkPath(owner, name), Nil)
@@ -1207,10 +1207,10 @@ object RepositoryAdminApi:
     read(BranchForkSyncInfoOperation, syncForkPath(owner, name) ++ branch.segments, Nil)
 
   private def syncForkRequest(owner: Owner, name: RepoName): CodebergRequest =
-    post(SyncForkOperation, syncForkPath(owner, name))
+    bodiless(SyncForkOperation, HttpMethod.Post, syncForkPath(owner, name))
 
   private def syncForkBranchRequest(owner: Owner, name: RepoName, branch: BranchName): CodebergRequest =
-    post(SyncForkBranchOperation, syncForkPath(owner, name) ++ branch.segments)
+    bodiless(SyncForkBranchOperation, HttpMethod.Post, syncForkPath(owner, name) ++ branch.segments)
 
   private def subscriptionRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(GetSubscriptionOperation, subscriptionPath(owner, name), Nil)
@@ -1219,14 +1219,7 @@ object RepositoryAdminApi:
     * defined.
     */
   private def watchRequest(owner: Owner, name: RepoName): CodebergRequest =
-    CodebergRequest(
-      operation = WatchOperation,
-      method    = HttpMethod.Put,
-      path      = subscriptionPath(owner, name),
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
-    )
+    bodiless(WatchOperation, HttpMethod.Put, subscriptionPath(owner, name))
 
   private def unwatchRequest(owner: Owner, name: RepoName): CodebergRequest =
     remove(UnwatchOperation, subscriptionPath(owner, name))
@@ -1357,17 +1350,6 @@ object RepositoryAdminApi:
       SearchTopicsOperation,
       List("topics", "search"),
       AdminQueries.topicSearch(keyword) ++ AdminQueries.paging(params),
-    )
-
-  /** A `POST` that Forgejo declares no request model for — accept, reject, convert and the four sync calls. */
-  private def post(operation: String, path: List[String]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Post,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
     )
 
   private def repoPath(owner: Owner, name: RepoName): List[String] =

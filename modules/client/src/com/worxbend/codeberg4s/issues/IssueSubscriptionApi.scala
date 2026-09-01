@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues
 
-import com.worxbend.codeberg4s.core.CodebergRequest.read
-import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RequestBody, RetryEligibility}
+import com.worxbend.codeberg4s.core.CodebergRequest.{empty, read}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.issues.wire.IssueQueries
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.users.User
@@ -205,7 +205,7 @@ object IssueSubscriptionApi:
       number: IssueNumber,
       login: Owner,
   ): CodebergRequest =
-    emptyBody(SubscribeOperation, HttpMethod.Put, subscriptionsPath(owner, name, number) :+ login.value)
+    empty(SubscribeOperation, HttpMethod.Put, subscriptionsPath(owner, name, number) :+ login.value)
 
   private def unsubscribeRequest(
       owner: Owner,
@@ -213,24 +213,7 @@ object IssueSubscriptionApi:
       number: IssueNumber,
       login: Owner,
   ): CodebergRequest =
-    emptyBody(UnsubscribeOperation, HttpMethod.Delete, subscriptionsPath(owner, name, number) :+ login.value)
-
-  /** A mutating call carrying a deliberately empty body.
-    *
-    * Deliberately not [[com.worxbend.codeberg4s.core.CodebergRequest.bodiless]], which sends no body at all: these two
-    * routes are among the Forgejo endpoints [[com.worxbend.codeberg4s.core.RequestBody.Empty]] exists for, and the
-    * difference — a zero-length body with a `Content-Length: 0` header, against no body and no header — is visible to
-    * the server. Keeping the two under different names keeps the choice from being made by accident.
-    */
-  private def emptyBody(operation: String, method: HttpMethod, path: List[String]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Empty),
-    )
+    empty(UnsubscribeOperation, HttpMethod.Delete, subscriptionsPath(owner, name, number) :+ login.value)
 
   private def subscriptionsPath(owner: Owner, name: RepoName, number: IssueNumber): List[String] =
     IssueRequests.issuePath(owner, name, number) :+ "subscriptions"

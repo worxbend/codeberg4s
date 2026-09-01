@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s
 
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.wire.ServerVersionDto
 
@@ -49,14 +50,7 @@ object VersionApi:
     /** [[VersionApi.get]] with its failure as a value. The returned `Future` never fails with a [[CodebergException]]. */
     def get(): Future[Either[CodebergError, ServerVersion]] = exec.attempt(rail.get())
 
-  private val Request: CodebergRequest = CodebergRequest(
-    operation = Operation,
-    method    = HttpMethod.Get,
-    path      = List("version"),
-    query     = Nil,
-    headers   = Nil,
-    body      = None,
-  )
+  private val Request: CodebergRequest = read(Operation, List("version"), Nil)
 
   private val Decoder: Decode[ServerVersion] =
     WireDecode.single(Json.decoder[ServerVersionDto])(_.toDomain)

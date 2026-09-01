@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.issues
 
-import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
+import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.issues.wire.{AddTimeOptionDto, IssueQueries}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
@@ -289,14 +289,7 @@ object IssueTimeApi:
       number: IssueNumber,
       action: String,
   ): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = IssueRequests.issuePath(owner, name, number) ++ List("stopwatch", action),
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
-    )
+    bodiless(operation, method, IssueRequests.issuePath(owner, name, number) ++ List("stopwatch", action))
 
   private def listRequest(
       owner: Owner,
