@@ -46,8 +46,14 @@ object SegmentLiteral:
     * [[PathSegment.from]], which trims: `Owner(" forgejo ")` is refused rather than silently accepted as `"forgejo"`,
     * because a literal with stray whitespace in it is a typo the programmer can simply fix, and quietly changing what
     * someone wrote is worse than telling them.
+    *
+    * The control-character class is `\p{Cc}` and not the more obvious `\p{Cntrl}`: Java's `\p{Cntrl}` is only
+    * `[\x00-\x1F\x7F]` unless the pattern was compiled with `UNICODE_CHARACTER_CLASS`, whereas `Character.isISOControl`
+    * — which is what `Char.isControl` in [[PathSegment]] calls — also covers `U+0080`–`U+009F`. `\p{Cc}` is that same
+    * set. The alternative, prefixing the pattern with `(?U)`, would also widen `\s` and so change which characters
+    * count as the surrounding whitespace this rule refuses.
     */
-  type Plain = "(?!\\.\\.?$)(?:[^/\\s\\p{Cntrl}]|[^/\\s\\p{Cntrl}][^/\\p{Cntrl}]*[^/\\s\\p{Cntrl}])"
+  type Plain = "(?!\\.\\.?$)(?:[^/\\s\\p{Cc}]|[^/\\s\\p{Cc}][^/\\p{Cc}]*[^/\\s\\p{Cc}])"
 
   /** The regular expression form of [[PathSegment.segmented]]'s rules.
     *
@@ -57,7 +63,7 @@ object SegmentLiteral:
     * because a regular expression that describes "no segment is `..`" positionally is unreadable.)
     */
   type Segmented =
-    "(?!.*(?:^|/)\\.\\.?(?:/|$))(?!/)(?!.*//)(?!.*/$)(?:[^\\s\\p{Cntrl}]|[^\\s\\p{Cntrl}][^\\p{Cntrl}]*[^\\s\\p{Cntrl}])"
+    "(?!.*(?:^|/)\\.\\.?(?:/|$))(?!/)(?!.*//)(?!.*/$)(?:[^\\s\\p{Cc}]|[^\\s\\p{Cc}][^\\p{Cc}]*[^\\s\\p{Cc}])"
 
   /** Accepts `value` if it can stand alone as one path segment, and fails the compilation if it cannot.
     *

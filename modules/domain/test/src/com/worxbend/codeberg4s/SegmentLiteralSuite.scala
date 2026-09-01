@@ -61,9 +61,13 @@ final class SegmentLiteralSuite extends FunSuite:
 
   /** Values chosen to sit on the edges of both spellings of the rule.
     *
-    * Every entry is already equal to its own `trim`, because that is the one place the two rules are meant to disagree:
-    * `PathSegment` trims and the literal check refuses whitespace outright, so a padded value would report a difference
-    * that is intended rather than a drift.
+    * Every entry is already equal to its own `trim`, because whitespace padding is the one place the two rules are
+    * meant to disagree: `PathSegment` trims it away and the literal check refuses it outright, so a padded value would
+    * report a difference that is intended rather than a drift.
+    *
+    * A control character is a different matter and belongs here: `U+0001` is not whitespace, so `trim` never removes
+    * it, and both halves of the rule have to refuse it wherever it sits. `U+0085` earns its place too — it is a control
+    * character to `Char.isControl` but not to a Java regex's `\p{Cntrl}`, which is why the patterns say `\p{Cc}`.
     */
   private val Corpus: List[String] = List(
     "forgejo",
@@ -90,6 +94,11 @@ final class SegmentLiteralSuite extends FunSuite:
     "forge\tjo",
     "a b",
     "ab",
+    "\u0085ab",
+    "ab\u0085",
+    "\u0001forgejo",
+    "forgejo\u0001",
+    "a/\u0001b",
   )
 
   private def escape(candidate: String): String =
