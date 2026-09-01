@@ -25,6 +25,42 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **Quota is modelled once, in `com.worxbend.codeberg4s.quota`.** Forgejo
+  answers `GET /orgs/{org}/quota` and `GET /user/quota` with the same
+  `QuotaInfo` payload, and the three usage listings under each of them with the
+  same `QuotaUsedArtifact`, `QuotaUsedAttachment` and `QuotaUsedPackage`
+  elements. Until now each of those was modelled twice — once under
+  `organizations`, once under `users.account` — with the same wire spellings
+  written out in two decoders and the field names drifting between the copies
+  (`sizeBytes` against `size`, `QuotaAttachmentContext` against
+  `AttachmentContainer`). Two public case classes both called `QuotaInfo` meant
+  a program reading an organisation's quota and its own could not import both.
+  There is now one model set, one DTO set, and one decode suite covering the
+  traps both copies had to know about (the upper-case `git.LFS` key, and
+  `assets.packages.all` being an object rather than a number).
+
+  The surviving shapes are the more useful half of each pair: the nested `used`
+  tree is flattened into one `QuotaUsedSize` with seven leaves and a
+  `reportedTotal`, `QuotaRule.subjects` keeps the instance's own strings so a
+  subject a newer Forgejo emits is never dropped, and `QuotaRule.isUnlimited`
+  and `QuotaInfo.rules` are kept.
+
+  BREAKING CHANGE: import the quota types from `com.worxbend.codeberg4s.quota`
+  instead of from `com.worxbend.codeberg4s.organizations` or
+  `com.worxbend.codeberg4s.users.account`. `QuotaSubject`, `QuotaInfo`,
+  `QuotaGroup` and `QuotaRule` keep their names. The organisation listings now
+  answer `QuotaUsedArtifact`, `QuotaUsedAttachment` and `QuotaUsedPackage`
+  where they answered `QuotaArtifact`, `QuotaAttachment` and `QuotaPackage`,
+  and `QuotaAttachmentContext` is now `AttachmentContainer`. On the account
+  side, the three usage models report `sizeBytes` where they reported `size`.
+  Reading an organisation's usage tree changes shape: `info.used.size.repos`
+  and its siblings are gone, so `info.used.size.repositories.publicBytes`
+  becomes `info.used.publicRepositories`, `info.used.size.git.lfsBytes`
+  becomes `info.used.gitLfs`, and `QuotaUsage.Empty` becomes
+  `QuotaUsedSize.Empty`. `QuotaRule.subjects` on the account side is now
+  `Vector[String]` rather than `Vector[QuotaSubject]`; convert an entry with
+  `QuotaSubject.from` where one is needed as a query argument.
+
 - **The two ZIP downloads moved to `client.repos.actions`,** and the root-level
   `client.downloads` group is gone. They used to sit apart because they were
   the only operations that needed a byte-carrying transport; that transport no

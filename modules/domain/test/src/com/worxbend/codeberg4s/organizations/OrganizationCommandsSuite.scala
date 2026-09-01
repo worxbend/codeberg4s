@@ -152,23 +152,6 @@ final class OrganizationCommandsSuite extends FunSuite:
 
     assertEquals(command.unitPermissions, Map("repo.code" -> TeamPermission.Admin, "repo.issues" -> TeamPermission.Write))
 
-  // --- QuotaSubject ---------------------------------------------------------
-
-  test("a quota subject is trimmed and otherwise untouched"):
-    assertEquals(orFail(QuotaSubject.from("  size:repos:public ")).value, "size:repos:public")
-
-  test("a quota subject this library has never heard of is still accepted, because the spec enumerates none"):
-    assertEquals(
-      orFail(QuotaSubject.from("size:something:forgejo:adds:later")).value,
-      "size:something:forgejo:adds:later",
-    )
-
-  test("a blank quota subject is refused on the quotaSubject field"):
-    assertEquals(fieldOf(QuotaSubject.from("  ")), "quotaSubject")
-
-  test("a quota subject carrying a control character is refused, because it becomes a query parameter"):
-    assertEquals(fieldOf(QuotaSubject.from("size:\nall")), "quotaSubject")
-
   // --- OrganizationLabelSort ------------------------------------------------
 
   test("every label ordering round-trips through its wire spelling"):

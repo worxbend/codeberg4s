@@ -30,46 +30,6 @@ object OAuth2ApplicationId:
     /** The identifier as a `Long`, ready to be rendered into a path segment. */
     def value: Long = id
 
-/** One subject of a quota rule — the `subject` parameter of `GET /user/quota/check`.
-  *
-  * '''Not enumerated by the spec, and deliberately not enumerated here.''' `spec/swagger.v1.json` declares the
-  * parameter as a bare required `type: string` and `QuotaRuleInfo.subjects` as an array of bare strings; it names no
-  * values anywhere. Forgejo's own vocabulary is a dotted hierarchy — `size:all`, `size:repos:public`,
-  * `size:assets:packages:all` and so on — but it is instance and release configuration, not part of the published
-  * contract, so an `enum` here would be a list this library invented and a value a newer Forgejo added would be one
-  * this library refused to ask about.
-  *
-  * What the type does do is stop a subject that cannot survive a query string: a blank value asks nothing, and a
-  * control character corrupts the request. Both are rejected before a client is involved, which is why
-  * [[com.worxbend.codeberg4s.users.account.UserQuotaApi.check]] cannot produce
-  * [[com.worxbend.codeberg4s.CodebergError.Validation]]. A subject Forgejo does not recognise is its own judgement to
-  * make and arrives as a `422`.
-  */
-opaque type QuotaSubject = String
-
-object QuotaSubject:
-
-  /** Parses a quota subject.
-    *
-    * Trims surrounding whitespace. Rejects an empty or blank value and a value containing a control character. Nothing
-    * else is checked; see the type note for why the vocabulary is not enumerated.
-    *
-    * @return
-    *   the subject, or a [[ValidationError]] on the `"quotaSubject"` field
-    */
-  def from(value: String): Either[ValidationError, QuotaSubject] =
-    val trimmed = value.trim
-
-    if trimmed.isEmpty then Left(ValidationError("quotaSubject", "must not be blank"))
-    else if trimmed.exists(_.isControl) then
-      Left(ValidationError("quotaSubject", "must not contain a control character"))
-    else Right(trimmed)
-
-  extension (subject: QuotaSubject)
-
-    /** The subject as a string, ready to be sent as a query parameter. */
-    def value: String = subject
-
 /** One email address belonging to the authenticated account.
   *
   * An address is what both mutating email endpoints address: `POST /user/emails` adds the ones it names and

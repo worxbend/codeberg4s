@@ -1,18 +1,15 @@
-package com.worxbend.codeberg4s.users.account.wire
+package com.worxbend.codeberg4s.quota.wire
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.users.account.{
-  AttachmentContainer,
-  QuotaUsedArtifact,
-  QuotaUsedAttachment,
-  QuotaUsedPackage
-}
+import com.worxbend.codeberg4s.quota.{AttachmentContainer, QuotaUsedArtifact, QuotaUsedAttachment, QuotaUsedPackage}
 
-/** Forgejo's `QuotaUsedArtifact` model — one artifact counting towards the quota.
+/** Forgejo's `QuotaUsedArtifact` model — one artifact counting towards a quota.
   *
-  * '''Derived from `spec/swagger.v1.json`, not from a capture'''; see [[QuotaInfoDto]].
+  * '''Derived from `spec/swagger.v1.json`, not from captured responses''' — see
+  * [[com.worxbend.codeberg4s.quota.QuotaInfo]] for why no quota fixture exists. The organisation and account listings
+  * answer the same three models, so they are read here once for both.
   *
   * ==Nothing in these three listings is required, and that is a deliberate reading==
   *
@@ -25,16 +22,18 @@ import com.worxbend.codeberg4s.users.account.{
   * That is also why these models have no `toDomainAt`: a path exists to say where a conversion failed, and none of
   * these can. The array conversions still go through [[com.worxbend.codeberg4s.codec.ArrayElements.convert]] so that
   * the day one of these fields becomes load-bearing, the position reporting is already in place.
+  *
+  * ==`size` is bytes and `type` is a keyword==
+  *
+  * `size` is `format: int64` on all three and is carried as a `Long` without scaling. `QuotaUsedPackage.type` becomes
+  * `packageType` in Scala, because `type` is a keyword; the wire spelling stays `type` and is written exactly once, in
+  * [[QuotaUsedPackageDto.fromFields]].
   */
-final case class QuotaUsedArtifactDto(
-    name: Option[String],
-    size: Option[Long],
-    htmlUrl: Option[String],
-):
+final case class QuotaUsedArtifactDto(name: Option[String], size: Option[Long], htmlUrl: Option[String]):
 
   /** Converts to the domain. Cannot fail; see the class note. */
   def toDomain: Either[DecodeFailure, QuotaUsedArtifact] =
-    Right(QuotaUsedArtifact(name = name, size = size, htmlUrl = htmlUrl))
+    Right(QuotaUsedArtifact(name = name, sizeBytes = size, htmlUrl = htmlUrl))
 
 object QuotaUsedArtifactDto:
 
@@ -46,11 +45,7 @@ object QuotaUsedArtifactDto:
 
   /** Projects an already-decoded object. */
   def fromFields(fields: JsonFields): QuotaUsedArtifactDto =
-    QuotaUsedArtifactDto(
-      name    = fields.text("name"),
-      size    = fields.number("size"),
-      htmlUrl = fields.text("html_url"),
-    )
+    QuotaUsedArtifactDto(name = fields.text("name"), size = fields.number("size"), htmlUrl = fields.text("html_url"))
 
   /** Converts a decoded array, ready to report the position of an element that ever starts being able to fail. */
   def toDomainAll(
@@ -59,15 +54,15 @@ object QuotaUsedArtifactDto:
   ): Either[DecodeFailure, Vector[QuotaUsedArtifact]] =
     ArrayElements.convert(base, dtos)((dto, _) => dto.toDomain)
 
-/** Forgejo's `QuotaUsedAttachment` model — one attachment counting towards the quota.
+/** Forgejo's `QuotaUsedAttachment` model — one attachment counting towards a quota.
   *
   * '''Derived from `spec/swagger.v1.json`, not from a capture'''; see [[QuotaInfoDto]], and see
   * [[QuotaUsedArtifactDto]] for why nothing here is required.
   *
   * `contained_in` is declared inline in the spec rather than as a named definition, so there is no DTO for it: its two
   * links are lifted to the top level of this DTO and folded back into
-  * [[com.worxbend.codeberg4s.users.account.AttachmentContainer]] on the way into the domain. The container is reported
-  * as absent when it carried neither link, so a caller holding one is holding at least one URL.
+  * [[com.worxbend.codeberg4s.quota.AttachmentContainer]] on the way into the domain. The container is reported as
+  * absent when it carried neither link, so a caller holding one is holding at least one URL.
   */
 final case class QuotaUsedAttachmentDto(
     name: Option[String],
@@ -82,7 +77,7 @@ final case class QuotaUsedAttachmentDto(
     Right(
       QuotaUsedAttachment(
         name        = name,
-        size        = size,
+        sizeBytes   = size,
         apiUrl      = apiUrl,
         containedIn = container,
       )
@@ -122,7 +117,7 @@ object QuotaUsedAttachmentDto:
   ): Either[DecodeFailure, Vector[QuotaUsedAttachment]] =
     ArrayElements.convert(base, dtos)((dto, _) => dto.toDomain)
 
-/** Forgejo's `QuotaUsedPackage` model — one package version counting towards the quota.
+/** Forgejo's `QuotaUsedPackage` model — one package version counting towards a quota.
   *
   * '''Derived from `spec/swagger.v1.json`, not from a capture'''; see [[QuotaInfoDto]], and see
   * [[QuotaUsedArtifactDto]] for why nothing here is required.
@@ -142,7 +137,7 @@ final case class QuotaUsedPackageDto(
         name        = name,
         version     = version,
         packageType = packageType,
-        size        = size,
+        sizeBytes   = size,
         htmlUrl     = htmlUrl,
       )
     )
@@ -153,7 +148,7 @@ object QuotaUsedPackageDto:
   given JsonDecoder[QuotaUsedPackageDto] =
     JsonFields.reader(fromFields)
 
-  /** Projects an already-decoded object. */
+  /** Projects an already-decoded object. The wire spelling `type` is written here and nowhere else. */
   def fromFields(fields: JsonFields): QuotaUsedPackageDto =
     QuotaUsedPackageDto(
       name        = fields.text("name"),

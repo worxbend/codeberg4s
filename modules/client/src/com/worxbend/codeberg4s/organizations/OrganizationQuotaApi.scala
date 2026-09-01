@@ -6,6 +6,7 @@ import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.organizations.wire.OrganizationQueries
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
+import com.worxbend.codeberg4s.quota.{QuotaInfo, QuotaSubject, QuotaUsedArtifact, QuotaUsedAttachment, QuotaUsedPackage}
 
 import scala.concurrent.Future
 
@@ -33,11 +34,10 @@ import scala.concurrent.Future
   *
   * ==Everything here is derived from the spec==
   *
-  * '''No quota fixture exists anywhere in this repository.''' The models in
-  * [[com.worxbend.codeberg4s.organizations.QuotaInfo]] and [[com.worxbend.codeberg4s.organizations.QuotaArtifact]] are
-  * `spec/swagger.v1.json` read literally under the rule `docs/HAZARDS.md` §1 forces on the whole API, and the payloads
-  * asserted in the suites were written by hand to match those definitions. They are not evidence that Forgejo sends
-  * exactly this.
+  * '''No quota fixture exists anywhere in this repository.''' The models in [[com.worxbend.codeberg4s.quota.QuotaInfo]]
+  * and [[com.worxbend.codeberg4s.quota.QuotaUsedArtifact]] are `spec/swagger.v1.json` read literally under the rule
+  * `docs/HAZARDS.md` §1 forces on the whole API, and the payloads asserted in the suites were written by hand to match
+  * those definitions. They are not evidence that Forgejo sends exactly this.
   *
   * ==Failures==
   *
@@ -66,11 +66,11 @@ final class OrganizationQuotaApi private[codeberg4s] (pipeline: ApiPipeline[Futu
     *
     * '''Rule names are administrators-only.''' The spec marks `QuotaRuleInfo.name` "only shown to admins", so a caller
     * without that standing sees the limits and the subjects with [[QuotaRule.name]] absent. That is not a decoding
-    * problem and not a failure; see [[com.worxbend.codeberg4s.organizations.QuotaRule]].
+    * problem and not a failure; see [[com.worxbend.codeberg4s.quota.QuotaRule]].
     *
     * '''Absent is not zero.''' Every size in the result is an `Option`, because an instance that does not track a
     * category sends nothing for it and reporting `0` would let a caller draw a usage chart out of silence. See
-    * [[com.worxbend.codeberg4s.organizations.QuotaInfo]].
+    * [[com.worxbend.codeberg4s.quota.QuotaInfo]].
     *
     * '''Failures.''' The group contract above.
     *
@@ -99,7 +99,7 @@ final class OrganizationQuotaApi private[codeberg4s] (pipeline: ApiPipeline[Futu
     * @param org
     *   the organisation handle
     * @param subject
-    *   what to ask about, such as the value of one [[com.worxbend.codeberg4s.organizations.QuotaRule.subjects]] entry
+    *   what to ask about, such as the value of one [[com.worxbend.codeberg4s.quota.QuotaRule.subjects]] entry
     */
   def check(org: OrgName, subject: QuotaSubject): Future[Boolean] =
     pipeline.call(OrganizationQuotaApi.checkRequest(org, subject), RetryEligibility.IdempotentOnly)(using
@@ -108,7 +108,7 @@ final class OrganizationQuotaApi private[codeberg4s] (pipeline: ApiPipeline[Futu
   /** Lists the Actions artifacts counting towards the quota — `GET /orgs/{org}/quota/artifacts`.
     *
     * '''A report, not a set of handles.''' The entries carry no identifier and nothing here can delete one; see
-    * [[com.worxbend.codeberg4s.organizations.QuotaArtifact]].
+    * [[com.worxbend.codeberg4s.quota.QuotaUsedArtifact]].
     *
     * '''Paging ends where `rel="next"` says it does''', never where a short page suggests (`docs/HAZARDS.md` §5).
     *
@@ -119,14 +119,14 @@ final class OrganizationQuotaApi private[codeberg4s] (pipeline: ApiPipeline[Futu
     * @param params
     *   the page to fetch and how many entries it may hold
     */
-  def artifacts(org: OrgName, params: PageParams): Future[Page[QuotaArtifact]] =
+  def artifacts(org: OrgName, params: PageParams): Future[Page[QuotaUsedArtifact]] =
     pipeline.callPage(OrganizationQuotaApi.artifactsRequest(org, params), params)(using
       OrganizationDecoders.quotaArtifacts)
 
   /** Lists the attachments counting towards the quota — `GET /orgs/{org}/quota/attachments`.
     *
-    * Each entry says what it hangs off, through [[com.worxbend.codeberg4s.organizations.QuotaAttachment.containedIn]] —
-    * an issue, a comment or a release. Both links there point at the container, never at the attachment.
+    * Each entry says what it hangs off, through [[com.worxbend.codeberg4s.quota.QuotaUsedAttachment.containedIn]] — an
+    * issue, a comment or a release. Both links there point at the container, never at the attachment.
     *
     * '''Failures.''' The group contract above.
     *
@@ -135,7 +135,7 @@ final class OrganizationQuotaApi private[codeberg4s] (pipeline: ApiPipeline[Futu
     * @param params
     *   the page to fetch and how many entries it may hold
     */
-  def attachments(org: OrgName, params: PageParams): Future[Page[QuotaAttachment]] =
+  def attachments(org: OrgName, params: PageParams): Future[Page[QuotaUsedAttachment]] =
     pipeline.callPage(OrganizationQuotaApi.attachmentsRequest(org, params), params)(using
       OrganizationDecoders.quotaAttachments)
 
@@ -151,7 +151,7 @@ final class OrganizationQuotaApi private[codeberg4s] (pipeline: ApiPipeline[Futu
     * @param params
     *   the page to fetch and how many entries it may hold
     */
-  def packages(org: OrgName, params: PageParams): Future[Page[QuotaPackage]] =
+  def packages(org: OrgName, params: PageParams): Future[Page[QuotaUsedPackage]] =
     pipeline.callPage(OrganizationQuotaApi.packagesRequest(org, params), params)(using
       OrganizationDecoders.quotaPackages)
 
@@ -193,15 +193,15 @@ object OrganizationQuotaApi:
       exec.attempt(rail.check(org, subject))
 
     /** [[OrganizationQuotaApi.artifacts]] with its failure as a value. */
-    def artifacts(org: OrgName, params: PageParams): Future[Either[CodebergError, Page[QuotaArtifact]]] =
+    def artifacts(org: OrgName, params: PageParams): Future[Either[CodebergError, Page[QuotaUsedArtifact]]] =
       exec.attempt(rail.artifacts(org, params))
 
     /** [[OrganizationQuotaApi.attachments]] with its failure as a value. */
-    def attachments(org: OrgName, params: PageParams): Future[Either[CodebergError, Page[QuotaAttachment]]] =
+    def attachments(org: OrgName, params: PageParams): Future[Either[CodebergError, Page[QuotaUsedAttachment]]] =
       exec.attempt(rail.attachments(org, params))
 
     /** [[OrganizationQuotaApi.packages]] with its failure as a value. */
-    def packages(org: OrgName, params: PageParams): Future[Either[CodebergError, Page[QuotaPackage]]] =
+    def packages(org: OrgName, params: PageParams): Future[Either[CodebergError, Page[QuotaUsedPackage]]] =
       exec.attempt(rail.packages(org, params))
 
   private def getRequest(org: OrgName): CodebergRequest =

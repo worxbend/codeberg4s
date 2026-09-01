@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.users.account.wire
 
-import com.worxbend.codeberg4s.users.account.{QuotaSubject, RepositoryOrder}
+import com.worxbend.codeberg4s.quota.QuotaSubject
+import com.worxbend.codeberg4s.users.account.RepositoryOrder
 
 /** The query strings the `/user` account endpoints send.
   *

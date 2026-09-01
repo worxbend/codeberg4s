@@ -7,12 +7,12 @@ import com.worxbend.codeberg4s.organizations.EditOrganization
 import com.worxbend.codeberg4s.organizations.EditTeam
 import com.worxbend.codeberg4s.organizations.OrgName
 import com.worxbend.codeberg4s.organizations.OrganizationLabelSort
-import com.worxbend.codeberg4s.organizations.QuotaSubject
 import com.worxbend.codeberg4s.organizations.TeamName
 import com.worxbend.codeberg4s.organizations.TeamPermission
 import com.worxbend.codeberg4s.paging.PageNumber
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.paging.PageSize
+import com.worxbend.codeberg4s.quota.QuotaSubject
 import com.worxbend.codeberg4s.users.UserVisibility
 import com.worxbend.codeberg4s.users.account.AvatarImage
 

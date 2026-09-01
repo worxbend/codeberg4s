@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.organizations
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.quota.{QuotaSubject, QuotaUsedSize}
 
 import sttp.client4.testing.RecordingBackend
 
@@ -13,7 +14,8 @@ import munit.FunSuite
   * paths under one segment, one required query parameter, and one response that is a bare JSON boolean rather than an
   * object — the only such response in the whole organisation surface.
   *
-  * '''No quota fixture exists'''; see [[QuotaInfo]]. The payloads below are the spec's definitions written by hand.
+  * '''No quota fixture exists'''; see [[com.worxbend.codeberg4s.quota.QuotaInfo]]. The payloads below are the spec's
+  * definitions written by hand.
   */
 final class OrganizationQuotaApiSuite extends FunSuite with OrganizationStubs:
 
@@ -64,8 +66,8 @@ final class OrganizationQuotaApiSuite extends FunSuite with OrganizationStubs:
       api.quota
         .get(Org)
         .map: info =>
-          assertEquals(info.used.size.repositories.publicBytes, Some(1024L))
-          assertEquals(info.used.size.git.lfsBytes, Some(65536L))
+          assertEquals(info.used.publicRepositories, Some(1024L))
+          assertEquals(info.used.gitLfs, Some(65536L))
           assertEquals(info.groups.flatMap(_.rules).flatMap(_.subjects), Vector("size:repos:all"))
 
   test("an instance that tracks nothing yields an empty tree rather than a decoding failure"):
@@ -74,7 +76,7 @@ final class OrganizationQuotaApiSuite extends FunSuite with OrganizationStubs:
         .get(Org)
         .map: info =>
           assertEquals(info.groups, Vector.empty)
-          assertEquals(info.used, QuotaUsage.Empty)
+          assertEquals(info.used, QuotaUsedSize.Empty)
 
   test("a false verdict is an answer on the success channel, not a failure"):
     onApi(responding(200, "false")): api =>

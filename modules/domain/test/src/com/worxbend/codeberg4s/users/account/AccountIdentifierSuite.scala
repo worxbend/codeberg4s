@@ -7,11 +7,10 @@ import munit.FunSuite
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
-/** The four validated values this group introduces, and what each of them refuses.
+/** The validated values this group introduces, and what each of them refuses.
   *
-  * Every one of them exists to stop a value that would otherwise reach the wire and be rejected there — or, in the case
-  * of [[QuotaSubject]], corrupt the query string on the way. The assertions are the contract each smart constructor's
-  * Scaladoc states.
+  * Every one of them exists to stop a value that would otherwise reach the wire and be rejected there. The assertions
+  * are the contract each smart constructor's Scaladoc states.
   */
 final class AccountIdentifierSuite extends FunSuite:
 
@@ -25,23 +24,6 @@ final class AccountIdentifierSuite extends FunSuite:
 
   test("an application id rejects a negative value"):
     assert(OAuth2ApplicationId.from(-1L).isLeft, "a negative application id must be refused")
-
-  // --- quota subjects -------------------------------------------------------
-
-  test("a quota subject keeps Forgejo's dotted vocabulary verbatim"):
-    assertEquals(subject("size:assets:packages:all").value, "size:assets:packages:all")
-
-  test("a quota subject is trimmed"):
-    assertEquals(subject("  size:all  ").value, "size:all")
-
-  test("a quota subject rejects a blank value, which asks nothing"):
-    assertEquals(QuotaSubject.from("   ").swap.toOption.map(_.field), Some("quotaSubject"))
-
-  test("a quota subject rejects a control character, which would corrupt the query string"):
-    assert(QuotaSubject.from("size:\nall").isLeft, "a control character must be refused")
-
-  test("a subject this library has never heard of is accepted, because the vocabulary is not published"):
-    assert(QuotaSubject.from("size:something:new").isRight, "an unknown subject must still be askable")
 
   // --- email addresses ------------------------------------------------------
 
@@ -105,9 +87,6 @@ final class AccountIdentifierSuite extends FunSuite:
     val wrapped = s"${"QUFB" * 19}\n${"QUFB" * 19}"
 
     assert(AvatarImage.ofBase64(wrapped).isLeft, "a wrapped blob must be refused")
-
-  private def subject(value: String): QuotaSubject =
-    orFail(QuotaSubject.from(value))
 
   private def address(value: String): EmailAddress =
     orFail(EmailAddress.from(value))

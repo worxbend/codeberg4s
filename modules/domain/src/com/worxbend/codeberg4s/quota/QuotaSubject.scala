@@ -1,8 +1,9 @@
-package com.worxbend.codeberg4s.organizations
+package com.worxbend.codeberg4s.quota
 
 import com.worxbend.codeberg4s.ValidationError
 
-/** What a quota question is about — the required `subject` parameter of `GET /orgs/{org}/quota/check`.
+/** What a quota question is about — the required `subject` parameter of `GET /orgs/{org}/quota/check` and
+  * `GET /user/quota/check`.
   *
   * ==Deliberately not an enum, and that is a measurement rather than laziness==
   *
@@ -18,8 +19,9 @@ import com.worxbend.codeberg4s.ValidationError
   * blank or control-character-bearing one here is better than sending a request that produces an unexplained `422`.
   *
   * A subject the instance does not know comes back as a `422`, which is the instance's judgement and the right place
-  * for it. [[QuotaRule.subjects]] carries the subjects an instance actually applies, so a caller who wants to ask about
-  * a real one can read [[OrganizationQuotaApi.get]] first and convert a value from there.
+  * for it. [[QuotaRule.subjects]] carries the subjects an instance actually applies — as plain strings, so that a
+  * subject a newer Forgejo emits never costs the caller the whole rule — and converting one of them for use as a query
+  * argument is the caller's explicit step through [[QuotaSubject.from]].
   */
 opaque type QuotaSubject = String
 

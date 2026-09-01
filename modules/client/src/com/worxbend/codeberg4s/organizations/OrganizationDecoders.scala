@@ -6,15 +6,14 @@ import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.issues.Label
 import com.worxbend.codeberg4s.issues.wire.LabelDto
-import com.worxbend.codeberg4s.organizations.wire.{
-  OrganizationDto,
-  OrganizationPermissionsDto,
-  QuotaArtifactDto,
-  QuotaAttachmentDto,
+import com.worxbend.codeberg4s.organizations.wire.{OrganizationDto, OrganizationPermissionsDto, TeamDto}
+import com.worxbend.codeberg4s.quota.wire.{
   QuotaInfoDto,
-  QuotaPackageDto,
-  TeamDto
+  QuotaUsedArtifactDto,
+  QuotaUsedAttachmentDto,
+  QuotaUsedPackageDto
 }
+import com.worxbend.codeberg4s.quota.{QuotaInfo, QuotaUsedArtifact, QuotaUsedAttachment, QuotaUsedPackage}
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.admin.RepositoryActivity
 import com.worxbend.codeberg4s.repositories.admin.wire.ActivityDto
@@ -137,13 +136,13 @@ private[organizations] object OrganizationDecoders:
     Json.decoder[Boolean]
 
   /** A bare array of artifact usage entries. */
-  val quotaArtifacts: Decode[Vector[QuotaArtifact]] =
-    WireDecode.vector(Json.decoder[Vector[QuotaArtifactDto]])(QuotaArtifactDto.toDomainAll)
+  val quotaArtifacts: Decode[Vector[QuotaUsedArtifact]] =
+    WireDecode.vector(Json.decoder[Vector[QuotaUsedArtifactDto]])(QuotaUsedArtifactDto.toDomainAll)
 
   /** A bare array of attachment usage entries. */
-  val quotaAttachments: Decode[Vector[QuotaAttachment]] =
-    WireDecode.vector(Json.decoder[Vector[QuotaAttachmentDto]])(QuotaAttachmentDto.toDomainAll)
+  val quotaAttachments: Decode[Vector[QuotaUsedAttachment]] =
+    WireDecode.vector(Json.decoder[Vector[QuotaUsedAttachmentDto]])(QuotaUsedAttachmentDto.toDomainAll)
 
   /** A bare array of package usage entries. */
-  val quotaPackages: Decode[Vector[QuotaPackage]] =
-    WireDecode.vector(Json.decoder[Vector[QuotaPackageDto]])(QuotaPackageDto.toDomainAll)
+  val quotaPackages: Decode[Vector[QuotaUsedPackage]] =
+    WireDecode.vector(Json.decoder[Vector[QuotaUsedPackageDto]])(QuotaUsedPackageDto.toDomainAll)

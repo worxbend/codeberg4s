@@ -5,6 +5,13 @@ import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.organizations.Team
 import com.worxbend.codeberg4s.organizations.wire.TeamDto
+import com.worxbend.codeberg4s.quota.wire.{
+  QuotaInfoDto,
+  QuotaUsedArtifactDto,
+  QuotaUsedAttachmentDto,
+  QuotaUsedPackageDto
+}
+import com.worxbend.codeberg4s.quota.{QuotaInfo, QuotaUsedArtifact, QuotaUsedAttachment, QuotaUsedPackage}
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.actions.wire.{
   ActionRunJobDto,
@@ -23,15 +30,7 @@ import com.worxbend.codeberg4s.repositories.actions.{
 import com.worxbend.codeberg4s.repositories.hooks.Webhook
 import com.worxbend.codeberg4s.repositories.hooks.wire.WebhookDto
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
-import com.worxbend.codeberg4s.users.account.wire.{
-  EmailDto,
-  OAuth2ApplicationDto,
-  QuotaInfoDto,
-  QuotaUsedArtifactDto,
-  QuotaUsedAttachmentDto,
-  QuotaUsedPackageDto,
-  UserSettingsDto
-}
+import com.worxbend.codeberg4s.users.account.wire.{EmailDto, OAuth2ApplicationDto, UserSettingsDto}
 
 /** Every response shape the five API classes of this package can receive, decoded once and shared.
   *
@@ -47,7 +46,8 @@ import com.worxbend.codeberg4s.users.account.wire.{
   * review-blocking defect, and two decoders for one payload would drift the first time Forgejo added a field.
   *
   * The five shapes that genuinely are new to this group — an OAuth2 application, an email address, the account's
-  * settings, its quota, and the three quota usage listings — live in [[com.worxbend.codeberg4s.users.account.wire]].
+  * settings, its quota, and the three quota usage listings — live in [[com.worxbend.codeberg4s.users.account.wire]]
+  * and, for the quota shapes the organisation routes answer identically, in [[com.worxbend.codeberg4s.quota.wire]].
   */
 private[account] object UserAccountDecoders:
 

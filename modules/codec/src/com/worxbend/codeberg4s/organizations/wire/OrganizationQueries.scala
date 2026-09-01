@@ -1,8 +1,9 @@
 package com.worxbend.codeberg4s.organizations.wire
 
 import com.worxbend.codeberg4s.codec.PagingQuery
-import com.worxbend.codeberg4s.organizations.{OrganizationLabelSort, QuotaSubject}
+import com.worxbend.codeberg4s.organizations.OrganizationLabelSort
 import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.quota.QuotaSubject
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter

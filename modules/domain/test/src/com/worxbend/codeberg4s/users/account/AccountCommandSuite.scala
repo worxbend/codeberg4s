@@ -6,11 +6,10 @@ import com.worxbend.codeberg4s.repositories.BranchName
 
 import munit.FunSuite
 
-/** The commands this group sends, and the two read models that carry logic of their own.
+/** The commands this group sends, and what a caller can express with them.
   *
   * Every assertion here is about a decision a caller can observe without a network: what a builder sets, what a default
-  * is, and how the quota model reads a sentinel. The wire rendering of these commands is asserted in `modules/codec`;
-  * this suite is about what they mean.
+  * is. The wire rendering of these commands is asserted in `modules/codec`; this suite is about what they mean.
   */
 final class AccountCommandSuite extends FunSuite:
 
@@ -123,37 +122,6 @@ final class AccountCommandSuite extends FunSuite:
     assertEquals(command.isTemplate, true)
     assertEquals(command.objectFormat, Some(ObjectFormat.Sha256))
     assertEquals(command.trustModel, Some(TrustModel.Committer))
-
-  // --- quota reading --------------------------------------------------------
-
-  test("a negative limit is Forgejo's spelling of unlimited, and is kept rather than folded away"):
-    val rule = QuotaRule(name = Some("default"), limit = Some(-1L), subjects = Vector.empty)
-
-    assertEquals(rule.isUnlimited, true)
-    assertEquals(rule.limit, Some(-1L))
-
-  test("an absent limit is not unlimited, because unknown is not the same as unbounded"):
-    assertEquals(QuotaRule(name = None, limit = None, subjects = Vector.empty).isUnlimited, false)
-
-  test("a stated ceiling is not unlimited"):
-    assertEquals(QuotaRule(name = None, limit = Some(0L), subjects = Vector.empty).isUnlimited, false)
-
-  test("the rules of a quota report are every group's rules, repeats included"):
-    val rule   = QuotaRule(name = Some("default"), limit = Some(10L), subjects = Vector.empty)
-    val report = QuotaInfo(groups = Vector(group(rule), group(rule)), used = QuotaUsedSize.Empty)
-
-    assertEquals(report.rules, Vector(rule, rule))
-
-  test("the reported total adds up only the headings the instance sent"):
-    val used = QuotaUsedSize.Empty.copy(publicRepositories = Some(100L), artifacts = Some(5L))
-
-    assertEquals(used.reportedTotal, 105L)
-
-  test("a breakdown in which nothing was reported totals zero, which is a lower bound and not a measurement"):
-    assertEquals(QuotaUsedSize.Empty.reportedTotal, 0L)
-
-  private def group(rule: QuotaRule): QuotaGroup =
-    QuotaGroup(name = Some("default"), rules = Vector(rule))
 
   private def definitionNamed(value: String): OAuth2ApplicationDefinition =
     orFail(OAuth2ApplicationDefinition.named(value))

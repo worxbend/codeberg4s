@@ -5,6 +5,7 @@ import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
+import com.worxbend.codeberg4s.quota.{QuotaInfo, QuotaSubject, QuotaUsedArtifact, QuotaUsedAttachment, QuotaUsedPackage}
 import com.worxbend.codeberg4s.users.account.wire.AccountQueries
 
 import scala.concurrent.Future
@@ -26,8 +27,8 @@ import scala.concurrent.Future
   *
   * Quota enforcement is a deployment setting. On an instance that does not use it, [[info]] answers a report with no
   * groups and no rules rather than a failure, and the three usage listings answer whatever the instance measured. An
-  * empty [[com.worxbend.codeberg4s.users.account.QuotaInfo.groups]] is therefore '''not''' the same as "unlimited" —
-  * nothing in the response says which it is, and this library does not guess.
+  * empty [[com.worxbend.codeberg4s.quota.QuotaInfo.groups]] is therefore '''not''' the same as "unlimited" — nothing in
+  * the response says which it is, and this library does not guess.
   *
   * ==Evidence==
   *
@@ -51,7 +52,7 @@ import scala.concurrent.Future
   *   - [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] when a retryable failure outlived the policy.
   *
   * [[com.worxbend.codeberg4s.CodebergError.Validation]] is '''not''' produced by any operation here: the one free-text
-  * argument is a [[com.worxbend.codeberg4s.users.account.QuotaSubject]], validated by its own smart constructor.
+  * argument is a [[com.worxbend.codeberg4s.quota.QuotaSubject]], validated by its own smart constructor.
   *
   * @param pipeline
   *   the shared request pipeline; the only thing here that reaches the network
@@ -63,11 +64,10 @@ final class UserQuotaApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usi
 
   /** Reads the account's quota report — `GET /user/quota`.
     *
-    * '''The nested `used` tree is flattened''' into one [[com.worxbend.codeberg4s.users.account.QuotaUsedSize]]; see
-    * that type and [[com.worxbend.codeberg4s.users.account.wire.QuotaInfoDto]] for the argument. A heading the instance
-    * did not report is `None` and contributes nothing to
-    * [[com.worxbend.codeberg4s.users.account.QuotaUsedSize.reportedTotal]], which is therefore a lower bound and not an
-    * authoritative total.
+    * '''The nested `used` tree is flattened''' into one [[com.worxbend.codeberg4s.quota.QuotaUsedSize]]; see that type
+    * and [[com.worxbend.codeberg4s.quota.wire.QuotaInfoDto]] for the argument. A heading the instance did not report is
+    * `None` and contributes nothing to [[com.worxbend.codeberg4s.quota.QuotaUsedSize.reportedTotal]], which is
+    * therefore a lower bound and not an authoritative total.
     *
     * '''Failures.''' The group contract above.
     */
@@ -85,8 +85,7 @@ final class UserQuotaApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usi
     * never as a permission.
     *
     * '''Failures.''' The group contract above. A `422` is what a subject the instance does not recognise produces — the
-    * vocabulary is not published, which is why [[com.worxbend.codeberg4s.users.account.QuotaSubject]] does not
-    * enumerate it.
+    * vocabulary is not published, which is why [[com.worxbend.codeberg4s.quota.QuotaSubject]] does not enumerate it.
     *
     * @param subject
     *   what to ask about, in Forgejo's own dotted vocabulary such as `size:repos:public`
@@ -103,7 +102,7 @@ final class UserQuotaApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usi
     * absent; absent means unknown, never zero.
     *
     * '''These are not addressable artifacts.''' The elements carry no id — see
-    * [[com.worxbend.codeberg4s.users.account.QuotaUsedArtifact]] for why they are a different type from
+    * [[com.worxbend.codeberg4s.quota.QuotaUsedArtifact]] for why they are a different type from
     * [[com.worxbend.codeberg4s.repositories.actions.ActionArtifact]].
     *
     * '''Failures.''' The group contract above.

@@ -3,6 +3,7 @@ package com.worxbend.codeberg4s.users.account
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
 import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.quota.{QuotaGroup, QuotaSubject, QuotaUsedSize}
 
 import sttp.client4.Backend
 import sttp.client4.testing.RecordingBackend

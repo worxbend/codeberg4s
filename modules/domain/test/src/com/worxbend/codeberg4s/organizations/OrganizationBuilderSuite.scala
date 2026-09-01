@@ -5,14 +5,11 @@ import com.worxbend.codeberg4s.users.UserVisibility
 
 import munit.FunSuite
 
-/** The organisation group's builders applied to values that already carry every field, and the quota tree's empties.
+/** The organisation group's builders applied to values that already carry every field.
   *
   * `OrganizationCommandsSuite` establishes what each builder produces from a fresh command. This suite asks the harder
   * question: applied to a command that already says everything, does a builder change only the one property it names? A
   * `copy` that dropped a sibling passes the first test and fails this one.
-  *
-  * The quota half is about the distinction the model is built around — an absent size is not a zero one — which only
-  * shows up on the empties, since those are what a payload that said nothing decodes to.
   */
 final class OrganizationBuilderSuite extends FunSuite:
 
@@ -85,32 +82,6 @@ final class OrganizationBuilderSuite extends FunSuite:
 
   test("reaching with no names empties the list, which sends no units key and leaves the team's units alone"):
     assertEquals(populatedTeamEdit.reaching().units, Vector.empty[String])
-
-  // --- the quota tree -------------------------------------------------------
-
-  test("an absent size is absent rather than zero, at every leaf of the empty usage tree"):
-    val empty = QuotaUsage.Empty
-
-    assertEquals(empty.size.repositories.publicBytes, None)
-    assertEquals(empty.size.repositories.privateBytes, None)
-    assertEquals(empty.size.assets.artifactBytes, None)
-    assertEquals(empty.size.assets.attachments.issueBytes, None)
-    assertEquals(empty.size.assets.attachments.releaseBytes, None)
-    assertEquals(empty.size.assets.packageBytes, None)
-    assertEquals(empty.size.git.lfsBytes, None)
-
-  test("each empty grouping is the one the level above reaches, so navigating never needs a chain of options"):
-    assertEquals(QuotaUsage.Empty.size, QuotaSizes.Empty)
-    assertEquals(QuotaSizes.Empty.repositories, QuotaRepositorySizes.Empty)
-    assertEquals(QuotaSizes.Empty.assets, QuotaAssetSizes.Empty)
-    assertEquals(QuotaSizes.Empty.git, QuotaGitSizes.Empty)
-    assertEquals(QuotaAssetSizes.Empty.attachments, QuotaAttachmentSizes.Empty)
-
-  test("an instance with quota disabled leaves the whole tree empty rather than reporting an organisation at zero"):
-    val info = QuotaInfo(groups = Vector.empty, used = QuotaUsage.Empty)
-
-    assertEquals(info.groups, Vector.empty[QuotaGroup])
-    assertEquals(info.used.size.repositories.publicBytes, None)
 
   // --- helpers --------------------------------------------------------------
 
