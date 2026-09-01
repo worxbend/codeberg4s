@@ -601,6 +601,8 @@ Copy this into the release pull request.
 - [ ] `CHANGELOG.md` entry written, breaking changes first
 - [ ] `Publish.version` set, `-SNAPSHOT` dropped
 - [ ] `./verify.sh` and `./verify.sh --with-slow` green
+- [ ] `./scripts/site.sh` green — it compiles every documentation snippet
+      against the real library, and `./verify.sh` does not cover it
 - [ ] `./mill modules.__.mimaReportBinaryIssues` green, or every report
       filtered with a reason (not applicable to `0.1.0`)
 - [ ] `./mill modules.__.publishLocal`, then something compiled against it
