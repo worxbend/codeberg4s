@@ -112,7 +112,7 @@ val config: Either[ValidationError, CodebergConfig] =
 the default user agent, a page size of 30 and 10 s / 30 s timeouts. Copy the
 result to change one field — see [Configuration](#configuration).
 
-## The nine resource groups
+## The eight resource groups
 
 Everything is grouped the way the API's own tags are.
 
@@ -600,8 +600,8 @@ as `CodebergError.Transport(ctx, TransportCause.ResponseTooLarge(detail))`.
   largest JSON body Forgejo produces is a file's contents, a blob capped by the
   instance's `default_max_blob_size` (10 MiB on codeberg.org) and then
   base64-encoded, which costs four bytes per three; 16 MiB clears that.
-- `maxDownloadBodyBytes` — 50 MiB, applied only to `client.downloads`, which
-  fetches ZIP archives. An artifact is whatever a workflow uploaded, so nothing
+- `maxDownloadBodyBytes` — 50 MiB, applied only to the two ZIP-fetching
+  operations, `client.repos.actions.downloadArtifact` and `downloadRunLogs`. An artifact is whatever a workflow uploaded, so nothing
   about `default_max_blob_size` bounds it, and one shared number would have had
   to be either too small for ordinary artifacts or too large to bound JSON
   usefully.

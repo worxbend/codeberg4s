@@ -4,7 +4,7 @@ Pages to look things up in, rather than to read through. The
 [guides](../guides/README.md) explain how to do something; these explain what a
 thing is.
 
-- **[API groups](./api-groups.md)** — every one of the nine accessors on
+- **[API groups](./api-groups.md)** — every one of the eight accessors on
   `CodebergClient` and all 29 nested groups: what each covers, how many
   operations it has, and which class to open in the Scaladoc.
 - **[Glossary](./glossary.md)** — the vocabulary this library and Forgejo use.

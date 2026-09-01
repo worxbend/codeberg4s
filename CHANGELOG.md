@@ -12,6 +12,43 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **The two ZIP downloads moved to `client.repos.actions`,** and the root-level
+  `client.downloads` group is gone. They used to sit apart because they were
+  the only operations that needed a byte-carrying transport; that transport no
+  longer exists, so nothing kept them out of the Actions group they belong to.
+
+  BREAKING CHANGE: replace `client.downloads.artifact(owner, name, id)` with
+  `client.repos.actions.downloadArtifact(owner, name, id)`, and
+  `client.downloads.runLogs(owner, name, run)` with
+  `client.repos.actions.downloadRunLogs(owner, name, run)`. Both are on
+  `client.repos.actions.attempt` under the same names. The operation ids —
+  `repos.actions.artifacts.download` and `repos.actions.runs.logs.download` —
+  are unchanged, so anything alerting on them still works.
+
+- **`BinaryResponse` and `BinaryHttpPort` are removed.** `BinaryResponse` was a
+  near-duplicate of `CodebergResponse` left over from when a response body was
+  a `String` and a ZIP could not survive one. A body has been bytes plus a
+  charset (`ResponseBody`) for a while, so one response type now serves every
+  call, and one port serves every transport.
+
+  BREAKING CHANGE: a download answers `core.CodebergResponse`. Read the archive
+  as `response.body.bytes` where it was `response.bytes`, and
+  `response.body.size` where it was `response.size`; the status and the headers
+  are unchanged. Byte-structural equality is unchanged too — `ResponseBody`
+  compares its bytes with `java.util.Arrays.equals`.
+
+- **`HttpPort.send` takes the response-body bound as an argument.** Which bound
+  applied used to depend on which port method was called, which put the choice
+  in the adapter, the one place that cannot know whether it is fetching a JSON
+  document or a CI artifact. The pipeline passes it now:
+  `maxResponseBodyBytes` for every ordinary call, `maxDownloadBodyBytes` for
+  the two archive downloads. Both settings stay on `CodebergConfig`; only where
+  they are read changed.
+
+  BREAKING CHANGE: an implementation of `core.HttpPort` gains a third
+  parameter, `maxBodyBytes: Long`, and must apply it to the response body
+  instead of reading a bound off `CodebergConfig` itself.
+
 - **`ValidationError` is now the case `CodebergError.Validation`** rather than a
   standalone `final case class` wrapped by that case. `ValidationError` remains
   a usable name — it is a type alias for the case, with an `apply` and an
@@ -46,9 +83,9 @@ changed deliberately *before* the freeze, and anyone who built against a
 
 ### Added
 
-- **Public `Future` API.** `CodebergClient` exposes nine accessors — `repos`,
-  `users`, `issues`, `pulls`, `organizations`, `notifications`, `misc`,
-  `downloads` and `version` — which between them reach 38 API classes and 439
+- **Public `Future` API.** `CodebergClient` exposes eight accessors — `repos`,
+  `users`, `issues`, `pulls`, `organizations`, `notifications`, `misc` and
+  `version` — which between them reach 38 API classes and 439
   REST operations against Codeberg, Forgejo or any Gitea-compatible instance.
   The base URI is configuration, not a constant. That is 439 of the 439
   in-scope operations, 100 % (`docs/API_INVENTORY.md` §0), and 86.8 % of the
@@ -81,8 +118,8 @@ changed deliberately *before* the freeze, and anyone who built against a
   logging dependency and writes nothing to stdout.
 - **A bounded response body.** `CodebergConfig` carries
   `maxResponseBodyBytes` (16 MiB, every textual response) and
-  `maxDownloadBodyBytes` (50 MiB, the two ZIP-fetching operations under
-  `client.downloads`). Exceeding either is `TransportCause.ResponseTooLarge`,
+  `maxDownloadBodyBytes` (50 MiB, the two ZIP-fetching operations
+  `client.repos.actions.downloadArtifact` and `downloadRunLogs`). Exceeding either is `TransportCause.ResponseTooLarge`,
   which is deliberately *not* retryable — a retryable oversize failure would
   have downloaded the same oversized body once per attempt.
 - **Hexagonal module layout,** published as five artifacts under
@@ -197,7 +234,7 @@ now because the tag is what freezes the surface.
 - **`UploadAsset` and `UploadAttachment` are built through `of` / `named` /
   `as`,** not through their constructors, and `as` validates the media type, so
   it answers `Either[ValidationError, …]`. Both also compare their content by
-  its bytes now, as do `BinaryResponse`, `RequestBody.Binary` and
+  its bytes now, as do `ResponseBody`, `RequestBody.Binary` and
   `RequestBody.Multipart`; code that relied on two byte-identical values
   staying distinct has to say `eq`.
 - **`CodebergConfig` gains `maxResponseBodyBytes` and

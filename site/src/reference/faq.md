@@ -211,8 +211,8 @@ privileges.
 
 ## Why can I not stream a large file or artifact?
 
-Because this library does not stream, anywhere. `client.downloads.artifact` and
-`client.downloads.runLogs` hold the whole archive in memory, and so do the raw
+Because this library does not stream, anywhere.
+`client.repos.actions.downloadArtifact` and `downloadRunLogs` hold the whole archive in memory, and so do the raw
 and media file endpoints.
 
 That is a real limitation to plan around rather than a setting to change. If you

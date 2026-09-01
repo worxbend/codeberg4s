@@ -262,7 +262,8 @@ val roomierBodies: CodebergConfig =
 ```
 
 The defaults are 16 MiB for a textual response and 50 MiB for the two ZIP
-downloads under `client.downloads`. Two settings rather than one,
+downloads, `client.repos.actions.downloadArtifact` and `downloadRunLogs`. Two
+settings rather than one,
 because the reasoning behind them is different: the textual bound is derived
 from `default_max_blob_size` — 10 MiB on codeberg.org, base64-encoded into a
 file-contents response at four bytes per three — while a CI artifact is whatever

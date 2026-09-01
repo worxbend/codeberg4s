@@ -136,7 +136,7 @@ none at all.
   driving a walk over ten thousand pages is a decision the caller makes.
 - **Known limitations already documented.** Two operations —
   `DownloadActionArtifact` and `repoGetActionRunLogs`, reachable as
-  `client.downloads` — hold the whole archive in memory; the library does not
+  `client.repos.actions.downloadArtifact` and `downloadRunLogs` — hold the whole archive in memory; the library does not
   stream, and attachment streaming above 50 MB is explicitly out of scope for
   v1. Those two are bounded by `CodebergConfig.maxDownloadBodyBytes`, which
   defaults to 50 MiB for exactly that reason; raising the setting yourself and

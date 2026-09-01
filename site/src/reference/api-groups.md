@@ -15,7 +15,7 @@ its own Scaladoc saying what it calls, what it returns, which failures it can
 produce, and **which retry eligibility it uses** — that last one is not
 guessable from the HTTP method, so read it before assuming.
 
-## The nine accessors
+## The eight accessors
 
 | Accessor | Class | Operations | Nested groups |
 | --- | --- | ---: | ---: |
@@ -27,7 +27,6 @@ guessable from the HTTP method, so read it before assuming.
 | `client.organizations` | `com.worxbend.codeberg4s.organizations.OrganizationApi` | 29 | 5 |
 | `client.notifications` | `com.worxbend.codeberg4s.notifications.NotificationApi` | 7 | — |
 | `client.misc` | `com.worxbend.codeberg4s.miscellaneous.MiscellaneousApi` | 17 | — |
-| `client.downloads` | `com.worxbend.codeberg4s.repositories.actions.ActionDownloadApi` | 2 | — |
 
 ---
 
@@ -59,7 +58,7 @@ record full of nullable fields.
 
 | Accessor | Class | Operations | Covers |
 | --- | --- | ---: | --- |
-| `client.repos.actions` | `repositories.actions.RepositoryActionApi` | 26 | a repository's Actions surface: runs, jobs, tasks, artifacts, runners, secrets, variables, workflow dispatch |
+| `client.repos.actions` | `repositories.actions.RepositoryActionApi` | 28 | a repository's Actions surface: runs, jobs, tasks, artifacts, runners, secrets, variables, workflow dispatch, and the two ZIP downloads |
 | `client.repos.git` | `repositories.gitdata.RepositoryGitApi` | 20 | raw Git data and commit-level reads: blobs, trees, refs, notes, annotated tags, commit statuses, comparison, diffpatch, raw and media files, archives |
 | `client.repos.publishing` | `repositories.publishing.RepositoryPublishingApi` | 19 | releases and their assets, tags, topics, forking, generating from a template |
 | `client.repos.hooks` | `repositories.hooks.RepositoryHookApi` | 10 | webhooks Forgejo delivers elsewhere, and the Git hooks it runs on its own machine |
@@ -68,6 +67,14 @@ record full of nullable fields.
 | `client.repos.issueConfig` | `repositories.hooks.RepositoryIssueConfigApi` | 3 | what a repository tells a contributor about to open an issue: its issue config and templates |
 | `client.repos.access` | `repositories.access.RepositoryAccessApi` | 23 | who may push and merge: branch and tag protections, collaborators, deploy keys, team access |
 | `client.repos.admin` | `repositories.admin.RepositoryAdminApi` | 44 | administering a repository: creating, editing, transferring, mirroring, watching, branches, **writing files**, avatars, activity, languages, tracked time |
+
+`client.repos.actions` holds the only two operations in the library whose
+success body is not text: `downloadArtifact` and `downloadRunLogs` answer a ZIP,
+so they hand back the whole `CodebergResponse` and the archive is
+`response.body.bytes`. Both hold the archive in memory — **this library does not
+stream** — and both read under `CodebergConfig.maxDownloadBodyBytes` rather than
+the smaller bound every other call uses. For a large artifact that is a fact to
+plan around rather than a setting to change.
 
 `client.repos.admin` is the largest single group in the library and the one that
 holds the file-write operations — `createFile`, `updateFile`, `deleteFile`,
@@ -215,19 +222,6 @@ clamps `limit` to. Read it once on a self-hosted instance. See
 
 `signingKey()` and `sshSigningKey()` return `Option`, because an instance that
 does not sign commits is a legitimate answer and not a `404`.
-
----
-
-## `client.downloads` — the two ZIP endpoints
-
-**2 operations:** `artifact`, `runLogs`
-
-These live at the top level rather than under `client.repos.actions` because they
-are the only operations in the API that need a byte-carrying transport; every
-other group is built on the textual one.
-
-Both hold the whole archive in memory. **This library does not stream.** For a
-large artifact, that is a fact to plan around rather than a setting to change.
 
 ---
 

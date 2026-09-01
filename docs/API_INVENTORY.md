@@ -53,8 +53,9 @@ They are listed in §4 and are deliberately not implemented.
 
 Two operations answer a ZIP rather than JSON or text —
 `DownloadActionArtifact` and `repoGetActionRunLogs`. They are reachable as
-`client.downloads`, over a separate byte-carrying transport port, and both hold
-the whole archive in memory; the library does not stream.
+`client.repos.actions.downloadArtifact` and `downloadRunLogs`, which hand the
+response body back undecoded, and both hold the whole archive in memory; the
+library does not stream.
 
 ---
 
