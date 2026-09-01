@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.actions.{ActionArtifact, ArtifactId, RunId}
 
@@ -78,7 +78,3 @@ object ActionArtifactDto:
       updatedAt          = fields.text("updated_at"),
       expiresAt          = fields.text("expires_at"),
     )
-
-  /** Converts a decoded array of artifacts, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[ActionArtifactDto]): Either[DecodeFailure, Vector[ActionArtifact]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

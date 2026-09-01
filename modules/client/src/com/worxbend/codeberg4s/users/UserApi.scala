@@ -1,9 +1,9 @@
 package com.worxbend.codeberg4s.users
 
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.{Json, PagingQuery}
+import com.worxbend.codeberg4s.codec.{Json, PagingQuery, WireModel}
 import com.worxbend.codeberg4s.core.CodebergRequest.read
-import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, DecodeFailure, Exec, RetryEligibility}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
@@ -315,34 +315,14 @@ object UserApi:
     WireDecode.single(Json.decoder[UserDto])(_.toDomain)
 
   private val UserListDecoder: Decode[Vector[User]] =
-    WireDecode.vector(Json.decoder[Vector[UserDto]])(each(_, _)(_.toDomainAt(_)))
+    WireDecode.vector(Json.decoder[Vector[UserDto]])
 
   private val UserSearchDecoder: Decode[Vector[User]] =
     WireDecode.single(Json.decoder[SearchEnvelopeDto[UserDto]]): envelope =>
-      each(JsonPath.Root.field("data"), envelope.data)(_.toDomainAt(_))
+      WireModel.all(JsonPath.Root.field("data"), envelope.data)
 
   private val RepositoryListDecoder: Decode[Vector[Repository]] =
-    WireDecode.vector(Json.decoder[Vector[RepositoryDto]])(each(_, _)(_.toDomainAt(_)))
+    WireDecode.vector(Json.decoder[Vector[RepositoryDto]])
 
   private val PublicKeyListDecoder: Decode[Vector[PublicKey]] =
-    WireDecode.vector(Json.decoder[Vector[PublicKeyDto]])(each(_, _)(_.toDomainAt(_)))
-
-  /** Converts every element of a decoded list, stopping at the first element that will not convert.
-    *
-    * Each element is converted at its own path below `at`, so a failure says `$[3].login` or `$.data[3].login` rather
-    * than "decoding failed" — which is the difference between a usable bug report and a shrug. One bad element fails
-    * the whole page, matching what a bare-list body does: a page that silently dropped an item would make a caller's
-    * `totalCount` arithmetic lie.
-    *
-    * @param at
-    *   the path of the list itself — `JsonPath.Root` for a bare array body, `Root.field("data")` inside a search
-    *   envelope
-    */
-  private def each[D, A](at: JsonPath, dtos: Vector[D])(
-      convert: (D, JsonPath) => Either[DecodeFailure, A]
-  ): Either[DecodeFailure, Vector[A]] =
-    dtos.indices.foldLeft[Either[DecodeFailure, Vector[A]]](Right(Vector.empty)): (converted, index) =>
-      for
-        done <- converted
-        next <- convert(dtos(index), at.index(index))
-      yield done :+ next
+    WireDecode.vector(Json.decoder[Vector[PublicKeyDto]])

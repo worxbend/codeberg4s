@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.LabelColor
 import com.worxbend.codeberg4s.miscellaneous.TemplateLabel
@@ -69,7 +69,3 @@ object TemplateLabelDto:
       exclusive   = fields.boolean("exclusive"),
       name        = fields.text("name"),
     )
-
-  /** Converts a decoded array of template labels, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[TemplateLabelDto]): Either[DecodeFailure, Vector[TemplateLabel]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

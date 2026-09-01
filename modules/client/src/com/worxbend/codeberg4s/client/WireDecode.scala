@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.client
 
 import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.WireModel
 import com.worxbend.codeberg4s.core.{Decode, DecodeFailure, ResponseBody}
 
 /** Joins the two halves of reading a response: parse the wire DTO, then project it into the domain.
@@ -33,19 +34,18 @@ private[codeberg4s] object WireDecode:
   /** A decoder for a response whose whole body is a JSON array, converted element by element.
     *
     * This is [[single]] with the one detail every list endpoint would otherwise repeat filled in: the array is the
-    * whole body, so the base path handed to the DTO's `toDomainAll` is [[com.worxbend.codeberg4s.JsonPath.Root]] and
-    * the element paths it reports read as `[0].name` rather than something rooted at a field that does not exist.
-    * Writing that once means a list endpoint names its DTO and its projection and nothing else.
+    * whole body, so the base path handed to each element is [[com.worxbend.codeberg4s.JsonPath.Root]] and the paths the
+    * elements report read as `[0].name` rather than something rooted at a field that does not exist. Writing that once
+    * means a list endpoint names its DTO and nothing else.
+    *
+    * The conversion itself needs no argument because [[com.worxbend.codeberg4s.codec.WireModel.toDomainAt]] is what
+    * `D <: WireModel[A]` promises. That is also what fixes `A`: naming the DTO names the domain model it converts into.
     *
     * Use [[single]] instead when the array is nested inside an envelope object, because then the base path is that
-    * envelope's field, not the root.
+    * envelope's field, not the root — see [[com.worxbend.codeberg4s.codec.WireModel.all]], which takes the path.
     *
     * @param wire
     *   the codec module's reader for the array of wire DTOs
-    * @param toDomainAll
-    *   the DTO companion's bulk projection, which takes the base path of the array it is converting
     */
-  def vector[D, A](
-      wire: Decode[Vector[D]]
-  )(toDomainAll: (JsonPath, Vector[D]) => Either[DecodeFailure, Vector[A]]): Decode[Vector[A]] =
-    single(wire)(dtos => toDomainAll(JsonPath.Root, dtos))
+  def vector[D <: WireModel[A], A](wire: Decode[Vector[D]]): Decode[Vector[A]] =
+    single(wire)(dtos => WireModel.all(JsonPath.Root, dtos))

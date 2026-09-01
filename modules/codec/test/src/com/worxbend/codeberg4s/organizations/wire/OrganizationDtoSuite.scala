@@ -1,8 +1,7 @@
 package com.worxbend.codeberg4s.organizations.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.GoldenFixtures
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{GoldenFixtures, Json, WireModel}
 import com.worxbend.codeberg4s.organizations.Organization
 import com.worxbend.codeberg4s.users.UserVisibility
 
@@ -77,7 +76,7 @@ final class OrganizationDtoSuite extends FunSuite with GoldenFixtures:
     assertEquals(dtos.map(_.id), Vector(Some(25273L), Some(90224L), Some(37150L)))
 
   test("every organisation of golden /orgs converts, punctuation-only names included"):
-    OrganizationDto.toDomainAll(JsonPath.Root, decodeList("organization/org-list.json")) match
+    WireModel.all(JsonPath.Root, decodeList("organization/org-list.json")) match
       case Right(organizations) =>
         assertEquals(organizations.map(_.name.value), Vector("_CYBER_STONES_", "-_", "-_-"))
         assertEquals(organizations.map(_.fullName), Vector(None, None, None))
@@ -132,7 +131,7 @@ final class OrganizationDtoSuite extends FunSuite with GoldenFixtures:
   test("a bad element of a listing reports its own position, not the document root"):
     Json.decode[Vector[OrganizationDto]]("""[{"id":1,"name":"a"},{"name":"b"}]""") match
       case Right(dtos)   =>
-        OrganizationDto.toDomainAll(JsonPath.Root, dtos) match
+        WireModel.all(JsonPath.Root, dtos) match
           case Left(failure)        => assertEquals(failure.path.render, "$[1].id")
           case Right(organizations) => fail(s"expected a failure, converted $organizations")
       case Left(failure) => fail(s"the array did not decode: ${failure.message}")

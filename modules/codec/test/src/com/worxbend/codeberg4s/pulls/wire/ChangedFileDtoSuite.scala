@@ -1,8 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.GoldenFixtures
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{GoldenFixtures, Json, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.pulls.ChangedFile
 import com.worxbend.codeberg4s.repositories.CommitFileStatus
@@ -48,7 +47,7 @@ final class ChangedFileDtoSuite extends FunSuite with GoldenFixtures:
   test("a failing element of a list reports its position, not the array's"):
     val decoded = Json
       .decode[Vector[ChangedFileDto]]("""[{"filename":"a.go"},{"status":"added"}]""")
-      .flatMap(dtos => ChangedFileDto.toDomainAll(JsonPath.Root, dtos))
+      .flatMap(dtos => WireModel.all(JsonPath.Root, dtos))
 
     decoded match
       case Left(failure) => assertEquals(failure.path.render, "$[1].filename")
@@ -60,7 +59,7 @@ final class ChangedFileDtoSuite extends FunSuite with GoldenFixtures:
   private def files: Vector[ChangedFile] =
     Json
       .decode[Vector[ChangedFileDto]](golden("pull/files-list.json"))
-      .flatMap(dtos => ChangedFileDto.toDomainAll(JsonPath.Root, dtos)) match
+      .flatMap(dtos => WireModel.all(JsonPath.Root, dtos)) match
       case Right(values) => values
       case Left(failure) => fail(s"could not decode the changed-file listing: $failure")
 

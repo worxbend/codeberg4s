@@ -1,8 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.GoldenFixtures
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{GoldenFixtures, Json, WireModel}
 import com.worxbend.codeberg4s.issues.LifecycleState
 import com.worxbend.codeberg4s.issues.Milestone
 
@@ -68,7 +67,7 @@ final class MilestoneDtoSuite extends FunSuite with GoldenFixtures:
   test("a failing element reports its position, not the array's"):
     val decoded = Json
       .decode[Vector[MilestoneDto]]("""[{"id":1,"title":"a","state":"open"},{"id":2,"title":"b"}]""")
-      .flatMap(dtos => MilestoneDto.toDomainAll(JsonPath.Root, dtos))
+      .flatMap(dtos => WireModel.all(JsonPath.Root, dtos))
 
     decoded match
       case Left(failure) => assertEquals(failure.path.render, "$[1].state")
@@ -77,7 +76,7 @@ final class MilestoneDtoSuite extends FunSuite with GoldenFixtures:
   private def milestones: Vector[Milestone] =
     Json
       .decode[Vector[MilestoneDto]](golden("issue/milestones-list.json"))
-      .flatMap(dtos => MilestoneDto.toDomainAll(JsonPath.Root, dtos)) match
+      .flatMap(dtos => WireModel.all(JsonPath.Root, dtos)) match
       case Right(values) => values
       case Left(failure) => fail(s"could not decode the milestone listing: $failure")
 

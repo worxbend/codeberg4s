@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.repositories.actions.ActionRun
 import com.worxbend.codeberg4s.repositories.actions.ActionStatus
 
@@ -109,7 +109,7 @@ final class ActionRunDtoSuite extends FunSuite:
       case Right(decoded) => decoded
       case Left(failure)  => fail(s"the array did not decode: ${failure.message}")
 
-    assertEquals(ActionRunDto.toDomainAll(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].id"))
+    assertEquals(WireModel.all(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].id"))
 
   private def decode(body: String): ActionRunDto =
     Json.decode[ActionRunDto](body) match

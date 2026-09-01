@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.organizations.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.organizations.{Team, TeamId, TeamPermission}
 
@@ -88,10 +88,6 @@ object TeamDto:
       canCreateOrgRepo        = fields.boolean("can_create_org_repo"),
       includesAllRepositories = fields.boolean("includes_all_repositories"),
     )
-
-  /** Converts a decoded array of teams, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[TeamDto]): Either[DecodeFailure, Vector[Team]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
 
   /** The `units_map` object as unit name to raw level, dropping any entry whose value is not a string. */
   private def rawLevels(fields: JsonFields): Map[String, String] =

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.repositories.hooks.IssueConfig
 import com.worxbend.codeberg4s.repositories.hooks.IssueConfigValidation
 import com.worxbend.codeberg4s.repositories.hooks.IssueFormFieldType
@@ -130,7 +130,7 @@ final class IssueConfigDtoSuite extends FunSuite:
       case Left(failure)  => fail(s"the array did not decode: ${failure.message}")
 
     assertEquals(
-      IssueTemplateDto.toDomainAll(JsonPath.Root, dtos).swap.toOption.map(_.path.render),
+      WireModel.all(JsonPath.Root, dtos).swap.toOption.map(_.path.render),
       Some("$[1].file_name"),
     )
 

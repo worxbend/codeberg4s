@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.users.account.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.account.{Email, EmailAddress}
 
@@ -59,7 +59,3 @@ object EmailDto:
       userId   = fields.number("user_id"),
       username = fields.text("username"),
     )
-
-  /** Converts a decoded array of addresses, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[EmailDto]): Either[DecodeFailure, Vector[Email]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

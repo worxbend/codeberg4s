@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.miscellaneous.LicenseTemplate
 import com.worxbend.codeberg4s.miscellaneous.LicenseTemplateSummary
@@ -108,4 +108,4 @@ final class LicenseTemplateDtoSuite extends FunSuite:
   private def catalogue(body: String): Either[DecodeFailure, Vector[LicenseTemplateSummary]] =
     Json
       .decode[Vector[LicenseTemplateSummaryDto]](body)
-      .flatMap(dtos => LicenseTemplateSummaryDto.toDomainAll(JsonPath.Root, dtos))
+      .flatMap(dtos => WireModel.all(JsonPath.Root, dtos))

@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonDecoder
+import com.worxbend.codeberg4s.codec.{Json, JsonDecoder, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.admin.ActivityOperation
 import com.worxbend.codeberg4s.repositories.admin.ForkSyncInfo
@@ -169,7 +168,7 @@ final class AdminResponsesSuite extends FunSuite:
 
   test("the topic search envelope reports a bad element at its position inside topics"):
     val envelope = Json.decode[TopicSearchEnvelopeDto]("""{"topics": [{"id": 1, "topic_name": "a"}, {"id": 2}]}""")
-    val failure  = envelope.flatMap(e => TopicSummaryDto.toDomainAll(TopicPath, e.entries)).swap.toOption
+    val failure  = envelope.flatMap(e => WireModel.all(TopicPath, e.entries)).swap.toOption
 
     assertEquals(failure.map(_.path.render), Some("$.topics[1].topic_name"))
 
@@ -229,7 +228,7 @@ final class AdminResponsesSuite extends FunSuite:
 
   test("an activity array reports a bad element at its own index"):
     val failure = Json.decode[Vector[ActivityDto]]("""[{"id": 1}, {"op_type": "star_repo"}]""")
-      .flatMap(dtos => ActivityDto.toDomainAll(com.worxbend.codeberg4s.JsonPath.Root, dtos))
+      .flatMap(dtos => WireModel.all(com.worxbend.codeberg4s.JsonPath.Root, dtos))
       .swap
       .toOption
 

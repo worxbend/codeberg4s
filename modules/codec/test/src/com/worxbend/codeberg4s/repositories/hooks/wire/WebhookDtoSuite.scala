@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.repositories.hooks.GitHook
 import com.worxbend.codeberg4s.repositories.hooks.HookConfig
 import com.worxbend.codeberg4s.repositories.hooks.HookContentType
@@ -97,7 +97,7 @@ final class WebhookDtoSuite extends FunSuite:
       case Right(decoded) => decoded
       case Left(failure)  => fail(s"the array did not decode: ${failure.message}")
 
-    assertEquals(WebhookDto.toDomainAll(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].id"))
+    assertEquals(WireModel.all(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].id"))
 
   // --- GitHook --------------------------------------------------------------
 
@@ -130,7 +130,7 @@ final class WebhookDtoSuite extends FunSuite:
       case Right(decoded) => decoded
       case Left(failure)  => fail(s"the array did not decode: ${failure.message}")
 
-    assertEquals(GitHookDto.toDomainAll(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].name"))
+    assertEquals(WireModel.all(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].name"))
 
   private def decodeHook(body: String): WebhookDto =
     Json.decode[WebhookDto](body) match

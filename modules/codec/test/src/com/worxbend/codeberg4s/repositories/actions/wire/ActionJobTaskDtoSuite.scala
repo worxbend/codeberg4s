@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.repositories.actions.ActionRunJob
 import com.worxbend.codeberg4s.repositories.actions.ActionStatus
 import com.worxbend.codeberg4s.repositories.actions.ActionTask
@@ -53,7 +53,7 @@ final class ActionJobTaskDtoSuite extends FunSuite:
       case Right(decoded) => decoded
       case Left(failure)  => fail(s"the array did not decode: ${failure.message}")
 
-    assertEquals(ActionRunJobDto.toDomainAll(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].id"))
+    assertEquals(WireModel.all(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].id"))
 
   test("a full task decodes and converts"):
     val decoded = task(ActionJobTaskDtoSuite.TaskBody)
@@ -98,7 +98,7 @@ final class ActionJobTaskDtoSuite extends FunSuite:
     val at       = JsonPath.Root.field(WorkflowRunsEnvelopeDto.EntriesKey)
 
     assertEquals(
-      ActionRunDto.toDomainAll(at, envelope.entries).swap.toOption.map(_.path.render),
+      WireModel.all(at, envelope.entries).swap.toOption.map(_.path.render),
       Some("$.workflow_runs[1].id"),
     )
 

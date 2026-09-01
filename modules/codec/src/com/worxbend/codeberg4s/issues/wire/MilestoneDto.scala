@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.{LifecycleState, Milestone, MilestoneId}
 
@@ -78,7 +78,3 @@ object MilestoneDto:
       createdAt    = fields.text("created_at"),
       updatedAt    = fields.text("updated_at"),
     )
-
-  /** Converts a decoded array of milestones, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[MilestoneDto]): Either[DecodeFailure, Vector[Milestone]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

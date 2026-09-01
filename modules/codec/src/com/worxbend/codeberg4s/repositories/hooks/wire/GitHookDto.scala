@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.hooks.{GitHook, GitHookName}
 
@@ -48,7 +48,3 @@ object GitHookDto:
       isActive = fields.boolean("is_active"),
       content  = fields.rawText("content"),
     )
-
-  /** Converts a decoded array of Git hooks, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[GitHookDto]): Either[DecodeFailure, Vector[GitHook]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

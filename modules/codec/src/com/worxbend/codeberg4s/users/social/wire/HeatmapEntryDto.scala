@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.users.social.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.social.HeatmapEntry
 
@@ -57,7 +57,3 @@ object HeatmapEntryDto:
       timestamp     = fields.number("timestamp"),
       contributions = fields.number("contributions"),
     )
-
-  /** Converts a decoded array of buckets, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[HeatmapEntryDto]): Either[DecodeFailure, Vector[HeatmapEntry]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

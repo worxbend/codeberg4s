@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.access.BranchProtection
 
@@ -139,7 +139,3 @@ object BranchProtectionDto:
       createdAt                     = fields.text(BranchProtectionWire.CreatedAt),
       updatedAt                     = fields.text(BranchProtectionWire.UpdatedAt),
     )
-
-  /** Converts a decoded array of rules, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[BranchProtectionDto]): Either[DecodeFailure, Vector[BranchProtection]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

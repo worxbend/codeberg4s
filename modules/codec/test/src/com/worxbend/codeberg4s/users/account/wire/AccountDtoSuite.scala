@@ -1,8 +1,7 @@
 package com.worxbend.codeberg4s.users.account.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonDecoder
+import com.worxbend.codeberg4s.codec.{Json, JsonDecoder, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.account.ClientSecret
 import com.worxbend.codeberg4s.users.account.Email
@@ -71,7 +70,7 @@ final class AccountDtoSuite extends FunSuite:
     val dtos = decodeAll[OAuth2ApplicationDto]("""[{"id":1},{"name":"no id"}]""")
 
     assertEquals(
-      OAuth2ApplicationDto.toDomainAll(JsonPath.Root, dtos).swap.toOption.map(_.path.render),
+      WireModel.all(JsonPath.Root, dtos).swap.toOption.map(_.path.render),
       Some("$[1].id"),
     )
 
@@ -109,7 +108,7 @@ final class AccountDtoSuite extends FunSuite:
   test("a bad element of an address array reports its own position, rather than being dropped"):
     val dtos = decodeAll[EmailDto]("""[{"email":"a@b.example"},{"primary":true}]""")
 
-    assertEquals(EmailDto.toDomainAll(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].email"))
+    assertEquals(WireModel.all(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].email"))
 
   // --- settings -------------------------------------------------------------
 

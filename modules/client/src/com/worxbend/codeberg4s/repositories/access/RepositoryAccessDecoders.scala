@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access
 
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
+import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.organizations.Team
 import com.worxbend.codeberg4s.organizations.wire.TeamDto
@@ -42,7 +42,7 @@ private[access] object RepositoryAccessDecoders:
 
   /** A bare array of branch protection rules, as the unpaged listing returns it. */
   val branchProtections: Decode[Vector[BranchProtection]] =
-    WireDecode.vector(Json.decoder[Vector[BranchProtectionDto]])(BranchProtectionDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[BranchProtectionDto]])
 
   /** One tag protection rule. */
   val tagProtection: Decode[TagProtection] =
@@ -50,18 +50,11 @@ private[access] object RepositoryAccessDecoders:
 
   /** A bare array of tag protection rules. */
   val tagProtections: Decode[Vector[TagProtection]] =
-    WireDecode.vector(Json.decoder[Vector[TagProtectionDto]])(TagProtectionDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[TagProtectionDto]])
 
-  /** A bare array of users, which is what the collaborator listing answers.
-    *
-    * `UserDto` has no `toDomainAll` of its own — it is not this group's model — so the element fold is spelled out
-    * here, exactly as [[com.worxbend.codeberg4s.organizations.OrganizationDecoders]] and
-    * [[com.worxbend.codeberg4s.issues.IssueDecoders]] spell it out. One bad element still fails the page, and reports
-    * its position.
-    */
+  /** A bare array of users, which is what the collaborator listing answers. */
   val collaborators: Decode[Vector[User]] =
-    WireDecode.vector(Json.decoder[Vector[UserDto]]): (at, dtos) =>
-      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
+    WireDecode.vector(Json.decoder[Vector[UserDto]])
 
   /** The `{permission, role_name, user}` object the collaborator permission endpoint answers. */
   val collaboratorAccess: Decode[CollaboratorAccess] =
@@ -73,7 +66,7 @@ private[access] object RepositoryAccessDecoders:
 
   /** A bare array of deploy keys. */
   val deployKeys: Decode[Vector[DeployKey]] =
-    WireDecode.vector(Json.decoder[Vector[DeployKeyDto]])(DeployKeyDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[DeployKeyDto]])
 
   /** One team, which is what the team check answers rather than the `204` its siblings answer. */
   val team: Decode[Team] =
@@ -81,4 +74,4 @@ private[access] object RepositoryAccessDecoders:
 
   /** A bare array of teams, as `TeamListWithoutPagination` returns it. */
   val teams: Decode[Vector[Team]] =
-    WireDecode.vector(Json.decoder[Vector[TeamDto]])(TeamDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[TeamDto]])

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.pulls.{Review, ReviewId, ReviewState}
 import com.worxbend.codeberg4s.repositories.CommitSha
@@ -100,7 +100,3 @@ object ReviewDto:
       submittedAt    = fields.text("submitted_at"),
       updatedAt      = fields.text("updated_at"),
     )
-
-  /** Converts a decoded array of reviews, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[ReviewDto]): Either[DecodeFailure, Vector[Review]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

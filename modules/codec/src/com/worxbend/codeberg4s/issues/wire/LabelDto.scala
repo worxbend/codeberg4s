@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.{Label, LabelColor, LabelId}
 
@@ -71,7 +71,3 @@ object LabelDto:
       isArchived  = fields.boolean("is_archived"),
       url         = fields.text("url"),
     )
-
-  /** Converts a decoded array of labels, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[LabelDto]): Either[DecodeFailure, Vector[Label]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

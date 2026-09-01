@@ -14,12 +14,12 @@ import com.worxbend.codeberg4s.repositories.actions.wire.{
 
 /** The Actions response shapes that '''every''' Actions surface can receive, decoded once and shared.
   *
-  * Forgejo exposes the same runner, secret and variable models three times over — under `/repos/{owner}/{repo}/actions`,
-  * under `/orgs/{org}/actions` and under `/user/actions` — with nothing but the path prefix differing. So the decoders
-  * for those shapes live here, in one place that all three groups can reach, rather than being re-derived from the same
-  * DTOs in each group. Re-deriving them is what this object exists to prevent: a security decision such as the
-  * [[com.worxbend.codeberg4s.core.Decode.sensitive]] marking below has to hold on every surface, and three copies of it
-  * can be changed one at a time.
+  * Forgejo exposes the same runner, secret and variable models three times over — under
+  * `/repos/{owner}/{repo}/actions`, under `/orgs/{org}/actions` and under `/user/actions` — with nothing but the path
+  * prefix differing. So the decoders for those shapes live here, in one place that all three groups can reach, rather
+  * than being re-derived from the same DTOs in each group. Re-deriving them is what this object exists to prevent: a
+  * security decision such as the [[com.worxbend.codeberg4s.core.Decode.sensitive]] marking below has to hold on every
+  * surface, and three copies of it can be changed one at a time.
   *
   * The instances are stateless and immutable, so they are built as `val`s rather than per call, exactly as
   * [[com.worxbend.codeberg4s.repositories.RepositoryDecoders]] does.
@@ -40,11 +40,11 @@ private[codeberg4s] object ActionDecoders:
 
   /** A bare array of runner objects, as every runner listing returns it. */
   val runners: Decode[Vector[ActionRunner]] =
-    WireDecode.vector(Json.decoder[Vector[ActionRunnerDto]])(ActionRunnerDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[ActionRunnerDto]])
 
   /** A bare array of job objects, as both a run's job listing and the runner job search return it. */
   val jobs: Decode[Vector[ActionRunJob]] =
-    WireDecode.vector(Json.decoder[Vector[ActionRunJobDto]])(ActionRunJobDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[ActionRunJobDto]])
 
   /** The `{id, uuid, token}` object a runner registration returns, whose `token` is a live credential.
     *
@@ -63,7 +63,7 @@ private[codeberg4s] object ActionDecoders:
 
   /** A bare array of secret objects — names and timestamps, never values. */
   val secrets: Decode[Vector[ActionSecret]] =
-    WireDecode.vector(Json.decoder[Vector[ActionSecretDto]])(ActionSecretDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[ActionSecretDto]])
 
   /** One variable object. */
   val variable: Decode[ActionVariable] =
@@ -71,4 +71,4 @@ private[codeberg4s] object ActionDecoders:
 
   /** A bare array of variable objects. */
   val variables: Decode[Vector[ActionVariable]] =
-    WireDecode.vector(Json.decoder[Vector[ActionVariableDto]])(ActionVariableDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[ActionVariableDto]])

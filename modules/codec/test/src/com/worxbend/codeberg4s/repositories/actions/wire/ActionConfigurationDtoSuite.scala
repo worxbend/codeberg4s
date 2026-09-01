@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.repositories.actions.ActionSecret
 import com.worxbend.codeberg4s.repositories.actions.ActionVariable
 
@@ -49,7 +49,7 @@ final class ActionConfigurationDtoSuite extends FunSuite:
       case Right(decoded) => decoded
       case Left(failure)  => fail(s"the array did not decode: ${failure.message}")
 
-    assertEquals(ActionSecretDto.toDomainAll(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].name"))
+    assertEquals(WireModel.all(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].name"))
 
   test("a variable decodes with its value, which arrives under 'data' and not 'value'"):
     val variable = domainVariable("""{"name":"ENVIRONMENT","data":"staging","owner_id":0,"repo_id":12}""")
@@ -77,7 +77,7 @@ final class ActionConfigurationDtoSuite extends FunSuite:
       case Left(failure)  => fail(s"the array did not decode: ${failure.message}")
 
     assertEquals(
-      ActionVariableDto.toDomainAll(JsonPath.Root, dtos).swap.toOption.map(_.path.render),
+      WireModel.all(JsonPath.Root, dtos).swap.toOption.map(_.path.render),
       Some("$[1].data"),
     )
 

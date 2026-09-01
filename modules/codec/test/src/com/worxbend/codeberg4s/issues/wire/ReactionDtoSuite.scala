@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.issues.Reaction
 
 import munit.FunSuite
@@ -65,7 +65,7 @@ final class ReactionDtoSuite extends FunSuite:
   test("a failing element of a listing reports its position, not the array's"):
     val decoded = Json
       .decode[Vector[ReactionDto]]("""[{"content":"+1"},{"user":{"id":1,"login":"a"}}]""")
-      .flatMap(dtos => ReactionDto.toDomainAll(JsonPath.Root, dtos))
+      .flatMap(dtos => WireModel.all(JsonPath.Root, dtos))
 
     decoded match
       case Left(failure) => assertEquals(failure.path.render, "$[1].content")

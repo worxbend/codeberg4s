@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.organizations.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.organizations.Team
 import com.worxbend.codeberg4s.organizations.TeamPermission
 
@@ -133,7 +133,7 @@ final class TeamDtoSuite extends FunSuite:
   test("a bad element of a team listing reports its own position"):
     Json.decode[Vector[TeamDto]]("""[{"id":1,"name":"a"},{"id":2}]""") match
       case Right(dtos)   =>
-        TeamDto.toDomainAll(JsonPath.Root, dtos) match
+        WireModel.all(JsonPath.Root, dtos) match
           case Left(failure) => assertEquals(failure.path.render, "$[1].name")
           case Right(teams)  => fail(s"expected a failure, converted $teams")
       case Left(failure) => fail(s"the array did not decode: ${failure.message}")

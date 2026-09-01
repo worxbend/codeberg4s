@@ -2,7 +2,7 @@ package com.worxbend.codeberg4s.users.social
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
+import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.{Decode, DecodeFailure, ResponseBody}
 import com.worxbend.codeberg4s.issues.TrackedTime
 import com.worxbend.codeberg4s.issues.wire.TrackedTimeDto
@@ -46,21 +46,19 @@ private[social] object SocialDecoders:
 
   /** A bare array of user objects, as every follower and following listing returns it. */
   val users: Decode[Vector[User]] =
-    WireDecode.vector(Json.decoder[Vector[UserDto]]): (at, dtos) =>
-      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
+    WireDecode.vector(Json.decoder[Vector[UserDto]])
 
   /** A bare array of repository objects, as the starred and watched listings return them. */
   val repositories: Decode[Vector[Repository]] =
-    WireDecode.vector(Json.decoder[Vector[RepositoryDto]]): (at, dtos) =>
-      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
+    WireDecode.vector(Json.decoder[Vector[RepositoryDto]])
 
   /** A bare array of block entries. */
   val blockedUsers: Decode[Vector[BlockedUser]] =
-    WireDecode.vector(Json.decoder[Vector[BlockedUserDto]])(BlockedUserDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[BlockedUserDto]])
 
   /** A bare array of running stopwatches. */
   val stopWatches: Decode[Vector[StopWatch]] =
-    WireDecode.vector(Json.decoder[Vector[StopWatchDto]])(StopWatchDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[StopWatchDto]])
 
   /** A bare array of tracked-time entries, read by the model `client.issues` already uses.
     *
@@ -69,7 +67,7 @@ private[social] object SocialDecoders:
     * a second endpoint the mistake to avoid.
     */
   val trackedTimes: Decode[Vector[TrackedTime]] =
-    WireDecode.vector(Json.decoder[Vector[TrackedTimeDto]])(TrackedTimeDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[TrackedTimeDto]])
 
   /** A bare array of activity entries, read by the model `client.repos.admin` already uses.
     *
@@ -79,11 +77,11 @@ private[social] object SocialDecoders:
     * second copy of thirteen fields.
     */
   val activities: Decode[Vector[RepositoryActivity]] =
-    WireDecode.vector(Json.decoder[Vector[ActivityDto]])(ActivityDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[ActivityDto]])
 
   /** A bare array of heatmap buckets. Not paged — the endpoint takes no `page` or `limit`. */
   val heatmap: Decode[Vector[HeatmapEntry]] =
-    WireDecode.vector(Json.decoder[Vector[HeatmapEntryDto]])(HeatmapEntryDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[HeatmapEntryDto]])
 
   /** One GPG key object. */
   val gpgKey: Decode[GpgKey] =
@@ -91,7 +89,7 @@ private[social] object SocialDecoders:
 
   /** A bare array of GPG key objects. */
   val gpgKeys: Decode[Vector[GpgKey]] =
-    WireDecode.vector(Json.decoder[Vector[GpgKeyDto]])(GpgKeyDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[GpgKeyDto]])
 
   /** One SSH public key object, as `POST /user/keys` and `GET /user/keys/{id}` return it. */
   val publicKey: Decode[PublicKey] =
@@ -99,7 +97,7 @@ private[social] object SocialDecoders:
 
   /** A bare array of access-token objects, with the credential field dropped unconditionally. */
   val accessTokens: Decode[Vector[AccessToken]] =
-    WireDecode.vector(Json.decoder[Vector[AccessTokenDto]])(AccessTokenDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[AccessTokenDto]])
 
   /** The `201` of a token creation — the one decoder in this library that yields a usable personal access token.
     *

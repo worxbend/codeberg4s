@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.users.social.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.social.GpgKey
 
@@ -99,7 +99,7 @@ final class GpgKeyDtoSuite extends FunSuite:
 
   test("a whole array reports the position of whichever element failed"):
     val dtos    = Json.decode[Vector[GpgKeyDto]](s"""[{"id": 12}, {"key_id": "AB"}]""")
-    val outcome = dtos.flatMap(GpgKeyDto.toDomainAll(JsonPath.Root, _))
+    val outcome = dtos.flatMap(WireModel.all(JsonPath.Root, _))
 
     outcome match
       case Left(problem) => assertEquals(problem.path.render, "$[1].id")
@@ -107,7 +107,7 @@ final class GpgKeyDtoSuite extends FunSuite:
 
   test("an element position is reported relative to whatever path the array sits at"):
     val dtos    = Json.decode[Vector[GpgKeyDto]]("""[{"id": 0}]""")
-    val outcome = dtos.flatMap(GpgKeyDto.toDomainAll(JsonPath.Root.field("keys"), _))
+    val outcome = dtos.flatMap(WireModel.all(JsonPath.Root.field("keys"), _))
 
     outcome match
       case Left(problem) => assertEquals(problem.path.render, "$.keys[0].id")

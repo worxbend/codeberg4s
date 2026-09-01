@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.hooks.{HookConfig, HookId, HookType, Webhook}
 
@@ -93,7 +93,3 @@ object WebhookDto:
       createdAt    = fields.text("created_at"),
       updatedAt    = fields.text("updated_at"),
     )
-
-  /** Converts a decoded array of hooks, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[WebhookDto]): Either[DecodeFailure, Vector[Webhook]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

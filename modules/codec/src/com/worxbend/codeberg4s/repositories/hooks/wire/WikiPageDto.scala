@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.hooks.{WikiCommit, WikiPage, WikiPageMeta}
 import com.worxbend.codeberg4s.repositories.wire.GitIdentityDto
@@ -63,10 +63,6 @@ object WikiCommitDto:
       committer = fields.nested(CommitterKey).map(GitIdentityDto.fromFields),
       message   = fields.rawText("message"),
     )
-
-  /** Converts a decoded array of revisions, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[WikiCommitDto]): Either[DecodeFailure, Vector[WikiCommit]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
 
 /** Forgejo's `WikiPage` model — one wiki page with its content.
   *
@@ -179,10 +175,6 @@ object WikiPageMetaDto:
       subUrl     = fields.text("sub_url"),
       lastCommit = fields.nested(WikiPageDto.LastCommitKey).map(WikiCommitDto.fromFields),
     )
-
-  /** Converts a decoded array of listing entries, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[WikiPageMetaDto]): Either[DecodeFailure, Vector[WikiPageMeta]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
 
 /** Forgejo's `WikiCommitList` model — the envelope the revision listing returns.
   *

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.users.account.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.account.{ClientSecret, OAuth2Application, OAuth2ApplicationId}
 
@@ -79,10 +79,3 @@ object OAuth2ApplicationDto:
       confidentialClient = fields.boolean("confidential_client"),
       created            = fields.text("created"),
     )
-
-  /** Converts a decoded array of applications, reporting the position of whichever element failed. */
-  def toDomainAll(
-      base: JsonPath,
-      dtos: Vector[OAuth2ApplicationDto],
-  ): Either[DecodeFailure, Vector[OAuth2Application]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

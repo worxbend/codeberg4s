@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.miscellaneous
 
+import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.CodebergRequest.{read, text, write}
@@ -577,16 +578,16 @@ object MiscellaneousApi:
     * [[com.worxbend.codeberg4s.miscellaneous.wire.TemplateNamesDto]].
     */
   private val TemplateNamesDecoder: Decode[Vector[TemplateName]] =
-    WireDecode.vector(Json.decoder[Vector[String]])(TemplateNamesDto.toDomainAll)
+    WireDecode.single(Json.decoder[Vector[String]])(TemplateNamesDto.toDomainAll(JsonPath.Root, _))
 
   private val GitignoreTemplateDecoder: Decode[GitignoreTemplate] =
     WireDecode.single(Json.decoder[GitignoreTemplateDto])(_.toDomain)
 
   private val TemplateLabelsDecoder: Decode[Vector[TemplateLabel]] =
-    WireDecode.vector(Json.decoder[Vector[TemplateLabelDto]])(TemplateLabelDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[TemplateLabelDto]])
 
   private val LicenseTemplatesDecoder: Decode[Vector[LicenseTemplateSummary]] =
-    WireDecode.vector(Json.decoder[Vector[LicenseTemplateSummaryDto]])(LicenseTemplateSummaryDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[LicenseTemplateSummaryDto]])
   private val LicenseTemplateDecoder: Decode[LicenseTemplate]                 =
     WireDecode.single(Json.decoder[LicenseTemplateDto])(_.toDomain)
 

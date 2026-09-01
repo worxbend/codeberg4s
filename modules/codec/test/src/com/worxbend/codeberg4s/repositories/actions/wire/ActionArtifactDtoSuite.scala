@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.repositories.actions.ActionArtifact
 
 import munit.FunSuite
@@ -57,7 +57,7 @@ final class ActionArtifactDtoSuite extends FunSuite:
       case Left(failure)  => fail(s"the array did not decode: ${failure.message}")
 
     assertEquals(
-      ActionArtifactDto.toDomainAll(JsonPath.Root, dtos).swap.toOption.map(_.path.render),
+      WireModel.all(JsonPath.Root, dtos).swap.toOption.map(_.path.render),
       Some("$[1].id"),
     )
 

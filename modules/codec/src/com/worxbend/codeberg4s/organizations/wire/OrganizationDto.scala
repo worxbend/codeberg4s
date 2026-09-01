@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.organizations.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.organizations.{OrgName, Organization}
 import com.worxbend.codeberg4s.users.UserVisibility
@@ -94,7 +94,3 @@ object OrganizationDto:
       created                   = fields.text("created"),
       username                  = fields.text("username"),
     )
-
-  /** Converts a decoded array of organisations, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[OrganizationDto]): Either[DecodeFailure, Vector[Organization]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.repositories.actions.ActionRunner
 import com.worxbend.codeberg4s.repositories.actions.RegisteredRunner
 import com.worxbend.codeberg4s.repositories.actions.RunnerRegistrationToken
@@ -57,7 +57,7 @@ final class ActionRunnerDtoSuite extends FunSuite:
       case Right(decoded) => decoded
       case Left(failure)  => fail(s"the array did not decode: ${failure.message}")
 
-    assertEquals(ActionRunnerDto.toDomainAll(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].id"))
+    assertEquals(WireModel.all(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].id"))
 
   test("a registration result carries its token as a masked credential"):
     val result = registered("""{"id":37,"uuid":"abc","token":"QWERTY123"}""")

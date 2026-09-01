@@ -1,8 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.JsonDecoder
+import com.worxbend.codeberg4s.codec.{Json, JsonDecoder, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.organizations.TeamPermission
 import com.worxbend.codeberg4s.repositories.access.BranchProtection
@@ -107,7 +106,7 @@ final class AccessResponsesSuite extends FunSuite:
     val dtos = decodeAll[BranchProtectionDto]("""[{"rule_name":"main"},{"enable_push":true}]""")
 
     assertEquals(
-      BranchProtectionDto.toDomainAll(JsonPath.Root, dtos).swap.toOption.map(_.path.render),
+      WireModel.all(JsonPath.Root, dtos).swap.toOption.map(_.path.render),
       Some("$[1].rule_name"),
     )
 
@@ -144,7 +143,7 @@ final class AccessResponsesSuite extends FunSuite:
   test("a bad element of a tag protection array reports its own position"):
     val dtos = decodeAll[TagProtectionDto]("""[{"id":1,"name_pattern":"v*"},{"name_pattern":"x"}]""")
 
-    assertEquals(TagProtectionDto.toDomainAll(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].id"))
+    assertEquals(WireModel.all(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].id"))
 
   // --- deploy keys ----------------------------------------------------------
 
@@ -190,7 +189,7 @@ final class AccessResponsesSuite extends FunSuite:
   test("a bad element of a deploy key array reports its own position"):
     val dtos = decodeAll[DeployKeyDto]("""[{"id":1,"key":"a"},{"key":"b"}]""")
 
-    assertEquals(DeployKeyDto.toDomainAll(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].id"))
+    assertEquals(WireModel.all(JsonPath.Root, dtos).swap.toOption.map(_.path.render), Some("$[1].id"))
 
   // --- collaborator permission ----------------------------------------------
 

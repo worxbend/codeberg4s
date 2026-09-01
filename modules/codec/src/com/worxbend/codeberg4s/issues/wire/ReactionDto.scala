@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.{Reaction, ReactionContent}
 import com.worxbend.codeberg4s.users.wire.UserDto
@@ -46,7 +46,3 @@ object ReactionDto:
       user      = fields.nested("user").map(UserDto.fromFields),
       createdAt = fields.text("created_at"),
     )
-
-  /** Converts a decoded array of reactions, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[ReactionDto]): Either[DecodeFailure, Vector[Reaction]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.hooks.{IssueFormField, IssueFormFieldType, IssueTemplate}
 
@@ -114,7 +114,3 @@ object IssueTemplateDto:
       ref      = fields.text("ref"),
       fields   = fields.nestedAll(FieldsKey).map(IssueFormFieldDto.fromFields),
     )
-
-  /** Converts a decoded array of templates, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[IssueTemplateDto]): Either[DecodeFailure, Vector[IssueTemplate]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

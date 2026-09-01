@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.admin.{MirrorName, PushMirror}
 
@@ -98,7 +98,3 @@ object PushMirrorDto:
       created       = fields.text("created"),
       lastUpdate    = fields.text("last_update"),
     )
-
-  /** Converts a whole array, each element failing at its own index. */
-  def toDomainAll(base: JsonPath, dtos: Vector[PushMirrorDto]): Either[DecodeFailure, Vector[PushMirror]] =
-    ArrayElements.convert(base, dtos)((dto, at) => dto.toDomainAt(at))

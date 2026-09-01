@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues
 
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
+import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.{Decode, ResponseBody}
 import com.worxbend.codeberg4s.issues.wire.{
   AttachmentDto,
@@ -39,7 +39,7 @@ private[issues] object IssueDecoders:
 
   /** A bare array of issue objects — the cross-repository search, the blocks listing and the dependency listing. */
   val issues: Decode[Vector[Issue]] =
-    WireDecode.vector(Json.decoder[Vector[IssueDto]])(IssueDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[IssueDto]])
 
   /** One comment object on an endpoint that always sends a body — posting a comment, where `201` is the only success.
     *
@@ -64,7 +64,7 @@ private[issues] object IssueDecoders:
 
   /** A bare array of comment objects, as the repository-wide comment listing returns it. */
   val comments: Decode[Vector[Comment]] =
-    WireDecode.vector(Json.decoder[Vector[CommentDto]])(CommentDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[CommentDto]])
 
   /** One label object. */
   val label: Decode[Label] =
@@ -72,7 +72,7 @@ private[issues] object IssueDecoders:
 
   /** A bare array of label objects, as the per-issue label calls return it. */
   val labels: Decode[Vector[Label]] =
-    WireDecode.vector(Json.decoder[Vector[LabelDto]])(LabelDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[LabelDto]])
 
   /** One milestone object. */
   val milestone: Decode[Milestone] =
@@ -80,7 +80,7 @@ private[issues] object IssueDecoders:
 
   /** A bare array of milestone objects, as the repository's milestone listing returns it. */
   val milestones: Decode[Vector[Milestone]] =
-    WireDecode.vector(Json.decoder[Vector[MilestoneDto]])(MilestoneDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[MilestoneDto]])
 
   /** One attachment object. */
   val attachment: Decode[IssueAttachment] =
@@ -88,7 +88,7 @@ private[issues] object IssueDecoders:
 
   /** A bare array of attachment objects. */
   val attachments: Decode[Vector[IssueAttachment]] =
-    WireDecode.vector(Json.decoder[Vector[AttachmentDto]])(AttachmentDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[AttachmentDto]])
 
   /** One reaction object, as adding a reaction returns it. */
   val reaction: Decode[Reaction] =
@@ -96,7 +96,7 @@ private[issues] object IssueDecoders:
 
   /** A bare array of reaction objects — one element per account per emoji, never a tally. */
   val reactions: Decode[Vector[Reaction]] =
-    WireDecode.vector(Json.decoder[Vector[ReactionDto]])(ReactionDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[ReactionDto]])
 
   /** The one-key object the deadline endpoint answers. */
   val deadline: Decode[IssueDeadline] =
@@ -106,15 +106,9 @@ private[issues] object IssueDecoders:
   val subscription: Decode[IssueSubscription] =
     WireDecode.single(Json.decoder[IssueSubscriptionDto])(_.toDomain)
 
-  /** A bare array of user objects, as the subscriber listing returns it.
-    *
-    * `UserDto` has no `toDomainAll` of its own — it is not this group's model — so the element fold is spelled out
-    * here, exactly as [[com.worxbend.codeberg4s.organizations.OrganizationDecoders]] spells it out for the member
-    * listings. One bad element still fails the page, and reports its position.
-    */
+  /** A bare array of user objects, as the subscriber listing returns it. */
   val users: Decode[Vector[User]] =
-    WireDecode.vector(Json.decoder[Vector[UserDto]]): (at, dtos) =>
-      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
+    WireDecode.vector(Json.decoder[Vector[UserDto]])
 
   /** One tracked-time entry, as adding time returns it. */
   val trackedTime: Decode[TrackedTime] =
@@ -122,8 +116,8 @@ private[issues] object IssueDecoders:
 
   /** A bare array of tracked-time entries. */
   val trackedTimes: Decode[Vector[TrackedTime]] =
-    WireDecode.vector(Json.decoder[Vector[TrackedTimeDto]])(TrackedTimeDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[TrackedTimeDto]])
 
   /** A bare array of timeline entries. */
   val timeline: Decode[Vector[TimelineEvent]] =
-    WireDecode.vector(Json.decoder[Vector[TimelineCommentDto]])(TimelineCommentDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[TimelineCommentDto]])

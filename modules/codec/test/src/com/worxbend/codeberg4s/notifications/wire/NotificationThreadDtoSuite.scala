@@ -1,8 +1,7 @@
 package com.worxbend.codeberg4s.notifications.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.GoldenFixtures
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{GoldenFixtures, Json, WireModel}
 import com.worxbend.codeberg4s.notifications.NotificationSubjectType
 import com.worxbend.codeberg4s.notifications.NotificationThread
 
@@ -31,7 +30,7 @@ final class NotificationThreadDtoSuite extends FunSuite with GoldenFixtures:
 
   private def domain(body: String): Vector[NotificationThread] =
     Json.decode[Vector[NotificationThreadDto]](body).flatMap(dtos =>
-      NotificationThreadDto.toDomainAll(JsonPath.Root, dtos)
+      WireModel.all(JsonPath.Root, dtos)
     ) match
       case Right(threads) => threads
       case Left(failure)  => fail(s"body did not convert: ${failure.path.render} ${failure.message}")
@@ -128,7 +127,7 @@ final class NotificationThreadDtoSuite extends FunSuite with GoldenFixtures:
   test("a bad element of a list reports its position"):
     Json
       .decode[Vector[NotificationThreadDto]]("""[{"id":1},{"subject":null}]""")
-      .flatMap(dtos => NotificationThreadDto.toDomainAll(JsonPath.Root, dtos)) match
+      .flatMap(dtos => WireModel.all(JsonPath.Root, dtos)) match
       case Left(failure)  => assertEquals(failure.path.render, "$[1].id")
       case Right(threads) => fail(s"a list with a bad element should not convert, got $threads")
 

@@ -1,8 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.GoldenFixtures
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{GoldenFixtures, Json, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.pulls.PullRequest
 import com.worxbend.codeberg4s.pulls.PullRequestState
@@ -201,7 +200,7 @@ final class PullRequestDtoSuite extends FunSuite with GoldenFixtures:
       .decode[Vector[PullRequestDto]](
         """[{"id":1,"number":1,"title":"t","state":"open"},{"id":2,"number":2,"title":"t"}]"""
       )
-      .flatMap(dtos => PullRequestDto.toDomainAll(JsonPath.Root, dtos))
+      .flatMap(dtos => WireModel.all(JsonPath.Root, dtos))
 
     decoded match
       case Left(failure) => assertEquals(failure.path.render, "$[1].state")
@@ -225,7 +224,7 @@ final class PullRequestDtoSuite extends FunSuite with GoldenFixtures:
   private def list(path: String): Vector[PullRequest] =
     Json
       .decode[Vector[PullRequestDto]](golden(path))
-      .flatMap(dtos => PullRequestDto.toDomainAll(JsonPath.Root, dtos)) match
+      .flatMap(dtos => WireModel.all(JsonPath.Root, dtos)) match
       case Right(values) => values
       case Left(failure) => fail(s"could not decode $path: $failure")
 

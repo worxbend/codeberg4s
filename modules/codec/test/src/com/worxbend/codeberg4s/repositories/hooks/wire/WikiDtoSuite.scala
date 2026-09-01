@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.repositories.hooks.WikiCommit
 import com.worxbend.codeberg4s.repositories.hooks.WikiPage
 import com.worxbend.codeberg4s.repositories.hooks.WikiPageMeta
@@ -83,7 +83,7 @@ final class WikiDtoSuite extends FunSuite:
       case Left(failure)  => fail(s"the array did not decode: ${failure.message}")
 
     assertEquals(
-      WikiPageMetaDto.toDomainAll(JsonPath.Root, dtos).swap.toOption.map(_.path.render),
+      WireModel.all(JsonPath.Root, dtos).swap.toOption.map(_.path.render),
       Some("$[1].title"),
     )
 
@@ -137,7 +137,7 @@ final class WikiDtoSuite extends FunSuite:
     val path     = JsonPath.Root.field(WikiCommitListDto.EntriesKey)
 
     assertEquals(
-      WikiCommitDto.toDomainAll(path, envelope.entries).swap.toOption.map(_.path.render),
+      WireModel.all(path, envelope.entries).swap.toOption.map(_.path.render),
       Some("$.commits[1].sha"),
     )
 

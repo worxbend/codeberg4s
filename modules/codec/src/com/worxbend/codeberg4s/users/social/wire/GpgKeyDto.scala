@@ -173,7 +173,3 @@ object GpgKeyDto:
       created           = fields.text("created_at"),
       expires           = fields.text("expires_at"),
     )
-
-  /** Converts a decoded array of keys, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[GpgKeyDto]): Either[DecodeFailure, Vector[GpgKey]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.users.social.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.social.BlockedUser
 import com.worxbend.codeberg4s.users.social.HeatmapEntry
@@ -44,7 +44,7 @@ final class SocialDtoSuite extends FunSuite:
   test("a bad block entry names its position in the array"):
     val outcome = Json
       .decode[Vector[BlockedUserDto]]("""[{"block_id": 1}, {"created_at": null}]""")
-      .flatMap(BlockedUserDto.toDomainAll(JsonPath.Root, _))
+      .flatMap(WireModel.all(JsonPath.Root, _))
 
     outcome match
       case Left(problem) => assertEquals(problem.path.render, "$[1].block_id")
@@ -66,7 +66,7 @@ final class SocialDtoSuite extends FunSuite:
   test("an empty block listing is an empty vector, not a failure"):
     val outcome = Json
       .decode[Vector[BlockedUserDto]]("[]")
-      .flatMap(BlockedUserDto.toDomainAll(JsonPath.Root, _))
+      .flatMap(WireModel.all(JsonPath.Root, _))
 
     assertEquals(outcome, Right(Vector.empty[BlockedUser]))
 
@@ -129,7 +129,7 @@ final class SocialDtoSuite extends FunSuite:
   test("a bad heatmap bucket names its position in the array"):
     val outcome = Json
       .decode[Vector[HeatmapEntryDto]]("""[{"timestamp": 1, "contributions": 1}, {"timestamp": 2}]""")
-      .flatMap(HeatmapEntryDto.toDomainAll(JsonPath.Root, _))
+      .flatMap(WireModel.all(JsonPath.Root, _))
 
     outcome match
       case Left(problem)  => assertEquals(problem.path.render, "$[1].contributions")

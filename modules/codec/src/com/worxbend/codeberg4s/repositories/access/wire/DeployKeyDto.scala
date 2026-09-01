@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.access.{DeployKey, DeployKeyId}
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
@@ -115,7 +115,3 @@ object DeployKeyDto:
       readOnly    = fields.boolean(DeployKeyWire.ReadOnly),
       createdAt   = fields.text(DeployKeyWire.CreatedAt),
     )
-
-  /** Converts a decoded array of deploy keys, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[DeployKeyDto]): Either[DecodeFailure, Vector[DeployKey]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

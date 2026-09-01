@@ -1,8 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.GoldenFixtures
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{GoldenFixtures, Json, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.pulls.Review
 import com.worxbend.codeberg4s.pulls.ReviewState
@@ -76,7 +75,7 @@ final class ReviewDtoSuite extends FunSuite with GoldenFixtures:
   test("a failing element of a list reports its position, not the array's"):
     val decoded = Json
       .decode[Vector[ReviewDto]]("""[{"id":1},{"id":0}]""")
-      .flatMap(dtos => ReviewDto.toDomainAll(JsonPath.Root, dtos))
+      .flatMap(dtos => WireModel.all(JsonPath.Root, dtos))
 
     decoded match
       case Left(failure) => assertEquals(failure.path.render, "$[1].id")
@@ -88,7 +87,7 @@ final class ReviewDtoSuite extends FunSuite with GoldenFixtures:
   private def reviews: Vector[Review] =
     Json
       .decode[Vector[ReviewDto]](golden("pull/reviews-list.json"))
-      .flatMap(dtos => ReviewDto.toDomainAll(JsonPath.Root, dtos)) match
+      .flatMap(dtos => WireModel.all(JsonPath.Root, dtos)) match
       case Right(values) => values
       case Left(failure) => fail(s"could not decode the review listing: $failure")
 

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.issues.TrackedTime
 
 import munit.FunSuite
@@ -76,7 +76,7 @@ final class TrackedTimeDtoSuite extends FunSuite:
   test("a failing element of a listing reports its position, not the array's"):
     val decoded = Json
       .decode[Vector[TrackedTimeDto]]("""[{"id":1,"time":60},{"id":2}]""")
-      .flatMap(dtos => TrackedTimeDto.toDomainAll(JsonPath.Root, dtos))
+      .flatMap(dtos => WireModel.all(JsonPath.Root, dtos))
 
     decoded match
       case Left(failure) => assertEquals(failure.path.render, "$[1].time")

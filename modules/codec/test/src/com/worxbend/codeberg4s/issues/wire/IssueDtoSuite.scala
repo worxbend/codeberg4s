@@ -1,8 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.GoldenFixtures
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{GoldenFixtures, Json, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.Issue
 import com.worxbend.codeberg4s.issues.LifecycleState
@@ -129,7 +128,7 @@ final class IssueDtoSuite extends FunSuite with GoldenFixtures:
   test("a failing element of a list reports its position, not the array's"):
     val decoded = Json
       .decode[Vector[IssueDto]]("""[{"id":1,"number":1,"title":"t","state":"open"},{"id":2,"number":2,"title":"t"}]""")
-      .flatMap(dtos => IssueDto.toDomainAll(JsonPath.Root, dtos))
+      .flatMap(dtos => WireModel.all(JsonPath.Root, dtos))
 
     decoded match
       case Left(failure) => assertEquals(failure.path.render, "$[1].state")
@@ -145,7 +144,7 @@ final class IssueDtoSuite extends FunSuite with GoldenFixtures:
       case Left(failure) => fail(s"could not decode the single issue: $failure")
 
   private def list(path: String): Vector[Issue] =
-    Json.decode[Vector[IssueDto]](golden(path)).flatMap(dtos => IssueDto.toDomainAll(JsonPath.Root, dtos)) match
+    Json.decode[Vector[IssueDto]](golden(path)).flatMap(dtos => WireModel.all(JsonPath.Root, dtos)) match
       case Right(values) => values
       case Left(failure) => fail(s"could not decode $path: $failure")
 

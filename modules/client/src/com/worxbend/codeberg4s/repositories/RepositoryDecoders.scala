@@ -2,8 +2,8 @@ package com.worxbend.codeberg4s.repositories
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
-import com.worxbend.codeberg4s.core.{Decode, DecodeFailure}
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
+import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.repositories.wire.{
   BranchDto,
   CommitDto,
@@ -33,12 +33,12 @@ private[repositories] object RepositoryDecoders:
 
   /** A bare array of repository objects, as the fork listing returns it. */
   val repositories: Decode[Vector[Repository]] =
-    listOf(Json.decoder[Vector[RepositoryDto]])((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[RepositoryDto]])
 
   /** The `{"ok", "data"}` envelope the search endpoint returns. */
   val searchResults: Decode[Vector[Repository]] =
     WireDecode.single(Json.decoder[SearchEnvelopeDto[RepositoryDto]]): envelope =>
-      ArrayElements.convert(JsonPath.Root.field("data"), envelope.data)((dto, at) => dto.toDomainAt(at))
+      WireModel.all(JsonPath.Root.field("data"), envelope.data)
 
   /** One branch object. */
   val branch: Decode[Branch] =
@@ -46,15 +46,15 @@ private[repositories] object RepositoryDecoders:
 
   /** A bare array of branch objects. */
   val branches: Decode[Vector[Branch]] =
-    listOf(Json.decoder[Vector[BranchDto]])((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[BranchDto]])
 
   /** A bare array of tag objects. */
   val tags: Decode[Vector[Tag]] =
-    listOf(Json.decoder[Vector[TagDto]])((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[TagDto]])
 
   /** A bare array of commit objects. */
   val commits: Decode[Vector[Commit]] =
-    listOf(Json.decoder[Vector[CommitDto]])((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[CommitDto]])
 
   /** One release object. */
   val release: Decode[Release] =
@@ -62,7 +62,7 @@ private[repositories] object RepositoryDecoders:
 
   /** A bare array of release objects. */
   val releases: Decode[Vector[Release]] =
-    listOf(Json.decoder[Vector[ReleaseDto]])((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[ReleaseDto]])
 
   /** The `{"topics"}` envelope, unwrapped to the names it carries. */
   val topics: Decode[Vector[String]] =
@@ -71,9 +71,3 @@ private[repositories] object RepositoryDecoders:
   /** Either arm of the contents union — see [[com.worxbend.codeberg4s.repositories.RepositoryContent]]. */
   val contents: Decode[RepositoryContent] =
     WireDecode.single(Json.decoder[RepositoryContentDto])(_.toDomain)
-
-  /** A response body that is an array of DTOs, converted element by element with each failure at its own index. */
-  private def listOf[D, A](wire: Decode[Vector[D]])(
-      one: (D, JsonPath) => Either[DecodeFailure, A]
-  ): Decode[Vector[A]] =
-    WireDecode.single(wire)(dtos => ArrayElements.convert(JsonPath.Root, dtos)(one))

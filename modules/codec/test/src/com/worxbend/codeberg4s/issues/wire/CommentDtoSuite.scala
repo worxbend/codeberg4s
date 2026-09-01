@@ -1,8 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.GoldenFixtures
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{GoldenFixtures, Json, WireModel}
 import com.worxbend.codeberg4s.issues.Comment
 
 import munit.FunSuite
@@ -61,7 +60,7 @@ final class CommentDtoSuite extends FunSuite with GoldenFixtures:
   test("a failing element reports its position, not the array's"):
     val decoded = Json
       .decode[Vector[CommentDto]]("""[{"id":1},{"body":"orphan"}]""")
-      .flatMap(dtos => CommentDto.toDomainAll(JsonPath.Root, dtos))
+      .flatMap(dtos => WireModel.all(JsonPath.Root, dtos))
 
     decoded match
       case Left(failure) => assertEquals(failure.path.render, "$[1].id")
@@ -75,6 +74,6 @@ final class CommentDtoSuite extends FunSuite with GoldenFixtures:
   private def comments: Vector[Comment] =
     Json
       .decode[Vector[CommentDto]](golden("issue/comments-list.json"))
-      .flatMap(dtos => CommentDto.toDomainAll(JsonPath.Root, dtos)) match
+      .flatMap(dtos => WireModel.all(JsonPath.Root, dtos)) match
       case Right(values) => values
       case Left(failure) => fail(s"could not decode the comment listing: $failure")

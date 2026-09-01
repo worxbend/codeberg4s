@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.admin.{TopicId, TopicSummary}
 
@@ -63,10 +63,6 @@ object TopicSummaryDto:
       created   = fields.text("created"),
       updated   = fields.text("updated"),
     )
-
-  /** Converts a whole array, each element failing at its own index. */
-  def toDomainAll(base: JsonPath, dtos: Vector[TopicSummaryDto]): Either[DecodeFailure, Vector[TopicSummary]] =
-    ArrayElements.convert(base, dtos)((dto, at) => dto.toDomainAt(at))
 
 /** The `{"topics": [...]}` envelope `GET /topics/search` answers with.
   *

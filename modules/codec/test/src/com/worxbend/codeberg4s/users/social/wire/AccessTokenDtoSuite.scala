@@ -2,7 +2,7 @@ package com.worxbend.codeberg4s.users.social.wire
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.auth.ApiToken
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.social.AccessToken
 import com.worxbend.codeberg4s.users.social.CreatedAccessToken
@@ -87,7 +87,7 @@ final class AccessTokenDtoSuite extends FunSuite:
   test("a bad element names its position in the array"):
     val outcome = Json
       .decode[Vector[AccessTokenDto]]("""[{"id": 1}, {"name": "ci"}]""")
-      .flatMap(AccessTokenDto.toDomainAll(JsonPath.Root, _))
+      .flatMap(WireModel.all(JsonPath.Root, _))
 
     outcome match
       case Left(problem) => assertEquals(problem.path.render, "$[1].id")

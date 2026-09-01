@@ -2,7 +2,7 @@ package com.worxbend.codeberg4s.repositories.actions
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.core.{Decode, ResponseBody}
 import com.worxbend.codeberg4s.miscellaneous.PlainText
 import com.worxbend.codeberg4s.repositories.actions.wire.{
@@ -40,7 +40,7 @@ private[actions] object RepositoryActionDecoders:
 
   /** A bare array of artifact objects, as both artifact listings return it. */
   val artifacts: Decode[Vector[ActionArtifact]] =
-    WireDecode.vector(Json.decoder[Vector[ActionArtifactDto]])(ActionArtifactDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[ActionArtifactDto]])
 
   /** One run object. */
   val run: Decode[ActionRun] =
@@ -49,12 +49,12 @@ private[actions] object RepositoryActionDecoders:
   /** The `{"total_count", "workflow_runs"}` envelope the run listing returns, unwrapped to its runs. */
   val runs: Decode[Vector[ActionRun]] =
     WireDecode.single(Json.decoder[WorkflowRunsEnvelopeDto[ActionRunDto]]): envelope =>
-      ActionRunDto.toDomainAll(RepositoryActionDecoders.EntriesPath, envelope.entries)
+      WireModel.all(RepositoryActionDecoders.EntriesPath, envelope.entries)
 
   /** The same envelope as [[runs]], carrying tasks. The key is `workflow_runs` there too; see the envelope's note. */
   val tasks: Decode[Vector[ActionTask]] =
     WireDecode.single(Json.decoder[WorkflowRunsEnvelopeDto[ActionTaskDto]]): envelope =>
-      ActionTaskDto.toDomainAll(RepositoryActionDecoders.EntriesPath, envelope.entries)
+      WireModel.all(RepositoryActionDecoders.EntriesPath, envelope.entries)
 
   /** Every shape the organisation and account Actions surfaces answer too, decoded by [[ActionDecoders]].
     *

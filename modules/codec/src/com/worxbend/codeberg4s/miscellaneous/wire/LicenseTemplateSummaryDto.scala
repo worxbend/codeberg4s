@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.miscellaneous.{LicenseTemplateSummary, TemplateName}
 
@@ -49,10 +49,3 @@ object LicenseTemplateSummaryDto:
       name = fields.text("name"),
       url  = fields.text("url"),
     )
-
-  /** Converts a decoded array of entries, reporting the position of whichever element failed. */
-  def toDomainAll(
-      base: JsonPath,
-      dtos: Vector[LicenseTemplateSummaryDto],
-  ): Either[DecodeFailure, Vector[LicenseTemplateSummary]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

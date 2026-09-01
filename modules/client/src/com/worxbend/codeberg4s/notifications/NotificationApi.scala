@@ -1,8 +1,7 @@
 package com.worxbend.codeberg4s.notifications
 
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.codec.PagingQuery
+import com.worxbend.codeberg4s.codec.{Json, PagingQuery}
 import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.notifications.wire.{NotificationCountDto, NotificationQueries, NotificationThreadDto}
@@ -308,7 +307,7 @@ object NotificationApi:
     WireDecode.single(Json.decoder[NotificationThreadDto])(_.toDomain)
 
   private val ThreadsDecoder: Decode[Vector[NotificationThread]] =
-    WireDecode.vector(Json.decoder[Vector[NotificationThreadDto]])(NotificationThreadDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[NotificationThreadDto]])
 
   private val CountDecoder: Decode[UnreadCount] =
     WireDecode.single(Json.decoder[NotificationCountDto])(_.toDomain)

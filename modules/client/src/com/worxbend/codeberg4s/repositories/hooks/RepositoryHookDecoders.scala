@@ -2,7 +2,7 @@ package com.worxbend.codeberg4s.repositories.hooks
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.repositories.hooks.wire.{
   GitHookDto,
@@ -11,7 +11,6 @@ import com.worxbend.codeberg4s.repositories.hooks.wire.{
   IssueTemplateDto,
   RepositoryFlagWire,
   WebhookDto,
-  WikiCommitDto,
   WikiCommitListDto,
   WikiPageDto,
   WikiPageMetaDto
@@ -42,7 +41,7 @@ private[hooks] object RepositoryHookDecoders:
 
   /** A bare array of webhook objects, as the hook listing returns it. */
   val webhooks: Decode[Vector[Webhook]] =
-    WireDecode.vector(Json.decoder[Vector[WebhookDto]])(WebhookDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[WebhookDto]])
 
   /** One Git hook object. */
   val gitHook: Decode[GitHook] =
@@ -50,11 +49,11 @@ private[hooks] object RepositoryHookDecoders:
 
   /** A bare array of Git hook objects. */
   val gitHooks: Decode[Vector[GitHook]] =
-    WireDecode.vector(Json.decoder[Vector[GitHookDto]])(GitHookDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[GitHookDto]])
 
   /** A bare array of flag names, validated as path segments on the way into the domain. */
   val flags: Decode[Vector[RepositoryFlag]] =
-    WireDecode.vector(Json.decoder[Vector[String]])(RepositoryFlagWire.toDomainAll)
+    WireDecode.single(Json.decoder[Vector[String]])(RepositoryFlagWire.toDomainAll(JsonPath.Root, _))
 
   /** One wiki page, content included. */
   val wikiPage: Decode[WikiPage] =
@@ -62,12 +61,12 @@ private[hooks] object RepositoryHookDecoders:
 
   /** A bare array of wiki page listing entries — metadata only, no content. */
   val wikiPages: Decode[Vector[WikiPageMeta]] =
-    WireDecode.vector(Json.decoder[Vector[WikiPageMetaDto]])(WikiPageMetaDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[WikiPageMetaDto]])
 
   /** The `{"commits", "count"}` envelope the revision listing returns, unwrapped to its revisions. */
   val wikiRevisions: Decode[Vector[WikiCommit]] =
     WireDecode.single(Json.decoder[WikiCommitListDto]): envelope =>
-      WikiCommitDto.toDomainAll(RepositoryHookDecoders.RevisionsPath, envelope.entries)
+      WireModel.all(RepositoryHookDecoders.RevisionsPath, envelope.entries)
 
   /** The repository's issue configuration. */
   val issueConfig: Decode[IssueConfig] =
@@ -79,4 +78,4 @@ private[hooks] object RepositoryHookDecoders:
 
   /** A bare array of issue template objects. */
   val issueTemplates: Decode[Vector[IssueTemplate]] =
-    WireDecode.vector(Json.decoder[Vector[IssueTemplateDto]])(IssueTemplateDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[IssueTemplateDto]])

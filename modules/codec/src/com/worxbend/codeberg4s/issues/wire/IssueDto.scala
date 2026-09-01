@@ -85,7 +85,7 @@ final case class IssueDto(
                     )
       author     <- Wire.nested(at, "user", user)(_.toDomainAt(_))
       assigned   <- assigneesAt(at)
-      attached   <- LabelDto.toDomainAll(at.field("labels"), labels)
+      attached   <- WireModel.all(at.field("labels"), labels)
       target     <- Wire.nested(at, "milestone", milestone)(_.toDomainAt(_))
     yield Issue(
       id             = identifier,
@@ -154,7 +154,3 @@ object IssueDto:
       createdAt        = fields.text("created_at"),
       updatedAt        = fields.text("updated_at"),
     )
-
-  /** Converts a decoded array of issues, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[IssueDto]): Either[DecodeFailure, Vector[Issue]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

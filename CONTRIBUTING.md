@@ -276,8 +276,10 @@ redefine it.** [`docs/LEDGER.md`](docs/LEDGER.md) records who owns each shared
 model, and a duplicate is a review-blocking defect.
 
 **4. Write the wire DTO in `modules/codec`.** A DTO in `…<group>.wire`
-mirroring the JSON exactly — including the parts you do not want — with a
-`toDomain` that produces the domain type. The DTO is where nullability,
+mirroring the JSON exactly — including the parts you do not want — extending
+`WireModel[Foo]` and implementing the one member that trait asks for,
+`toDomainAt(at)`, which produces the domain type and reports any failure at a
+path below `at`. `toDomain` comes with the trait. The DTO is where nullability,
 snake_case names and Forgejo's quirks live, so that the domain model does not
 have to carry them.
 
@@ -292,8 +294,9 @@ the fixtures is that your idea was wrong twice already.
   `CallContext`, which callers alert on, so it does not change afterwards;
 - a `CodebergRequest` with the method, path segments, query and headers;
 - a `Decode` built from the DTO — `WireDecode.single(Json.decoder[FooDto])(_.toDomain)`
-  for one object, or `WireDecode.vector(Json.decoder[Vector[FooDto]])(FooDto.toDomainAll)`
-  when the whole body is an array;
+  for one object, or `WireDecode.vector(Json.decoder[Vector[FooDto]])` when the
+  whole body is an array. The array form needs no conversion argument: `FooDto`
+  extends `WireModel[Foo]`, and that is what names the conversion;
 - a method calling `pipeline.call(request, eligibility)`;
 - the same method on the group's `Attempt` class, as
   `exec.attempt(rail.method(...))` — **derived**, never reimplemented, so the

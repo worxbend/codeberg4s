@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.actions.{ActionRun, RunId}
 import com.worxbend.codeberg4s.users.wire.UserDto
@@ -136,10 +136,6 @@ object ActionRunDto:
       stopped           = fields.text("stopped"),
       updated           = fields.text("updated"),
     )
-
-  /** Converts a decoded array of runs, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[ActionRunDto]): Either[DecodeFailure, Vector[ActionRun]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
 
   /** A Go `time.Duration` as a [[scala.concurrent.duration.FiniteDuration]].
     *

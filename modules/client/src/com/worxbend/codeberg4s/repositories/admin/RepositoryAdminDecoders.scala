@@ -2,8 +2,8 @@ package com.worxbend.codeberg4s.repositories.admin
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
-import com.worxbend.codeberg4s.core.{Decode, DecodeFailure}
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
+import com.worxbend.codeberg4s.core.Decode
 import com.worxbend.codeberg4s.issues.wire.{IssueDto, TrackedTimeDto}
 import com.worxbend.codeberg4s.issues.{Issue, TrackedTime}
 import com.worxbend.codeberg4s.miscellaneous.{PlainText, SigningKey}
@@ -15,7 +15,6 @@ import com.worxbend.codeberg4s.repositories.admin.wire.{
   PushMirrorDto,
   SyncForkInfoDto,
   TopicSearchEnvelopeDto,
-  TopicSummaryDto,
   WatchInfoDto
 }
 import com.worxbend.codeberg4s.repositories.gitdata.FileChange
@@ -61,23 +60,23 @@ private[admin] object RepositoryAdminDecoders:
 
   /** A bare array of user objects, as the assignee, reviewer, stargazer and subscriber listings all return. */
   val users: Decode[Vector[User]] =
-    listOf(Json.decoder[Vector[UserDto]])((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[UserDto]])
 
   /** A bare array of issue objects, as the pinned-issue listing returns. */
   val issues: Decode[Vector[Issue]] =
-    listOf(Json.decoder[Vector[IssueDto]])((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[IssueDto]])
 
   /** A bare array of content entries, as the root contents listing returns. */
   val contents: Decode[Vector[ContentEntry]] =
-    listOf(Json.decoder[Vector[ContentEntryDto]])((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[ContentEntryDto]])
 
   /** A bare array of activity entries. */
   val activities: Decode[Vector[RepositoryActivity]] =
-    listOf(Json.decoder[Vector[ActivityDto]])((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[ActivityDto]])
 
   /** A bare array of tracked-time entries, shared with the per-issue listings. */
   val trackedTimes: Decode[Vector[TrackedTime]] =
-    listOf(Json.decoder[Vector[TrackedTimeDto]])((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[TrackedTimeDto]])
 
   /** One push-mirror object. */
   val pushMirror: Decode[PushMirror] =
@@ -85,7 +84,7 @@ private[admin] object RepositoryAdminDecoders:
 
   /** A bare array of push-mirror objects. */
   val pushMirrors: Decode[Vector[PushMirror]] =
-    listOf(Json.decoder[Vector[PushMirrorDto]])((dto, at) => dto.toDomainAt(at))
+    WireDecode.vector(Json.decoder[Vector[PushMirrorDto]])
 
   /** The subscription object, which only a watcher ever receives — a non-watcher gets a `404`. */
   val watchStatus: Decode[WatchStatus] =
@@ -106,7 +105,7 @@ private[admin] object RepositoryAdminDecoders:
   /** The `{"topics": [...]}` envelope the topic search returns, unwrapped to the topics it carries. */
   val topics: Decode[Vector[TopicSummary]] =
     WireDecode.single(Json.decoder[TopicSearchEnvelopeDto]): envelope =>
-      TopicSummaryDto.toDomainAll(RepositoryAdminDecoders.TopicEntriesPath, envelope.entries)
+      WireModel.all(RepositoryAdminDecoders.TopicEntriesPath, envelope.entries)
 
   /** The single-file write response, shared with `POST /repos/{owner}/{repo}/diffpatch`. */
   val fileChange: Decode[FileChange] =
@@ -124,9 +123,3 @@ private[admin] object RepositoryAdminDecoders:
     */
   val signingKey: Decode[Option[SigningKey]] =
     PlainText.decodedAs(SigningKey.from)
-
-  /** A response body that is an array of DTOs, converted element by element with each failure at its own index. */
-  private def listOf[D, A](wire: Decode[Vector[D]])(
-      one: (D, JsonPath) => Either[DecodeFailure, A]
-  ): Decode[Vector[A]] =
-    WireDecode.single(wire)(dtos => ArrayElements.convert(JsonPath.Root, dtos)(one))

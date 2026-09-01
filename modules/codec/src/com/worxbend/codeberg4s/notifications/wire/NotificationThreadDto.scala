@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.notifications.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.notifications.{NotificationThread, NotificationThreadId}
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
@@ -25,8 +25,7 @@ import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
   * ==Shared helpers, not copies==
   *
   * `repository` recurses into the repository group's own DTO rather than a reduced copy — `docs/LEDGER.md` gives
-  * `Repository` to that group and calls a fork a review-blocking defect — and [[toDomainAll]] reuses that group's
-  * [[com.worxbend.codeberg4s.codec.ArrayElements]] for the same reason. The dependency exists either way, because the
+  * `Repository` to that group and calls a fork a review-blocking defect. The dependency exists either way, because the
   * embedded repository already brings it.
   */
 final case class NotificationThreadDto(
@@ -87,14 +86,3 @@ object NotificationThreadDto:
       subject    = fields.nested("subject").map(NotificationSubjectDto.fromFields),
       repository = fields.nested("repository").map(RepositoryDto.fromFields),
     )
-
-  /** Converts a decoded array of threads, reporting the position of whichever element failed.
-    *
-    * One bad element fails the whole page, which is the contract every other list in this module has: a caller handed
-    * nineteen of twenty threads would have no way to notice.
-    */
-  def toDomainAll(
-      base: JsonPath,
-      dtos: Vector[NotificationThreadDto],
-  ): Either[DecodeFailure, Vector[NotificationThread]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

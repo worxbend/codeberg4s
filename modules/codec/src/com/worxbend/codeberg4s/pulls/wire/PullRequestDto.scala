@@ -110,7 +110,7 @@ final case class PullRequestDto(
                     )
       assigned   <- usersAt(at, "assignees", assignees)
       reviewers  <- usersAt(at, "requested_reviewers", requestedReviewers)
-      attached   <- LabelDto.toDomainAll(at.field("labels"), labels)
+      attached   <- WireModel.all(at.field("labels"), labels)
       target     <- Wire.nested(at, "milestone", milestone)(_.toDomainAt(_))
       into       <- Wire.nested(at, "base", base)(_.toDomainAt(_))
       from       <- Wire.nested(at, "head", head)(_.toDomainAt(_))
@@ -200,7 +200,3 @@ object PullRequestDto:
       pinOrder            = fields.number("pin_order"),
       flow                = fields.number("flow"),
     )
-
-  /** Converts a decoded array of pull requests, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[PullRequestDto]): Either[DecodeFailure, Vector[PullRequest]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))

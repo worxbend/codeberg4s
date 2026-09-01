@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.issues.AttachmentKind
 
 import munit.FunSuite
@@ -89,7 +89,7 @@ final class AttachmentDtoSuite extends FunSuite:
   test("a failing element of a listing reports its position, not the array's"):
     val decoded = Json
       .decode[Vector[AttachmentDto]]("""[{"id":1,"name":"a"},{"id":2}]""")
-      .flatMap(dtos => AttachmentDto.toDomainAll(JsonPath.Root, dtos))
+      .flatMap(dtos => WireModel.all(JsonPath.Root, dtos))
 
     decoded match
       case Left(failure) => assertEquals(failure.path.render, "$[1].name")

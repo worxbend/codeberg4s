@@ -1,8 +1,7 @@
 package com.worxbend.codeberg4s.pulls
 
 import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.PagingQuery
-import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
+import com.worxbend.codeberg4s.codec.{Json, PagingQuery}
 import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, empty, read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.miscellaneous.PlainText
@@ -1386,23 +1385,22 @@ object PullRequestApi:
     WireDecode.single(Json.decoder[PullRequestDto])(_.toDomain)
 
   private val PullsDecoder: Decode[Vector[PullRequest]] =
-    WireDecode.vector(Json.decoder[Vector[PullRequestDto]])(PullRequestDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[PullRequestDto]])
 
   private val ReviewDecoder: Decode[Review] =
     WireDecode.single(Json.decoder[ReviewDto])(_.toDomain)
 
   private val ReviewsDecoder: Decode[Vector[Review]] =
-    WireDecode.vector(Json.decoder[Vector[ReviewDto]])(ReviewDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[ReviewDto]])
 
   private val ReviewCommentDecoder: Decode[ReviewComment] =
     WireDecode.single(Json.decoder[ReviewCommentDto])(_.toDomain)
 
   private val ReviewCommentsDecoder: Decode[Vector[ReviewComment]] =
-    WireDecode.vector(Json.decoder[Vector[ReviewCommentDto]])(ReviewCommentDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[ReviewCommentDto]])
 
   private val CommitsDecoder: Decode[Vector[Commit]] =
-    WireDecode.vector(Json.decoder[Vector[CommitDto]]): (at, dtos) =>
-      ArrayElements.convert(at, dtos)(_.toDomainAt(_))
+    WireDecode.vector(Json.decoder[Vector[CommitDto]])
 
   private val FilesDecoder: Decode[Vector[ChangedFile]] =
-    WireDecode.vector(Json.decoder[Vector[ChangedFileDto]])(ChangedFileDto.toDomainAll)
+    WireDecode.vector(Json.decoder[Vector[ChangedFileDto]])

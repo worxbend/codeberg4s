@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.miscellaneous.TemplateLabel
 
@@ -75,4 +75,4 @@ final class TemplateLabelDtoSuite extends FunSuite:
     assert(Json.decode[Vector[TemplateLabelDto]]("""{"labels":[]}""").isLeft)
 
   private def template(body: String): Either[DecodeFailure, Vector[TemplateLabel]] =
-    Json.decode[Vector[TemplateLabelDto]](body).flatMap(dtos => TemplateLabelDto.toDomainAll(JsonPath.Root, dtos))
+    Json.decode[Vector[TemplateLabelDto]](body).flatMap(dtos => WireModel.all(JsonPath.Root, dtos))

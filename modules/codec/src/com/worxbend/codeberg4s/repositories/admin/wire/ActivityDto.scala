@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.wire.CommentDto
 import com.worxbend.codeberg4s.repositories.admin.{ActivityId, ActivityOperation, RepositoryActivity}
@@ -117,7 +117,3 @@ object ActivityDto:
       isPrivate = fields.boolean("is_private"),
       created   = fields.text("created"),
     )
-
-  /** Converts a whole array, each element failing at its own index. */
-  def toDomainAll(base: JsonPath, dtos: Vector[ActivityDto]): Either[DecodeFailure, Vector[RepositoryActivity]] =
-    ArrayElements.convert(base, dtos)((dto, at) => dto.toDomainAt(at))

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.access.{TagProtection, TagProtectionId}
 
@@ -86,7 +86,3 @@ object TagProtectionDto:
       createdAt          = fields.text(TagProtectionWire.CreatedAt),
       updatedAt          = fields.text(TagProtectionWire.UpdatedAt),
     )
-
-  /** Converts a decoded array of rules, reporting the position of whichever element failed. */
-  def toDomainAll(base: JsonPath, dtos: Vector[TagProtectionDto]): Either[DecodeFailure, Vector[TagProtection]] =
-    ArrayElements.convert(base, dtos)((dto, path) => dto.toDomainAt(path))
