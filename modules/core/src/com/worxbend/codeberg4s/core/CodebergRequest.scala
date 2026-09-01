@@ -92,14 +92,36 @@ object CodebergRequest:
     * said by the path. Sending `{}` on the chance the instance prefers it would be guesswork, and `docs/HAZARDS.md` §4
     * shows Forgejo answering `400` to bodies it did not expect.
     */
-  private[codeberg4s] def bodiless(operation: String, method: HttpMethod, path: List[String]): CodebergRequest =
+  private[codeberg4s] def bodiless(
+      operation: String,
+      method: HttpMethod,
+      path: List[String],
+      query: List[(String, String)] = Nil,
+  ): CodebergRequest =
+    CodebergRequest(
+      operation = operation,
+      method    = method,
+      path      = path,
+      query     = query,
+      headers   = Nil,
+      body      = None,
+    )
+
+  /** A mutating call carrying a deliberately empty body.
+    *
+    * Deliberately not [[bodiless]], which sends no body at all: these routes are among the Forgejo endpoints
+    * [[RequestBody.Empty]] exists for, and the difference — a zero-length body with a `Content-Length: 0` header,
+    * against no body and no header — is visible to the server. Keeping the two under different names keeps the choice
+    * from being made by accident.
+    */
+  private[codeberg4s] def empty(operation: String, method: HttpMethod, path: List[String]): CodebergRequest =
     CodebergRequest(
       operation = operation,
       method    = method,
       path      = path,
       query     = Nil,
       headers   = Nil,
-      body      = None,
+      body      = Some(RequestBody.Empty),
     )
 
   /** A `DELETE` with no body — the ordinary shape, where what to remove is named in the path. */
