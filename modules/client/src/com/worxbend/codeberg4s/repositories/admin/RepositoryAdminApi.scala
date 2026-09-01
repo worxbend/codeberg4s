@@ -19,7 +19,7 @@ import com.worxbend.codeberg4s.repositories.admin.wire.{
 import com.worxbend.codeberg4s.repositories.gitdata.{FileChange, RefName}
 import com.worxbend.codeberg4s.repositories.{Branch, BranchName, ContentEntry, ContentPath, Repository}
 import com.worxbend.codeberg4s.users.{User, Username}
-import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
 
@@ -1157,33 +1157,51 @@ object RepositoryAdminApi:
     read(GetByIdOperation, List("repositories", id.value.toString), Nil)
 
   private def editRequest(owner: Owner, name: RepoName, command: EditRepository): CodebergRequest =
-    write(EditOperation, HttpMethod.Patch, repoPath(owner, name), RepositoryOptionDto.renderEdit(command))
+    write(
+      EditOperation,
+      HttpMethod.Patch,
+      RepositoryRequests.repositoryPath(owner, name),
+      RepositoryOptionDto.renderEdit(command)
+    )
 
   private def deleteRequest(owner: Owner, name: RepoName): CodebergRequest =
-    remove(DeleteOperation, repoPath(owner, name))
+    remove(DeleteOperation, RepositoryRequests.repositoryPath(owner, name))
 
   private def migrateRequest(command: MigrateRepository): CodebergRequest =
-    write(MigrateOperation, HttpMethod.Post, List("repos", "migrate"), MigrateRepoOptionsDto.render(command))
+    write(
+      MigrateOperation,
+      HttpMethod.Post,
+      RepositoryRequests.reposPath :+ "migrate",
+      MigrateRepoOptionsDto.render(command)
+    )
 
   private def transferRequest(owner: Owner, name: RepoName, command: TransferRepository): CodebergRequest =
     write(
       TransferOperation,
       HttpMethod.Post,
-      repoPath(owner, name) :+ "transfer",
+      RepositoryRequests.repositoryPath(owner, name) :+ "transfer",
       TransferRepoOptionDto.render(command),
     )
 
   private def acceptTransferRequest(owner: Owner, name: RepoName): CodebergRequest =
-    bodiless(AcceptTransferOperation, HttpMethod.Post, repoPath(owner, name) ++ List("transfer", "accept"))
+    bodiless(
+      AcceptTransferOperation,
+      HttpMethod.Post,
+      RepositoryRequests.repositoryPath(owner, name) ++ List("transfer", "accept")
+    )
 
   private def rejectTransferRequest(owner: Owner, name: RepoName): CodebergRequest =
-    bodiless(RejectTransferOperation, HttpMethod.Post, repoPath(owner, name) ++ List("transfer", "reject"))
+    bodiless(
+      RejectTransferOperation,
+      HttpMethod.Post,
+      RepositoryRequests.repositoryPath(owner, name) ++ List("transfer", "reject")
+    )
 
   private def convertRequest(owner: Owner, name: RepoName): CodebergRequest =
-    bodiless(ConvertOperation, HttpMethod.Post, repoPath(owner, name) :+ "convert")
+    bodiless(ConvertOperation, HttpMethod.Post, RepositoryRequests.repositoryPath(owner, name) :+ "convert")
 
   private def syncMirrorRequest(owner: Owner, name: RepoName): CodebergRequest =
-    bodiless(SyncMirrorOperation, HttpMethod.Post, repoPath(owner, name) :+ "mirror-sync")
+    bodiless(SyncMirrorOperation, HttpMethod.Post, RepositoryRequests.repositoryPath(owner, name) :+ "mirror-sync")
 
   private def pushMirrorsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
     read(ListPushMirrorsOperation, pushMirrorsPath(owner, name), AdminQueries.paging(params))
@@ -1198,7 +1216,11 @@ object RepositoryAdminApi:
     remove(DeletePushMirrorOperation, pushMirrorsPath(owner, name) :+ mirror.value)
 
   private def syncPushMirrorsRequest(owner: Owner, name: RepoName): CodebergRequest =
-    bodiless(SyncPushMirrorsOperation, HttpMethod.Post, repoPath(owner, name) :+ "push_mirrors-sync")
+    bodiless(
+      SyncPushMirrorsOperation,
+      HttpMethod.Post,
+      RepositoryRequests.repositoryPath(owner, name) :+ "push_mirrors-sync"
+    )
 
   private def forkSyncInfoRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(ForkSyncInfoOperation, syncForkPath(owner, name), Nil)
@@ -1225,16 +1247,24 @@ object RepositoryAdminApi:
     remove(UnwatchOperation, subscriptionPath(owner, name))
 
   private def assigneesRequest(owner: Owner, name: RepoName): CodebergRequest =
-    read(ListAssigneesOperation, repoPath(owner, name) :+ "assignees", Nil)
+    read(ListAssigneesOperation, RepositoryRequests.repositoryPath(owner, name) :+ "assignees", Nil)
 
   private def reviewersRequest(owner: Owner, name: RepoName): CodebergRequest =
-    read(ListReviewersOperation, repoPath(owner, name) :+ "reviewers", Nil)
+    read(ListReviewersOperation, RepositoryRequests.repositoryPath(owner, name) :+ "reviewers", Nil)
 
   private def stargazersRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListStargazersOperation, repoPath(owner, name) :+ "stargazers", AdminQueries.paging(params))
+    read(
+      ListStargazersOperation,
+      RepositoryRequests.repositoryPath(owner, name) :+ "stargazers",
+      AdminQueries.paging(params)
+    )
 
   private def subscribersRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListSubscribersOperation, repoPath(owner, name) :+ "subscribers", AdminQueries.paging(params))
+    read(
+      ListSubscribersOperation,
+      RepositoryRequests.repositoryPath(owner, name) :+ "subscribers",
+      AdminQueries.paging(params)
+    )
 
   private def createBranchRequest(owner: Owner, name: RepoName, command: CreateBranch): CodebergRequest =
     write(CreateBranchOperation, HttpMethod.Post, branchesPath(owner, name), BranchOptionDto.renderCreate(command))
@@ -1314,21 +1344,21 @@ object RepositoryAdminApi:
   ): CodebergRequest =
     read(
       ListActivityFeedOperation,
-      repoPath(owner, name) ++ List("activities", "feeds"),
+      RepositoryRequests.repositoryPath(owner, name) ++ List("activities", "feeds"),
       AdminQueries.activities(date) ++ AdminQueries.paging(params),
     )
 
   private def languagesRequest(owner: Owner, name: RepoName): CodebergRequest =
-    read(GetLanguagesOperation, repoPath(owner, name) :+ "languages", Nil)
+    read(GetLanguagesOperation, RepositoryRequests.repositoryPath(owner, name) :+ "languages", Nil)
 
   private def newPinAllowedRequest(owner: Owner, name: RepoName): CodebergRequest =
-    read(NewPinAllowedOperation, repoPath(owner, name) :+ "new_pin_allowed", Nil)
+    read(NewPinAllowedOperation, RepositoryRequests.repositoryPath(owner, name) :+ "new_pin_allowed", Nil)
 
   private def pinnedIssuesRequest(owner: Owner, name: RepoName): CodebergRequest =
-    read(ListPinnedIssuesOperation, repoPath(owner, name) ++ List("issues", "pinned"), Nil)
+    read(ListPinnedIssuesOperation, RepositoryRequests.repositoryPath(owner, name) ++ List("issues", "pinned"), Nil)
 
   private def signingKeyRequest(owner: Owner, name: RepoName): CodebergRequest =
-    read(SigningKeyOperation, repoPath(owner, name) :+ "signing-key.gpg", Nil)
+    read(SigningKeyOperation, RepositoryRequests.repositoryPath(owner, name) :+ "signing-key.gpg", Nil)
 
   private def trackedTimesRequest(
       owner: Owner,
@@ -1352,26 +1382,23 @@ object RepositoryAdminApi:
       AdminQueries.topicSearch(keyword) ++ AdminQueries.paging(params),
     )
 
-  private def repoPath(owner: Owner, name: RepoName): List[String] =
-    List("repos", owner.value, name.value)
-
   private def pushMirrorsPath(owner: Owner, name: RepoName): List[String] =
-    repoPath(owner, name) :+ "push_mirrors"
+    RepositoryRequests.repositoryPath(owner, name) :+ "push_mirrors"
 
   private def syncForkPath(owner: Owner, name: RepoName): List[String] =
-    repoPath(owner, name) :+ "sync_fork"
+    RepositoryRequests.repositoryPath(owner, name) :+ "sync_fork"
 
   private def subscriptionPath(owner: Owner, name: RepoName): List[String] =
-    repoPath(owner, name) :+ "subscription"
+    RepositoryRequests.repositoryPath(owner, name) :+ "subscription"
 
   private def branchesPath(owner: Owner, name: RepoName): List[String] =
-    repoPath(owner, name) :+ "branches"
+    RepositoryRequests.repositoryPath(owner, name) :+ "branches"
 
   private def contentsPath(owner: Owner, name: RepoName): List[String] =
-    repoPath(owner, name) :+ "contents"
+    RepositoryRequests.repositoryPath(owner, name) :+ "contents"
 
   private def avatarPath(owner: Owner, name: RepoName): List[String] =
-    repoPath(owner, name) :+ "avatar"
+    RepositoryRequests.repositoryPath(owner, name) :+ "avatar"
 
   private def timesPath(owner: Owner, name: RepoName): List[String] =
-    repoPath(owner, name) :+ "times"
+    RepositoryRequests.repositoryPath(owner, name) :+ "times"

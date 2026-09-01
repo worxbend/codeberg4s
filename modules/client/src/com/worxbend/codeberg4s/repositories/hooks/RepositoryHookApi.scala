@@ -4,7 +4,7 @@ import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, remove, wri
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.hooks.wire.{HookOptionDto, HookQueries}
-import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
 
@@ -372,7 +372,7 @@ object RepositoryHookApi:
     remove(DeleteGitHookOperation, gitHookPath(owner, name, hook))
 
   private def hooksPath(owner: Owner, name: RepoName): List[String] =
-    HookRequests.repositoryPath(owner, name) :+ "hooks"
+    RepositoryRequests.repositoryPath(owner, name) :+ "hooks"
 
   private def hookPath(owner: Owner, name: RepoName, id: HookId): List[String] =
     hooksPath(owner, name) :+ id.value.toString

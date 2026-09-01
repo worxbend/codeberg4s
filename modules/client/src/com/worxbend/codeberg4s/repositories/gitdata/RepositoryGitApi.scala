@@ -6,7 +6,7 @@ import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.pulls.PullRequest
 import com.worxbend.codeberg4s.repositories.gitdata.wire.{DiffPatchOptionsDto, GitDataQueries, NoteOptionsDto}
 import com.worxbend.codeberg4s.repositories.{Commit, CommitSha, ContentPath}
-import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
 
@@ -877,13 +877,13 @@ object RepositoryGitApi:
     read(GetCommitPullRequestOperation, commitsPath(owner, name) :+ sha.value :+ "pull", Nil)
 
   private def compareRequest(owner: Owner, name: RepoName, range: CompareRange): CodebergRequest =
-    read(CompareOperation, repoPath(owner, name) :+ "compare" :++ range.segments, Nil)
+    read(CompareOperation, RepositoryRequests.repositoryPath(owner, name) :+ "compare" :++ range.segments, Nil)
 
   private def diffPatchRequest(owner: Owner, name: RepoName, command: ApplyDiffPatch): CodebergRequest =
     write(
       ApplyDiffPatchOperation,
       HttpMethod.Post,
-      repoPath(owner, name) :+ "diffpatch",
+      RepositoryRequests.repositoryPath(owner, name) :+ "diffpatch",
       DiffPatchOptionsDto.render(command),
     )
 
@@ -895,7 +895,7 @@ object RepositoryGitApi:
   ): CodebergRequest =
     read(
       GetEditorConfigOperation,
-      repoPath(owner, name) :+ "editorconfig" :++ path.segments,
+      RepositoryRequests.repositoryPath(owner, name) :+ "editorconfig" :++ path.segments,
       GitDataQueries.atRef(ref),
     )
 
@@ -905,7 +905,11 @@ object RepositoryGitApi:
       path: ContentPath,
       ref: Option[RefName],
   ): CodebergRequest =
-    read(GetRawFileOperation, repoPath(owner, name) :+ "raw" :++ path.segments, GitDataQueries.atRef(ref))
+    read(
+      GetRawFileOperation,
+      RepositoryRequests.repositoryPath(owner, name) :+ "raw" :++ path.segments,
+      GitDataQueries.atRef(ref)
+    )
 
   private def mediaFileRequest(
       owner: Owner,
@@ -913,7 +917,11 @@ object RepositoryGitApi:
       path: ContentPath,
       ref: Option[RefName],
   ): CodebergRequest =
-    read(GetMediaFileOperation, repoPath(owner, name) :+ "media" :++ path.segments, GitDataQueries.atRef(ref))
+    read(
+      GetMediaFileOperation,
+      RepositoryRequests.repositoryPath(owner, name) :+ "media" :++ path.segments,
+      GitDataQueries.atRef(ref)
+    )
 
   private def archiveRequest(
       owner: Owner,
@@ -921,7 +929,11 @@ object RepositoryGitApi:
       ref: RefName,
       format: ArchiveFormat,
   ): CodebergRequest =
-    read(GetArchiveOperation, repoPath(owner, name) :+ "archive" :++ archiveSegments(ref, format), Nil)
+    read(
+      GetArchiveOperation,
+      RepositoryRequests.repositoryPath(owner, name) :+ "archive" :++ archiveSegments(ref, format),
+      Nil
+    )
 
   /** The ref's segments with the format's suffix glued onto the last one, which is how Forgejo spells an archive name.
     *
@@ -933,14 +945,11 @@ object RepositoryGitApi:
 
     segments.dropRight(1) ++ segments.lastOption.map(last => s"$last.${format.suffix}")
 
-  private def repoPath(owner: Owner, name: RepoName): List[String] =
-    List("repos", owner.value, name.value)
-
   private def gitPath(owner: Owner, name: RepoName, resource: String): List[String] =
-    repoPath(owner, name) :+ "git" :+ resource
+    RepositoryRequests.repositoryPath(owner, name) :+ "git" :+ resource
 
   private def commitsPath(owner: Owner, name: RepoName): List[String] =
-    repoPath(owner, name) :+ "commits"
+    RepositoryRequests.repositoryPath(owner, name) :+ "commits"
 
   private def notePath(owner: Owner, name: RepoName, sha: CommitSha): List[String] =
     gitPath(owner, name, "notes") :+ sha.value

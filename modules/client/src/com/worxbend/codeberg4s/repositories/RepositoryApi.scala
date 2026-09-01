@@ -15,7 +15,7 @@ import com.worxbend.codeberg4s.repositories.hooks.{
   RepositoryWikiApi
 }
 import com.worxbend.codeberg4s.repositories.publishing.RepositoryPublishingApi
-import com.worxbend.codeberg4s.{CodebergError, Owner, RepoName}
+import com.worxbend.codeberg4s.{CodebergError, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
 
@@ -379,37 +379,37 @@ object RepositoryApi:
       exec.attempt(rail.forks(owner, name, params))
 
   private def getRequest(owner: Owner, name: RepoName): CodebergRequest =
-    read(GetOperation, List("repos", owner.value, name.value), Nil)
+    read(GetOperation, RepositoryRequests.repositoryPath(owner, name), Nil)
 
   private def searchRequest(term: String, params: PageParams): CodebergRequest =
-    read(SearchOperation, List("repos", "search"), ("q" -> term) :: window(params))
+    read(SearchOperation, RepositoryRequests.reposPath :+ "search", ("q" -> term) :: window(params))
 
   private def branchesRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListBranchesOperation, List("repos", owner.value, name.value, "branches"), window(params))
+    read(ListBranchesOperation, RepositoryRequests.repositoryPath(owner, name) :+ "branches", window(params))
 
   private def branchRequest(owner: Owner, name: RepoName, branch: BranchName): CodebergRequest =
-    read(GetBranchOperation, List("repos", owner.value, name.value, "branches") ++ branch.segments, Nil)
+    read(GetBranchOperation, (RepositoryRequests.repositoryPath(owner, name) :+ "branches") ++ branch.segments, Nil)
 
   private def tagsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListTagsOperation, List("repos", owner.value, name.value, "tags"), window(params))
+    read(ListTagsOperation, RepositoryRequests.repositoryPath(owner, name) :+ "tags", window(params))
 
   private def commitsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListCommitsOperation, List("repos", owner.value, name.value, "commits"), window(params))
+    read(ListCommitsOperation, RepositoryRequests.repositoryPath(owner, name) :+ "commits", window(params))
 
   private def releasesRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListReleasesOperation, List("repos", owner.value, name.value, "releases"), window(params))
+    read(ListReleasesOperation, RepositoryRequests.repositoryPath(owner, name) :+ "releases", window(params))
 
   private def releaseRequest(owner: Owner, name: RepoName, id: ReleaseId): CodebergRequest =
-    read(GetReleaseOperation, List("repos", owner.value, name.value, "releases", id.value.toString), Nil)
+    read(GetReleaseOperation, RepositoryRequests.repositoryPath(owner, name) ++ List("releases", id.value.toString), Nil)
 
   private def topicsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListTopicsOperation, List("repos", owner.value, name.value, "topics"), window(params))
+    read(ListTopicsOperation, RepositoryRequests.repositoryPath(owner, name) :+ "topics", window(params))
 
   private def contentsRequest(owner: Owner, name: RepoName, path: ContentPath): CodebergRequest =
-    read(GetContentsOperation, List("repos", owner.value, name.value, "contents") ++ path.segments, Nil)
+    read(GetContentsOperation, (RepositoryRequests.repositoryPath(owner, name) :+ "contents") ++ path.segments, Nil)
 
   private def forksRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListForksOperation, List("repos", owner.value, name.value, "forks"), window(params))
+    read(ListForksOperation, RepositoryRequests.repositoryPath(owner, name) :+ "forks", window(params))
 
   /** Every operation in this group is a `GET` that carries no body and adds no header of its own. */
   /** The `page` and `limit` window, rendered by [[com.worxbend.codeberg4s.codec.PagingQuery.window]]. */

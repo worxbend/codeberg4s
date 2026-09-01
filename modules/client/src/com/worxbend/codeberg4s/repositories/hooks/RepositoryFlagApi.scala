@@ -3,7 +3,7 @@ package com.worxbend.codeberg4s.repositories.hooks
 import com.worxbend.codeberg4s.core.CodebergRequest.{empty, read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.repositories.hooks.wire.RepositoryFlagWire
-import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
 
@@ -228,7 +228,7 @@ object RepositoryFlagApi:
     remove(DeleteOperation, flagPath(owner, name, flag))
 
   private def flagsPath(owner: Owner, name: RepoName): List[String] =
-    HookRequests.repositoryPath(owner, name) :+ "flags"
+    RepositoryRequests.repositoryPath(owner, name) :+ "flags"
 
   private def flagPath(owner: Owner, name: RepoName, flag: RepositoryFlag): List[String] =
     flagsPath(owner, name) :+ flag.value

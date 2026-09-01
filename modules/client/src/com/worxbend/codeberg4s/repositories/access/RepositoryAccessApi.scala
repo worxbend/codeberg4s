@@ -13,7 +13,7 @@ import com.worxbend.codeberg4s.repositories.access.wire.{
   TagProtectionOptionDto
 }
 import com.worxbend.codeberg4s.users.{User, Username}
-import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
 
@@ -878,35 +878,32 @@ object RepositoryAccessApi:
   private def deleteTeamRequest(owner: Owner, name: RepoName, team: TeamName): CodebergRequest =
     remove(DeleteTeamOperation, teamPath(owner, name, team))
 
-  private def repoPath(owner: Owner, name: RepoName): List[String] =
-    List("repos", owner.value, name.value)
-
   private def branchProtectionsPath(owner: Owner, name: RepoName): List[String] =
-    repoPath(owner, name) :+ "branch_protections"
+    RepositoryRequests.repositoryPath(owner, name) :+ "branch_protections"
 
   private def branchProtectionPath(owner: Owner, name: RepoName, rule: BranchRuleName): List[String] =
     branchProtectionsPath(owner, name) :+ rule.value
 
   private def tagProtectionsPath(owner: Owner, name: RepoName): List[String] =
-    repoPath(owner, name) :+ "tag_protections"
+    RepositoryRequests.repositoryPath(owner, name) :+ "tag_protections"
 
   private def tagProtectionPath(owner: Owner, name: RepoName, id: TagProtectionId): List[String] =
     tagProtectionsPath(owner, name) :+ id.value.toString
 
   private def collaboratorsPath(owner: Owner, name: RepoName): List[String] =
-    repoPath(owner, name) :+ "collaborators"
+    RepositoryRequests.repositoryPath(owner, name) :+ "collaborators"
 
   private def collaboratorPath(owner: Owner, name: RepoName, collaborator: Username): List[String] =
     collaboratorsPath(owner, name) :+ collaborator.value
 
   private def deployKeysPath(owner: Owner, name: RepoName): List[String] =
-    repoPath(owner, name) :+ "keys"
+    RepositoryRequests.repositoryPath(owner, name) :+ "keys"
 
   private def deployKeyPath(owner: Owner, name: RepoName, id: DeployKeyId): List[String] =
     deployKeysPath(owner, name) :+ id.value.toString
 
   private def teamsPath(owner: Owner, name: RepoName): List[String] =
-    repoPath(owner, name) :+ "teams"
+    RepositoryRequests.repositoryPath(owner, name) :+ "teams"
 
   private def teamPath(owner: Owner, name: RepoName, team: TeamName): List[String] =
     teamsPath(owner, name) :+ team.value

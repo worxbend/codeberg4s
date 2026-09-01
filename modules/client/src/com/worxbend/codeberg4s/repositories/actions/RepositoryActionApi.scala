@@ -10,7 +10,7 @@ import com.worxbend.codeberg4s.repositories.actions.wire.{
   SecretOptionDto,
   VariableOptionDto
 }
-import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
 
@@ -1007,7 +1007,7 @@ object RepositoryActionApi:
     )
 
   private def actionsPath(owner: Owner, name: RepoName): List[String] =
-    List("repos", owner.value, name.value, "actions")
+    RepositoryRequests.repositoryPath(owner, name) :+ "actions"
 
   private def artifactsPath(owner: Owner, name: RepoName): List[String] =
     actionsPath(owner, name) :+ "artifacts"

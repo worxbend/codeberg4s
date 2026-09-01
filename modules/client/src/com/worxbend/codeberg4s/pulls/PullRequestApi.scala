@@ -23,7 +23,7 @@ import com.worxbend.codeberg4s.pulls.wire.{
 }
 import com.worxbend.codeberg4s.repositories.wire.CommitDto
 import com.worxbend.codeberg4s.repositories.{BranchName, Commit}
-import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
 
@@ -1345,7 +1345,7 @@ object PullRequestApi:
     remove(DeleteReviewCommentOperation, reviewCommentPath(owner, name, number, review, comment))
 
   private def pullsPath(owner: Owner, name: RepoName): List[String] =
-    List("repos", owner.value, name.value, "pulls")
+    RepositoryRequests.repositoryPath(owner, name) :+ "pulls"
 
   private def pullPath(owner: Owner, name: RepoName, number: PullRequestNumber): List[String] =
     pullsPath(owner, name) :+ number.value.toString

@@ -6,7 +6,7 @@ import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.notifications.wire.{NotificationCountDto, NotificationQueries, NotificationThreadDto}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
-import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
 
@@ -301,7 +301,7 @@ object NotificationApi:
     NotificationsPath ++ List("threads", id.value.toString)
 
   private def repositoryNotificationsPath(owner: Owner, name: RepoName): List[String] =
-    List("repos", owner.value, name.value, "notifications")
+    RepositoryRequests.repositoryPath(owner, name) :+ "notifications"
 
   private val ThreadDecoder: Decode[NotificationThread] =
     WireDecode.single(Json.decoder[NotificationThreadDto])(_.toDomain)

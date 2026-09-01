@@ -4,7 +4,7 @@ import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.hooks.wire.{HookQueries, WikiPageOptionsDto}
-import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
 
@@ -290,7 +290,7 @@ object RepositoryWikiApi:
     )
 
   private def wikiPath(owner: Owner, name: RepoName): List[String] =
-    HookRequests.repositoryPath(owner, name) :+ "wiki"
+    RepositoryRequests.repositoryPath(owner, name) :+ "wiki"
 
   private def pagePath(owner: Owner, name: RepoName, pageName: WikiPageName): List[String] =
     wikiPath(owner, name) ++ ("page" :: pageName.segments)

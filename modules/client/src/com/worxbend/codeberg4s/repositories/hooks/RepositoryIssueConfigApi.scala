@@ -2,7 +2,7 @@ package com.worxbend.codeberg4s.repositories.hooks
 
 import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
-import com.worxbend.codeberg4s.{CodebergError, Owner, RepoName}
+import com.worxbend.codeberg4s.{CodebergError, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
 
@@ -129,7 +129,7 @@ object RepositoryIssueConfigApi:
     read(ValidateOperation, issueConfigPath(owner, name) :+ "validate", Nil)
 
   private def templatesRequest(owner: Owner, name: RepoName): CodebergRequest =
-    read(TemplatesOperation, HookRequests.repositoryPath(owner, name) :+ "issue_templates", Nil)
+    read(TemplatesOperation, RepositoryRequests.repositoryPath(owner, name) :+ "issue_templates", Nil)
 
   private def issueConfigPath(owner: Owner, name: RepoName): List[String] =
-    HookRequests.repositoryPath(owner, name) :+ "issue_config"
+    RepositoryRequests.repositoryPath(owner, name) :+ "issue_config"

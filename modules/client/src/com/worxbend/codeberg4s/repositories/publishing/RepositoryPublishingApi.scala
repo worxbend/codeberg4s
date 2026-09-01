@@ -22,7 +22,7 @@ import com.worxbend.codeberg4s.repositories.{
   Tag,
   TagName
 }
-import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
 
@@ -668,7 +668,7 @@ object RepositoryPublishingApi:
     write(
       ForkOperation,
       HttpMethod.Post,
-      List("repos", owner.value, name.value, "forks"),
+      RepositoryRequests.repositoryPath(owner, name) :+ "forks",
       CreateForkOptionDto.render(command),
     )
 
@@ -680,7 +680,7 @@ object RepositoryPublishingApi:
     write(
       GenerateOperation,
       HttpMethod.Post,
-      List("repos", templateOwner.value, templateName.value, "generate"),
+      RepositoryRequests.repositoryPath(templateOwner, templateName) :+ "generate",
       GenerateRepoOptionDto.render(command),
     )
 
@@ -690,7 +690,7 @@ object RepositoryPublishingApi:
     PagingQuery.window(params)
 
   private def releasesPath(owner: Owner, name: RepoName): List[String] =
-    List("repos", owner.value, name.value, "releases")
+    RepositoryRequests.repositoryPath(owner, name) :+ "releases"
 
   private def releasePath(owner: Owner, name: RepoName, id: ReleaseId): List[String] =
     releasesPath(owner, name) :+ id.value.toString
@@ -706,7 +706,7 @@ object RepositoryPublishingApi:
     assetsPath(owner, name, id) :+ asset.value.toString
 
   private def tagsPath(owner: Owner, name: RepoName): List[String] =
-    List("repos", owner.value, name.value, "tags")
+    RepositoryRequests.repositoryPath(owner, name) :+ "tags"
 
   private def topicsPath(owner: Owner, name: RepoName): List[String] =
-    List("repos", owner.value, name.value, "topics")
+    RepositoryRequests.repositoryPath(owner, name) :+ "topics"

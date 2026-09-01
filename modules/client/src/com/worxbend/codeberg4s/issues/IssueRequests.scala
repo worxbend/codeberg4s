@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.issues
 
-import com.worxbend.codeberg4s.{Owner, RepoName}
+import com.worxbend.codeberg4s.{Owner, RepoName, RepositoryRequests}
 
 /** The path prefixes every sub-API of the issue group builds on, so that `/repos/{owner}/{repo}/issues` is spelled once
   * rather than eight times.
@@ -12,13 +12,9 @@ import com.worxbend.codeberg4s.{Owner, RepoName}
   */
 private[issues] object IssueRequests:
 
-  /** `/repos/{owner}/{repo}`. */
-  def repoPath(owner: Owner, name: RepoName): List[String] =
-    List("repos", owner.value, name.value)
-
   /** `/repos/{owner}/{repo}/issues`. */
   def issuesPath(owner: Owner, name: RepoName): List[String] =
-    repoPath(owner, name) :+ "issues"
+    RepositoryRequests.repositoryPath(owner, name) :+ "issues"
 
   /** `/repos/{owner}/{repo}/issues/{index}`. */
   def issuePath(owner: Owner, name: RepoName, number: IssueNumber): List[String] =
@@ -30,7 +26,7 @@ private[issues] object IssueRequests:
 
   /** `/repos/{owner}/{repo}/labels` — the labels a repository offers, not the ones on any one issue. */
   def labelsPath(owner: Owner, name: RepoName): List[String] =
-    repoPath(owner, name) :+ "labels"
+    RepositoryRequests.repositoryPath(owner, name) :+ "labels"
 
   /** `/repos/{owner}/{repo}/labels/{id}`. */
   def labelPath(owner: Owner, name: RepoName, id: LabelId): List[String] =
@@ -38,7 +34,7 @@ private[issues] object IssueRequests:
 
   /** `/repos/{owner}/{repo}/milestones`. */
   def milestonesPath(owner: Owner, name: RepoName): List[String] =
-    repoPath(owner, name) :+ "milestones"
+    RepositoryRequests.repositoryPath(owner, name) :+ "milestones"
 
   /** `/repos/{owner}/{repo}/milestones/{id}`. */
   def milestonePath(owner: Owner, name: RepoName, id: MilestoneId): List[String] =
