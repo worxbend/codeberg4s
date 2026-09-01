@@ -25,7 +25,8 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
   * @param userAgent
   *   the `User-Agent` header sent with every request
   * @param defaultPageSize
-  *   the page size used when a caller does not supply [[paging.PageParams]]
+  *   the size of `CodebergClient.firstPage`, the ready-made first window; every listing takes explicit
+  *   [[paging.PageParams]], so this is the only place the value is read
   * @param connectTimeout
   *   how long to wait for the connection to be established
   * @param readTimeout

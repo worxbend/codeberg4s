@@ -113,7 +113,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     * @param query
     *   the filters to apply; [[PullRequestQuery.Empty]] asks for the instance's default, which is open pull requests
     *   only
-    * @param page
+    * @param params
     *   which window to fetch, and how large
     */
   def list(owner: Owner, name: RepoName, query: PullRequestQuery, params: PageParams): Future[Page[PullRequest]] =

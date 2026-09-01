@@ -27,7 +27,7 @@ what to set and exits normally rather than throwing.
 | ------------------ | ------------------------------------------------------------ | ------- | ------------------------------------------------------------------ |
 | `HelloCodeberg`    | nothing                                                      | no      | the smallest complete program: config, call, await, close           |
 | `Authenticating`   | `CODEBERG_TOKEN` (optional)                                  | no      | `Auth.Anonymous`, `Auth.Token`, `Auth.Basic`, and a rejected token  |
-| `HandlingErrors`   | nothing                                                      | no      | both rails on one call, and all five `CodebergError` cases          |
+| `HandlingErrors`   | nothing                                                      | no      | both rails on one call, and every `CodebergError` case               |
 | `WalkingPages`     | nothing                                                      | no      | pagination driven by `Page.nextPage`, plus a bounded fold           |
 | `CreatingAnIssue`  | `CODEBERG_TOKEN`, `CODEBERG_OWNER`, `CODEBERG_REPO`, `CODEBERG_BASE_URI` (optional) | **yes** | a write path end to end                       |
 | `ObservingRequests`| nothing                                                      | no      | implementing the `Telemetry` port                                   |

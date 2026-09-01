@@ -135,7 +135,7 @@ def readOrFallback(
     fallback: Repository,
 )(using ExecutionContext): Future[Repository] =
   client.repos.get(owner, name).recover:
-    case CodebergException(CodebergError.Api(_, 404, _)) => fallback
+    case CodebergException(CodebergError.Api(_, 404, _, _)) => fallback
 ```
 
 Any case you do not handle stays a failed `Future`, carrying the same value.
@@ -158,8 +158,8 @@ def attemptRead(
 
 `CodebergError` has exactly six cases — `Transport`, `Api`, `DecodingFailed`,
 `Validation`, `RetriesExhausted`, `WalkTruncated`. **There is no `NotFound` and
-no `RateLimited`.** A `404` is `Api(ctx, 404, body)`; a `429` is
-`Api(ctx, 429, body)`, or a `RetriesExhausted` wrapping one after the retry
+no `RateLimited`.** A `404` is `Api(ctx, 404, body, retryAfter)`; a `429` is
+the same case, or a `RetriesExhausted` wrapping one after the retry
 policy gives up. Matching on a case that does not exist is the most common
 mistake made against this library.
 

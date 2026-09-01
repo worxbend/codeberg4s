@@ -193,7 +193,7 @@ validation — showing up as a measured 41-token clone rather than as a note.
 | ------------------------------------- | ------------------------------------------------ | -------------------------------- |
 | element-wise `Vector[Dto]` conversion with per-index `JsonPath` | still three copies — `repositories.wire.Elements` (also used by orgs, notifications and pulls' commit list), `issues.wire.WireElements` (also used by `PullRequestDto`), `UserApi.each` | `codec.Wire` or `client.WireDecode` |
 | the `page`/`limit` query pair          | six copies — `UserApi.pageQuery`, `RepositoryApi.window`, `OrganizationApi.window`, `IssueQueries.paging`, `PullRequestQueries.paging`, `NotificationQueries.paging` | `paging.PageParams`              |
-| path-segment validation                | `repositories.PathSegment` is `private[repositories]`, so `Username.from` and `OrgName.from` each re-implement it | the domain module root |
+| path-segment validation                | done — `PathSegment` moved to the domain module root as `private[codeberg4s]`, and `Username.from` and `OrgName.from` now call it | the domain module root |
 
 ## Pending claims
 

@@ -92,7 +92,7 @@ final class NotificationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
     * @param query
     *   the filters to apply; [[NotificationQuery.Empty]] asks for the instance's default, documented as unread and
     *   pinned threads
-    * @param page
+    * @param params
     *   which window to fetch, and how large
     */
   def list(query: NotificationQuery, params: PageParams): Future[Page[NotificationThread]] =

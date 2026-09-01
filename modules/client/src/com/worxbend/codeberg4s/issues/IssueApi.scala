@@ -105,7 +105,7 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     *
     * @param query
     *   the filters to apply; [[IssueQuery.Empty]] asks for the instance's default, which is open issues only
-    * @param page
+    * @param params
     *   which window to fetch, and how large
     */
   def list(owner: Owner, name: RepoName, query: IssueQuery, params: PageParams): Future[Page[Issue]] =
