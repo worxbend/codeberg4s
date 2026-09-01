@@ -2,8 +2,8 @@ package com.worxbend.codeberg4s.miscellaneous
 
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.core.CodebergRequest.{read, write}
-import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RequestBody, RetryEligibility}
+import com.worxbend.codeberg4s.core.CodebergRequest.{read, text, write}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.miscellaneous.wire.{
   GitignoreTemplateDto,
   LicenseTemplateDto,
@@ -619,11 +619,4 @@ object MiscellaneousApi:
 
   /** The one request in this group whose body is not JSON: the markdown source is sent verbatim as plain text. */
   private def markdownRawRequest(markdown: String): CodebergRequest =
-    CodebergRequest(
-      operation = RenderMarkdownRawOperation,
-      method    = HttpMethod.Post,
-      path      = List("markdown", "raw"),
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Text(markdown, PlainTextUtf8)),
-    )
+    text(RenderMarkdownRawOperation, HttpMethod.Post, List("markdown", "raw"), markdown, PlainTextUtf8)

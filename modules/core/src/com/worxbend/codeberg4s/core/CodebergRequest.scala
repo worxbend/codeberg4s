@@ -49,7 +49,9 @@ final case class CodebergRequest(
   * Building every request here, once, is what makes the security contract of [[CodebergRequest]] checkable rather than
   * merely documented. None of these builders takes headers, so no call site anywhere in the library can set one, and
   * therefore none can set an `Authorization` one; credentials are attached by the transport, from
-  * [[com.worxbend.codeberg4s.auth.Auth]], and nowhere else.
+  * [[com.worxbend.codeberg4s.auth.Auth]], and nowhere else. The contract does not rest on the builders alone: the
+  * transport's own `callerHeaders` drops any `Authorization` or `Proxy-Authorization` entry it is handed, so a request
+  * built by some future route around these shapes still cannot smuggle a credential past `Auth`.
   *
   * Internal to the library: these are the vocabulary the endpoint modules share, not part of the public API.
   */
@@ -138,6 +140,27 @@ object CodebergRequest:
     */
   private[codeberg4s] def removeWithBody(operation: String, path: List[String], body: String): CodebergRequest =
     write(operation, HttpMethod.Delete, path, body)
+
+  /** A mutating call whose body is text under its own media type, for a route that does not consume JSON.
+    *
+    * `POST /markdown/raw` is the one of these: it takes the markdown source itself, as `text/plain`. The media type is
+    * named by the caller rather than assumed here, because it is part of what the endpoint documents.
+    */
+  private[codeberg4s] def text(
+      operation: String,
+      method: HttpMethod,
+      path: List[String],
+      body: String,
+      mediaType: String,
+  ): CodebergRequest =
+    CodebergRequest(
+      operation = operation,
+      method    = method,
+      path      = path,
+      query     = Nil,
+      headers   = Nil,
+      body      = Some(RequestBody.Text(body, mediaType)),
+    )
 
   /** A `POST` carrying a non-JSON body and a query, which the attachment and asset uploads need. */
   private[codeberg4s] def upload(

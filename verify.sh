@@ -372,6 +372,20 @@ boundary_violation 'modules/domain/src modules/core/src modules/codec/src module
 boundary_violation 'modules/domain/src modules/core/src modules/codec/src modules/transport/src modules/client/src' \
   'new (Exception|RuntimeException|IllegalStateException)\(' \
   'bare exceptions are banned — every failure carries a CallContext' || boundaries_ok=false
+# The security contract on `CodebergRequest` says no call site can set an
+# `Authorization` header, and the reason it holds is that no endpoint spells the
+# constructor out: the builders in `object CodebergRequest` take no headers
+# argument at all, so a caller has nowhere to put one. That is only true while
+# the constructor stays unapplied outside core, which is what this checks.
+#
+# Core itself is not listed, because the builders are the constructor's one
+# production call site. Test sources are not listed either: SttpHttpPortSuite
+# builds a request bearing an Authorization header on purpose, to prove the
+# transport strips it, and that test is the evidence for the other half of the
+# contract.
+boundary_violation 'modules/codec/src modules/transport/src modules/client/src' \
+  '[^.[:alnum:]]CodebergRequest\(' \
+  'build requests with the CodebergRequest builders, not the constructor' || boundaries_ok=false
 $boundaries_ok || fail "architecture boundaries"
 echo "  boundaries clean"
 
