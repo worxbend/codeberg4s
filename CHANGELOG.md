@@ -66,6 +66,17 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
   already the sub-API accessors. Each of those three now says so in its
   Scaladoc.
 
+- **`client.users.account.quota.info()` is now `get()`.** `OrganizationQuotaApi`
+  and `UserQuotaApi` are otherwise line-for-line mirrors of each other, and the
+  organization side already called this operation `get`; one differing name
+  between two twins is noise a reader has to stop and check.
+
+  **Breaking:** call `quota.get()` instead of `quota.info()` on both rails. The
+  operation id constant `UserQuotaApi.InfoOperation` is now
+  `UserQuotaApi.GetOperation`, and the operation id it carries changes from
+  `users.account.quota.info` to `users.account.quota.get`, so any alert matching
+  on that string needs updating.
+
 - **`Repository.id` is a `RepositoryId`, and `RepositoryId` moved to
   `com.worxbend.codeberg4s.repositories`.** `repos.admin.byId` already took a
   `RepositoryId` while the model handed back a bare `Long`, so addressing a

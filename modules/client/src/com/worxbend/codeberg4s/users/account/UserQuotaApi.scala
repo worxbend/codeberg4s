@@ -25,7 +25,7 @@ import scala.concurrent.Future
   *
   * ==Quota may not be turned on at all==
   *
-  * Quota enforcement is a deployment setting. On an instance that does not use it, [[info]] answers a report with no
+  * Quota enforcement is a deployment setting. On an instance that does not use it, [[get]] answers a report with no
   * groups and no rules rather than a failure, and the three usage listings answer whatever the instance measured. An
   * empty [[com.worxbend.codeberg4s.quota.QuotaInfo.groups]] is therefore '''not''' the same as "unlimited" — nothing in
   * the response says which it is, and this library does not guess.
@@ -71,8 +71,8 @@ final class UserQuotaApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usi
     *
     * '''Failures.''' The group contract above.
     */
-  def info(): Future[QuotaInfo] =
-    pipeline.call(UserQuotaApi.infoRequest, RetryEligibility.IdempotentOnly)(using UserAccountDecoders.quota)
+  def get(): Future[QuotaInfo] =
+    pipeline.call(UserQuotaApi.getRequest, RetryEligibility.IdempotentOnly)(using UserAccountDecoders.quota)
 
   /** Asks whether one more action of a given kind would fit — `GET /user/quota/check`.
     *
@@ -134,8 +134,8 @@ final class UserQuotaApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usi
 /** The requests this group issues, its operation ids, and its typed rail. */
 object UserQuotaApi:
 
-  /** The stable operation id of [[UserQuotaApi.info]]. Safe to alert on. */
-  val InfoOperation: String = "users.account.quota.info"
+  /** The stable operation id of [[UserQuotaApi.get]]. Safe to alert on. */
+  val GetOperation: String = "users.account.quota.get"
 
   /** The stable operation id of [[UserQuotaApi.check]]. */
   val CheckOperation: String = "users.account.quota.check"
@@ -157,9 +157,9 @@ object UserQuotaApi:
     */
   final class Attempt private[codeberg4s] (rail: UserQuotaApi)(using exec: Exec[Future]):
 
-    /** [[UserQuotaApi.info]] with its failure as a value. */
-    def info(): Future[Either[CodebergError, QuotaInfo]] =
-      exec.attempt(rail.info())
+    /** [[UserQuotaApi.get]] with its failure as a value. */
+    def get(): Future[Either[CodebergError, QuotaInfo]] =
+      exec.attempt(rail.get())
 
     /** [[UserQuotaApi.check]] with its failure as a value. */
     def check(subject: QuotaSubject): Future[Either[CodebergError, Boolean]] =
@@ -177,8 +177,8 @@ object UserQuotaApi:
     def packages(params: PageParams): Future[Either[CodebergError, Page[QuotaUsedPackage]]] =
       exec.attempt(rail.packages(params))
 
-  private def infoRequest: CodebergRequest =
-    read(InfoOperation, quotaPath, Nil)
+  private def getRequest: CodebergRequest =
+    read(GetOperation, quotaPath, Nil)
 
   private def checkRequest(subject: QuotaSubject): CodebergRequest =
     read(CheckOperation, quotaPath :+ "check", AccountQueries.quotaCheck(subject))

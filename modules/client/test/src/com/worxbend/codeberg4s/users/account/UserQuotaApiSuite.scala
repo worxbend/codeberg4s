@@ -25,7 +25,7 @@ final class UserQuotaApiSuite extends AccountApiSuite:
     val backend = RecordingBackend(responding(200, UserQuotaApiSuite.ReportBody))
 
     onApi(backend): api =>
-      api.info().map: report =>
+      api.get().map: report =>
         assertEquals(pathOf(backend), QuotaRoot)
         assertEquals(queryOf(backend), Nil)
         assertEquals(report.used.publicRepositories, Some(1024L))
@@ -33,7 +33,7 @@ final class UserQuotaApiSuite extends AccountApiSuite:
 
   test("a report from an instance that does not enforce quota is a report with no groups, not a failure"):
     onApi(responding(200, "{}")): api =>
-      api.info().map: report =>
+      api.get().map: report =>
         assertEquals(report.groups, Vector.empty[QuotaGroup])
         assertEquals(report.used, QuotaUsedSize.Empty)
 
@@ -91,13 +91,13 @@ final class UserQuotaApiSuite extends AccountApiSuite:
 
   test("a 403 fails the convenience rail with a CodebergException carrying the Api failure"):
     onApi(responding(403, AccountApiSuite.ForbiddenBody)): api =>
-      api.info().failed.map(failure => assertEquals(summary(unwrap(failure))._1, UserQuotaApi.InfoOperation))
+      api.get().failed.map(failure => assertEquals(summary(unwrap(failure))._1, UserQuotaApi.GetOperation))
 
   test("a 403 reaches the typed rail as a Left reporting the very same failure"):
     onApi(responding(403, AccountApiSuite.ForbiddenBody)): api =>
       for
-        raised <- api.info().failed
-        typed  <- api.attempt.info()
+        raised <- api.get().failed
+        typed  <- api.attempt.get()
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on the check as well, whose 422 is the one status specific to it"):
