@@ -77,6 +77,14 @@ trait ClientSuiteHarness:
   def responding(status: Int, body: String, headers: List[Header]): BackendStub[Future] =
     BackendStub.asynchronousFuture.whenAnyRequest.thenRespond(ResponseStub.adjust(body, StatusCode(status), headers))
 
+  /** A backend answering every request with `status` and a body that is bytes rather than text.
+    *
+    * The archive endpoints need this: their body is a ZIP, and a stub that could only answer a `String` would prove
+    * nothing about bytes surviving the trip.
+    */
+  def respondingBytes(status: Int, body: Array[Byte]): BackendStub[Future] =
+    BackendStub.asynchronousFuture.whenAnyRequest.thenRespond(ResponseStub.adjust(body, StatusCode(status)))
+
   /** A backend that answers one `503` and then `status` with `body` — how a retry is made observable. */
   def flakyThen(status: Int, body: String): BackendStub[Future] =
     cycling(stub(503, ""), stub(status, body))

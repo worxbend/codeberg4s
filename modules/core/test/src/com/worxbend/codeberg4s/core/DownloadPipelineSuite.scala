@@ -36,7 +36,11 @@ final class DownloadPipelineSuite extends FunSuite:
     ApiPipeline[Result](http, config, FakeTimer(0L), telemetry, _ => ApiErrorBody.Empty)
 
   private def zipResponse(status: Int, bytes: Array[Byte]): CodebergResponse =
-    CodebergResponse(status, Map("content-type" -> List("application/zip")), ResponseBody.of(bytes, StandardCharsets.UTF_8))
+    CodebergResponse(
+      status,
+      Map("content-type" -> List("application/zip")),
+      ResponseBody.of(bytes, StandardCharsets.UTF_8)
+    )
 
   private def bodyOf(status: Int, json: String): CodebergResponse =
     CodebergResponse(status, Map.empty, ResponseBody.utf8(json))

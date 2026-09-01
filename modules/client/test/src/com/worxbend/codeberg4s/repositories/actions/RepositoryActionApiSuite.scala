@@ -104,6 +104,17 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     onApi(backend): api =>
       api.deleteArtifact(Handle, Name, Artifact).map(_ => assertEquals(backend.allInteractions.size, 2))
 
+  test("actions.artifacts.download asks for the archive and hands the bytes back undecoded"):
+    // A ZIP's first four bytes, one of which is not valid UTF-8: decoding the
+    // body would replace it, so this is what proves nothing decoded it.
+    val archive = Array[Byte](0x50, 0x4B, 0x03, 0x04.toByte, 0xFF.toByte)
+    val backend = RecordingBackend(respondingBytes(200, archive))
+
+    onApi(backend): api =>
+      api.downloadArtifact(Handle, Name, Artifact).map: response =>
+        assertEquals(pathOf(backend), s"$Endpoint/artifacts/881/zip")
+        assertEquals(response.body.bytes.toList, archive.toList)
+
   // --- runs -----------------------------------------------------------------
 
   test("actions.runs.list unwraps the workflow_runs envelope, which no other listing here uses"):
@@ -184,6 +195,14 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
         assertEquals(pathOf(backend), s"$Endpoint/runs/4711/jobs")
         assertEquals(queryOf(backend), Nil)
         assertEquals(jobs.map(_.id.value), Vector(55L))
+
+  test("actions.runs.logs.download addresses the run's archive, not one job's text log"):
+    val backend = RecordingBackend(responding(200, "PK"))
+
+    onApi(backend): api =>
+      api.downloadRunLogs(Handle, Name, Run).map: response =>
+        assertEquals(pathOf(backend), s"$Endpoint/runs/4711/logs")
+        assertEquals(response.body.text, "PK")
 
   // --- jobs -----------------------------------------------------------------
 

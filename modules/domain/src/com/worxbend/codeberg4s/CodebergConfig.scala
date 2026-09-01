@@ -34,7 +34,7 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
   *   the most bytes a textual response may carry before the call fails with [[TransportCause.ResponseTooLarge]]; see
   *   [[DefaultMaxResponseBodyBytes]]
   * @param maxDownloadBodyBytes
-  *   the same bound for the archive-downloading operations under `client.downloads`, which is larger for the reason
+  *   the same bound for the two archive downloads under `client.repos.actions`, which is larger for the reason
   *   [[DefaultMaxDownloadBodyBytes]] gives
   */
 final case class CodebergConfig(
@@ -77,10 +77,10 @@ object CodebergConfig:
 
   /** 50 MiB — the same bound for the two archive downloads, deliberately larger than [[DefaultMaxResponseBodyBytes]].
     *
-    * `client.downloads` fetches a CI artifact or a run's logs as a ZIP. A ZIP is not a JSON document bounded by
-    * `default_max_blob_size`; it is whatever a workflow uploaded, so the reasoning behind the textual bound says
-    * nothing about it and a shared number would have had to be wrong for one of the two — either small enough to reject
-    * ordinary artifacts, or large enough to make the bound on JSON meaningless.
+    * `client.repos.actions.downloadArtifact` and `downloadRunLogs` fetch a CI artifact or a run's logs as a ZIP. A ZIP
+    * is not a JSON document bounded by `default_max_blob_size`; it is whatever a workflow uploaded, so the reasoning
+    * behind the textual bound says nothing about it and a shared number would have had to be wrong for one of the two —
+    * either small enough to reject ordinary artifacts, or large enough to make the bound on JSON meaningless.
     *
     * 50 MiB is where the project already drew this line: `SECURITY.md` and `docs/ROADMAP.md` both record "attachment
     * streaming above 50 MB" as out of scope for v1, which is to say that archives above that size are the case this

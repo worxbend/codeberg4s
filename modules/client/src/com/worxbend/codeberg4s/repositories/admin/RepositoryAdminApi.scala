@@ -87,15 +87,15 @@ import java.time.LocalDate
   *
   * ==What is not here==
   *
-  * Two spec operations in this group's tag are deliberately absent, for the same reason the Actions group leaves two
-  * out:
+  * Two spec operations in this group's tag are not served here:
   *
   *   - `GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/zip` (`DownloadActionArtifact`);
   *   - `GET /repos/{owner}/{repo}/actions/runs/{run_id}/logs` (`repoGetActionRunLogs`).
   *
-  * Both answer a ZIP archive, so neither is served by a class whose every other operation decodes text. They are
-  * implemented on [[com.worxbend.codeberg4s.repositories.actions.ActionDownloadApi]], reached as `client.downloads`,
-  * which reads a body as bytes.
+  * They belong to the Actions surface and are implemented there, as
+  * [[com.worxbend.codeberg4s.repositories.actions.RepositoryActionApi.downloadArtifact]] and
+  * [[com.worxbend.codeberg4s.repositories.actions.RepositoryActionApi.downloadRunLogs]] — reached as
+  * `client.repos.actions`.
   *
   * @param pipeline
   *   the shared request pipeline; the only thing here that reaches the network

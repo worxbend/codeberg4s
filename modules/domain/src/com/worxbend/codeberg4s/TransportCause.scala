@@ -38,8 +38,8 @@ enum TransportCause:
     * again. Repeating it would download the oversized body once per attempt — the opposite of what a bound is for — so
     * this case is excluded from retrying.
     *
-    * Which bound was passed depends on the operation: [[CodebergConfig.maxDownloadBodyBytes]] for the archive downloads
-    * under `client.downloads`, [[CodebergConfig.maxResponseBodyBytes]] for everything else.
+    * Which bound was passed depends on the operation: [[CodebergConfig.maxDownloadBodyBytes]] for the two archive
+    * downloads under `client.repos.actions`, [[CodebergConfig.maxResponseBodyBytes]] for everything else.
     */
   case ResponseTooLarge(detail: String)
 

@@ -119,7 +119,6 @@ object AttemptParitySuite:
     ),
     Pair(classOf[repositories.RepositoryApi], classOf[repositories.RepositoryApi.Attempt]),
     Pair(classOf[repositories.access.RepositoryAccessApi], classOf[repositories.access.RepositoryAccessApi.Attempt]),
-    Pair(classOf[repositories.actions.ActionDownloadApi], classOf[repositories.actions.ActionDownloadApi.Attempt]),
     Pair(
       classOf[repositories.actions.RepositoryActionApi],
       classOf[repositories.actions.RepositoryActionApi.Attempt],

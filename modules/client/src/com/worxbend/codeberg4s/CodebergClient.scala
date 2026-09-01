@@ -10,7 +10,6 @@ import com.worxbend.codeberg4s.organizations.OrganizationApi
 import com.worxbend.codeberg4s.paging.{PageNumber, PageParams}
 import com.worxbend.codeberg4s.pulls.PullRequestApi
 import com.worxbend.codeberg4s.repositories.RepositoryApi
-import com.worxbend.codeberg4s.repositories.actions.ActionDownloadApi
 import com.worxbend.codeberg4s.syntax.discard
 import com.worxbend.codeberg4s.transport.SttpHttpPort
 import com.worxbend.codeberg4s.users.UserApi
@@ -89,13 +88,6 @@ final class CodebergClient private (
 
   /** Instance-level endpoints: server settings, the signing key and markdown rendering. */
   val misc: MiscellaneousApi = MiscellaneousApi(pipeline)
-
-  /** The two endpoints whose success body is a ZIP rather than text: an Actions artifact and a run's logs.
-    *
-    * They hand the body back undecoded, where every other group decodes a model from it. Both hold the whole archive in
-    * memory; this library does not stream.
-    */
-  val downloads: ActionDownloadApi = ActionDownloadApi(pipeline)
 
   private val closed: AtomicBoolean = AtomicBoolean(false)
 

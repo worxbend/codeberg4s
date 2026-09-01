@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions
 
 import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
-import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, CodebergResponse, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.actions.wire.{
   ActionQueries,
@@ -72,17 +72,20 @@ import scala.concurrent.Future
   * rendering path, and the read model [[ActionSecret]] has no value field at all — see both types for why that is
   * modelled rather than documented.
   *
-  * ==What is not here==
+  * ==The two archive endpoints==
   *
-  * Two spec operations are deliberately absent, because this library cannot implement them honestly:
+  * Two operations here answer a ZIP rather than JSON, and hand the body back undecoded:
   *
-  *   - `GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/zip` (`DownloadActionArtifact`);
-  *   - `GET /repos/{owner}/{repo}/actions/runs/{run_id}/logs` (`repoGetActionRunLogs`).
+  *   - [[downloadArtifact]] — `GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/zip`;
+  *   - [[downloadRunLogs]] — `GET /repos/{owner}/{repo}/actions/runs/{run_id}/logs`.
   *
-  * Both answer a ZIP archive, which is not text, so neither belongs on a class whose every other operation decodes one.
-  * They are '''implemented''', on [[ActionDownloadApi]] — reached as `client.downloads` — which reads a body as bytes.
-  * [[ActionArtifact.archiveDownloadUrl]] remains available for a caller who would rather stream the archive with their
-  * own HTTP client, since nothing in this library streams. [[jobLogs]] is genuinely text and is implemented here.
+  * Both answer a [[com.worxbend.codeberg4s.core.CodebergResponse]] whose `body.bytes` is the archive verbatim, and both
+  * hold the whole thing in memory — this library does not stream. They read under
+  * [[com.worxbend.codeberg4s.CodebergConfig.maxDownloadBodyBytes]], 50 MiB by default rather than the 16 MiB every
+  * other operation gets, because an artifact is whatever a workflow uploaded. An archive past the bound fails as
+  * [[com.worxbend.codeberg4s.TransportCause.ResponseTooLarge]] and is not retried, since a second attempt would
+  * download it again. [[ActionArtifact.archiveDownloadUrl]] remains available for a caller who would rather stream the
+  * archive with their own HTTP client. [[jobLogs]] is genuinely text and needs no archive handling at all.
   *
   * @param pipeline
   *   the shared request pipeline; the only thing here that reaches the network
@@ -138,6 +141,18 @@ final class RepositoryActionApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     */
   def deleteArtifact(owner: Owner, name: RepoName, id: ArtifactId): Future[Unit] =
     pipeline.callUnit(RepositoryActionApi.deleteArtifactRequest(owner, name, id), RetryEligibility.AlwaysRetry)
+
+  /** Downloads an artifact's ZIP — `GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/zip`.
+    *
+    * '''Bytes, not a model.''' The returned [[com.worxbend.codeberg4s.core.CodebergResponse]] carries the archive
+    * verbatim — read `response.body.bytes` — along with the response headers, so `content-disposition` is there for the
+    * server's own file name. Nothing is decoded, so no [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] is
+    * possible. See the class note on the two archive endpoints for the memory cost and the larger body bound.
+    *
+    * '''Failures.''' The group contract above, plus `410` when Forgejo has garbage-collected the artifact.
+    */
+  def downloadArtifact(owner: Owner, name: RepoName, id: ArtifactId): Future[CodebergResponse] =
+    pipeline.callDownload(RepositoryActionApi.downloadArtifactRequest(owner, name, id))
 
   // --- runs -----------------------------------------------------------------
 
@@ -227,6 +242,16 @@ final class RepositoryActionApi private[codeberg4s] (pipeline: ApiPipeline[Futur
   def listRunJobs(owner: Owner, name: RepoName, id: RunId): Future[Vector[ActionRunJob]] =
     pipeline.call(RepositoryActionApi.listRunJobsRequest(owner, name, id), RetryEligibility.IdempotentOnly)(using
       RepositoryActionDecoders.jobs)
+
+  /** Downloads a run's logs as a ZIP — `GET /repos/{owner}/{repo}/actions/runs/{run_id}/logs`.
+    *
+    * '''Bytes, not a model''', exactly as [[downloadArtifact]]. For one job's logs as plain text, use [[jobLogs]]
+    * instead; it needs no archive handling.
+    *
+    * '''Failures.''' The group contract above.
+    */
+  def downloadRunLogs(owner: Owner, name: RepoName, id: RunId): Future[CodebergResponse] =
+    pipeline.callDownload(RepositoryActionApi.downloadRunLogsRequest(owner, name, id))
 
   // --- jobs -----------------------------------------------------------------
 
@@ -519,6 +544,12 @@ object RepositoryActionApi:
   /** The stable operation id of [[RepositoryActionApi.deleteArtifact]]. */
   val DeleteArtifactOperation: String = "repos.actions.artifacts.delete"
 
+  /** The stable operation id of [[RepositoryActionApi.downloadArtifact]]. */
+  val DownloadArtifactOperation: String = "repos.actions.artifacts.download"
+
+  /** The stable operation id of [[RepositoryActionApi.downloadRunLogs]]. */
+  val DownloadRunLogsOperation: String = "repos.actions.runs.logs.download"
+
   /** The stable operation id of [[RepositoryActionApi.listRuns]]. */
   val ListRunsOperation: String = "repos.actions.runs.list"
 
@@ -612,6 +643,18 @@ object RepositoryActionApi:
     /** [[RepositoryActionApi.deleteArtifact]] with its failure as a value. */
     def deleteArtifact(owner: Owner, name: RepoName, id: ArtifactId): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.deleteArtifact(owner, name, id))
+
+    /** [[RepositoryActionApi.downloadArtifact]] with its failure as a value. */
+    def downloadArtifact(
+        owner: Owner,
+        name: RepoName,
+        id: ArtifactId,
+    ): Future[Either[CodebergError, CodebergResponse]] =
+      exec.attempt(rail.downloadArtifact(owner, name, id))
+
+    /** [[RepositoryActionApi.downloadRunLogs]] with its failure as a value. */
+    def downloadRunLogs(owner: Owner, name: RepoName, id: RunId): Future[Either[CodebergError, CodebergResponse]] =
+      exec.attempt(rail.downloadRunLogs(owner, name, id))
 
     /** [[RepositoryActionApi.listRuns]] with its failure as a value. */
     def listRuns(
@@ -801,6 +844,12 @@ object RepositoryActionApi:
 
   private def deleteArtifactRequest(owner: Owner, name: RepoName, id: ArtifactId): CodebergRequest =
     remove(DeleteArtifactOperation, artifactPath(owner, name, id))
+
+  private def downloadArtifactRequest(owner: Owner, name: RepoName, id: ArtifactId): CodebergRequest =
+    read(DownloadArtifactOperation, artifactPath(owner, name, id) :+ "zip", Nil)
+
+  private def downloadRunLogsRequest(owner: Owner, name: RepoName, id: RunId): CodebergRequest =
+    read(DownloadRunLogsOperation, runPath(owner, name, id) :+ "logs", Nil)
 
   private def listRunsRequest(
       owner: Owner,

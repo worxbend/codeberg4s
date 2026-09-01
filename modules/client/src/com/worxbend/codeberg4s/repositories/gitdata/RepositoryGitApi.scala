@@ -549,7 +549,8 @@ final class RepositoryGitApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     * story.''' A zip or a gzipped tar decoded as text is not recoverable. This method builds and issues the request
     * correctly and returns what its own signature can express; it is not a way to obtain a usable archive file. Making
     * it one is now a change to this method's return type alone — the transport and core carry the bytes intact, and
-    * `com.worxbend.codeberg4s.repositories.actions.ActionDownloadApi` shows the shape such an operation takes.
+    * `com.worxbend.codeberg4s.repositories.actions.RepositoryActionApi.downloadArtifact` shows the shape such an
+    * operation takes.
     *
     * '''Failures.''' The group contract above. [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] is not
     * reachable: nothing is parsed.

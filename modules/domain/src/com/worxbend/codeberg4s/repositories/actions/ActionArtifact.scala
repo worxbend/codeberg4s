@@ -11,11 +11,12 @@ import java.time.Instant
   *
   * ==Downloading==
   *
-  * `GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/zip` is implemented, on
-  * `com.worxbend.codeberg4s.repositories.actions.ActionDownloadApi` — reached as `client.downloads`. It holds the whole
-  * archive in memory, because nothing in this library streams, so [[archiveDownloadUrl]] remains the route for an
-  * archive too large to want in the heap: hand it to an HTTP client that can stream bytes. Note that the URL is
-  * authenticated exactly like the API is, so the caller's own client must send the same credentials.
+  * `GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}/zip` is implemented, as
+  * `com.worxbend.codeberg4s.repositories.actions.RepositoryActionApi.downloadArtifact` — reached as
+  * `client.repos.actions.downloadArtifact`. It holds the whole archive in memory, because nothing in this library
+  * streams, so [[archiveDownloadUrl]] remains the route for an archive too large to want in the heap: hand it to an
+  * HTTP client that can stream bytes. Note that the URL is authenticated exactly like the API is, so the caller's own
+  * client must send the same credentials.
   *
   * @param id
   *   the identifier the artifact endpoints address this artifact by
