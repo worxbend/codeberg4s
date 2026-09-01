@@ -25,6 +25,21 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **`Repository.defaultBranch` is an `Option[BranchName]` and
+  `Repository.topics` a `Vector[Topic]`.** Both were bare strings, so reading a
+  repository and then asking for that branch, or adding to that topic set,
+  meant re-parsing values the library had already accepted. `RepositoryDto`
+  validates both during conversion.
+
+  **Breaking:** call `.value` where the text is wanted
+  (`repository.defaultBranch.map(_.value)`). A `default_branch` that cannot be
+  a `BranchName` is now a decoding failure at `$.default_branch`, and a topic
+  that cannot be a `Topic` fails the repository at `$.topics[n]` rather than
+  being dropped — the same first-failure rule every other array in the codec
+  follows, so a shortened vector never gets mistaken for a repository with
+  fewer topics. An absent `default_branch`, and an absent, `null` or empty
+  `topics`, are unchanged.
+
 - **`repos.topics` returns a `Page[Topic]`, not a `Page[String]`.** The write
   side of the same endpoint group already spoke `Topic` —
   `repos.publishing.replaceTopics` takes a `Vector[Topic]`, `addTopic` and

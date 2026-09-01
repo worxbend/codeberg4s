@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories
 
+import com.worxbend.codeberg4s.repositories.publishing.Topic
 import com.worxbend.codeberg4s.users.User
 
 import java.time.Instant
@@ -27,6 +28,11 @@ import java.time.Instant
   *   the on-disk size in kibibytes, as Forgejo reports it
   * @param permissions
   *   what the caller may do, from the perspective of the credentials that made the request
+  * @param defaultBranch
+  *   the branch a clone checks out, already validated so it can be handed to any branch endpoint; absent on an empty
+  *   repository
+  * @param topics
+  *   the repository's topics, already validated so they can be handed back to the topic endpoints
   * @param archivedAt
   *   absent unless the repository is archived; Forgejo sends the Unix epoch as its "never" sentinel
   */
@@ -41,10 +47,10 @@ final case class Repository private[codeberg4s] (
     sshUrl: Option[String],
     originalUrl: Option[String],
     website: Option[String],
-    defaultBranch: Option[String],
+    defaultBranch: Option[BranchName],
     language: Option[String],
     avatarUrl: Option[String],
-    topics: Vector[String],
+    topics: Vector[Topic],
     sizeKb: Long,
     starsCount: Long,
     forksCount: Long,

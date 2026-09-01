@@ -55,7 +55,7 @@ final class CodebergClientSuite extends FunSuite with ClientSuiteHarness:
         assertEquals(repository.slug.value, "forgejo/forgejo")
         assertEquals(repository.owner.login.value, "forgejo")
         assertEquals(repository.starsCount, 1234L)
-        assertEquals(repository.topics, Vector("git", "forge"))
+        assertEquals(repository.topics.map(_.value), Vector("git", "forge"))
 
   test("repos.get targets /repos/{owner}/{repo} on the configured instance"):
     val backend = RecordingBackend(responding(200, CodebergClientSuite.RepositoryBody))

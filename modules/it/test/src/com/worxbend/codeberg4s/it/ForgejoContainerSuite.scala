@@ -94,7 +94,7 @@ final class ForgejoContainerSuite extends IntegrationSuite with TestContainerFor
     forgejo.client.repos.get(forgejo.owner, forgejo.repository).map: repository =>
       assertEquals(repository.fullName, s"${ForgejoContainer.Admin.username}/${ForgejoContainer.RepositoryName}")
       assertEquals(repository.slug.name.value, ForgejoContainer.RepositoryName)
-      assertEquals(repository.defaultBranch, Some(ForgejoContainer.DefaultBranch))
+      assertEquals(repository.defaultBranch.map(_.value), Some(ForgejoContainer.DefaultBranch))
       assertEquals(repository.isPrivate, false)
       assertEquals(repository.isEmpty, false)
       assertEquals(repository.owner.login.value, ForgejoContainer.Admin.username)

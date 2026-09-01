@@ -83,7 +83,7 @@ final class RepositoryDtoSuite extends FunSuite with GoldenFixtures:
     assertEquals(repository.sizeKb, 364707L)
     assertEquals(repository.openPullRequestCount, 167L)
     assertEquals(repository.releaseCount, 113L)
-    assertEquals(repository.topics, Vector("forge", "forgejo", "git", "self-hosted"))
+    assertEquals(repository.topics.map(_.value), Vector("forge", "forgejo", "git", "self-hosted"))
     assertEquals(repository.permissions, Some(RepositoryPermissions(admin = false, push = false, pull = true)))
     assertEquals(repository.parent, None)
     assertEquals(repository.isPrivate, false)
@@ -106,9 +106,9 @@ final class RepositoryDtoSuite extends FunSuite with GoldenFixtures:
     assertEquals(repository.slug.value, "Codeberg/Community")
     assertEquals(repository.fullName, "Codeberg/Community")
     assertEquals(repository.owner.login.value, "Codeberg")
-    assertEquals(repository.defaultBranch, Some("main"))
+    assertEquals(repository.defaultBranch.map(_.value), Some("main"))
     assertEquals(repository.starsCount, 395L)
-    assertEquals(repository.topics, Vector("codeberg", "community"))
+    assertEquals(repository.topics.map(_.value), Vector("codeberg", "community"))
     assertEquals(repository.description, Some("Discussion of community- and platform-related issues"))
     assertEquals(repository.createdAt, Some(Instant.parse("2018-06-29T10:48:58Z")))
 
@@ -183,8 +183,20 @@ final class RepositoryDtoSuite extends FunSuite with GoldenFixtures:
   test("a null topics array is an empty vector, never a crash"):
     Json.decode[RepositoryDto]("""{"id":1,"name":"r","owner":{"id":2,"login":"o"},"topics":null}""")
       .flatMap(_.toDomain) match
-      case Right(repository) => assertEquals(repository.topics, Vector.empty[String])
+      case Right(repository) => assertEquals(repository.topics.map(_.value), Vector.empty[String])
       case Left(failure)     => fail(s"a null array must not fail: ${failure.path.render} ${failure.message}")
+
+  test("a topic that could not go back into a request path fails the repository, by position"):
+    Json.decode[RepositoryDto]("""{"id":1,"name":"r","owner":{"id":2,"login":"o"},"topics":["ok","bad/topic"]}""")
+      .flatMap(_.toDomain) match
+      case Left(failure)     => assertEquals(failure.path.render, "$.topics[1]")
+      case Right(repository) => fail(s"expected a failure, converted $repository")
+
+  test("a default branch that could not be addressed fails the repository"):
+    Json.decode[RepositoryDto]("""{"id":1,"name":"r","owner":{"id":2,"login":"o"},"default_branch":".."}""")
+      .flatMap(_.toDomain) match
+      case Left(failure)     => assertEquals(failure.path.render, "$.default_branch")
+      case Right(repository) => fail(s"expected a failure, converted $repository")
 
   test("a repository reduced to the fields an embedded object carries still converts"):
     Json.decode[RepositoryDto]("""{"id":5,"name":"tiny","owner":{"id":6,"login":"someone"}}""")
@@ -193,7 +205,7 @@ final class RepositoryDtoSuite extends FunSuite with GoldenFixtures:
         assertEquals(repository.slug.value, "someone/tiny")
         assertEquals(repository.fullName, "someone/tiny")
         assertEquals(repository.starsCount, 0L)
-        assertEquals(repository.topics, Vector.empty[String])
+        assertEquals(repository.topics.map(_.value), Vector.empty[String])
         assertEquals(repository.permissions, None)
         assertEquals(repository.hasIssues, false)
       case Left(failure)     => fail(s"a reduced repository must convert: ${failure.path.render} ${failure.message}")

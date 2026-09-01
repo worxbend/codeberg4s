@@ -1,8 +1,9 @@
 package com.worxbend.codeberg4s.repositories.wire
 
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
-import com.worxbend.codeberg4s.repositories.{RepoSlug, Repository}
+import com.worxbend.codeberg4s.repositories.publishing.Topic
+import com.worxbend.codeberg4s.repositories.{BranchName, RepoSlug, Repository}
 import com.worxbend.codeberg4s.users.wire.UserDto
 import com.worxbend.codeberg4s.{JsonPath, Owner, RepoName}
 
@@ -107,6 +108,14 @@ final case class RepositoryDto(
     * `topics` becomes an empty `Vector` — the reduced repository objects Forgejo embeds in pull requests and
     * notifications carry none of them.
     *
+    * `default_branch` and the elements of `topics` are put through their own smart constructors, so that a caller can
+    * hand either straight to the endpoints that take a [[com.worxbend.codeberg4s.repositories.BranchName]] or a
+    * [[com.worxbend.codeberg4s.repositories.publishing.Topic]]. '''A topic the constructor rejects fails the whole
+    * repository rather than being dropped from the vector''': that is the same first-failure-wins rule every other
+    * array in this module follows, and a caller about to rewrite a repository's topic set cannot tell a silently
+    * shortened vector from a repository that genuinely has fewer topics. The failure names the element's position,
+    * `$.topics[2]`. An absent `default_branch` — which is what an empty repository sends — stays absent.
+    *
     * A failure inside `owner` or `parent` is reported at that nested path, not at the repository's.
     */
   def toDomainAt(at: JsonPath): Either[DecodeFailure, Repository] =
@@ -115,6 +124,9 @@ final case class RepositoryDto(
       repoName    <- Wire.validated(at, "name", name)(RepoName.from)
       ownerDto    <- Wire.required(at, "owner", owner)
       ownerModel  <- ownerDto.toDomainAt(at.field("owner"))
+      branch      <- Wire.optional(at, "default_branch", defaultBranch)(BranchName.from)
+      topicNames  <- ArrayElements.convert(at.field("topics"), topics): (name, path) =>
+                       Topic.from(name).left.map(error => DecodeFailure(path, error.message))
       parentModel <- Wire.nested(at, "parent", parent)(_.toDomainAt(_))
     yield Repository(
       id                   = identifier,
@@ -127,10 +139,10 @@ final case class RepositoryDto(
       sshUrl               = sshUrl,
       originalUrl          = originalUrl,
       website              = website,
-      defaultBranch        = defaultBranch,
+      defaultBranch        = branch,
       language             = language,
       avatarUrl            = avatarUrl,
-      topics               = topics,
+      topics               = topicNames,
       sizeKb               = size.getOrElse(0L),
       starsCount           = starsCount.getOrElse(0L),
       forksCount           = forksCount.getOrElse(0L),
