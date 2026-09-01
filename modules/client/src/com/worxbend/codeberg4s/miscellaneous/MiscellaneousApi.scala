@@ -2,7 +2,7 @@ package com.worxbend.codeberg4s.miscellaneous
 
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.core.CodebergRequest.read
+import com.worxbend.codeberg4s.core.CodebergRequest.{read, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RequestBody, RetryEligibility}
 import com.worxbend.codeberg4s.miscellaneous.wire.{
   GitignoreTemplateDto,
@@ -505,17 +505,8 @@ object MiscellaneousApi:
     def actionsRun(): Future[Either[CodebergError, ActionRun]] =
       exec.attempt(rail.actionsRun())
 
-  /** The `Content-Type` `POST /markdown/raw` consumes.
-    *
-    * Sent as an explicit header because [[com.worxbend.codeberg4s.core.RequestBody]] models only a JSON payload and an
-    * empty one, and this endpoint takes neither: its body is the markdown source as plain text. The transport applies a
-    * request's own headers after the body's content type, replacing it, so this is what reaches the wire — the
-    * `MiscellaneousApiSuite` case "renderMarkdownRaw sends the markdown as a plain-text body" pins that down rather
-    * than trusting it.
-    */
+  /** The `Content-Type` `POST /markdown/raw` consumes: its body is the markdown source itself, not a JSON document. */
   private val PlainTextUtf8: String = "text/plain; charset=utf-8"
-
-  private val ContentTypeHeader: String = "Content-Type"
 
   private val ApiSettingsRequest: CodebergRequest =
     settingsRequest(ApiSettingsOperation, "api")
@@ -621,42 +612,18 @@ object MiscellaneousApi:
     read(LicenseTemplateOperation, LicensesPath :+ name.value, Nil)
 
   private def markupRequest(request: MarkupRenderRequest): CodebergRequest =
-    CodebergRequest(
-      operation = RenderMarkupOperation,
-      method    = HttpMethod.Post,
-      path      = List("markup"),
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Json(MarkupOptionDto.fromDomain(request).toJson)),
-    )
+    write(RenderMarkupOperation, HttpMethod.Post, List("markup"), MarkupOptionDto.fromDomain(request).toJson)
 
   private def markdownRequest(request: MarkdownRenderRequest): CodebergRequest =
-    CodebergRequest(
-      operation = RenderMarkdownOperation,
-      method    = HttpMethod.Post,
-      path      = List("markdown"),
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Json(MarkdownOptionDto.fromDomain(request).toJson)),
-    )
+    write(RenderMarkdownOperation, HttpMethod.Post, List("markdown"), MarkdownOptionDto.fromDomain(request).toJson)
 
-  /** The one request in this group whose body is not JSON.
-    *
-    * [[com.worxbend.codeberg4s.core.RequestBody.Json]] is used as the carrier and the `Content-Type` header above
-    * corrects what that would otherwise put on the wire. That was the only option when this endpoint was written; '''it
-    * no longer is''' — core has since grown [[com.worxbend.codeberg4s.core.RequestBody.Text]], which the transport
-    * already handles, and switching to it would delete both the header override and `PlainTextUtf8`. The bytes on the
-    * wire are identical either way, so this is a tidy-up and not a fix, and it is left for whoever next touches the
-    * markdown renderers rather than folded into a wave that is adding endpoints. The `MiscellaneousApiSuite` case
-    * "renderMarkdownRaw sends the markdown itself as a plain-text body" pins the observable behaviour, so the migration
-    * cannot change it silently.
-    */
+  /** The one request in this group whose body is not JSON: the markdown source is sent verbatim as plain text. */
   private def markdownRawRequest(markdown: String): CodebergRequest =
     CodebergRequest(
       operation = RenderMarkdownRawOperation,
       method    = HttpMethod.Post,
       path      = List("markdown", "raw"),
       query     = Nil,
-      headers   = List(ContentTypeHeader -> PlainTextUtf8),
-      body      = Some(RequestBody.Json(markdown)),
+      headers   = Nil,
+      body      = Some(RequestBody.Text(markdown, PlainTextUtf8)),
     )
