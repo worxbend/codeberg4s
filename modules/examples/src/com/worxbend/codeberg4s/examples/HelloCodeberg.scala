@@ -2,7 +2,7 @@ package com.worxbend.codeberg4s.examples
 
 import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.repositories.Repository
-import com.worxbend.codeberg4s.{CodebergClient, CodebergConfig, Owner, RepoName, ServerVersion, ValidationError}
+import com.worxbend.codeberg4s.{CodebergClient, CodebergConfig, Owner, RepoName, ServerVersion}
 
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext}
@@ -23,7 +23,7 @@ import scala.concurrent.{Await, ExecutionContext}
   * ==What it shows==
   *
   *   - building a [[com.worxbend.codeberg4s.CodebergConfig]] from nothing but an [[com.worxbend.codeberg4s.auth.Auth]],
-  *   - turning `String` arguments into validated identifiers with `Owner.from` and `RepoName.from`,
+  *   - writing identifiers down as string literals, which the compiler checks,
   *   - awaiting the `Future` at the edge of `main`, which is the only place a program should block,
   *   - closing the client exactly once, in a `finally`.
   *
@@ -42,16 +42,15 @@ object HelloCodeberg:
 
   /** The repository this program reads: Forgejo's own, on Codeberg.
     *
-    * `Owner.from` and `RepoName.from` return `Either` rather than the value, because a string containing `/` would
-    * forge a request path. Both names here are literals, so `Owner("forgejo")` would also do and would skip the
-    * `Either` entirely; `from` is shown because it is the shape a value read from a config file or an argument needs.
-    * The two are combined in a `for`-comprehension, which is how validated values are usually assembled.
+    * Both names are written down here as string literals, so the compiler checks them: `Owner("forgejo")` '''is''' the
+    * owner, with no `Either` to unwrap, and an invalid literal such as `Owner("forgejo/forgejo")` fails the build
+    * rather than the program. A value that only exists at run time — an argument, a config entry — goes through
+    * `Owner.from` instead, which returns `Either[ValidationError, Owner]`; `CreatingAnIssue` shows that shape.
     */
-  private val target: Either[ValidationError, (Owner, RepoName)] =
-    for
-      owner <- Owner.from("forgejo")
-      name  <- RepoName.from("forgejo")
-    yield (owner, name)
+  private val owner: Owner = Owner("forgejo")
+
+  /** The repository name, checked the same way as [[owner]]. */
+  private val name: RepoName = RepoName("forgejo")
 
   def main(args: Array[String]): Unit =
     // Every call the client makes needs somewhere to run its continuations.
@@ -77,19 +76,12 @@ object HelloCodeberg:
       val version: ServerVersion = Await.result(client.version.get(), AwaitLimit)
       ExampleConsole.line(s"instance version: ${version.raw}")
 
-      target match
-        case Left(problem) =>
-          // Unreachable for the literals above, but the compiler does not know
-          // that, and pretending otherwise is what an unsafe extraction is for.
-          ExampleConsole.line(s"invalid ${problem.field}: ${problem.message}")
+      // Await at the edge, once. Everywhere else, compose the Future.
+      val repository: Repository = Await.result(client.repos.get(owner, name), AwaitLimit)
 
-        case Right((owner, name)) =>
-          // Await at the edge, once. Everywhere else, compose the Future.
-          val repository: Repository = Await.result(client.repos.get(owner, name), AwaitLimit)
-
-          ExampleConsole.heading(repository.fullName)
-          ExampleConsole.line(s"  stars:       ${repository.starsCount}")
-          ExampleConsole.line(s"  forks:       ${repository.forksCount}")
-          ExampleConsole.line(s"  open issues: ${repository.openIssuesCount}")
-          ExampleConsole.line(s"  description: ${repository.description.getOrElse("(none)")}")
+      ExampleConsole.heading(repository.fullName)
+      ExampleConsole.line(s"  stars:       ${repository.starsCount}")
+      ExampleConsole.line(s"  forks:       ${repository.forksCount}")
+      ExampleConsole.line(s"  open issues: ${repository.openIssuesCount}")
+      ExampleConsole.line(s"  description: ${repository.description.getOrElse("(none)")}")
     finally client.close()

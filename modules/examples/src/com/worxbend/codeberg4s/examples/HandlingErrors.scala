@@ -2,15 +2,7 @@ package com.worxbend.codeberg4s.examples
 
 import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.repositories.Repository
-import com.worxbend.codeberg4s.{
-  CodebergClient,
-  CodebergConfig,
-  CodebergError,
-  CodebergException,
-  Owner,
-  RepoName,
-  ValidationError
-}
+import com.worxbend.codeberg4s.{CodebergClient, CodebergConfig, CodebergError, CodebergException, Owner, RepoName}
 
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -58,12 +50,13 @@ object HandlingErrors:
 
   /** A repository that will not exist. The owner is real so the failure is a plain `404` on the repository rather than
     * anything to do with the account.
+    *
+    * Both are string literals, so the compiler checks them: a well-formed name is not the same claim as an existing
+    * repository, which is exactly why the `404` below still has to be handled.
     */
-  private val missing: Either[ValidationError, (Owner, RepoName)] =
-    for
-      owner <- Owner.from("forgejo")
-      name  <- RepoName.from("codeberg4s-no-such-repository")
-    yield (owner, name)
+  private val owner: Owner = Owner("forgejo")
+
+  private val name: RepoName = RepoName("codeberg4s-no-such-repository")
 
   def main(args: Array[String]): Unit =
     given ExecutionContext = ExecutionContext.global
@@ -71,16 +64,11 @@ object HandlingErrors:
     val client: CodebergClient = CodebergClient(CodebergConfig(Auth.Anonymous))
 
     try
-      missing match
-        case Left(problem) =>
-          ExampleConsole.line(s"invalid ${problem.field}: ${problem.message}")
+      ExampleConsole.heading("convenience rail — the Future fails with CodebergException")
+      ExampleConsole.line(s"  ${Await.result(convenienceRail(client, owner, name), AwaitLimit)}")
 
-        case Right((owner, name)) =>
-          ExampleConsole.heading("convenience rail — the Future fails with CodebergException")
-          ExampleConsole.line(s"  ${Await.result(convenienceRail(client, owner, name), AwaitLimit)}")
-
-          ExampleConsole.heading("typed rail — the Future succeeds with a Left")
-          ExampleConsole.line(s"  ${Await.result(typedRail(client, owner, name), AwaitLimit)}")
+      ExampleConsole.heading("typed rail — the Future succeeds with a Left")
+      ExampleConsole.line(s"  ${Await.result(typedRail(client, owner, name), AwaitLimit)}")
     finally client.close()
 
   /** The rail that suits code already written in terms of failed `Future`s.

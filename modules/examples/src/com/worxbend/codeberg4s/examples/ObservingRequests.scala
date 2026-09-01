@@ -2,15 +2,7 @@ package com.worxbend.codeberg4s.examples
 
 import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.core.Telemetry
-import com.worxbend.codeberg4s.{
-  CallContext,
-  CodebergClient,
-  CodebergConfig,
-  CodebergError,
-  Owner,
-  RepoName,
-  ValidationError
-}
+import com.worxbend.codeberg4s.{CallContext, CodebergClient, CodebergConfig, CodebergError, Owner, RepoName}
 
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -57,12 +49,14 @@ object ObservingRequests:
 
   private val AwaitLimit: FiniteDuration = 2.minutes
 
-  /** A real owner and a repository name that will not resolve, so the second call below is a `404`. */
-  private val missing: Either[ValidationError, (Owner, RepoName)] =
-    for
-      owner <- Owner.from("forgejo")
-      name  <- RepoName.from("codeberg4s-no-such-repository")
-    yield (owner, name)
+  /** A real owner and a repository name that will not resolve, so the second call below is a `404`.
+    *
+    * Both are string literals, so the compiler checks them and there is no `Either` to unwrap. Being a valid name and
+    * naming something that exists are different questions: only the first is decided here.
+    */
+  private val owner: Owner = Owner("forgejo")
+
+  private val name: RepoName = RepoName("codeberg4s-no-such-repository")
 
   def main(args: Array[String]): Unit =
     given ExecutionContext = ExecutionContext.global
@@ -75,16 +69,11 @@ object ObservingRequests:
       ExampleConsole.heading("a call that succeeds")
       ExampleConsole.line(s"  version ${Await.result(client.version.get(), AwaitLimit).raw}")
 
-      missing match
-        case Left(problem) =>
-          ExampleConsole.line(s"invalid ${problem.field}: ${problem.message}")
-
-        case Right((owner, name)) =>
-          ExampleConsole.heading("a call that fails, so onError fires too")
-          // The typed rail, so the 404 does not end the program before the
-          // telemetry lines have been printed.
-          val outcome = Await.result(client.repos.attempt.get(owner, name), AwaitLimit)
-          ExampleConsole.line(s"  the caller received a Left: ${outcome.isLeft}")
+      ExampleConsole.heading("a call that fails, so onError fires too")
+      // The typed rail, so the 404 does not end the program before the
+      // telemetry lines have been printed.
+      val outcome = Await.result(client.repos.attempt.get(owner, name), AwaitLimit)
+      ExampleConsole.line(s"  the caller received a Left: ${outcome.isLeft}")
     finally client.close()
 
   /** A telemetry that writes one line per event to standard output.

@@ -10,8 +10,7 @@ import com.worxbend.codeberg4s.{
   PageNumber,
   PageParams,
   PageSize,
-  RepoName,
-  ValidationError
+  RepoName
 }
 
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
@@ -65,11 +64,12 @@ object WalkingPages:
     */
   private val MaxPages: Int = 3
 
-  private val target: Either[ValidationError, (Owner, RepoName)] =
-    for
-      owner <- Owner.from("forgejo")
-      name  <- RepoName.from("forgejo")
-    yield (owner, name)
+  /** The listing this program walks. Both names are literals, so the compiler checks them and hands back the
+    * identifiers themselves; `Owner.from` is for a value known only at run time.
+    */
+  private val owner: Owner = Owner("forgejo")
+
+  private val name: RepoName = RepoName("forgejo")
 
   def main(args: Array[String]): Unit =
     given ExecutionContext = ExecutionContext.global
@@ -77,28 +77,23 @@ object WalkingPages:
     val client: CodebergClient = CodebergClient(CodebergConfig(Auth.Anonymous))
 
     try
-      target match
-        case Left(problem) =>
-          ExampleConsole.line(s"invalid ${problem.field}: ${problem.message}")
+      // PageSize.Max is 50, which is Forgejo's real ceiling. PageSize.from
+      // rejects anything larger rather than letting the instance clamp it,
+      // so the surprise happens here instead of three pages into a walk.
+      val start = PageParams(PageNumber.First, PageSize.Max)
 
-        case Right((owner, name)) =>
-          // PageSize.Max is 50, which is Forgejo's real ceiling. PageSize.from
-          // rejects anything larger rather than letting the instance clamp it,
-          // so the surprise happens here instead of three pages into a walk.
-          val start = PageParams(PageNumber.First, PageSize.Max)
+      // One request per page. The listing operation is passed as a function
+      // of PageParams so that both walks below work for any listing in the
+      // library — every one of them has the same shape.
+      val issues: PageParams => Future[Page[Issue]] =
+        params => client.issues.list(owner, name, IssueQuery.Empty, params)
 
-          // One request per page. The listing operation is passed as a function
-          // of PageParams so that both walks below work for any listing in the
-          // library — every one of them has the same shape.
-          val issues: PageParams => Future[Page[Issue]] =
-            params => client.issues.list(owner, name, IssueQuery.Empty, params)
+      ExampleConsole.heading("walk — one line per page, driven by nextPage")
+      Await.result(describeEachPage(issues, start, MaxPages), AwaitLimit)
 
-          ExampleConsole.heading("walk — one line per page, driven by nextPage")
-          Await.result(describeEachPage(issues, start, MaxPages), AwaitLimit)
-
-          ExampleConsole.heading("bounded fold — carries a count, never the items")
-          val counts = Await.result(foldPages(issues, start, Counts.Zero, MaxPages, Counts.add), AwaitLimit)
-          ExampleConsole.line(s"  $counts")
+      ExampleConsole.heading("bounded fold — carries a count, never the items")
+      val counts = Await.result(foldPages(issues, start, Counts.Zero, MaxPages, Counts.add), AwaitLimit)
+      ExampleConsole.line(s"  $counts")
     finally client.close()
 
   /** Reads pages until the response stops offering one, printing what each page said about the walk.
