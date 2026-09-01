@@ -133,7 +133,7 @@ final class RepositoryGitApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     * @param params
     *   the page to fetch and how many entries it may hold
     */
-  def listTree(
+  def tree(
       owner: Owner,
       name: RepoName,
       sha: CommitSha,
@@ -283,7 +283,7 @@ final class RepositoryGitApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     * @param name
     *   the repository name, without the owner
     */
-  def listRefs(owner: Owner, name: RepoName): Future[Vector[GitReference]] =
+  def refs(owner: Owner, name: RepoName): Future[Vector[GitReference]] =
     pipeline.call(RepositoryGitApi.refsRequest(owner, name), RetryEligibility.IdempotentOnly)(using
       GitDataDecoders.references)
 
@@ -293,7 +293,7 @@ final class RepositoryGitApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     * branch, `heads/release` lists every branch under it, and `heads/main` lists exactly one. A ref name contains `/`
     * and is sent as several path segments for that reason — see [[RefName]].
     *
-    * '''Failures.''' As [[listRefs]]. A prefix that matches nothing is a `404` rather than an empty array.
+    * '''Failures.''' As [[refs]]. A prefix that matches nothing is a `404` rather than an empty array.
     *
     * @param owner
     *   the user or organisation that owns the repository
@@ -302,7 +302,7 @@ final class RepositoryGitApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     * @param ref
     *   the prefix or the whole ref name
     */
-  def listMatchingRefs(owner: Owner, name: RepoName, ref: RefName): Future[Vector[GitReference]] =
+  def matchingRefs(owner: Owner, name: RepoName, ref: RefName): Future[Vector[GitReference]] =
     pipeline.call(RepositoryGitApi.matchingRefsRequest(owner, name, ref), RetryEligibility.IdempotentOnly)(using
       GitDataDecoders.references)
 
@@ -381,7 +381,7 @@ final class RepositoryGitApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     * @param params
     *   the page to fetch and how many statuses it may hold
     */
-  def listStatuses(
+  def statuses(
       owner: Owner,
       name: RepoName,
       ref: RefName,
@@ -580,7 +580,7 @@ object RepositoryGitApi:
   /** The stable operation id of [[RepositoryGitApi.getBlobs]]. */
   val GetBlobsOperation: String = "repos.git.blobs.list"
 
-  /** The stable operation id of [[RepositoryGitApi.listTree]]. */
+  /** The stable operation id of [[RepositoryGitApi.tree]]. */
   val ListTreeOperation: String = "repos.git.trees.list"
 
   /** The stable operation id of [[RepositoryGitApi.getCommit]]. */
@@ -598,10 +598,10 @@ object RepositoryGitApi:
   /** The stable operation id of [[RepositoryGitApi.removeNote]]. */
   val RemoveNoteOperation: String = "repos.git.notes.remove"
 
-  /** The stable operation id of [[RepositoryGitApi.listRefs]]. */
+  /** The stable operation id of [[RepositoryGitApi.refs]]. */
   val ListRefsOperation: String = "repos.git.refs.list"
 
-  /** The stable operation id of [[RepositoryGitApi.listMatchingRefs]]. */
+  /** The stable operation id of [[RepositoryGitApi.matchingRefs]]. */
   val ListMatchingRefsOperation: String = "repos.git.refs.match"
 
   /** The stable operation id of [[RepositoryGitApi.getAnnotatedTag]]. */
@@ -610,7 +610,7 @@ object RepositoryGitApi:
   /** The stable operation id of [[RepositoryGitApi.getCombinedStatus]]. */
   val GetCombinedStatusOperation: String = "repos.commits.status.get"
 
-  /** The stable operation id of [[RepositoryGitApi.listStatuses]]. */
+  /** The stable operation id of [[RepositoryGitApi.statuses]]. */
   val ListStatusesOperation: String = "repos.commits.statuses.list"
 
   /** The stable operation id of [[RepositoryGitApi.getCommitPullRequest]]. */
@@ -659,15 +659,15 @@ object RepositoryGitApi:
     ): Future[Either[CodebergError, Vector[GitBlob]]] =
       exec.attempt(rail.getBlobs(owner, name, shas))
 
-    /** [[RepositoryGitApi.listTree]] with its failure as a value. */
-    def listTree(
+    /** [[RepositoryGitApi.tree]] with its failure as a value. */
+    def tree(
         owner: Owner,
         name: RepoName,
         sha: CommitSha,
         recursive: Boolean,
         params: PageParams,
     ): Future[Either[CodebergError, Page[GitTreeEntry]]] =
-      exec.attempt(rail.listTree(owner, name, sha, recursive, params))
+      exec.attempt(rail.tree(owner, name, sha, recursive, params))
 
     /** [[RepositoryGitApi.getCommit]] with its failure as a value. */
     def getCommit(
@@ -709,17 +709,17 @@ object RepositoryGitApi:
     def removeNote(owner: Owner, name: RepoName, sha: CommitSha): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.removeNote(owner, name, sha))
 
-    /** [[RepositoryGitApi.listRefs]] with its failure as a value. */
-    def listRefs(owner: Owner, name: RepoName): Future[Either[CodebergError, Vector[GitReference]]] =
-      exec.attempt(rail.listRefs(owner, name))
+    /** [[RepositoryGitApi.refs]] with its failure as a value. */
+    def refs(owner: Owner, name: RepoName): Future[Either[CodebergError, Vector[GitReference]]] =
+      exec.attempt(rail.refs(owner, name))
 
-    /** [[RepositoryGitApi.listMatchingRefs]] with its failure as a value. */
-    def listMatchingRefs(
+    /** [[RepositoryGitApi.matchingRefs]] with its failure as a value. */
+    def matchingRefs(
         owner: Owner,
         name: RepoName,
         ref: RefName,
     ): Future[Either[CodebergError, Vector[GitReference]]] =
-      exec.attempt(rail.listMatchingRefs(owner, name, ref))
+      exec.attempt(rail.matchingRefs(owner, name, ref))
 
     /** [[RepositoryGitApi.getAnnotatedTag]] with its failure as a value. */
     def getAnnotatedTag(owner: Owner, name: RepoName, sha: CommitSha): Future[Either[CodebergError, AnnotatedTag]] =
@@ -734,15 +734,15 @@ object RepositoryGitApi:
     ): Future[Either[CodebergError, CombinedCommitStatus]] =
       exec.attempt(rail.getCombinedStatus(owner, name, ref, params))
 
-    /** [[RepositoryGitApi.listStatuses]] with its failure as a value. */
-    def listStatuses(
+    /** [[RepositoryGitApi.statuses]] with its failure as a value. */
+    def statuses(
         owner: Owner,
         name: RepoName,
         ref: RefName,
         query: CommitStatusQuery,
         params: PageParams,
     ): Future[Either[CodebergError, Page[CommitStatus]]] =
-      exec.attempt(rail.listStatuses(owner, name, ref, query, params))
+      exec.attempt(rail.statuses(owner, name, ref, query, params))
 
     /** [[RepositoryGitApi.getCommitPullRequest]] with its failure as a value. */
     def getCommitPullRequest(

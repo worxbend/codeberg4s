@@ -174,6 +174,10 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     *
     * '''Failures.''' The group contract above, plus `500`, which the spec declares for this operation and which arrives
     * as [[com.worxbend.codeberg4s.CodebergError.Api]] like any other status.
+    *
+    * '''The name keeps its `list` prefix''', against the rule in `SCALA_CODE_STYLE.md` that a sub-resource listing is
+    * named after its plural noun: on this class `comments` is already the [[comments]] sub-API accessor, so the bare
+    * noun is not available. This is one of the three recorded exemptions.
     */
   def listComments(owner: Owner, name: RepoName, number: IssueNumber, params: PageParams): Future[Page[Comment]] =
     pipeline.callPage(IssueApi.listCommentsRequest(owner, name, number, params), params)(using IssueDecoders.comments)
@@ -205,6 +209,10 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     * another window.
     *
     * '''Failures.''' The group contract above.
+    *
+    * '''The name keeps its `list` prefix''', against the rule in `SCALA_CODE_STYLE.md` that a sub-resource listing is
+    * named after its plural noun: on this class `labels` is already the [[labels]] sub-API accessor, so the bare noun
+    * is not available. This is one of the three recorded exemptions.
     */
   def listLabels(owner: Owner, name: RepoName, params: PageParams): Future[Page[Label]] =
     pipeline.callPage(IssueApi.listLabelsRequest(owner, name, params), params)(using IssueDecoders.labels)
@@ -232,6 +240,10 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     * @param state
     *   which milestones to include. Explicit rather than optional here, unlike [[IssueQuery.state]], because the
     *   endpoint has no other filter worth naming and Forgejo's silent default of open-only surprises callers
+    *
+    * '''The name keeps its `list` prefix''', against the rule in `SCALA_CODE_STYLE.md` that a sub-resource listing is
+    * named after its plural noun: on this class `milestones` is already the [[milestones]] sub-API accessor, so the
+    * bare noun is not available. This is one of the three recorded exemptions.
     */
   def listMilestones(owner: Owner, name: RepoName, state: StateFilter, params: PageParams): Future[Page[Milestone]] =
     pipeline.callPage(IssueApi.listMilestonesRequest(owner, name, state, params), params)(using IssueDecoders.milestones)
@@ -366,20 +378,20 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
   /** Lists the issues this issue is blocking — `GET /repos/{owner}/{repo}/issues/{index}/blocks`.
     *
     * '''Read the direction carefully.''' These are the issues that cannot proceed until this one is done. The opposite
-    * relation — what this issue is waiting on — is [[listDependencies]]. Forgejo stores one relation and serves both
-    * ends of it, so adding a block here is the same edge as adding a dependency there, seen from the other side.
+    * relation — what this issue is waiting on — is [[dependencies]]. Forgejo stores one relation and serves both ends
+    * of it, so adding a block here is the same edge as adding a dependency there, seen from the other side.
     *
     * '''Paging.''' As [[list]]: the `Link` header decides, not the number of items.
     *
     * '''Failures.''' The group contract above.
     */
-  def listBlocks(
+  def blocks(
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
       params: PageParams,
   ): Future[Page[Issue]] =
-    pipeline.callPage(IssueApi.listBlocksRequest(owner, name, number, params), params)(using IssueDecoders.issues)
+    pipeline.callPage(IssueApi.blocksRequest(owner, name, number, params), params)(using IssueDecoders.issues)
 
   /** Declares that this issue blocks another — `POST /repos/{owner}/{repo}/issues/{index}/blocks`.
     *
@@ -429,19 +441,19 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
 
   /** Lists the issues this issue is waiting on — `GET /repos/{owner}/{repo}/issues/{index}/dependencies`.
     *
-    * The other end of the relation [[listBlocks]] reports; see that method for the direction.
+    * The other end of the relation [[blocks]] reports; see that method for the direction.
     *
     * '''Paging.''' As [[list]]: the `Link` header decides, not the number of items.
     *
     * '''Failures.''' The group contract above.
     */
-  def listDependencies(
+  def dependencies(
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
       params: PageParams,
   ): Future[Page[Issue]] =
-    pipeline.callPage(IssueApi.listDependenciesRequest(owner, name, number, params), params)(using IssueDecoders.issues)
+    pipeline.callPage(IssueApi.dependenciesRequest(owner, name, number, params), params)(using IssueDecoders.issues)
 
   /** Declares that this issue depends on another — `POST /repos/{owner}/{repo}/issues/{index}/dependencies`.
     *
@@ -558,7 +570,7 @@ object IssueApi:
   /** The stable operation id of [[IssueApi.movePin]]. */
   val MovePinOperation: String = "issues.pin.move"
 
-  /** The stable operation id of [[IssueApi.listBlocks]]. */
+  /** The stable operation id of [[IssueApi.blocks]]. */
   val ListBlocksOperation: String = "issues.blocks.list"
 
   /** The stable operation id of [[IssueApi.addBlock]]. */
@@ -567,7 +579,7 @@ object IssueApi:
   /** The stable operation id of [[IssueApi.removeBlock]]. */
   val RemoveBlockOperation: String = "issues.blocks.remove"
 
-  /** The stable operation id of [[IssueApi.listDependencies]]. */
+  /** The stable operation id of [[IssueApi.dependencies]]. */
   val ListDependenciesOperation: String = "issues.dependencies.list"
 
   /** The stable operation id of [[IssueApi.addDependency]]. */
@@ -685,14 +697,14 @@ object IssueApi:
     ): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.movePin(owner, name, number, position))
 
-    /** [[IssueApi.listBlocks]] with its failure as a value. */
-    def listBlocks(
+    /** [[IssueApi.blocks]] with its failure as a value. */
+    def blocks(
         owner: Owner,
         name: RepoName,
         number: IssueNumber,
         params: PageParams,
     ): Future[Either[CodebergError, Page[Issue]]] =
-      exec.attempt(rail.listBlocks(owner, name, number, params))
+      exec.attempt(rail.blocks(owner, name, number, params))
 
     /** [[IssueApi.addBlock]] with its failure as a value. */
     def addBlock(
@@ -712,14 +724,14 @@ object IssueApi:
     ): Future[Either[CodebergError, Issue]] =
       exec.attempt(rail.removeBlock(owner, name, number, blocked))
 
-    /** [[IssueApi.listDependencies]] with its failure as a value. */
-    def listDependencies(
+    /** [[IssueApi.dependencies]] with its failure as a value. */
+    def dependencies(
         owner: Owner,
         name: RepoName,
         number: IssueNumber,
         params: PageParams,
     ): Future[Either[CodebergError, Page[Issue]]] =
-      exec.attempt(rail.listDependencies(owner, name, number, params))
+      exec.attempt(rail.dependencies(owner, name, number, params))
 
     /** [[IssueApi.addDependency]] with its failure as a value. */
     def addDependency(
@@ -786,7 +798,7 @@ object IssueApi:
   ): CodebergRequest =
     bodiless(MovePinOperation, HttpMethod.Patch, pinPath(owner, name, number) :+ position.value.toString)
 
-  private def listBlocksRequest(
+  private def blocksRequest(
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
@@ -819,7 +831,7 @@ object IssueApi:
       IssueMetaDto.render(blocked),
     )
 
-  private def listDependenciesRequest(
+  private def dependenciesRequest(
       owner: Owner,
       name: RepoName,
       number: IssueNumber,

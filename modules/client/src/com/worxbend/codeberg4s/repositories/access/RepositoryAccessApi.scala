@@ -115,8 +115,8 @@ final class RepositoryAccessApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     *
     * '''Failures.''' The group contract above.
     */
-  def listBranchProtections(owner: Owner, name: RepoName): Future[Vector[BranchProtection]] =
-    pipeline.call(RepositoryAccessApi.listBranchProtectionsRequest(owner, name), RetryEligibility.IdempotentOnly)(using
+  def branchProtections(owner: Owner, name: RepoName): Future[Vector[BranchProtection]] =
+    pipeline.call(RepositoryAccessApi.branchProtectionsRequest(owner, name), RetryEligibility.IdempotentOnly)(using
       RepositoryAccessDecoders.branchProtections)
 
   /** Reads one branch protection rule — `GET /repos/{owner}/{repo}/branch_protections/{name}`.
@@ -137,7 +137,7 @@ final class RepositoryAccessApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     * '''Never retried''', because it is a `POST` and this library repeats none. A repeat would answer `422` rather than
     * create a second rule — Forgejo rejects a duplicate rule name — but that is the instance's behaviour to change, not
     * a promise this library makes on its behalf. A transport failure therefore leaves the caller genuinely unsure
-    * whether the rule exists, which [[listBranchProtections]] resolves.
+    * whether the rule exists, which [[branchProtections]] resolves.
     *
     * '''Only what the command states is sent.''' Everything the caller left unset takes Forgejo's own default; see
     * [[BranchProtectionSettings]].
@@ -200,13 +200,13 @@ final class RepositoryAccessApi private[codeberg4s] (pipeline: ApiPipeline[Futur
 
   /** Lists a repository's tag protection rules — `GET /repos/{owner}/{repo}/tag_protections`.
     *
-    * '''Not paged''', for the reason [[listBranchProtections]] gives: the spec declares no `page` or `limit`.
+    * '''Not paged''', for the reason [[branchProtections]] gives: the spec declares no `page` or `limit`.
     *
     * '''Failures.''' The group contract above. This operation declares no failure status at all in the spec, which is a
     * gap in the spec rather than a promise — `401` and `404` both occur.
     */
-  def listTagProtections(owner: Owner, name: RepoName): Future[Vector[TagProtection]] =
-    pipeline.call(RepositoryAccessApi.listTagProtectionsRequest(owner, name), RetryEligibility.IdempotentOnly)(using
+  def tagProtections(owner: Owner, name: RepoName): Future[Vector[TagProtection]] =
+    pipeline.call(RepositoryAccessApi.tagProtectionsRequest(owner, name), RetryEligibility.IdempotentOnly)(using
       RepositoryAccessDecoders.tagProtections)
 
   /** Reads one tag protection rule — `GET /repos/{owner}/{repo}/tag_protections/{id}`.
@@ -277,8 +277,8 @@ final class RepositoryAccessApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     *
     * '''Failures.''' The group contract above.
     */
-  def listCollaborators(owner: Owner, name: RepoName, params: PageParams): Future[Page[User]] =
-    pipeline.callPage(RepositoryAccessApi.listCollaboratorsRequest(owner, name, params), params)(using
+  def collaborators(owner: Owner, name: RepoName, params: PageParams): Future[Page[User]] =
+    pipeline.callPage(RepositoryAccessApi.collaboratorsRequest(owner, name, params), params)(using
       RepositoryAccessDecoders.collaborators)
 
   /** Asks whether an account is a collaborator — `GET /repos/{owner}/{repo}/collaborators/{collaborator}`.
@@ -356,7 +356,7 @@ final class RepositoryAccessApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     * the library that does not simply drop an enum value it does not recognise.
     *
     * '''This answers for any account, not only for collaborators.''' A repository's owner, and an organisation member
-    * who reaches it through a team, both have a permission here without appearing in [[listCollaborators]].
+    * who reaches it through a team, both have a permission here without appearing in [[collaborators]].
     *
     * '''Failures.''' The group contract above.
     */
@@ -374,20 +374,20 @@ final class RepositoryAccessApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     * for why that needs no redacting and why the sensitive part of a deploy key is [[DeployKey.isReadOnly]] rather than
     * [[DeployKey.key]].
     *
-    * '''Paging.''' As [[listCollaborators]]: the `Link` header decides, not the number of items.
+    * '''Paging.''' As [[collaborators]]: the `Link` header decides, not the number of items.
     *
     * '''Failures.''' The group contract above.
     *
     * @param query
     *   the `key_id` and `fingerprint` filters; [[DeployKeyQuery.Empty]] asks for all of them
     */
-  def listDeployKeys(
+  def deployKeys(
       owner: Owner,
       name: RepoName,
       query: DeployKeyQuery,
       params: PageParams,
   ): Future[Page[DeployKey]] =
-    pipeline.callPage(RepositoryAccessApi.listDeployKeysRequest(owner, name, query, params), params)(using
+    pipeline.callPage(RepositoryAccessApi.deployKeysRequest(owner, name, query, params), params)(using
       RepositoryAccessDecoders.deployKeys)
 
   /** Reads one deploy key — `GET /repos/{owner}/{repo}/keys/{id}`.
@@ -406,7 +406,7 @@ final class RepositoryAccessApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     * '''Never retried''', because it is a `POST` and this library repeats none. A repeat would answer `422` — Forgejo
     * refuses a key already registered on the repository and refuses a duplicate title — rather than create a second
     * grant, but that is the instance's behaviour to change, not a promise this library makes on its behalf. A transport
-    * failure therefore leaves the caller unsure whether the key exists, which [[listDeployKeys]] resolves.
+    * failure therefore leaves the caller unsure whether the key exists, which [[deployKeys]] resolves.
     *
     * '''The grant is always stated.''' The rendered body always carries `read_only`, so a key never receives push
     * access because a property was omitted; see
@@ -437,7 +437,7 @@ final class RepositoryAccessApi private[codeberg4s] (pipeline: ApiPipeline[Futur
 
   /** Lists the teams with access to a repository — `GET /repos/{owner}/{repo}/teams`.
     *
-    * '''Not paged''', for the reason [[listBranchProtections]] gives: the spec's own response is
+    * '''Not paged''', for the reason [[branchProtections]] gives: the spec's own response is
     * `TeamListWithoutPagination` and the operation declares no `page` or `limit`.
     *
     * '''Only meaningful for a repository an organisation owns.''' A repository owned by a user has no teams, and
@@ -448,8 +448,8 @@ final class RepositoryAccessApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     *
     * '''Failures.''' The group contract above, `405` included.
     */
-  def listTeams(owner: Owner, name: RepoName): Future[Vector[Team]] =
-    pipeline.call(RepositoryAccessApi.listTeamsRequest(owner, name), RetryEligibility.IdempotentOnly)(using
+  def teams(owner: Owner, name: RepoName): Future[Vector[Team]] =
+    pipeline.call(RepositoryAccessApi.teamsRequest(owner, name), RetryEligibility.IdempotentOnly)(using
       RepositoryAccessDecoders.teams)
 
   /** Asks whether a team has access to a repository — `GET /repos/{owner}/{repo}/teams/{team}`.
@@ -503,7 +503,7 @@ final class RepositoryAccessApi private[codeberg4s] (pipeline: ApiPipeline[Futur
 /** The requests this group issues, its operation ids, and its typed rail. */
 object RepositoryAccessApi:
 
-  /** The stable operation id of [[RepositoryAccessApi.listBranchProtections]]. Safe to alert on. */
+  /** The stable operation id of [[RepositoryAccessApi.branchProtections]]. Safe to alert on. */
   val ListBranchProtectionsOperation: String = "repos.branchProtections.list"
 
   /** The stable operation id of the single-rule branch protection read on [[RepositoryAccessApi]]. */
@@ -518,7 +518,7 @@ object RepositoryAccessApi:
   /** The stable operation id of [[RepositoryAccessApi.deleteBranchProtection]]. */
   val DeleteBranchProtectionOperation: String = "repos.branchProtections.delete"
 
-  /** The stable operation id of [[RepositoryAccessApi.listTagProtections]]. */
+  /** The stable operation id of [[RepositoryAccessApi.tagProtections]]. */
   val ListTagProtectionsOperation: String = "repos.tagProtections.list"
 
   /** The stable operation id of the single-rule tag protection read on [[RepositoryAccessApi]]. */
@@ -533,7 +533,7 @@ object RepositoryAccessApi:
   /** The stable operation id of [[RepositoryAccessApi.deleteTagProtection]]. */
   val DeleteTagProtectionOperation: String = "repos.tagProtections.delete"
 
-  /** The stable operation id of [[RepositoryAccessApi.listCollaborators]]. */
+  /** The stable operation id of [[RepositoryAccessApi.collaborators]]. */
   val ListCollaboratorsOperation: String = "repos.collaborators.list"
 
   /** The stable operation id of [[RepositoryAccessApi.checkCollaborator]]. */
@@ -548,7 +548,7 @@ object RepositoryAccessApi:
   /** The stable operation id of [[RepositoryAccessApi.collaboratorAccess]]. */
   val CollaboratorPermissionOperation: String = "repos.collaborators.permission"
 
-  /** The stable operation id of [[RepositoryAccessApi.listDeployKeys]]. */
+  /** The stable operation id of [[RepositoryAccessApi.deployKeys]]. */
   val ListDeployKeysOperation: String = "repos.keys.list"
 
   /** The stable operation id of the single-key read on [[RepositoryAccessApi]]. */
@@ -560,7 +560,7 @@ object RepositoryAccessApi:
   /** The stable operation id of [[RepositoryAccessApi.deleteDeployKey]]. */
   val DeleteDeployKeyOperation: String = "repos.keys.delete"
 
-  /** The stable operation id of [[RepositoryAccessApi.listTeams]]. */
+  /** The stable operation id of [[RepositoryAccessApi.teams]]. */
   val ListTeamsOperation: String = "repos.teams.list"
 
   /** The stable operation id of [[RepositoryAccessApi.checkTeam]]. */
@@ -584,12 +584,12 @@ object RepositoryAccessApi:
     */
   final class Attempt private[codeberg4s] (rail: RepositoryAccessApi)(using exec: Exec[Future]):
 
-    /** [[RepositoryAccessApi.listBranchProtections]] with its failure as a value. */
-    def listBranchProtections(
+    /** [[RepositoryAccessApi.branchProtections]] with its failure as a value. */
+    def branchProtections(
         owner: Owner,
         name: RepoName,
     ): Future[Either[CodebergError, Vector[BranchProtection]]] =
-      exec.attempt(rail.listBranchProtections(owner, name))
+      exec.attempt(rail.branchProtections(owner, name))
 
     /** The single-rule branch protection read on [[RepositoryAccessApi]], with its failure as a value. */
     def branchProtection(
@@ -624,9 +624,9 @@ object RepositoryAccessApi:
     ): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.deleteBranchProtection(owner, name, rule))
 
-    /** [[RepositoryAccessApi.listTagProtections]] with its failure as a value. */
-    def listTagProtections(owner: Owner, name: RepoName): Future[Either[CodebergError, Vector[TagProtection]]] =
-      exec.attempt(rail.listTagProtections(owner, name))
+    /** [[RepositoryAccessApi.tagProtections]] with its failure as a value. */
+    def tagProtections(owner: Owner, name: RepoName): Future[Either[CodebergError, Vector[TagProtection]]] =
+      exec.attempt(rail.tagProtections(owner, name))
 
     /** The single-rule tag protection read on [[RepositoryAccessApi]], with its failure as a value. */
     def tagProtection(
@@ -661,13 +661,13 @@ object RepositoryAccessApi:
     ): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.deleteTagProtection(owner, name, id))
 
-    /** [[RepositoryAccessApi.listCollaborators]] with its failure as a value. */
-    def listCollaborators(
+    /** [[RepositoryAccessApi.collaborators]] with its failure as a value. */
+    def collaborators(
         owner: Owner,
         name: RepoName,
         params: PageParams,
     ): Future[Either[CodebergError, Page[User]]] =
-      exec.attempt(rail.listCollaborators(owner, name, params))
+      exec.attempt(rail.collaborators(owner, name, params))
 
     /** [[RepositoryAccessApi.checkCollaborator]] with its failure as a value.
       *
@@ -706,14 +706,14 @@ object RepositoryAccessApi:
     ): Future[Either[CodebergError, CollaboratorAccess]] =
       exec.attempt(rail.collaboratorAccess(owner, name, collaborator))
 
-    /** [[RepositoryAccessApi.listDeployKeys]] with its failure as a value. */
-    def listDeployKeys(
+    /** [[RepositoryAccessApi.deployKeys]] with its failure as a value. */
+    def deployKeys(
         owner: Owner,
         name: RepoName,
         query: DeployKeyQuery,
         params: PageParams,
     ): Future[Either[CodebergError, Page[DeployKey]]] =
-      exec.attempt(rail.listDeployKeys(owner, name, query, params))
+      exec.attempt(rail.deployKeys(owner, name, query, params))
 
     /** The single-key read on [[RepositoryAccessApi]], with its failure as a value. */
     def deployKey(owner: Owner, name: RepoName, id: DeployKeyId): Future[Either[CodebergError, DeployKey]] =
@@ -731,9 +731,9 @@ object RepositoryAccessApi:
     def deleteDeployKey(owner: Owner, name: RepoName, id: DeployKeyId): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.deleteDeployKey(owner, name, id))
 
-    /** [[RepositoryAccessApi.listTeams]] with its failure as a value. */
-    def listTeams(owner: Owner, name: RepoName): Future[Either[CodebergError, Vector[Team]]] =
-      exec.attempt(rail.listTeams(owner, name))
+    /** [[RepositoryAccessApi.teams]] with its failure as a value. */
+    def teams(owner: Owner, name: RepoName): Future[Either[CodebergError, Vector[Team]]] =
+      exec.attempt(rail.teams(owner, name))
 
     /** [[RepositoryAccessApi.checkTeam]] with its failure as a value. */
     def checkTeam(owner: Owner, name: RepoName, team: TeamName): Future[Either[CodebergError, Team]] =
@@ -747,7 +747,7 @@ object RepositoryAccessApi:
     def deleteTeam(owner: Owner, name: RepoName, team: TeamName): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.deleteTeam(owner, name, team))
 
-  private def listBranchProtectionsRequest(owner: Owner, name: RepoName): CodebergRequest =
+  private def branchProtectionsRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(ListBranchProtectionsOperation, branchProtectionsPath(owner, name), Nil)
 
   private def branchProtectionRequest(owner: Owner, name: RepoName, rule: BranchRuleName): CodebergRequest =
@@ -781,7 +781,7 @@ object RepositoryAccessApi:
   private def deleteBranchProtectionRequest(owner: Owner, name: RepoName, rule: BranchRuleName): CodebergRequest =
     remove(DeleteBranchProtectionOperation, branchProtectionPath(owner, name, rule))
 
-  private def listTagProtectionsRequest(owner: Owner, name: RepoName): CodebergRequest =
+  private def tagProtectionsRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(ListTagProtectionsOperation, tagProtectionsPath(owner, name), Nil)
 
   private def tagProtectionRequest(owner: Owner, name: RepoName, id: TagProtectionId): CodebergRequest =
@@ -815,7 +815,7 @@ object RepositoryAccessApi:
   private def deleteTagProtectionRequest(owner: Owner, name: RepoName, id: TagProtectionId): CodebergRequest =
     remove(DeleteTagProtectionOperation, tagProtectionPath(owner, name, id))
 
-  private def listCollaboratorsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
+  private def collaboratorsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
     read(ListCollaboratorsOperation, collaboratorsPath(owner, name), PagingQuery.window(params))
 
   private def checkCollaboratorRequest(owner: Owner, name: RepoName, collaborator: Username): CodebergRequest =
@@ -840,7 +840,7 @@ object RepositoryAccessApi:
   private def collaboratorAccessRequest(owner: Owner, name: RepoName, collaborator: Username): CodebergRequest =
     read(CollaboratorPermissionOperation, collaboratorPath(owner, name, collaborator) :+ "permission", Nil)
 
-  private def listDeployKeysRequest(
+  private def deployKeysRequest(
       owner: Owner,
       name: RepoName,
       query: DeployKeyQuery,
@@ -866,7 +866,7 @@ object RepositoryAccessApi:
   private def deleteDeployKeyRequest(owner: Owner, name: RepoName, id: DeployKeyId): CodebergRequest =
     remove(DeleteDeployKeyOperation, deployKeyPath(owner, name, id))
 
-  private def listTeamsRequest(owner: Owner, name: RepoName): CodebergRequest =
+  private def teamsRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(ListTeamsOperation, teamsPath(owner, name), Nil)
 
   private def checkTeamRequest(owner: Owner, name: RepoName, team: TeamName): CodebergRequest =

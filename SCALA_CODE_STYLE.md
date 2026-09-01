@@ -253,6 +253,43 @@ Use active verbs for side-effecting operations. Use noun-like names for pure
 values. Do not repeat the receiver in the method name: prefer
 `issueClient.findByNumber(n)` over `issueClient.findIssueByNumber(n)`.
 
+### Listing Operations On An API Group
+
+An "API group" is one of the `*Api` classes a caller reaches from
+`CodebergClient` — `client.pulls`, `client.repositories.actions`, and so on.
+Every group has one resource of its own and usually several sub-resources
+hanging off it, and each of those can be listed. The names follow one rule:
+
+| The listing returns                           | Name it            | Example                                     |
+| --------------------------------------------- | ------------------ | ------------------------------------------- |
+| The group's own resource                       | `list`             | `client.pulls.list(owner, name, …)`         |
+| A sub-resource of that resource                | the plural noun    | `client.pulls.reviews(owner, name, number)` |
+| The same sub-resource under two parent scopes  | `list<Scope>`      | `client.issues.attachments.listForIssue`    |
+
+Read that middle row as: `list` is reserved for the group's own resource, so a
+sub-resource listing does not repeat the word. `client.pulls.reviews(...)` is
+already unambiguous — the receiver says which group, the plural noun says which
+sub-resource — while `listReviews` adds a word that carries no information.
+
+The third row is the one exception, and it exists because the noun alone would
+not say enough. `IssueAttachmentApi` can list the attachments of an issue or the
+attachments of a comment; both are "attachments", so the name has to carry the
+*scope* instead: `listForIssue` and `listForComment`. Use this form only when
+the alternative would be two methods wanting the same noun, and name the scope,
+never the resource — `listForComment`, not `listCommentAttachments`. Today the
+whole set is `IssueAttachmentApi.listForIssue` / `listForComment`,
+`IssueCommentApi.listForRepository`, `IssueLabelApi.listOnIssue`,
+`IssueReactionApi.listOnIssue` / `listOnComment`, and
+`NotificationApi.listRepository`.
+
+There is one further exemption, for a genuine collision. On `IssueApi` the
+bare nouns `comments`, `labels` and `milestones` are already taken by the
+sub-API accessors (`client.issues.comments` is the `IssueCommentApi`, not a
+listing), so those three listings keep the prefixed names `listComments`,
+`listLabels` and `listMilestones`. A method that keeps a prefix for this reason
+must say so in its Scaladoc, and must be recorded in the exemption list in
+`ListingNamingSuite`, which fails the build on any other public `list<Noun>`.
+
 ### Constants
 
 Constants live in the companion of the type that owns the concept. Use

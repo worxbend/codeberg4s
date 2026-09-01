@@ -155,7 +155,7 @@ final class IssueApiTailSuite extends FunSuite with IssueLaneHarness:
     val backend = RecordingBackend(responding(200, s"[$IssueBody]"))
 
     onApi(backend): api =>
-      api.listBlocks(Handle, Name, Number, window(1, 30)).map: page =>
+      api.blocks(Handle, Name, Number, window(1, 30)).map: page =>
         assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/Codeberg/Community/issues/2966/blocks")
         assertEquals(queryOf(backend), List("page" -> "1", "limit" -> "30"))
         assertEquals(page.size, 1)
@@ -182,7 +182,7 @@ final class IssueApiTailSuite extends FunSuite with IssueLaneHarness:
     val added  = RecordingBackend(responding(201, IssueBody))
 
     for
-      _ <- onApi(listed)(_.listDependencies(Handle, Name, Number, window(1, 30)))
+      _ <- onApi(listed)(_.dependencies(Handle, Name, Number, window(1, 30)))
       _ <- onApi(added)(_.addDependency(Handle, Name, Number, Other))
     yield
       assertEquals(

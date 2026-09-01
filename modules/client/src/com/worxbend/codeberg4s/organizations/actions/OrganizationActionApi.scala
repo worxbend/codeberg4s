@@ -132,15 +132,15 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     *   is always sent, so what a listing contains is a property of the request rather than of the Forgejo version
     *   answering it
     */
-  def listRunners(org: OrgName, visibility: RunnerVisibility, params: PageParams): Future[Page[ActionRunner]] =
-    pipeline.callPage(OrganizationActionApi.listRunnersRequest(org, visibility, params), params)(using
+  def runners(org: OrgName, visibility: RunnerVisibility, params: PageParams): Future[Page[ActionRunner]] =
+    pipeline.callPage(OrganizationActionApi.runnersRequest(org, visibility, params), params)(using
       ActionDecoders.runners)
 
   /** Reads one of an organisation's runners — `GET /orgs/{org}/actions/runners/{runner_id}`.
     *
     * '''Failures.''' The group contract above. A runner that belongs to a repository or to the instance answers `404`
-    * here even though [[listRunners]] with [[com.worxbend.codeberg4s.repositories.actions.RunnerVisibility.AllVisible]]
-    * may have listed it.
+    * here even though [[runners]] with [[com.worxbend.codeberg4s.repositories.actions.RunnerVisibility.AllVisible]] may
+    * have listed it.
     */
   def runner(org: OrgName, id: RunnerId): Future[ActionRunner] =
     pipeline.call(OrganizationActionApi.runnerRequest(org, id), RetryEligibility.IdempotentOnly)(using
@@ -150,7 +150,7 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     *
     * '''Never retried.''' Runner names are explicitly not unique, so a repeat registers a second runner and issues a
     * second token. A transport failure therefore leaves the caller genuinely unsure whether a runner exists, which is
-    * the honest state of affairs and better than two — [[listRunners]] resolves it.
+    * the honest state of affairs and better than two — [[runners]] resolves it.
     *
     * '''The result carries a credential.''' [[com.worxbend.codeberg4s.repositories.actions.RegisteredRunner.token]] is
     * what the runner binary authenticates with; it masks itself in every rendering path, but it is still a secret that
@@ -226,19 +226,19 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     * '''Names and timestamps only.''' No endpoint returns a secret's value, so
     * [[com.worxbend.codeberg4s.repositories.actions.ActionSecret]] has no field for one.
     *
-    * '''Paging.''' As [[listRunners]]: the `Link` header decides, not the number of items.
+    * '''Paging.''' As [[runners]]: the `Link` header decides, not the number of items.
     *
     * '''Failures.''' The group contract above.
     */
-  def listSecrets(org: OrgName, params: PageParams): Future[Page[ActionSecret]] =
-    pipeline.callPage(OrganizationActionApi.listSecretsRequest(org, params), params)(using ActionDecoders.secrets)
+  def secrets(org: OrgName, params: PageParams): Future[Page[ActionSecret]] =
+    pipeline.callPage(OrganizationActionApi.secretsRequest(org, params), params)(using ActionDecoders.secrets)
 
   /** Creates or replaces an organisation secret — `PUT /orgs/{org}/actions/secrets/{secretname}`.
     *
     * '''One method for both, because the API has one endpoint for both.''' Forgejo answers `201` when the secret was
     * created and `204` when it was replaced, and both are success as far as
     * [[com.worxbend.codeberg4s.core.StatusMapping]] is concerned. Neither carries a body, so there is nothing to return
-    * and nothing to tell the two apart with — [[listSecrets]] before the call is the only way to know which one will
+    * and nothing to tell the two apart with — [[secrets]] before the call is the only way to know which one will
     * happen.
     *
     * '''Retried''', unlike [[deleteSecret]], and the difference is the whole of the group's retry rule. This call sets
@@ -267,7 +267,7 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     * destroys something this caller never asked to touch, and no response tells them it happened.
     *
     * The cost of `Never` is far smaller: a transport failure leaves the caller unsure whether the secret is gone, and
-    * [[listSecrets]] answers that in one call.
+    * [[secrets]] answers that in one call.
     *
     * '''Answers `204`.'''
     *
@@ -280,16 +280,16 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
 
   /** Lists an organisation's variables — `GET /orgs/{org}/actions/variables`.
     *
-    * '''Values included''', unlike [[listSecrets]] — a variable is configuration, not a credential. See
+    * '''Values included''', unlike [[secrets]] — a variable is configuration, not a credential. See
     * [[com.worxbend.codeberg4s.repositories.actions.ActionVariable]], and note that putting a credential in one makes
     * it readable by anyone who can read the organisation's Actions configuration.
     *
-    * '''Paging.''' As [[listRunners]].
+    * '''Paging.''' As [[runners]].
     *
     * '''Failures.''' The group contract above.
     */
-  def listVariables(org: OrgName, params: PageParams): Future[Page[ActionVariable]] =
-    pipeline.callPage(OrganizationActionApi.listVariablesRequest(org, params), params)(using ActionDecoders.variables)
+  def variables(org: OrgName, params: PageParams): Future[Page[ActionVariable]] =
+    pipeline.callPage(OrganizationActionApi.variablesRequest(org, params), params)(using ActionDecoders.variables)
 
   /** Reads one organisation variable — `GET /orgs/{org}/actions/variables/{variablename}`.
     *
@@ -339,7 +339,7 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
   /** Deletes an organisation variable — `DELETE /orgs/{org}/actions/variables/{variablename}`.
     *
     * '''Never retried''', for the reason [[deleteSecret]] gives: a variable is addressed by a reusable name, so a retry
-    * after a lost success can destroy a variable something else recreated in between. [[listVariables]] is how a caller
+    * after a lost success can destroy a variable something else recreated in between. [[variables]] is how a caller
     * finds out whether the first attempt landed.
     *
     * '''Answers `204`.'''
@@ -352,7 +352,7 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
 /** The requests this group issues, its operation ids, and its typed rail. */
 object OrganizationActionApi:
 
-  /** The stable operation id [[OrganizationActionApi.listRunners]] copies into every failure's
+  /** The stable operation id [[OrganizationActionApi.runners]] copies into every failure's
     * [[com.worxbend.codeberg4s.CallContext]]. Safe to alert on.
     */
   val ListRunnersOperation: String = "orgs.actions.runners.list"
@@ -372,7 +372,7 @@ object OrganizationActionApi:
   /** The stable operation id of [[OrganizationActionApi.searchRunnerJobs]]. */
   val SearchRunnerJobsOperation: String = "orgs.actions.runners.jobs.search"
 
-  /** The stable operation id of [[OrganizationActionApi.listSecrets]]. */
+  /** The stable operation id of [[OrganizationActionApi.secrets]]. */
   val ListSecretsOperation: String = "orgs.actions.secrets.list"
 
   /** The stable operation id of [[OrganizationActionApi.setSecret]]. */
@@ -381,7 +381,7 @@ object OrganizationActionApi:
   /** The stable operation id of [[OrganizationActionApi.deleteSecret]]. */
   val DeleteSecretOperation: String = "orgs.actions.secrets.delete"
 
-  /** The stable operation id of [[OrganizationActionApi.listVariables]]. */
+  /** The stable operation id of [[OrganizationActionApi.variables]]. */
   val ListVariablesOperation: String = "orgs.actions.variables.list"
 
   /** The stable operation id of the single-variable read on [[OrganizationActionApi]]. */
@@ -404,13 +404,13 @@ object OrganizationActionApi:
     */
   final class Attempt private[codeberg4s] (rail: OrganizationActionApi)(using exec: Exec[Future]):
 
-    /** [[OrganizationActionApi.listRunners]] with its failure as a value. */
-    def listRunners(
+    /** [[OrganizationActionApi.runners]] with its failure as a value. */
+    def runners(
         org: OrgName,
         visibility: RunnerVisibility,
         params: PageParams,
     ): Future[Either[CodebergError, Page[ActionRunner]]] =
-      exec.attempt(rail.listRunners(org, visibility, params))
+      exec.attempt(rail.runners(org, visibility, params))
 
     /** The single-runner read on [[OrganizationActionApi]], with its failure as a value. */
     def runner(org: OrgName, id: RunnerId): Future[Either[CodebergError, ActionRunner]] =
@@ -435,9 +435,9 @@ object OrganizationActionApi:
     ): Future[Either[CodebergError, Vector[ActionRunJob]]] =
       exec.attempt(rail.searchRunnerJobs(org, labels))
 
-    /** [[OrganizationActionApi.listSecrets]] with its failure as a value. */
-    def listSecrets(org: OrgName, params: PageParams): Future[Either[CodebergError, Page[ActionSecret]]] =
-      exec.attempt(rail.listSecrets(org, params))
+    /** [[OrganizationActionApi.secrets]] with its failure as a value. */
+    def secrets(org: OrgName, params: PageParams): Future[Either[CodebergError, Page[ActionSecret]]] =
+      exec.attempt(rail.secrets(org, params))
 
     /** [[OrganizationActionApi.setSecret]] with its failure as a value. */
     def setSecret(org: OrgName, secret: SecretName, value: SecretValue): Future[Either[CodebergError, Unit]] =
@@ -447,9 +447,9 @@ object OrganizationActionApi:
     def deleteSecret(org: OrgName, secret: SecretName): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.deleteSecret(org, secret))
 
-    /** [[OrganizationActionApi.listVariables]] with its failure as a value. */
-    def listVariables(org: OrgName, params: PageParams): Future[Either[CodebergError, Page[ActionVariable]]] =
-      exec.attempt(rail.listVariables(org, params))
+    /** [[OrganizationActionApi.variables]] with its failure as a value. */
+    def variables(org: OrgName, params: PageParams): Future[Either[CodebergError, Page[ActionVariable]]] =
+      exec.attempt(rail.variables(org, params))
 
     /** The single-variable read on [[OrganizationActionApi]], with its failure as a value. */
     def variable(org: OrgName, name: VariableName): Future[Either[CodebergError, ActionVariable]] =
@@ -484,7 +484,7 @@ object OrganizationActionApi:
   private[actions] def updateVariableEligibility(command: UpdateVariable): RetryEligibility =
     if command.renamedTo.isEmpty then RetryEligibility.AlwaysRetry else RetryEligibility.Never
 
-  private def listRunnersRequest(org: OrgName, visibility: RunnerVisibility, params: PageParams): CodebergRequest =
+  private def runnersRequest(org: OrgName, visibility: RunnerVisibility, params: PageParams): CodebergRequest =
     read(ListRunnersOperation, runnersPath(org), ActionQueries.runners(visibility) ++ PagingQuery.window(params))
 
   private def runnerRequest(org: OrgName, id: RunnerId): CodebergRequest =
@@ -502,7 +502,7 @@ object OrganizationActionApi:
   private def searchRunnerJobsRequest(org: OrgName, labels: Vector[RunnerLabel]): CodebergRequest =
     read(SearchRunnerJobsOperation, runnersPath(org) :+ "jobs", ActionQueries.runnerJobs(labels))
 
-  private def listSecretsRequest(org: OrgName, params: PageParams): CodebergRequest =
+  private def secretsRequest(org: OrgName, params: PageParams): CodebergRequest =
     read(ListSecretsOperation, secretsPath(org), PagingQuery.window(params))
 
   private def setSecretRequest(org: OrgName, secret: SecretName, value: SecretValue): CodebergRequest =
@@ -511,7 +511,7 @@ object OrganizationActionApi:
   private def deleteSecretRequest(org: OrgName, secret: SecretName): CodebergRequest =
     remove(DeleteSecretOperation, secretPath(org, secret))
 
-  private def listVariablesRequest(org: OrgName, params: PageParams): CodebergRequest =
+  private def variablesRequest(org: OrgName, params: PageParams): CodebergRequest =
     read(ListVariablesOperation, variablesPath(org), PagingQuery.window(params))
 
   private def variableRequest(org: OrgName, name: VariableName): CodebergRequest =

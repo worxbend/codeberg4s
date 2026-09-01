@@ -244,7 +244,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     *
     * '''Failures.''' The group contract above.
     */
-  def listReviews(
+  def reviews(
       owner: Owner,
       name: RepoName,
       number: PullRequestNumber,
@@ -265,14 +265,13 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     * parameters to populate them; this library does not send either, because both multiply the response size and
     * neither is what a caller listing commits usually wants. An empty
     * [[com.worxbend.codeberg4s.repositories.Commit.files]] therefore means "not requested", not "touched nothing" — the
-    * changed files are [[listFiles]].
+    * changed files are [[files]].
     *
-    * '''Paging.''' As [[listReviews]]: `X-Total-Count` but no `Link`, so the page always reports itself as the last
-    * one.
+    * '''Paging.''' As [[reviews]]: `X-Total-Count` but no `Link`, so the page always reports itself as the last one.
     *
     * '''Failures.''' The group contract above.
     */
-  def listCommits(
+  def commits(
       owner: Owner,
       name: RepoName,
       number: PullRequestNumber,
@@ -290,12 +289,12 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     * resumes a listing from a named path rather than from a page number, and `whitespace` changes how the instance
     * computes the counts; both would need a modelled type of their own, and neither has a fixture to model it from.
     *
-    * '''Paging.''' As [[listReviews]]: `X-Total-Count` but no `Link`, so the page always reports itself as the last
-    * one. Compare [[Page.totalCount]] with [[PullRequest.changedFileCount]] to tell whether the listing is complete.
+    * '''Paging.''' As [[reviews]]: `X-Total-Count` but no `Link`, so the page always reports itself as the last one.
+    * Compare [[Page.totalCount]] with [[PullRequest.changedFileCount]] to tell whether the listing is complete.
     *
     * '''Failures.''' The group contract above.
     */
-  def listFiles(
+  def files(
       owner: Owner,
       name: RepoName,
       number: PullRequestNumber,
@@ -316,7 +315,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     *
     * '''Failures.''' The group contract above.
     */
-  def listPinned(owner: Owner, name: RepoName): Future[Vector[PullRequest]] =
+  def pinned(owner: Owner, name: RepoName): Future[Vector[PullRequest]] =
     pipeline.call(PullRequestApi.pinnedRequest(owner, name), RetryEligibility.IdempotentOnly)(using
       PullRequestApi.PullsDecoder)
 
@@ -458,8 +457,8 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
   /** Asks accounts or teams to review — `POST /repos/{owner}/{repo}/pulls/{index}/requested_reviewers`.
     *
     * Answers with the [[Review]] rows the request created, each in state [[ReviewState.RequestReview]] — the same rows
-    * [[listReviews]] then reports, which is why a caller counting approvals has to filter on [[Review.state]]. The
-    * endpoint declares no paging, so this is a `Vector`.
+    * [[reviews]] then reports, which is why a caller counting approvals has to filter on [[Review.state]]. The endpoint
+    * declares no paging, so this is a `Vector`.
     *
     * '''Never retried.''' It creates rows, and `docs/HAZARDS.md` records no idempotency key anywhere in this API. In
     * practice Forgejo ignores a reviewer who is already requested, so a repeat is usually harmless — but "usually" is
@@ -547,7 +546,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
 
   /** Reads one review — `GET /repos/{owner}/{repo}/pulls/{index}/reviews/{id}`.
     *
-    * The same [[Review]] model [[listReviews]] returns, addressed by its instance-wide [[ReviewId]] rather than by a
+    * The same [[Review]] model [[reviews]] returns, addressed by its instance-wide [[ReviewId]] rather than by a
     * position on the listing. Worth using after [[createReview]] or [[submitReview]] to read back what was recorded.
     *
     * '''Failures.''' The group contract above. `404` covers "no such review", "that review belongs to a different pull
@@ -618,11 +617,10 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
 
   /** Dismisses a review — `POST /repos/{owner}/{repo}/pulls/{index}/reviews/{id}/dismissals`.
     *
-    * Takes a review out of the base branch's required-approval count without deleting it: the row stays on
-    * [[listReviews]] with [[Review.isDismissed]] set, and [[undismissReview]] reverses it.
-    * [[DismissReview.withMessage]] is worth setting — the message is the only explanation the reviewer ever sees — and
-    * [[DismissReview.includingPriors]] extends the dismissal to that reviewer's earlier reviews of the same pull
-    * request.
+    * Takes a review out of the base branch's required-approval count without deleting it: the row stays on [[reviews]]
+    * with [[Review.isDismissed]] set, and [[undismissReview]] reverses it. [[DismissReview.withMessage]] is worth
+    * setting — the message is the only explanation the reviewer ever sees — and [[DismissReview.includingPriors]]
+    * extends the dismissal to that reviewer's earlier reviews of the same pull request.
     *
     * '''Retried''' under [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]], despite being a `POST`. It
     * creates nothing: it sets a flag on one review named by an instance-wide id, and setting it twice leaves exactly
@@ -684,7 +682,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     *
     * '''Failures.''' The group contract above.
     */
-  def listReviewComments(
+  def reviewComments(
       owner: Owner,
       name: RepoName,
       number: PullRequestNumber,
@@ -702,8 +700,8 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     * the cheaper of the two when the remarks are known up front.
     *
     * '''Never retried.''' It creates a comment, and a repeat after a lost response leaves the same remark on the diff
-    * twice — Forgejo does not deduplicate. Confirming with [[listReviewComments]] is the reliable way to find out
-    * whether the first attempt landed.
+    * twice — Forgejo does not deduplicate. Confirming with [[reviewComments]] is the reliable way to find out whether
+    * the first attempt landed.
     *
     * '''Answers `200`''' with the created comment as the body.
     *
@@ -793,16 +791,16 @@ object PullRequestApi:
   /** The stable operation id of [[PullRequestApi.merge]]. The one worth alerting on by itself. */
   val MergeOperation: String = "pulls.merge"
 
-  /** The stable operation id of [[PullRequestApi.listReviews]]. */
+  /** The stable operation id of [[PullRequestApi.reviews]]. */
   val ListReviewsOperation: String = "pulls.reviews.list"
 
-  /** The stable operation id of [[PullRequestApi.listCommits]]. */
+  /** The stable operation id of [[PullRequestApi.commits]]. */
   val ListCommitsOperation: String = "pulls.commits.list"
 
-  /** The stable operation id of [[PullRequestApi.listFiles]]. */
+  /** The stable operation id of [[PullRequestApi.files]]. */
   val ListFilesOperation: String = "pulls.files.list"
 
-  /** The stable operation id of [[PullRequestApi.listPinned]]. */
+  /** The stable operation id of [[PullRequestApi.pinned]]. */
   val ListPinnedOperation: String = "pulls.pinned.list"
 
   /** The stable operation id of [[PullRequestApi.getByBaseHead]]. */
@@ -844,7 +842,7 @@ object PullRequestApi:
   /** The stable operation id of [[PullRequestApi.undismissReview]]. */
   val UndismissReviewOperation: String = "pulls.reviews.undismiss"
 
-  /** The stable operation id of [[PullRequestApi.listReviewComments]]. */
+  /** The stable operation id of [[PullRequestApi.reviewComments]]. */
   val ListReviewCommentsOperation: String = "pulls.reviews.comments.list"
 
   /** The stable operation id of [[PullRequestApi.createReviewComment]]. */
@@ -906,36 +904,36 @@ object PullRequestApi:
     ): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.merge(owner, name, number, command))
 
-    /** [[PullRequestApi.listReviews]] with its failure as a value. */
-    def listReviews(
+    /** [[PullRequestApi.reviews]] with its failure as a value. */
+    def reviews(
         owner: Owner,
         name: RepoName,
         number: PullRequestNumber,
         params: PageParams,
     ): Future[Either[CodebergError, Page[Review]]] =
-      exec.attempt(rail.listReviews(owner, name, number, params))
+      exec.attempt(rail.reviews(owner, name, number, params))
 
-    /** [[PullRequestApi.listCommits]] with its failure as a value. */
-    def listCommits(
+    /** [[PullRequestApi.commits]] with its failure as a value. */
+    def commits(
         owner: Owner,
         name: RepoName,
         number: PullRequestNumber,
         params: PageParams,
     ): Future[Either[CodebergError, Page[Commit]]] =
-      exec.attempt(rail.listCommits(owner, name, number, params))
+      exec.attempt(rail.commits(owner, name, number, params))
 
-    /** [[PullRequestApi.listFiles]] with its failure as a value. */
-    def listFiles(
+    /** [[PullRequestApi.files]] with its failure as a value. */
+    def files(
         owner: Owner,
         name: RepoName,
         number: PullRequestNumber,
         params: PageParams,
     ): Future[Either[CodebergError, Page[ChangedFile]]] =
-      exec.attempt(rail.listFiles(owner, name, number, params))
+      exec.attempt(rail.files(owner, name, number, params))
 
-    /** [[PullRequestApi.listPinned]] with its failure as a value. */
-    def listPinned(owner: Owner, name: RepoName): Future[Either[CodebergError, Vector[PullRequest]]] =
-      exec.attempt(rail.listPinned(owner, name))
+    /** [[PullRequestApi.pinned]] with its failure as a value. */
+    def pinned(owner: Owner, name: RepoName): Future[Either[CodebergError, Vector[PullRequest]]] =
+      exec.attempt(rail.pinned(owner, name))
 
     /** [[PullRequestApi.getByBaseHead]] with its failure as a value — including the `404` that means no pull request
       * joins those two branches.
@@ -1062,14 +1060,14 @@ object PullRequestApi:
     ): Future[Either[CodebergError, Review]] =
       exec.attempt(rail.undismissReview(owner, name, number, review))
 
-    /** [[PullRequestApi.listReviewComments]] with its failure as a value. */
-    def listReviewComments(
+    /** [[PullRequestApi.reviewComments]] with its failure as a value. */
+    def reviewComments(
         owner: Owner,
         name: RepoName,
         number: PullRequestNumber,
         review: ReviewId,
     ): Future[Either[CodebergError, Vector[ReviewComment]]] =
-      exec.attempt(rail.listReviewComments(owner, name, number, review))
+      exec.attempt(rail.reviewComments(owner, name, number, review))
 
     /** [[PullRequestApi.createReviewComment]] with its failure as a value. */
     def createReviewComment(

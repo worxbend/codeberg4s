@@ -25,7 +25,7 @@ final class RepositoryWikiApiSuite extends HookApiSuite:
     val backend = RecordingBackend(responding(200, RepositoryWikiApiSuite.PageListBody))
 
     onApi(backend): api =>
-      api.listPages(Handle, Name, window(2, 25)).map: page =>
+      api.pages(Handle, Name, window(2, 25)).map: page =>
         assertEquals(pathOf(backend), s"$Repository/wiki/pages")
         assertEquals(queryOf(backend), List("page" -> "2", "limit" -> "25"))
         assertEquals(page.items.map(_.title), Vector("Home"))
@@ -34,7 +34,7 @@ final class RepositoryWikiApiSuite extends HookApiSuite:
     val headers = pagedHeaders(12, s"$Repository/wiki/pages?limit=30&page=2")
 
     onApi(responding(200, RepositoryWikiApiSuite.PageListBody, headers)): api =>
-      api.listPages(Handle, Name, window(1, 30)).map: page =>
+      api.pages(Handle, Name, window(1, 30)).map: page =>
         assertEquals(page.totalCount, Some(12))
         assertEquals(page.nextPage.map(_.value), Some(2))
 

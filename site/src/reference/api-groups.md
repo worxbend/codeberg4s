@@ -122,8 +122,8 @@ renders as `***` everywhere. See
 
 **23 operations:** `list`, `get`, `create`, `edit`, `listComments`,
 `createComment`, `listLabels`, `createLabel`, `listMilestones`, `getMilestone`,
-`search`, `delete`, `setDeadline`, `pin`, `unpin`, `movePin`, `listBlocks`,
-`addBlock`, `removeBlock`, `listDependencies`, `addDependency`,
+`search`, `delete`, `setDeadline`, `pin`, `unpin`, `movePin`, `blocks`,
+`addBlock`, `removeBlock`, `dependencies`, `addDependency`,
 `removeDependency`, `timeline`
 
 Filters are one `IssueQuery` value rather than eight optional parameters, and an
@@ -150,11 +150,11 @@ rather than a tidier scheme.
 
 ## `client.pulls` — pull requests
 
-**26 operations:** `list`, `get`, `create`, `edit`, `merge`, `listReviews`,
-`listCommits`, `listFiles`, `listPinned`, `getByBaseHead`, `download`,
+**26 operations:** `list`, `get`, `create`, `edit`, `merge`, `reviews`,
+`commits`, `files`, `pinned`, `getByBaseHead`, `download`,
 `isMerged`, `cancelScheduledMerge`, `updateBranch`, `requestReviews`,
 `removeReviewRequests`, `createReview`, `getReview`, `submitReview`,
-`deleteReview`, `dismissReview`, `undismissReview`, `listReviewComments`,
+`deleteReview`, `dismissReview`, `undismissReview`, `reviewComments`,
 `createReviewComment`, `getReviewComment`, `deleteReviewComment`
 
 No nested groups: reviews, commits and changed files all live here.

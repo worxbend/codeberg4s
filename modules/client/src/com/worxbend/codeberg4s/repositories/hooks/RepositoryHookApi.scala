@@ -184,8 +184,8 @@ final class RepositoryHookApi private[codeberg4s] (pipeline: ApiPipeline[Future]
     *
     * '''Failures.''' The group contract above.
     */
-  def listGitHooks(owner: Owner, name: RepoName): Future[Vector[GitHook]] =
-    pipeline.call(RepositoryHookApi.listGitHooksRequest(owner, name), RetryEligibility.IdempotentOnly)(using
+  def gitHooks(owner: Owner, name: RepoName): Future[Vector[GitHook]] =
+    pipeline.call(RepositoryHookApi.gitHooksRequest(owner, name), RetryEligibility.IdempotentOnly)(using
       RepositoryHookDecoders.gitHooks)
 
   /** Reads one Git hook — `GET /repos/{owner}/{repo}/hooks/git/{id}`.
@@ -247,7 +247,7 @@ object RepositoryHookApi:
   /** The stable operation id of [[RepositoryHookApi.test]]. */
   val TestOperation: String = "repos.hooks.test"
 
-  /** The stable operation id of [[RepositoryHookApi.listGitHooks]]. */
+  /** The stable operation id of [[RepositoryHookApi.gitHooks]]. */
   val ListGitHooksOperation: String = "repos.hooks.git.list"
 
   /** The stable operation id of the single-Git-hook read on [[RepositoryHookApi]]. */
@@ -301,9 +301,9 @@ object RepositoryHookApi:
     ): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.test(owner, name, id, ref))
 
-    /** [[RepositoryHookApi.listGitHooks]] with its failure as a value. */
-    def listGitHooks(owner: Owner, name: RepoName): Future[Either[CodebergError, Vector[GitHook]]] =
-      exec.attempt(rail.listGitHooks(owner, name))
+    /** [[RepositoryHookApi.gitHooks]] with its failure as a value. */
+    def gitHooks(owner: Owner, name: RepoName): Future[Either[CodebergError, Vector[GitHook]]] =
+      exec.attempt(rail.gitHooks(owner, name))
 
     /** The single-Git-hook read on [[RepositoryHookApi]], with its failure as a value. */
     def gitHook(owner: Owner, name: RepoName, hook: GitHookName): Future[Either[CodebergError, GitHook]] =
@@ -350,7 +350,7 @@ object RepositoryHookApi:
   private def testRequest(owner: Owner, name: RepoName, id: HookId, ref: Option[String]): CodebergRequest =
     bodiless(TestOperation, HttpMethod.Post, hookPath(owner, name, id) :+ "tests", HookQueries.hookTest(ref))
 
-  private def listGitHooksRequest(owner: Owner, name: RepoName): CodebergRequest =
+  private def gitHooksRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(ListGitHooksOperation, gitHooksPath(owner, name), Nil)
 
   private def gitHookRequest(owner: Owner, name: RepoName, hook: GitHookName): CodebergRequest =

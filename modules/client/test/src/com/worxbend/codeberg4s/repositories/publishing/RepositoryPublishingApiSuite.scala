@@ -152,20 +152,20 @@ final class RepositoryPublishingApiSuite extends FunSuite with ClientSuiteHarnes
     val backend = RecordingBackend(responding(200, RepositoryPublishingApiSuite.AssetListBody))
 
     onApi(backend): api =>
-      api.listAssets(Handle, Name, Id, window(2, 25)).map: page =>
+      api.assets(Handle, Name, Id, window(2, 25)).map: page =>
         assertEquals(pathOf(backend), s"$Base/releases/11189746/assets")
         assertEquals(queryOf(backend), List("page" -> "2", "limit" -> "25"))
         assertEquals(page.items.map(_.name), Vector("forgejo-16.0.2-linux-amd64"))
 
   test("an attachment listing with no Link header reports itself as the last page, whatever the total says"):
     onApi(responding(200, RepositoryPublishingApiSuite.AssetListBody)): api =>
-      api.listAssets(Handle, Name, Id, PageParams.First).map: page =>
+      api.assets(Handle, Name, Id, PageParams.First).map: page =>
         assertEquals(page.isLast, true)
         assertEquals(page.nextPage, None)
 
   test("a bad element of an attachment listing reports its position, all the way through the pipeline"):
     onApi(responding(200, """[{"id":1,"name":"a"},{"id":2}]""")): api =>
-      api.attempt.listAssets(Handle, Name, Id, PageParams.First).map:
+      api.attempt.assets(Handle, Name, Id, PageParams.First).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$[1].name")
         case other                                             => fail(s"expected a decoding failure, got $other")
 

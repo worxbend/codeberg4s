@@ -59,7 +59,7 @@ final class OrganizationActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, "[]"))
 
     onApi(backend): api =>
-      api.listRunners(Org, RunnerVisibility.OwnedOnly, window(2, 25)).map: _ =>
+      api.runners(Org, RunnerVisibility.OwnedOnly, window(2, 25)).map: _ =>
         assertEquals(pathOf(backend), s"$Endpoint/runners")
         assertEquals(queryOf(backend).sorted, List("limit" -> "25", "page" -> "2", "visible" -> "false"))
 
@@ -69,7 +69,7 @@ final class OrganizationActionApiSuite extends FunSuite with ClientSuiteHarness:
     )
 
     onApi(backend): api =>
-      api.listRunners(Org, RunnerVisibility.AllVisible, window(1, 30)).map: page =>
+      api.runners(Org, RunnerVisibility.AllVisible, window(1, 30)).map: page =>
         assertEquals(page.size, 1)
         assertEquals(page.totalCount, Some(97))
         assertEquals(page.nextPage, Some(orFail(PageNumber.from(2))))
@@ -144,7 +144,7 @@ final class OrganizationActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, OrganizationActionApiSuite.SecretListBody))
 
     onApi(backend): api =>
-      api.listSecrets(Org, window(1, 50)).map: page =>
+      api.secrets(Org, window(1, 50)).map: page =>
         assertEquals(pathOf(backend), s"$Endpoint/secrets")
         assertEquals(queryOf(backend).sorted, List("limit" -> "50", "page" -> "1"))
         assertEquals(page.items.map(_.name.value), Vector("DEPLOY_KEY"))
@@ -175,7 +175,7 @@ final class OrganizationActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, OrganizationActionApiSuite.VariableListBody))
 
     onApi(backend): api =>
-      api.listVariables(Org, window(3, 10)).map: page =>
+      api.variables(Org, window(3, 10)).map: page =>
         assertEquals(pathOf(backend), s"$Endpoint/variables")
         assertEquals(queryOf(backend).sorted, List("limit" -> "10", "page" -> "3"))
         assertEquals(page.items.map(_.value), Vector("staging"))
@@ -232,7 +232,7 @@ final class OrganizationActionApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a 404 fails the convenience rail with a CodebergException carrying the Api failure"):
     onApi(responding(404, OrganizationActionApiSuite.NotFoundBody)): api =>
-      api.listSecrets(Org, window(1, 30)).failed.map:
+      api.secrets(Org, window(1, 30)).failed.map:
         case CodebergException(error) =>
           assertEquals(summary(error), (OrganizationActionApi.ListSecretsOperation, 404, Some("GetOrgSecrets")))
         case other                    => fail(s"expected a CodebergException, got $other")
@@ -240,8 +240,8 @@ final class OrganizationActionApiSuite extends FunSuite with ClientSuiteHarness:
   test("a 404 reaches the typed rail as a Left reporting the very same failure"):
     onApi(responding(404, OrganizationActionApiSuite.NotFoundBody)): api =>
       for
-        raised <- api.listSecrets(Org, window(1, 30)).failed
-        typed  <- api.attempt.listSecrets(Org, window(1, 30))
+        raised <- api.secrets(Org, window(1, 30)).failed
+        typed  <- api.attempt.secrets(Org, window(1, 30))
       yield (raised, typed) match
         case (CodebergException(convenience), Left(materialised)) =>
           assertEquals(summary(materialised), summary(convenience))
@@ -270,7 +270,7 @@ final class OrganizationActionApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a bad element of a runner listing is reported at its own index"):
     onApi(responding(200, """[{"id": 37}, {"name": "no id here"}]""")): api =>
-      api.attempt.listRunners(Org, RunnerVisibility.AllVisible, window(1, 30)).map:
+      api.attempt.runners(Org, RunnerVisibility.AllVisible, window(1, 30)).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$[1].id")
         case other                                             => fail(s"expected a decoding failure, got $other")
 

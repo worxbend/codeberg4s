@@ -26,8 +26,8 @@ import com.worxbend.codeberg4s.{PathSegment, SegmentLiteral, ValidationError}
   * `404` for an immediate [[ValidationError]] that says why. Percent-encoding the slash into one segment is not
   * attempted: nothing in the spec, and no capture, says the instance would decode it back, and quietly sending
   * `release%2F*` in the hope that it does is exactly the guess this library does not make on a caller's behalf.
-  * `listBranchProtections` still returns such a rule, so it can be read — it just cannot be read, edited or deleted one
-  * at a time.
+  * `branchProtections` still returns such a rule, so it can be read — it just cannot be read, edited or deleted one at
+  * a time.
   *
   * That is also why a rule '''read back''' is a plain `String` on [[BranchProtection.ruleName]] rather than this type:
   * dropping a rule the instance really holds, because this library cannot address it, would cost the caller the very

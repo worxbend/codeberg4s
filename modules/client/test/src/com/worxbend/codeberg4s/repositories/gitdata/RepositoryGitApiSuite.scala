@@ -65,7 +65,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
 
     onApi(backend): api =>
       api
-        .listTree(Handle, Name, Sha, false, window(2, 50))
+        .tree(Handle, Name, Sha, false, window(2, 50))
         .map: _ =>
           assertEquals(pathOf(backend), s"https://forge.example/api/v1/repos/worxbend/codeberg4s/git/trees/${Sha.value}")
           assertEquals(queryOf(backend), List("page" -> "2", "per_page" -> "50"))
@@ -75,14 +75,14 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
 
     onApi(backend): api =>
       api
-        .listTree(Handle, Name, Sha, true, PageParams.First)
+        .tree(Handle, Name, Sha, true, PageParams.First)
         .map(_ => assertEquals(queryOf(backend).headOption, Some("recursive" -> "true")))
 
   test("a tree page ends where rel=next says it ends, and not where truncated or a short page suggest"):
     val backend = responding(200, RepositoryGitApiSuite.TruncatedTreeBody, RepositoryGitApiSuite.PagedHeaders)
 
     onApi(backend): api =>
-      api.listTree(Handle, Name, Sha, true, window(1, 50)).map: page =>
+      api.tree(Handle, Name, Sha, true, window(1, 50)).map: page =>
         assertEquals(page.size, 1)
         assertEquals(page.totalCount, Some(4210))
         assertEquals(page.nextPage.map(_.value), Some(2))
@@ -90,7 +90,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a tree page whose response carries no Link header reports itself as the last one"):
     onApi(responding(200, RepositoryGitApiSuite.TruncatedTreeBody)): api =>
-      api.listTree(Handle, Name, Sha, true, PageParams.First).map: page =>
+      api.tree(Handle, Name, Sha, true, PageParams.First).map: page =>
         assertEquals(page.isLast, true)
         assertEquals(page.nextPage, None)
 
@@ -192,7 +192,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryGitApiSuite.RefsBody))
 
     onApi(backend): api =>
-      api.listRefs(Handle, Name).map: refs =>
+      api.refs(Handle, Name).map: refs =>
         assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/worxbend/codeberg4s/git/refs")
         assertEquals(queryOf(backend), Nil)
         assertEquals(refs.map(_.name.value), Vector("refs/heads/main"))
@@ -202,7 +202,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
 
     onApi(backend): api =>
       api
-        .listMatchingRefs(Handle, Name, ref("refs/heads/main"))
+        .matchingRefs(Handle, Name, ref("refs/heads/main"))
         .map: _ =>
           assertEquals(
             pathOf(backend),
@@ -237,7 +237,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
 
     onApi(backend): api =>
       api
-        .listStatuses(Handle, Name, ref("v1.0"), query, window(1, 30))
+        .statuses(Handle, Name, ref("v1.0"), query, window(1, 30))
         .map: _ =>
           assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/worxbend/codeberg4s/commits/v1.0/statuses")
           assertEquals(
@@ -248,7 +248,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
   test("a status page past the end is an empty page, not a failure"):
     onApi(responding(200, "[]")): api =>
       api
-        .listStatuses(Handle, Name, ref("main"), CommitStatusQuery.Empty, PageParams.First)
+        .statuses(Handle, Name, ref("main"), CommitStatusQuery.Empty, PageParams.First)
         .map: page =>
           assertEquals(page.items, Vector.empty[CommitStatus])
           assertEquals(page.isLast, true)
@@ -380,8 +380,8 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
   test("both rails agree on a tree listing failure too, so the choice of rail is only a choice of style"):
     onApi(responding(404, RepositoryGitApiSuite.NotFoundBody)): api =>
       for
-        raised <- api.listTree(Handle, Name, Sha, false, PageParams.First).failed
-        typed  <- api.attempt.listTree(Handle, Name, Sha, false, PageParams.First)
+        raised <- api.tree(Handle, Name, Sha, false, PageParams.First).failed
+        typed  <- api.attempt.tree(Handle, Name, Sha, false, PageParams.First)
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on the archive read as well, which has no decoder to disagree about"):
@@ -406,7 +406,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a bad entry of a tree page reports its position, all the way through the pipeline"):
     onApi(responding(200, """{"tree":[{"path":"a","sha":"cafebabe"},{"path":"b"}]}""")): api =>
-      api.attempt.listTree(Handle, Name, Sha, false, PageParams.First).map:
+      api.attempt.tree(Handle, Name, Sha, false, PageParams.First).map:
         case Left(CodebergError.DecodingFailed(_, _, failed, _)) => assertEquals(failed.render, "$.tree[1].sha")
         case other                                               => fail(s"expected a decoding failure, got $other")
 

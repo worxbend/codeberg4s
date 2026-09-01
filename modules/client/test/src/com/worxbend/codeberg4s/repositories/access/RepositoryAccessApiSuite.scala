@@ -59,7 +59,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAccessApiSuite.BranchListBody))
 
     onApi(backend): api =>
-      api.listBranchProtections(Handle, Name).map: rules =>
+      api.branchProtections(Handle, Name).map: rules =>
         assertEquals(pathOf(backend), s"$Endpoint/branch_protections")
         assertEquals(queryOf(backend), Nil)
         assertEquals(rules.map(_.ruleName), Vector("main"))
@@ -156,7 +156,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAccessApiSuite.TagListBody))
 
     onApi(backend): api =>
-      api.listTagProtections(Handle, Name).map: rules =>
+      api.tagProtections(Handle, Name).map: rules =>
         assertEquals(pathOf(backend), s"$Endpoint/tag_protections")
         assertEquals(queryOf(backend), Nil)
         assertEquals(rules.map(_.namePattern), Vector("v*"))
@@ -205,14 +205,14 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAccessApiSuite.UserListBody))
 
     onApi(backend): api =>
-      api.listCollaborators(Handle, Name, window(2, 25)).map: page =>
+      api.collaborators(Handle, Name, window(2, 25)).map: page =>
         assertEquals(pathOf(backend), s"$Endpoint/collaborators")
         assertEquals(queryOf(backend), List("page" -> "2", "limit" -> "25"))
         assertEquals(page.items.map(_.login.value), Vector("alice"))
 
   test("the collaborator listing ends where rel=next says it ends, not where a short page suggests"):
     onApi(responding(200, RepositoryAccessApiSuite.UserListBody, RepositoryAccessApiSuite.PagedHeaders)): api =>
-      api.listCollaborators(Handle, Name, window(1, 30)).map: page =>
+      api.collaborators(Handle, Name, window(1, 30)).map: page =>
         assertEquals(page.size, 1)
         assertEquals(page.totalCount, Some(97))
         assertEquals(page.nextPage.map(_.value), Some(2))
@@ -220,7 +220,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a page past the end is an empty page, not a failure"):
     onApi(responding(200, "[]")): api =>
-      api.listCollaborators(Handle, Name, PageParams.First).map: page =>
+      api.collaborators(Handle, Name, PageParams.First).map: page =>
         assertEquals(page.items, Vector.empty[User])
         assertEquals(page.isLast, true)
 
@@ -284,7 +284,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
     val query   = DeployKeyQuery.Empty.forKeyId(91L).withFingerprint("SHA256:abc")
 
     onApi(backend): api =>
-      api.listDeployKeys(Handle, Name, query, PageParams.First).map: page =>
+      api.deployKeys(Handle, Name, query, PageParams.First).map: page =>
         assertEquals(pathOf(backend), s"$Endpoint/keys")
         assertEquals(
           queryOf(backend),
@@ -336,7 +336,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAccessApiSuite.TeamListBody))
 
     onApi(backend): api =>
-      api.listTeams(Handle, Name).map: teams =>
+      api.teams(Handle, Name).map: teams =>
         assertEquals(pathOf(backend), s"$Endpoint/teams")
         assertEquals(queryOf(backend), Nil)
         assertEquals(teams.map(_.name), Vector("owners"))
@@ -405,8 +405,8 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
   test("both rails agree on a paged listing failure as well, so the choice of rail is only a choice of style"):
     onApi(responding(403, RepositoryAccessApiSuite.ForbiddenBody)): api =>
       for
-        raised <- api.listCollaborators(Handle, Name, PageParams.First).failed
-        typed  <- api.attempt.listCollaborators(Handle, Name, PageParams.First)
+        raised <- api.collaborators(Handle, Name, PageParams.First).failed
+        typed  <- api.attempt.collaborators(Handle, Name, PageParams.First)
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on a unit-returning write as well"):
@@ -424,7 +424,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a 405 on a team endpoint is an Api failure too — it is what a user-owned repository answers"):
     onApi(responding(405, RepositoryAccessApiSuite.NotAnOrgBody)): api =>
-      api.attempt.listTeams(Handle, Name).map:
+      api.attempt.teams(Handle, Name).map:
         case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 405)
         case other                                    => fail(s"expected an Api failure, got $other")
 
@@ -436,7 +436,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a bad element of a listing reports its position"):
     onApi(responding(200, """[{"rule_name":"main"},{"enable_push":true}]""")): api =>
-      api.attempt.listBranchProtections(Handle, Name).map:
+      api.attempt.branchProtections(Handle, Name).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$[1].rule_name")
         case other                                             => fail(s"expected a decoding failure, got $other")
 

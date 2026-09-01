@@ -53,14 +53,14 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, PullRequestReviewApiSuite.PullListBody))
 
     onApi(backend): api =>
-      api.listPinned(Handle, Name).map: pinned =>
+      api.pinned(Handle, Name).map: pinned =>
         assertEquals(pathOf(backend), s"$Endpoint/pinned")
         assertEquals(queryOf(backend), Nil)
         assertEquals(pinned.map(_.number.value), Vector(13726L))
 
   test("nothing pinned is an empty vector, not a failure — Forgejo answers 200 with []"):
     onApi(responding(200, "[]")): api =>
-      api.listPinned(Handle, Name).map(pinned => assertEquals(pinned, Vector.empty[PullRequest]))
+      api.pinned(Handle, Name).map(pinned => assertEquals(pinned, Vector.empty[PullRequest]))
 
   test("pulls.getByBaseHead puts the two branches in the path, base first"):
     val backend = RecordingBackend(responding(200, PullRequestReviewApiSuite.MergedBody))
@@ -290,7 +290,7 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, PullRequestReviewApiSuite.CommentListBody))
 
     onApi(backend): api =>
-      api.listReviewComments(Handle, Name, Number, Reviewed).map: comments =>
+      api.reviewComments(Handle, Name, Number, Reviewed).map: comments =>
         assertEquals(pathOf(backend), s"$Endpoint/13726/reviews/1654076/comments")
         assertEquals(queryOf(backend), Nil)
         assertEquals(comments.map(_.id.value), Vector(918273L))
@@ -366,7 +366,7 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a bad element of a comment listing reports its position, all the way through the pipeline"):
     onApi(responding(200, """[{"id":1},{"id":0}]""")): api =>
-      api.attempt.listReviewComments(Handle, Name, Number, Reviewed).map:
+      api.attempt.reviewComments(Handle, Name, Number, Reviewed).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$[1].id")
         case other                                             => fail(s"expected a decoding failure, got $other")
 

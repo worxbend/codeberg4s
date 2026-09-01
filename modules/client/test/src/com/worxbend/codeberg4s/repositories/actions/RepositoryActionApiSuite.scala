@@ -61,14 +61,14 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
 
     onApi(backend): api =>
       api
-        .listArtifacts(Handle, Name, ArtifactQuery.Empty.named("coverage"), window(2, 25))
+        .artifacts(Handle, Name, ArtifactQuery.Empty.named("coverage"), window(2, 25))
         .map: _ =>
           assertEquals(pathOf(backend), s"$Endpoint/artifacts")
           assertEquals(queryOf(backend), List("name" -> "coverage", "page" -> "2", "limit" -> "25"))
 
   test("actions.artifacts.list ends where rel=next says it ends, not where a short page suggests"):
     onApi(responding(200, RepositoryActionApiSuite.ArtifactListBody, RepositoryActionApiSuite.PagedHeaders)): api =>
-      api.listArtifacts(Handle, Name, ArtifactQuery.Empty, window(1, 30)).map: page =>
+      api.artifacts(Handle, Name, ArtifactQuery.Empty, window(1, 30)).map: page =>
         assertEquals(page.size, 1)
         assertEquals(page.totalCount, Some(97))
         assertEquals(page.nextPage.map(_.value), Some(2))
@@ -76,7 +76,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a page past the end is an empty page, not a failure"):
     onApi(responding(200, "[]")): api =>
-      api.listArtifacts(Handle, Name, ArtifactQuery.Empty, PageParams.First).map: page =>
+      api.artifacts(Handle, Name, ArtifactQuery.Empty, PageParams.First).map: page =>
         assertEquals(page.items, Vector.empty[ActionArtifact])
         assertEquals(page.isLast, true)
 
@@ -121,7 +121,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.RunListBody))
 
     onApi(backend): api =>
-      api.listRuns(Handle, Name, ActionRunQuery.Empty, PageParams.First).map: page =>
+      api.runs(Handle, Name, ActionRunQuery.Empty, PageParams.First).map: page =>
         assertEquals(pathOf(backend), s"$Endpoint/runs")
         assertEquals(page.items.map(_.id.value), Vector(4711L))
         assertEquals(page.items.flatMap(_.status), Vector(ActionStatus.Failure))
@@ -132,7 +132,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
 
     onApi(backend): api =>
       api
-        .listRuns(Handle, Name, query, PageParams.First)
+        .runs(Handle, Name, query, PageParams.First)
         .map: _ =>
           assertEquals(
             queryOf(backend),
@@ -147,7 +147,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a bad entry of the run envelope reports its position under workflow_runs"):
     onApi(responding(200, """{"workflow_runs":[{"id":1},{"title":"no id"}]}""")): api =>
-      api.attempt.listRuns(Handle, Name, ActionRunQuery.Empty, PageParams.First).map:
+      api.attempt.runs(Handle, Name, ActionRunQuery.Empty, PageParams.First).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) =>
           assertEquals(path.render, "$.workflow_runs[1].id")
         case other                                             => fail(s"expected a decoding failure, got $other")
@@ -184,14 +184,14 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
 
     onApi(backend): api =>
       api
-        .listRunArtifacts(Handle, Name, Run, ArtifactQuery.Empty, PageParams.First)
+        .runArtifacts(Handle, Name, Run, ArtifactQuery.Empty, PageParams.First)
         .map(_ => assertEquals(pathOf(backend), s"$Endpoint/runs/4711/artifacts"))
 
   test("actions.runs.jobs.list is a bare array and takes no paging parameters"):
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.JobListBody))
 
     onApi(backend): api =>
-      api.listRunJobs(Handle, Name, Run).map: jobs =>
+      api.runJobs(Handle, Name, Run).map: jobs =>
         assertEquals(pathOf(backend), s"$Endpoint/runs/4711/jobs")
         assertEquals(queryOf(backend), Nil)
         assertEquals(jobs.map(_.id.value), Vector(55L))
@@ -234,7 +234,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
 
     onApi(backend): api =>
       api
-        .listRunners(Handle, Name, RunnerVisibility.AllVisible, PageParams.First)
+        .runners(Handle, Name, RunnerVisibility.AllVisible, PageParams.First)
         .map: _ =>
           assertEquals(pathOf(backend), s"$Endpoint/runners")
           assertEquals(queryOf(backend), List("visible" -> "true", "page" -> "1", "limit" -> "30"))
@@ -317,7 +317,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
 
     onApi(backend): api =>
       api
-        .listTasks(Handle, Name, ActionTaskQuery.Empty.withStatus(ActionStatus.Success), PageParams.First)
+        .tasks(Handle, Name, ActionTaskQuery.Empty.withStatus(ActionStatus.Success), PageParams.First)
         .map: page =>
           assertEquals(pathOf(backend), s"$Endpoint/tasks")
           assertEquals(queryOf(backend), List("status" -> "success", "page" -> "1", "limit" -> "30"))
@@ -329,7 +329,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.SecretListBody))
 
     onApi(backend): api =>
-      api.listSecrets(Handle, Name, PageParams.First).map: page =>
+      api.secrets(Handle, Name, PageParams.First).map: page =>
         assertEquals(pathOf(backend), s"$Endpoint/secrets")
         assertEquals(page.items.map(_.name.value), Vector("DEPLOY_KEY"))
 
@@ -377,7 +377,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.VariableListBody))
 
     onApi(backend): api =>
-      api.listVariables(Handle, Name, PageParams.First).map: page =>
+      api.variables(Handle, Name, PageParams.First).map: page =>
         assertEquals(pathOf(backend), s"$Endpoint/variables")
         assertEquals(page.items.map(_.value), Vector("staging"))
 
@@ -490,8 +490,8 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
   test("both rails agree on a secret listing failure as well, so the choice of rail is only a choice of style"):
     onApi(responding(403, RepositoryActionApiSuite.ForbiddenBody)): api =>
       for
-        raised <- api.listSecrets(Handle, Name, PageParams.First).failed
-        typed  <- api.attempt.listSecrets(Handle, Name, PageParams.First)
+        raised <- api.secrets(Handle, Name, PageParams.First).failed
+        typed  <- api.attempt.secrets(Handle, Name, PageParams.First)
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on a unit-returning write as well"):
@@ -503,7 +503,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a 400 is an Api failure too — Forgejo uses it for validation alongside 422"):
     onApi(responding(400, RepositoryActionApiSuite.ValidationBody)): api =>
-      api.attempt.listRuns(Handle, Name, ActionRunQuery.Empty, PageParams.First).map:
+      api.attempt.runs(Handle, Name, ActionRunQuery.Empty, PageParams.First).map:
         case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 400)
         case other                                    => fail(s"expected an Api failure, got $other")
 

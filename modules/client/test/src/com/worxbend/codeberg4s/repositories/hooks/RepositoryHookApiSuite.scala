@@ -149,7 +149,7 @@ final class RepositoryHookApiSuite extends HookApiSuite:
     val backend = RecordingBackend(responding(200, RepositoryHookApiSuite.GitHookListBody))
 
     onApi(backend): api =>
-      api.listGitHooks(Handle, Name).map: hooks =>
+      api.gitHooks(Handle, Name).map: hooks =>
         assertEquals(pathOf(backend), s"$Repository/hooks/git")
         assertEquals(queryOf(backend), Nil)
         assertEquals(hooks.map(_.name.value), Vector("pre-receive"))
@@ -197,8 +197,8 @@ final class RepositoryHookApiSuite extends HookApiSuite:
   test("a 403 on the Git hook listing reaches both rails identically, as an administrative refusal does"):
     onApi(responding(403, HookApiSuite.NotFoundBody)): api =>
       for
-        raised <- api.listGitHooks(Handle, Name).failed
-        typed  <- api.attempt.listGitHooks(Handle, Name)
+        raised <- api.gitHooks(Handle, Name).failed
+        typed  <- api.attempt.gitHooks(Handle, Name)
       yield assertRailsAgree(raised, typed)
 
   test("a 200 whose payload does not fit the model becomes DecodingFailed, never an escaping codec exception"):

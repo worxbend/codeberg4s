@@ -117,8 +117,8 @@ final class UserActionApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     *   whether to include runners inherited from the instance, or only the account's own — see
     *   [[com.worxbend.codeberg4s.repositories.actions.RunnerVisibility]] for why this is not a `Boolean`
     */
-  def listRunners(visibility: RunnerVisibility, params: PageParams): Future[Page[ActionRunner]] =
-    pipeline.callPage(UserActionApi.listRunnersRequest(visibility, params), params)(using ActionDecoders.runners)
+  def runners(visibility: RunnerVisibility, params: PageParams): Future[Page[ActionRunner]] =
+    pipeline.callPage(UserActionApi.runnersRequest(visibility, params), params)(using ActionDecoders.runners)
 
   /** Reads one of the account's runners — `GET /user/actions/runners/{runner_id}`.
     *
@@ -131,7 +131,7 @@ final class UserActionApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     *
     * '''Never retried.''' Runner names are explicitly not unique, so a repeat registers a second runner and issues a
     * second token. A transport failure therefore leaves the caller genuinely unsure whether a runner exists, which is
-    * the honest state of affairs and better than two — [[listRunners]] resolves it.
+    * the honest state of affairs and better than two — [[runners]] resolves it.
     *
     * '''The result carries a credential.''' [[com.worxbend.codeberg4s.repositories.actions.RegisteredRunner.token]] is
     * what the runner binary authenticates with; it masks itself in every rendering path, but it is still a secret that
@@ -240,12 +240,12 @@ final class UserActionApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     * [[com.worxbend.codeberg4s.repositories.actions.ActionVariable]], and note that an account-level variable is
     * readable by every workflow in every repository the account owns.
     *
-    * '''Paging.''' As [[listRunners]].
+    * '''Paging.''' As [[runners]].
     *
     * '''Failures.''' The group contract above.
     */
-  def listVariables(params: PageParams): Future[Page[ActionVariable]] =
-    pipeline.callPage(UserActionApi.listVariablesRequest(params), params)(using ActionDecoders.variables)
+  def variables(params: PageParams): Future[Page[ActionVariable]] =
+    pipeline.callPage(UserActionApi.variablesRequest(params), params)(using ActionDecoders.variables)
 
   /** Reads one of the account's variables — `GET /user/actions/variables/{variablename}`.
     *
@@ -294,7 +294,7 @@ final class UserActionApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     *
     * '''Never retried''', for the reason [[deleteSecret]] gives: the name is reusable, so a retry after a lost success
     * can destroy a variable that was recreated in between. Unlike a secret, a variable can at least be read back —
-    * [[variable]] and [[listVariables]] are how a caller resolves the uncertainty a transport failure leaves.
+    * [[variable]] and [[variables]] are how a caller resolves the uncertainty a transport failure leaves.
     *
     * '''Answers `201` or `204`''', which is what the spec declares for a deletion; both are success.
     *
@@ -306,7 +306,7 @@ final class UserActionApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
 /** The requests this group issues, its operation ids, and its typed rail. */
 object UserActionApi:
 
-  /** The stable operation id of [[UserActionApi.listRunners]]. Safe to alert on. */
+  /** The stable operation id of [[UserActionApi.runners]]. Safe to alert on. */
   val ListRunnersOperation: String = "users.account.actions.runners.list"
 
   /** The stable operation id of the single-runner read on [[UserActionApi]]. */
@@ -330,7 +330,7 @@ object UserActionApi:
   /** The stable operation id of [[UserActionApi.deleteSecret]]. */
   val DeleteSecretOperation: String = "users.account.actions.secrets.delete"
 
-  /** The stable operation id of [[UserActionApi.listVariables]]. */
+  /** The stable operation id of [[UserActionApi.variables]]. */
   val ListVariablesOperation: String = "users.account.actions.variables.list"
 
   /** The stable operation id of the single-variable read on [[UserActionApi]]. */
@@ -353,12 +353,12 @@ object UserActionApi:
     */
   final class Attempt private[codeberg4s] (rail: UserActionApi)(using exec: Exec[Future]):
 
-    /** [[UserActionApi.listRunners]] with its failure as a value. */
-    def listRunners(
+    /** [[UserActionApi.runners]] with its failure as a value. */
+    def runners(
         visibility: RunnerVisibility,
         params: PageParams,
     ): Future[Either[CodebergError, Page[ActionRunner]]] =
-      exec.attempt(rail.listRunners(visibility, params))
+      exec.attempt(rail.runners(visibility, params))
 
     /** The single-runner read on [[UserActionApi]], with its failure as a value. */
     def runner(id: RunnerId): Future[Either[CodebergError, ActionRunner]] =
@@ -388,9 +388,9 @@ object UserActionApi:
     def deleteSecret(secret: SecretName): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.deleteSecret(secret))
 
-    /** [[UserActionApi.listVariables]] with its failure as a value. */
-    def listVariables(params: PageParams): Future[Either[CodebergError, Page[ActionVariable]]] =
-      exec.attempt(rail.listVariables(params))
+    /** [[UserActionApi.variables]] with its failure as a value. */
+    def variables(params: PageParams): Future[Either[CodebergError, Page[ActionVariable]]] =
+      exec.attempt(rail.variables(params))
 
     /** The single-variable read on [[UserActionApi]], with its failure as a value. */
     def variable(name: VariableName): Future[Either[CodebergError, ActionVariable]] =
@@ -418,7 +418,7 @@ object UserActionApi:
   private[account] def updateVariableEligibility(command: UpdateVariable): RetryEligibility =
     if command.renamedTo.isEmpty then RetryEligibility.AlwaysRetry else RetryEligibility.Never
 
-  private def listRunnersRequest(visibility: RunnerVisibility, params: PageParams): CodebergRequest =
+  private def runnersRequest(visibility: RunnerVisibility, params: PageParams): CodebergRequest =
     read(
       ListRunnersOperation,
       runnersPath,
@@ -451,7 +451,7 @@ object UserActionApi:
   private def deleteSecretRequest(secret: SecretName): CodebergRequest =
     remove(DeleteSecretOperation, secretPath(secret))
 
-  private def listVariablesRequest(params: PageParams): CodebergRequest =
+  private def variablesRequest(params: PageParams): CodebergRequest =
     read(ListVariablesOperation, variablesPath, PagingQuery.window(params))
 
   private def variableRequest(name: VariableName): CodebergRequest =

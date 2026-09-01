@@ -198,8 +198,8 @@ final class RepositoryPublishingApi private[codeberg4s] (pipeline: ApiPipeline[F
     *
     * '''Failures.''' The group contract above.
     */
-  def listAssets(owner: Owner, name: RepoName, id: ReleaseId, params: PageParams): Future[Page[ReleaseAsset]] =
-    pipeline.callPage(RepositoryPublishingApi.listAssetsRequest(owner, name, id, params), params)(using
+  def assets(owner: Owner, name: RepoName, id: ReleaseId, params: PageParams): Future[Page[ReleaseAsset]] =
+    pipeline.callPage(RepositoryPublishingApi.assetsRequest(owner, name, id, params), params)(using
       PublishingDecoders.assets)
 
   /** Uploads a file and attaches it to a release — `POST /repos/{owner}/{repo}/releases/{id}/assets`.
@@ -419,7 +419,7 @@ object RepositoryPublishingApi:
   /** The stable operation id of [[RepositoryPublishingApi.deleteReleaseByTag]]. */
   val DeleteReleaseByTagOperation: String = "repos.releases.deleteByTag"
 
-  /** The stable operation id of [[RepositoryPublishingApi.listAssets]]. */
+  /** The stable operation id of [[RepositoryPublishingApi.assets]]. */
   val ListAssetsOperation: String = "repos.releases.assets.list"
 
   /** The stable operation id of [[RepositoryPublishingApi.uploadAsset]]. */
@@ -498,14 +498,14 @@ object RepositoryPublishingApi:
     def deleteReleaseByTag(owner: Owner, name: RepoName, tag: TagName): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.deleteReleaseByTag(owner, name, tag))
 
-    /** [[RepositoryPublishingApi.listAssets]] with its failure as a value. */
-    def listAssets(
+    /** [[RepositoryPublishingApi.assets]] with its failure as a value. */
+    def assets(
         owner: Owner,
         name: RepoName,
         id: ReleaseId,
         params: PageParams,
     ): Future[Either[CodebergError, Page[ReleaseAsset]]] =
-      exec.attempt(rail.listAssets(owner, name, id, params))
+      exec.attempt(rail.assets(owner, name, id, params))
 
     /** [[RepositoryPublishingApi.uploadAsset]] with its failure as a value. */
     def uploadAsset(
@@ -605,7 +605,7 @@ object RepositoryPublishingApi:
   private def deleteReleaseByTagRequest(owner: Owner, name: RepoName, tag: TagName): CodebergRequest =
     remove(DeleteReleaseByTagOperation, releaseByTagPath(owner, name, tag))
 
-  private def listAssetsRequest(
+  private def assetsRequest(
       owner: Owner,
       name: RepoName,
       id: ReleaseId,

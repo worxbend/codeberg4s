@@ -44,7 +44,7 @@ final class UserActionApiSuite extends AccountApiSuite:
 
     onApi(backend): api =>
       api
-        .listRunners(RunnerVisibility.AllVisible, window(2, 25))
+        .runners(RunnerVisibility.AllVisible, window(2, 25))
         .map: _ =>
           assertEquals(pathOf(backend), s"$ActionsRoot/runners")
           assertEquals(queryOf(backend), List("visible" -> "true", "page" -> "2", "limit" -> "25"))
@@ -54,7 +54,7 @@ final class UserActionApiSuite extends AccountApiSuite:
 
     onApi(backend): api =>
       api
-        .listRunners(RunnerVisibility.OwnedOnly, PageParams.First)
+        .runners(RunnerVisibility.OwnedOnly, PageParams.First)
         .map(_ => assertEquals(queryOf(backend).headOption, Some("visible" -> "false")))
 
   test("a single-runner read addresses the runner by id and reads the shared runner model"):
@@ -163,7 +163,7 @@ final class UserActionApiSuite extends AccountApiSuite:
     val backend = RecordingBackend(responding(200, UserActionApiSuite.VariableListBody))
 
     onApi(backend): api =>
-      api.listVariables(PageParams.First).map: page =>
+      api.variables(PageParams.First).map: page =>
         assertEquals(pathOf(backend), s"$ActionsRoot/variables")
         assertEquals(queryOf(backend), List("page" -> "1", "limit" -> "30"))
         assertEquals(page.items.map(_.value), Vector("staging"))
@@ -256,7 +256,7 @@ final class UserActionApiSuite extends AccountApiSuite:
   test("a failure carries the operation id of the endpoint it came from, so an alert can name it"):
     onApi(responding(403, AccountApiSuite.ForbiddenBody)): api =>
       api.attempt
-        .listVariables(PageParams.First)
+        .variables(PageParams.First)
         .map(outcome => assertEquals(operationOf(outcome), UserActionApi.ListVariablesOperation))
 
   /** The method the per-command retry decision is asked about; a `PUT` is unsafe, so only `AlwaysRetry` permits it. */

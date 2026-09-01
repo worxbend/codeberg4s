@@ -109,13 +109,13 @@ final class RepositoryActionApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     * @param query
     *   the artifact-name filter; [[ArtifactQuery.Empty]] asks for all of them
     */
-  def listArtifacts(
+  def artifacts(
       owner: Owner,
       name: RepoName,
       query: ArtifactQuery,
       params: PageParams,
   ): Future[Page[ActionArtifact]] =
-    pipeline.callPage(RepositoryActionApi.listArtifactsRequest(owner, name, query, params), params)(using
+    pipeline.callPage(RepositoryActionApi.artifactsRequest(owner, name, query, params), params)(using
       RepositoryActionDecoders.artifacts)
 
   /** Reads one artifact's metadata — `GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}`.
@@ -165,15 +165,15 @@ final class RepositoryActionApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     * '''not''' what [[com.worxbend.codeberg4s.paging.Page.totalCount]] reports — that comes from the `X-Total-Count`
     * header, as it does for every other paged call.
     *
-    * '''Paging.''' As [[listArtifacts]]: the `Link` header decides, not the number of items.
+    * '''Paging.''' As [[artifacts]]: the `Link` header decides, not the number of items.
     *
     * '''Failures.''' The group contract above.
     *
     * @param query
     *   the filters to apply; [[ActionRunQuery.Empty]] asks for every run
     */
-  def listRuns(owner: Owner, name: RepoName, query: ActionRunQuery, params: PageParams): Future[Page[ActionRun]] =
-    pipeline.callPage(RepositoryActionApi.listRunsRequest(owner, name, query, params), params)(using
+  def runs(owner: Owner, name: RepoName, query: ActionRunQuery, params: PageParams): Future[Page[ActionRun]] =
+    pipeline.callPage(RepositoryActionApi.runsRequest(owner, name, query, params), params)(using
       RepositoryActionDecoders.runs)
 
   /** Reads one run — `GET /repos/{owner}/{repo}/actions/runs/{run_id}`.
@@ -215,19 +215,19 @@ final class RepositoryActionApi private[codeberg4s] (pipeline: ApiPipeline[Futur
 
   /** Lists the artifacts one run produced — `GET /repos/{owner}/{repo}/actions/runs/{run_id}/artifacts`.
     *
-    * The same model and the same filter as [[listArtifacts]], scoped to one run. A bare array here, not the envelope
-    * [[listRuns]] returns.
+    * The same model and the same filter as [[artifacts]], scoped to one run. A bare array here, not the envelope
+    * [[runs]] returns.
     *
     * '''Failures.''' The group contract above.
     */
-  def listRunArtifacts(
+  def runArtifacts(
       owner: Owner,
       name: RepoName,
       id: RunId,
       query: ArtifactQuery,
       params: PageParams,
   ): Future[Page[ActionArtifact]] =
-    pipeline.callPage(RepositoryActionApi.listRunArtifactsRequest(owner, name, id, query, params), params)(using
+    pipeline.callPage(RepositoryActionApi.runArtifactsRequest(owner, name, id, query, params), params)(using
       RepositoryActionDecoders.artifacts)
 
   /** Lists the jobs of one run — `GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs`.
@@ -240,8 +240,8 @@ final class RepositoryActionApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     *
     * '''Failures.''' The group contract above.
     */
-  def listRunJobs(owner: Owner, name: RepoName, id: RunId): Future[Vector[ActionRunJob]] =
-    pipeline.call(RepositoryActionApi.listRunJobsRequest(owner, name, id), RetryEligibility.IdempotentOnly)(using
+  def runJobs(owner: Owner, name: RepoName, id: RunId): Future[Vector[ActionRunJob]] =
+    pipeline.call(RepositoryActionApi.runJobsRequest(owner, name, id), RetryEligibility.IdempotentOnly)(using
       RepositoryActionDecoders.jobs)
 
   /** Downloads a run's logs as a ZIP — `GET /repos/{owner}/{repo}/actions/runs/{run_id}/logs`.
@@ -290,13 +290,13 @@ final class RepositoryActionApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     *   whether to include runners inherited from the owner and the instance, or only the repository's own — see
     *   [[RunnerVisibility]] for why this is not a `Boolean`
     */
-  def listRunners(
+  def runners(
       owner: Owner,
       name: RepoName,
       visibility: RunnerVisibility,
       params: PageParams,
   ): Future[Page[ActionRunner]] =
-    pipeline.callPage(RepositoryActionApi.listRunnersRequest(owner, name, visibility, params), params)(using
+    pipeline.callPage(RepositoryActionApi.runnersRequest(owner, name, visibility, params), params)(using
       RepositoryActionDecoders.runners)
 
   /** Reads one runner — `GET /repos/{owner}/{repo}/actions/runners/{runner_id}`.
@@ -311,7 +311,7 @@ final class RepositoryActionApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     *
     * '''Never retried.''' Runner names are explicitly not unique, so a repeat registers a second runner and issues a
     * second token. A transport failure therefore leaves the caller genuinely unsure whether a runner exists, which is
-    * the honest state of affairs and better than two — [[listRunners]] resolves it.
+    * the honest state of affairs and better than two — [[runners]] resolves it.
     *
     * '''The result carries a credential.''' [[RegisteredRunner.token]] is what the runner binary authenticates with; it
     * masks itself in every rendering path, but it is still a secret that has to reach exactly one machine.
@@ -352,7 +352,7 @@ final class RepositoryActionApi private[codeberg4s] (pipeline: ApiPipeline[Futur
 
   /** Finds jobs waiting for a runner with the given labels — `GET /repos/{owner}/{repo}/actions/runners/jobs`.
     *
-    * '''Not paged''', for the reason [[listRunJobs]] gives: the spec declares no `page` or `limit`.
+    * '''Not paged''', for the reason [[runJobs]] gives: the spec declares no `page` or `limit`.
     *
     * '''Labels are comma-joined into one parameter''', which is the encoding Forgejo declares and which has no escape.
     * That is why the elements are [[RunnerLabel]], which rejects a comma at construction. An empty vector sends no
@@ -369,14 +369,14 @@ final class RepositoryActionApi private[codeberg4s] (pipeline: ApiPipeline[Futur
 
   /** Lists the runner tasks of a repository — `GET /repos/{owner}/{repo}/actions/tasks`.
     *
-    * '''The body is the same envelope [[listRuns]] returns''', down to the `workflow_runs` key, even though its
-    * elements are tasks; see [[com.worxbend.codeberg4s.repositories.actions.wire.WorkflowRunsEnvelopeDto]].
+    * '''The body is the same envelope [[runs]] returns''', down to the `workflow_runs` key, even though its elements
+    * are tasks; see [[com.worxbend.codeberg4s.repositories.actions.wire.WorkflowRunsEnvelopeDto]].
     *
     * '''Failures.''' The group contract above. This is the one operation in the group for which the spec declares a
     * `409`, and it arrives as [[com.worxbend.codeberg4s.CodebergError.Api]] like any other status.
     */
-  def listTasks(owner: Owner, name: RepoName, query: ActionTaskQuery, params: PageParams): Future[Page[ActionTask]] =
-    pipeline.callPage(RepositoryActionApi.listTasksRequest(owner, name, query, params), params)(using
+  def tasks(owner: Owner, name: RepoName, query: ActionTaskQuery, params: PageParams): Future[Page[ActionTask]] =
+    pipeline.callPage(RepositoryActionApi.tasksRequest(owner, name, query, params), params)(using
       RepositoryActionDecoders.tasks)
 
   // --- secrets --------------------------------------------------------------
@@ -387,8 +387,8 @@ final class RepositoryActionApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     *
     * '''Failures.''' The group contract above.
     */
-  def listSecrets(owner: Owner, name: RepoName, params: PageParams): Future[Page[ActionSecret]] =
-    pipeline.callPage(RepositoryActionApi.listSecretsRequest(owner, name, params), params)(using
+  def secrets(owner: Owner, name: RepoName, params: PageParams): Future[Page[ActionSecret]] =
+    pipeline.callPage(RepositoryActionApi.secretsRequest(owner, name, params), params)(using
       RepositoryActionDecoders.secrets)
 
   /** Creates or replaces a secret — `PUT /repos/{owner}/{repo}/actions/secrets/{secretname}`.
@@ -396,7 +396,7 @@ final class RepositoryActionApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     * '''One method for both, because the API has one endpoint for both.''' Forgejo answers `201` when the secret was
     * created and `204` when it was replaced, and both are success as far as
     * [[com.worxbend.codeberg4s.core.StatusMapping]] is concerned. Neither carries a body, so there is nothing to return
-    * and nothing to tell the two apart with — [[listSecrets]] before the call is the only way to know which one will
+    * and nothing to tell the two apart with — [[secrets]] before the call is the only way to know which one will
     * happen.
     *
     * '''Retried''', because the call sets a named resource to a stated value: repeating it leaves the secret exactly as
@@ -424,13 +424,12 @@ final class RepositoryActionApi private[codeberg4s] (pipeline: ApiPipeline[Futur
 
   /** Lists a repository's variables — `GET /repos/{owner}/{repo}/actions/variables`.
     *
-    * '''Values included''', unlike [[listSecrets]] — a variable is configuration, not a credential. See
-    * [[ActionVariable]].
+    * '''Values included''', unlike [[secrets]] — a variable is configuration, not a credential. See [[ActionVariable]].
     *
     * '''Failures.''' The group contract above.
     */
-  def listVariables(owner: Owner, name: RepoName, params: PageParams): Future[Page[ActionVariable]] =
-    pipeline.callPage(RepositoryActionApi.listVariablesRequest(owner, name, params), params)(using
+  def variables(owner: Owner, name: RepoName, params: PageParams): Future[Page[ActionVariable]] =
+    pipeline.callPage(RepositoryActionApi.variablesRequest(owner, name, params), params)(using
       RepositoryActionDecoders.variables)
 
   /** Reads one variable — `GET /repos/{owner}/{repo}/actions/variables/{variablename}`.
@@ -506,8 +505,8 @@ final class RepositoryActionApi private[codeberg4s] (pipeline: ApiPipeline[Futur
   /** Starts a workflow by hand — `POST /repos/{owner}/{repo}/actions/workflows/{workflowfilename}/dispatches`.
     *
     * '''Never retried.''' A repeat starts a second run, and Forgejo has no idempotency key that would let the instance
-    * recognise the repeat. A transport failure therefore leaves the caller unsure whether a run started, which
-    * [[listRuns]] resolves.
+    * recognise the repeat. A transport failure therefore leaves the caller unsure whether a run started, which [[runs]]
+    * resolves.
     *
     * '''Whether a run is described back is the caller's choice.''' Without [[DispatchWorkflow.returningRunInfo]] the
     * instance answers `204` with an empty body and this yields `None`; with it, `201` and a [[DispatchedWorkflowRun]].
@@ -536,7 +535,7 @@ final class RepositoryActionApi private[codeberg4s] (pipeline: ApiPipeline[Futur
 /** The requests this group issues, its operation ids, and its typed rail. */
 object RepositoryActionApi:
 
-  /** The stable operation id of [[RepositoryActionApi.listArtifacts]]. Safe to alert on. */
+  /** The stable operation id of [[RepositoryActionApi.artifacts]]. Safe to alert on. */
   val ListArtifactsOperation: String = "repos.actions.artifacts.list"
 
   /** The stable operation id of the single-artifact read on [[RepositoryActionApi]]. */
@@ -551,7 +550,7 @@ object RepositoryActionApi:
   /** The stable operation id of [[RepositoryActionApi.downloadRunLogs]]. */
   val DownloadRunLogsOperation: String = "repos.actions.runs.logs.download"
 
-  /** The stable operation id of [[RepositoryActionApi.listRuns]]. */
+  /** The stable operation id of [[RepositoryActionApi.runs]]. */
   val ListRunsOperation: String = "repos.actions.runs.list"
 
   /** The stable operation id of the single-run read on [[RepositoryActionApi]]. */
@@ -563,16 +562,16 @@ object RepositoryActionApi:
   /** The stable operation id of [[RepositoryActionApi.cancelRun]]. */
   val CancelRunOperation: String = "repos.actions.runs.cancel"
 
-  /** The stable operation id of [[RepositoryActionApi.listRunArtifacts]]. */
+  /** The stable operation id of [[RepositoryActionApi.runArtifacts]]. */
   val ListRunArtifactsOperation: String = "repos.actions.runs.artifacts.list"
 
-  /** The stable operation id of [[RepositoryActionApi.listRunJobs]]. */
+  /** The stable operation id of [[RepositoryActionApi.runJobs]]. */
   val ListRunJobsOperation: String = "repos.actions.runs.jobs.list"
 
   /** The stable operation id of [[RepositoryActionApi.jobLogs]]. */
   val JobLogsOperation: String = "repos.actions.jobs.logs"
 
-  /** The stable operation id of [[RepositoryActionApi.listRunners]]. */
+  /** The stable operation id of [[RepositoryActionApi.runners]]. */
   val ListRunnersOperation: String = "repos.actions.runners.list"
 
   /** The stable operation id of the single-runner read on [[RepositoryActionApi]]. */
@@ -590,10 +589,10 @@ object RepositoryActionApi:
   /** The stable operation id of [[RepositoryActionApi.searchRunnerJobs]]. */
   val SearchRunnerJobsOperation: String = "repos.actions.runners.jobs.search"
 
-  /** The stable operation id of [[RepositoryActionApi.listTasks]]. */
+  /** The stable operation id of [[RepositoryActionApi.tasks]]. */
   val ListTasksOperation: String = "repos.actions.tasks.list"
 
-  /** The stable operation id of [[RepositoryActionApi.listSecrets]]. */
+  /** The stable operation id of [[RepositoryActionApi.secrets]]. */
   val ListSecretsOperation: String = "repos.actions.secrets.list"
 
   /** The stable operation id of [[RepositoryActionApi.setSecret]]. */
@@ -602,7 +601,7 @@ object RepositoryActionApi:
   /** The stable operation id of [[RepositoryActionApi.deleteSecret]]. */
   val DeleteSecretOperation: String = "repos.actions.secrets.delete"
 
-  /** The stable operation id of [[RepositoryActionApi.listVariables]]. */
+  /** The stable operation id of [[RepositoryActionApi.variables]]. */
   val ListVariablesOperation: String = "repos.actions.variables.list"
 
   /** The stable operation id of the single-variable read on [[RepositoryActionApi]]. */
@@ -628,14 +627,14 @@ object RepositoryActionApi:
     */
   final class Attempt private[codeberg4s] (rail: RepositoryActionApi)(using exec: Exec[Future]):
 
-    /** [[RepositoryActionApi.listArtifacts]] with its failure as a value. */
-    def listArtifacts(
+    /** [[RepositoryActionApi.artifacts]] with its failure as a value. */
+    def artifacts(
         owner: Owner,
         name: RepoName,
         query: ArtifactQuery,
         params: PageParams,
     ): Future[Either[CodebergError, Page[ActionArtifact]]] =
-      exec.attempt(rail.listArtifacts(owner, name, query, params))
+      exec.attempt(rail.artifacts(owner, name, query, params))
 
     /** The single-artifact read on [[RepositoryActionApi]], with its failure as a value. */
     def artifact(owner: Owner, name: RepoName, id: ArtifactId): Future[Either[CodebergError, ActionArtifact]] =
@@ -657,14 +656,14 @@ object RepositoryActionApi:
     def downloadRunLogs(owner: Owner, name: RepoName, id: RunId): Future[Either[CodebergError, CodebergResponse]] =
       exec.attempt(rail.downloadRunLogs(owner, name, id))
 
-    /** [[RepositoryActionApi.listRuns]] with its failure as a value. */
-    def listRuns(
+    /** [[RepositoryActionApi.runs]] with its failure as a value. */
+    def runs(
         owner: Owner,
         name: RepoName,
         query: ActionRunQuery,
         params: PageParams,
     ): Future[Either[CodebergError, Page[ActionRun]]] =
-      exec.attempt(rail.listRuns(owner, name, query, params))
+      exec.attempt(rail.runs(owner, name, query, params))
 
     /** The single-run read on [[RepositoryActionApi]], with its failure as a value. */
     def run(owner: Owner, name: RepoName, id: RunId): Future[Either[CodebergError, ActionRun]] =
@@ -678,19 +677,19 @@ object RepositoryActionApi:
     def cancelRun(owner: Owner, name: RepoName, id: RunId): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.cancelRun(owner, name, id))
 
-    /** [[RepositoryActionApi.listRunArtifacts]] with its failure as a value. */
-    def listRunArtifacts(
+    /** [[RepositoryActionApi.runArtifacts]] with its failure as a value. */
+    def runArtifacts(
         owner: Owner,
         name: RepoName,
         id: RunId,
         query: ArtifactQuery,
         params: PageParams,
     ): Future[Either[CodebergError, Page[ActionArtifact]]] =
-      exec.attempt(rail.listRunArtifacts(owner, name, id, query, params))
+      exec.attempt(rail.runArtifacts(owner, name, id, query, params))
 
-    /** [[RepositoryActionApi.listRunJobs]] with its failure as a value. */
-    def listRunJobs(owner: Owner, name: RepoName, id: RunId): Future[Either[CodebergError, Vector[ActionRunJob]]] =
-      exec.attempt(rail.listRunJobs(owner, name, id))
+    /** [[RepositoryActionApi.runJobs]] with its failure as a value. */
+    def runJobs(owner: Owner, name: RepoName, id: RunId): Future[Either[CodebergError, Vector[ActionRunJob]]] =
+      exec.attempt(rail.runJobs(owner, name, id))
 
     /** [[RepositoryActionApi.jobLogs]] with its failure as a value. */
     def jobLogs(
@@ -701,14 +700,14 @@ object RepositoryActionApi:
     ): Future[Either[CodebergError, String]] =
       exec.attempt(rail.jobLogs(owner, name, id, attempt))
 
-    /** [[RepositoryActionApi.listRunners]] with its failure as a value. */
-    def listRunners(
+    /** [[RepositoryActionApi.runners]] with its failure as a value. */
+    def runners(
         owner: Owner,
         name: RepoName,
         visibility: RunnerVisibility,
         params: PageParams,
     ): Future[Either[CodebergError, Page[ActionRunner]]] =
-      exec.attempt(rail.listRunners(owner, name, visibility, params))
+      exec.attempt(rail.runners(owner, name, visibility, params))
 
     /** The single-runner read on [[RepositoryActionApi]], with its failure as a value. */
     def runner(owner: Owner, name: RepoName, id: RunnerId): Future[Either[CodebergError, ActionRunner]] =
@@ -741,22 +740,22 @@ object RepositoryActionApi:
     ): Future[Either[CodebergError, Vector[ActionRunJob]]] =
       exec.attempt(rail.searchRunnerJobs(owner, name, labels))
 
-    /** [[RepositoryActionApi.listTasks]] with its failure as a value. */
-    def listTasks(
+    /** [[RepositoryActionApi.tasks]] with its failure as a value. */
+    def tasks(
         owner: Owner,
         name: RepoName,
         query: ActionTaskQuery,
         params: PageParams,
     ): Future[Either[CodebergError, Page[ActionTask]]] =
-      exec.attempt(rail.listTasks(owner, name, query, params))
+      exec.attempt(rail.tasks(owner, name, query, params))
 
-    /** [[RepositoryActionApi.listSecrets]] with its failure as a value. */
-    def listSecrets(
+    /** [[RepositoryActionApi.secrets]] with its failure as a value. */
+    def secrets(
         owner: Owner,
         name: RepoName,
         params: PageParams,
     ): Future[Either[CodebergError, Page[ActionSecret]]] =
-      exec.attempt(rail.listSecrets(owner, name, params))
+      exec.attempt(rail.secrets(owner, name, params))
 
     /** [[RepositoryActionApi.setSecret]] with its failure as a value. */
     def setSecret(
@@ -771,13 +770,13 @@ object RepositoryActionApi:
     def deleteSecret(owner: Owner, name: RepoName, secret: SecretName): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.deleteSecret(owner, name, secret))
 
-    /** [[RepositoryActionApi.listVariables]] with its failure as a value. */
-    def listVariables(
+    /** [[RepositoryActionApi.variables]] with its failure as a value. */
+    def variables(
         owner: Owner,
         name: RepoName,
         params: PageParams,
     ): Future[Either[CodebergError, Page[ActionVariable]]] =
-      exec.attempt(rail.listVariables(owner, name, params))
+      exec.attempt(rail.variables(owner, name, params))
 
     /** The single-variable read on [[RepositoryActionApi]], with its failure as a value. */
     def variable(
@@ -828,7 +827,7 @@ object RepositoryActionApi:
   private[actions] def updateVariableEligibility(command: UpdateVariable): RetryEligibility =
     if command.renamedTo.isEmpty then RetryEligibility.AlwaysRetry else RetryEligibility.Never
 
-  private def listArtifactsRequest(
+  private def artifactsRequest(
       owner: Owner,
       name: RepoName,
       query: ArtifactQuery,
@@ -852,7 +851,7 @@ object RepositoryActionApi:
   private def downloadRunLogsRequest(owner: Owner, name: RepoName, id: RunId): CodebergRequest =
     read(DownloadRunLogsOperation, runPath(owner, name, id) :+ "logs", Nil)
 
-  private def listRunsRequest(
+  private def runsRequest(
       owner: Owner,
       name: RepoName,
       query: ActionRunQuery,
@@ -869,7 +868,7 @@ object RepositoryActionApi:
   private def cancelRunRequest(owner: Owner, name: RepoName, id: RunId): CodebergRequest =
     bodiless(CancelRunOperation, HttpMethod.Post, runPath(owner, name, id) :+ "cancel")
 
-  private def listRunArtifactsRequest(
+  private def runArtifactsRequest(
       owner: Owner,
       name: RepoName,
       id: RunId,
@@ -882,7 +881,7 @@ object RepositoryActionApi:
       ActionQueries.artifacts(query) ++ PagingQuery.window(params),
     )
 
-  private def listRunJobsRequest(owner: Owner, name: RepoName, id: RunId): CodebergRequest =
+  private def runJobsRequest(owner: Owner, name: RepoName, id: RunId): CodebergRequest =
     read(ListRunJobsOperation, runPath(owner, name, id) :+ "jobs", Nil)
 
   private def jobLogsRequest(
@@ -897,7 +896,7 @@ object RepositoryActionApi:
       ActionQueries.jobLogs(attempt),
     )
 
-  private def listRunnersRequest(
+  private def runnersRequest(
       owner: Owner,
       name: RepoName,
       visibility: RunnerVisibility,
@@ -933,7 +932,7 @@ object RepositoryActionApi:
   ): CodebergRequest =
     read(SearchRunnerJobsOperation, runnersPath(owner, name) :+ "jobs", ActionQueries.runnerJobs(labels))
 
-  private def listTasksRequest(
+  private def tasksRequest(
       owner: Owner,
       name: RepoName,
       query: ActionTaskQuery,
@@ -945,7 +944,7 @@ object RepositoryActionApi:
       ActionQueries.tasks(query) ++ PagingQuery.window(params),
     )
 
-  private def listSecretsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
+  private def secretsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
     read(ListSecretsOperation, secretsPath(owner, name), PagingQuery.window(params))
 
   private def setSecretRequest(
@@ -959,7 +958,7 @@ object RepositoryActionApi:
   private def deleteSecretRequest(owner: Owner, name: RepoName, secret: SecretName): CodebergRequest =
     remove(DeleteSecretOperation, secretPath(owner, name, secret))
 
-  private def listVariablesRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
+  private def variablesRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
     read(ListVariablesOperation, variablesPath(owner, name), PagingQuery.window(params))
 
   private def variableRequest(owner: Owner, name: RepoName, variableName: VariableName): CodebergRequest =

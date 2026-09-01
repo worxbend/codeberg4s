@@ -25,6 +25,47 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **Every sub-resource listing is now named after its plural noun.** A previous
+  release applied this rule to `RepositoryApi` only, which left the library
+  saying the same thing two ways — `client.repositories.commits(...)` next to
+  `client.pulls.listCommits(...)`. The rule is that `list` names the listing of
+  an API group's *own* resource, and a listing of a sub-resource hanging off it
+  is just the noun: the receiver already says which group is being asked, so the
+  `list` prefix adds a word that carries no information. It is now written down
+  in `SCALA_CODE_STYLE.md` and checked by `ListingNamingSuite`, a reflection
+  test that fails on any public `list<Noun>` outside a recorded exemption.
+
+  **Breaking:** drop the `list` prefix and lower-case the first letter of the
+  noun, on both the convenience rail and the `.attempt` rail. `pulls`:
+  `listReviews` → `reviews`, `listCommits` → `commits`, `listFiles` → `files`,
+  `listPinned` → `pinned`, `listReviewComments` → `reviewComments`.
+  `repositories.access`: `listBranchProtections` → `branchProtections`,
+  `listTagProtections` → `tagProtections`, `listCollaborators` →
+  `collaborators`, `listDeployKeys` → `deployKeys`, `listTeams` → `teams`.
+  `repositories.actions`: `listArtifacts` → `artifacts`, `listRuns` → `runs`,
+  `listRunners` → `runners`, `listSecrets` → `secrets`, `listVariables` →
+  `variables`, `listTasks` → `tasks`, `listRunArtifacts` → `runArtifacts`,
+  `listRunJobs` → `runJobs`. `organizations.actions` and `users.account.actions`
+  rename their `listRunners`, `listSecrets` and `listVariables` the same way.
+  `repositories.gitdata`: `listRefs` → `refs`, `listMatchingRefs` →
+  `matchingRefs`, `listStatuses` → `statuses`, `listTree` → `tree`.
+  `repositories.wiki`: `listPages` → `pages`. `repositories.hooks`:
+  `listGitHooks` → `gitHooks`. `repositories.publishing`: `listAssets` →
+  `assets`. `issues`: `listBlocks` → `blocks`, `listDependencies` →
+  `dependencies`.
+
+  Two families deliberately keep the prefix, and both are recorded in the
+  suite's exemption list. The *scope-disambiguated* readers name the parent
+  rather than the resource, because the noun alone would not say which parent is
+  meant: `issues.attachments.listForIssue` / `listForComment`,
+  `issues.comments.listForRepository`, `issues.labels.listOnIssue`,
+  `issues.reactions.listOnIssue` / `listOnComment`, and
+  `notifications.listRepository`. The other is a *collision*:
+  `IssueApi.listComments`, `listLabels` and `listMilestones` cannot take their
+  bare nouns, because `client.issues.comments`, `.labels` and `.milestones` are
+  already the sub-API accessors. Each of those three now says so in its
+  Scaladoc.
+
 - **`Repository.id` is a `RepositoryId`, and `RepositoryId` moved to
   `com.worxbend.codeberg4s.repositories`.** `repos.admin.byId` already took a
   `RepositoryId` while the model handed back a bare `Long`, so addressing a
