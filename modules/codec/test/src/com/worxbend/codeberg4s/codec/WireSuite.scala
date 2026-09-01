@@ -15,6 +15,7 @@ final class WireSuite extends FunSuite:
 
   /** A nested DTO stand-in whose conversion always fails, at whatever path it is handed. */
   private final case class FailingDto(field: String):
+
     def toDomainAt(at: JsonPath): Either[DecodeFailure, Nothing] =
       Left(DecodeFailure(at.field(field), s"required field '$field' is missing"))
 
