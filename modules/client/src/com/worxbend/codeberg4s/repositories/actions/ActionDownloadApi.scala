@@ -1,16 +1,14 @@
 package com.worxbend.codeberg4s.repositories.actions
 
-import com.worxbend.codeberg4s.core.{ApiPipeline, BinaryHttpPort, BinaryResponse, CodebergRequest, Exec}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, CodebergResponse, Exec}
 import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
 
 import scala.concurrent.Future
 
 /** The two Actions endpoints whose success body is a ZIP archive rather than text.
   *
-  * Reached as `client.downloads`. They are separate from [[RepositoryActionApi]] because they are the only operations
-  * in the library that need a byte-carrying transport ([[com.worxbend.codeberg4s.core.BinaryHttpPort]]), and folding
-  * that requirement into the class that serves the other twenty-six would have made every one of them depend on a
-  * capability none of them use.
+  * Reached as `client.downloads`. They are separate from [[RepositoryActionApi]] because every operation there decodes
+  * a model from the body, and these two hand the body back undecoded.
   *
   * '''Memory.''' Both operations hold the whole archive in memory as an `Array[Byte]`. A CI artifact can be large, and
   * this library does not stream. Check [[com.worxbend.codeberg4s.repositories.actions.ActionArtifact.sizeInBytes]]
@@ -33,28 +31,26 @@ import scala.concurrent.Future
   *
   * Both are `GET`s and are retried under [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]].
   */
-final class ActionDownloadApi private[codeberg4s] (
-    pipeline: ApiPipeline[Future],
-    binary: BinaryHttpPort[Future],
-)(using exec: Exec[Future]):
+final class ActionDownloadApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using exec: Exec[Future]):
 
   /** The same operations, with failures as values instead of as a failed `Future`. */
   val attempt: ActionDownloadApi.Attempt = ActionDownloadApi.Attempt(this)
 
   /** Downloads an artifact's ZIP — `GET /repos/{owner}/{repo}/actions/artifacts/{id}/zip`.
     *
-    * The returned [[com.worxbend.codeberg4s.core.BinaryResponse]] carries the bytes verbatim along with the response
-    * headers, so a caller can read `content-disposition` for the server's own file name.
+    * The returned [[com.worxbend.codeberg4s.core.CodebergResponse]] carries the archive verbatim in its
+    * [[com.worxbend.codeberg4s.core.CodebergResponse.body]] — read `.body.bytes` — along with the response headers, so
+    * a caller can read `content-disposition` for the server's own file name.
     */
-  def artifact(owner: Owner, name: RepoName, artifact: ArtifactId): Future[BinaryResponse] =
-    pipeline.callBinary(ActionDownloadApi.artifactRequest(owner, name, artifact), binary)
+  def artifact(owner: Owner, name: RepoName, artifact: ArtifactId): Future[CodebergResponse] =
+    pipeline.callDownload(ActionDownloadApi.artifactRequest(owner, name, artifact))
 
   /** Downloads a run's logs as a ZIP — `GET /repos/{owner}/{repo}/actions/runs/{id}/logs`.
     *
     * For one job's logs as plain text, use [[RepositoryActionApi.jobLogs]] instead; it needs no archive handling.
     */
-  def runLogs(owner: Owner, name: RepoName, run: RunId): Future[BinaryResponse] =
-    pipeline.callBinary(ActionDownloadApi.runLogsRequest(owner, name, run), binary)
+  def runLogs(owner: Owner, name: RepoName, run: RunId): Future[CodebergResponse] =
+    pipeline.callDownload(ActionDownloadApi.runLogsRequest(owner, name, run))
 
 /** The requests this group issues, and its typed rail. */
 object ActionDownloadApi:
@@ -73,11 +69,11 @@ object ActionDownloadApi:
         owner: Owner,
         name: RepoName,
         artifact: ArtifactId,
-    ): Future[Either[CodebergError, BinaryResponse]] =
+    ): Future[Either[CodebergError, CodebergResponse]] =
       exec.attempt(rail.artifact(owner, name, artifact))
 
     /** [[ActionDownloadApi.runLogs]] with its failure as a value. */
-    def runLogs(owner: Owner, name: RepoName, run: RunId): Future[Either[CodebergError, BinaryResponse]] =
+    def runLogs(owner: Owner, name: RepoName, run: RunId): Future[Either[CodebergError, CodebergResponse]] =
       exec.attempt(rail.runLogs(owner, name, run))
 
   private def artifactRequest(owner: Owner, name: RepoName, artifact: ArtifactId): CodebergRequest =

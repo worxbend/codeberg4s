@@ -4,8 +4,8 @@ import munit.FunSuite
 
 import java.nio.charset.StandardCharsets
 
-/** The three core values that carry an `Array[Byte]`, and the one rule they all have to obey: two of them holding the
-  * same bytes are equal.
+/** The core values that carry an `Array[Byte]`, and the one rule they all have to obey: two of them holding the same
+  * bytes are equal.
   *
   * They are tested together because the defect is one defect. An array's `equals` in Scala is '''identity''', so the
   * equality a case class generates for a byte field compares two archives by reference — `download(a) == download(a)`
@@ -21,43 +21,47 @@ final class ByteEqualitySuite extends FunSuite:
 
   private val Headers: Map[String, List[String]] = Map("content-type" -> List("application/zip"))
 
-  // --- BinaryResponse -------------------------------------------------------
+  // --- ResponseBody, and the response that carries it -----------------------
 
-  test("two binary responses carrying equal-but-distinct arrays are equal and hash alike"):
-    val one = BinaryResponse(200, Headers, bytes("PK-archive"))
-    val two = BinaryResponse(200, Headers, bytes("PK-archive"))
+  private def zip(text: String): CodebergResponse =
+    CodebergResponse(200, Headers, ResponseBody.of(bytes(text), StandardCharsets.UTF_8))
+
+  test("two bodies carrying equal-but-distinct arrays are equal and hash alike"):
+    val one = ResponseBody.of(bytes("PK-archive"), StandardCharsets.UTF_8)
+    val two = ResponseBody.of(bytes("PK-archive"), StandardCharsets.UTF_8)
 
     assert(!one.bytes.eq(two.bytes), "the two arrays must be distinct objects, or the test proves nothing")
     assertEquals(one, two)
     assertEquals(one.hashCode, two.hashCode)
 
-  test("a set of binary responses keeps one copy of a repeated archive"):
-    val archive = BinaryResponse(200, Headers, bytes("PK-archive"))
-    val same    = BinaryResponse(200, Headers, bytes("PK-archive"))
+  test("a set of responses keeps one copy of a repeated archive"):
+    assertEquals(Set(zip("PK-archive"), zip("PK-archive")).size, 1)
 
-    assertEquals(Set(archive, same).size, 1)
-
-  test("binary responses whose bytes differ are not equal"):
-    val one = BinaryResponse(200, Headers, bytes("PK-archive"))
-    val two = BinaryResponse(200, Headers, bytes("PK-archiv3"))
-
-    assertNotEquals(one, two)
+  test("responses whose bytes differ are not equal"):
+    assertNotEquals(zip("PK-archive"), zip("PK-archiv3"))
 
   test("a shorter body is not equal to a longer one that starts the same way"):
-    assertNotEquals(BinaryResponse(200, Headers, bytes("PK")), BinaryResponse(200, Headers, bytes("PK-archive")))
+    assertNotEquals(zip("PK"), zip("PK-archive"))
 
   test("the status and the headers still count, so equal bytes alone are not enough"):
-    val archive = BinaryResponse(200, Headers, bytes("PK-archive"))
+    val archive = zip("PK-archive")
+    val body    = ResponseBody.of(bytes("PK-archive"), StandardCharsets.UTF_8)
 
-    assertNotEquals(archive, BinaryResponse(404, Headers, bytes("PK-archive")))
-    assertNotEquals(archive, BinaryResponse(200, Map.empty[String, List[String]], bytes("PK-archive")))
+    assertNotEquals(archive, CodebergResponse(404, Headers, body))
+    assertNotEquals(archive, CodebergResponse(200, Map.empty[String, List[String]], body))
 
-  test("canEqual agrees with equals: a binary response is comparable to another and to nothing else"):
-    // The compiler still generates canEqual for a case class that writes its own
-    // equals, and the two must not disagree about what is worth comparing.
-    val archive = BinaryResponse(200, Headers, bytes("PK-archive"))
+  test("the charset counts too: the same bytes read as different text are different bodies"):
+    // Two bodies that would render differently must not compare equal, or a
+    // cache keyed on the body would serve one for the other.
+    assertNotEquals(
+      ResponseBody.of(bytes("PK-archive"), StandardCharsets.UTF_8),
+      ResponseBody.of(bytes("PK-archive"), StandardCharsets.ISO_8859_1),
+    )
 
-    assert(archive.canEqual(BinaryResponse(500, Map.empty, Array.emptyByteArray)))
+  test("canEqual agrees with equals: a response is comparable to another and to nothing else"):
+    val archive = zip("PK-archive")
+
+    assert(archive.canEqual(CodebergResponse(500, Map.empty, ResponseBody.Empty)))
     assert(!archive.canEqual("PK-archive"))
     assertNotEquals[Any, Any](archive, "PK-archive")
 

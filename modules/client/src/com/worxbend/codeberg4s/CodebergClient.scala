@@ -2,7 +2,7 @@ package com.worxbend.codeberg4s
 
 import com.worxbend.codeberg4s.client.{FutureExec, FutureTimer, GuardedTelemetry}
 import com.worxbend.codeberg4s.codec.ApiErrorBodyCodec
-import com.worxbend.codeberg4s.core.{ApiPipeline, BinaryHttpPort, Exec, Telemetry}
+import com.worxbend.codeberg4s.core.{ApiPipeline, Exec, Telemetry}
 import com.worxbend.codeberg4s.issues.IssueApi
 import com.worxbend.codeberg4s.miscellaneous.MiscellaneousApi
 import com.worxbend.codeberg4s.notifications.NotificationApi
@@ -52,7 +52,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 final class CodebergClient private (
     config: CodebergConfig,
     pipeline: ApiPipeline[Future],
-    binary: BinaryHttpPort[Future],
     timer: FutureTimer,
     ownedBackend: Option[Backend[Future]],
 )(using Exec[Future]):
@@ -93,11 +92,10 @@ final class CodebergClient private (
 
   /** The two endpoints whose success body is a ZIP rather than text: an Actions artifact and a run's logs.
     *
-    * They live here rather than under [[repos]] because they are the only operations in the API that need a
-    * byte-carrying transport, and every other group is built on the textual one. Both hold the whole archive in memory;
-    * this library does not stream.
+    * They hand the body back undecoded, where every other group decodes a model from it. Both hold the whole archive in
+    * memory; this library does not stream.
     */
-  val downloads: ActionDownloadApi = ActionDownloadApi(pipeline, binary)
+  val downloads: ActionDownloadApi = ActionDownloadApi(pipeline)
 
   private val closed: AtomicBoolean = AtomicBoolean(false)
 
@@ -232,4 +230,4 @@ object CodebergClient:
       ApiErrorBodyCodec.parse,
     )
 
-    new CodebergClient(config, pipeline, port, timer, owned)
+    new CodebergClient(config, pipeline, timer, owned)

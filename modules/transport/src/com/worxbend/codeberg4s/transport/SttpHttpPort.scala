@@ -2,8 +2,6 @@ package com.worxbend.codeberg4s.transport
 
 import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.core.{
-  BinaryHttpPort,
-  BinaryResponse,
   CodebergRequest,
   CodebergResponse,
   HttpPort,
@@ -91,8 +89,7 @@ final class SttpHttpPort(
     backend: Backend[Future],
     config: CodebergConfig,
 )(using ExecutionContext)
-    extends HttpPort[Future]
-      with BinaryHttpPort[Future]:
+    extends HttpPort[Future]:
 
   /** The request target root, parsed once.
     *
@@ -134,19 +131,6 @@ final class SttpHttpPort(
       maxBodyBytes: Long,
   ): Future[Either[TransportFailure, CodebergResponse]] =
     dispatch(request, maxBodyBytes, SttpHttpPort.succeed)
-
-  /** Sends `request` and reports what came back as a [[com.worxbend.codeberg4s.core.BinaryResponse]] instead.
-    *
-    * Identical to [[send]] apart from the response type it assembles, because both read the body the same way now and
-    * both take their bound from the caller. Two methods remain because core still has two response types; see
-    * [[com.worxbend.codeberg4s.core.BinaryResponse]] for why that is expected to change.
-    */
-  override def sendBinary(
-      request: CodebergRequest,
-      redactedUri: String,
-      maxBodyBytes: Long,
-  ): Future[Either[TransportFailure, BinaryResponse]] =
-    dispatch(request, maxBodyBytes, SttpHttpPort.succeedBinary)
 
   /** Deliberately opaque: this object holds the configured credentials, so it renders nothing about its state. */
   override def toString: String = "SttpHttpPort"
@@ -430,9 +414,6 @@ object SttpHttpPort:
         // boundary does not match the body sttp actually writes.
         request.multipartBody(multipart(fieldName, bytes).fileName(fileName).contentType(mediaType))
 
-  private def succeedBinary(response: Response[Array[Byte]]): Either[TransportFailure, BinaryResponse] =
-    Right(BinaryResponse(response.code.code, lowercased(response.headers), response.body))
-
   /** The charset the response declared is captured here, next to the bytes, and applied nowhere yet.
     *
     * sttp used to make this decision inside `asStringAlways`; it now belongs to
@@ -443,7 +424,7 @@ object SttpHttpPort:
     val body = ResponseBody.of(response.body, ResponseBody.charsetOf(response.contentType))
     Right(CodebergResponse(response.code.code, lowercased(response.headers), body))
 
-  /** Generic in the success type so the textual and binary paths share one classification. */
+  /** Generic in the success type so the send and the pre-flight refusals share one classification. */
   private def fail[A](error: Throwable): Either[TransportFailure, A] =
     Left(TransportFailure(classify(error)))
 

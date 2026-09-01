@@ -232,11 +232,11 @@ final class SttpHttpPortSuite extends FunSuite:
     send(port, awkwardRequest, CodebergConfig.DefaultMaxDownloadBodyBytes).map: _ =>
       assertEquals(sent(backend).options.maxResponseBodyLength, Some(CodebergConfig.DefaultMaxDownloadBodyBytes))
 
-  test("the byte-carrying send takes its bound from the caller too"):
+  test("the bound is whatever the caller passed, never a number the adapter kept"):
     val backend = recording(respondingOk)
-    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous).copy(maxResponseBodyBytes = 111L))
 
-    port.sendBinary(awkwardRequest, "https://forge.example/api/v1", 222L).map: _ =>
+    send(port, awkwardRequest, 222L).map: _ =>
       assertEquals(sent(backend).options.maxResponseBodyLength, Some(222L))
 
   test("an exception this library does not recognise is unknown, never dropped"):
