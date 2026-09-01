@@ -25,6 +25,20 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **Wire DTOs share one conversion capability, `codec.WireModel[A]`.** Every DTO
+  declared its own `toDomain` as `toDomainAt(JsonPath.Root)` — the same member,
+  written out 75 times — and 44 of them also carried a companion `toDomainAll`
+  whose body was the same one-line array fold. Both now live in one place:
+  `WireModel[A]` asks a DTO only for `toDomainAt(at)` and supplies `toDomain`,
+  and `WireModel.all(base, dtos)` is the fold. Conversion behaviour, including
+  the JSON path each failure reports, is unchanged.
+
+  **Breaking:** `FooDto.toDomainAll(base, dtos)` is gone from the DTO
+  companions. Replace it with `WireModel.all(base, dtos)`, importing
+  `com.worxbend.codeberg4s.codec.WireModel`. `FooDto.toDomain` and
+  `fooDto.toDomainAt(at)` are unaffected. The three `QuotaUsed*Dto` companions,
+  whose conversions cannot fail, keep their own `toDomainAll`.
+
 - **Quota is modelled once, in `com.worxbend.codeberg4s.quota`.** Forgejo
   answers `GET /orgs/{org}/quota` and `GET /user/quota` with the same
   `QuotaInfo` payload, and the three usage listings under each of them with the
