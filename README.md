@@ -10,9 +10,10 @@ REST API v1.
 - **Two error rails.** Use exceptions if that suits your codebase, or typed
   `Either` values if it does not. Same implementation underneath.
 - **Illegal requests are unrepresentable.** Owners, repository names, branches,
-  labels and page sizes are validated types with `Either`-returning
-  constructors, so a value that would forge a request path is rejected before a
-  client is involved.
+  labels and page sizes are validated types. A string literal is checked while
+  the code compiles — `Owner("forgejo")` *is* the `Owner` — and a run-time value
+  goes through `Owner.from`, which returns an `Either`. Either way, a value that
+  would forge a request path is rejected before a client is involved.
 - **Pagination you cannot get wrong by accident.** No operation returns an
   unbounded `List`; every listing hands back a `Page[A]` that says whether
   another page exists.
@@ -75,11 +76,12 @@ given ExecutionContext = ExecutionContext.global
 // Build one per instance you talk to, for the lifetime of the application.
 val client: CodebergClient = CodebergClient(CodebergConfig(Auth.Anonymous))
 
-val stars: Either[ValidationError, Future[Long]] =
-  for
-    owner <- Owner.from("forgejo")
-    name  <- RepoName.from("forgejo")
-  yield client.repos.get(owner, name).map(_.starsCount)
+// Owner("forgejo") and RepoName("forgejo") are checked while this file
+// compiles, so they are the identifiers themselves — no Either to unwrap.
+// An invalid literal, such as Owner("forgejo/forgejo"), fails the build and
+// points at the literal.
+val stars: Future[Long] =
+  client.repos.get(Owner("forgejo"), RepoName("forgejo")).map(_.starsCount)
 
 // ... and at shutdown:
 client.close()
@@ -91,6 +93,34 @@ everyday surface — `ApiToken`, `Auth`, `Page`, `PageNumber`, `PageParams` and
 `CodebergConfig`, `Owner`, `RepoName`, `ValidationError`, …). The re-export
 list is deliberately short: more specialised types keep one canonical import
 from their own sub-package, as the examples below show.
+
+### When the identifier comes from an argument or a config file
+
+A value that only exists at run time cannot be checked by the compiler, so it
+goes through `from`, which returns `Either[ValidationError, …]`:
+
+```scala
+import com.worxbend.codeberg4s.*
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
+given ExecutionContext = ExecutionContext.global
+
+def client: CodebergClient
+def rawOwner: String
+def rawName: String
+
+val stars: Either[ValidationError, Future[Long]] =
+  for
+    owner <- Owner.from(rawOwner)
+    name  <- RepoName.from(rawName)
+  yield client.repos.get(owner, name).map(_.starsCount)
+```
+
+Two nested containers is the honest shape: validation fails *before* a request
+exists, so it cannot be a failed `Future`. Handing `Owner(rawOwner)` a run-time
+`String` is itself a compile error, so the two constructors cannot be mixed up.
 
 Authenticating is a different `Auth` and nothing else. A token is validated on
 the way in, so a blank or control-character-bearing string never reaches a
@@ -136,8 +166,8 @@ import scala.concurrent.ExecutionContext
 given ExecutionContext = ExecutionContext.global
 
 def client: CodebergClient
-def owner: Owner   // Owner.from("forgejo")
-def name: RepoName // RepoName.from("forgejo")
+def owner: Owner   // Owner("forgejo")
+def name: RepoName // RepoName("forgejo")
 ```
 
 ### `client.version`
