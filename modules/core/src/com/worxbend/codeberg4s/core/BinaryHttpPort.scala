@@ -9,9 +9,7 @@ package com.worxbend.codeberg4s.core
   * this, and one that cannot simply does not.
   *
   * The failure contract matches [[HttpPort]]: any HTTP status, including `5xx`, arrives as a `Right`; a `Left` means no
-  * complete response arrived. The one difference is which bound applies to the body — these operations fetch archives,
-  * so an adapter applies [[com.worxbend.codeberg4s.CodebergConfig.maxDownloadBodyBytes]] here rather than the smaller
-  * [[com.worxbend.codeberg4s.CodebergConfig.maxResponseBodyBytes]].
+  * complete response arrived, and the body bound is the one the caller passes, exactly as on [[HttpPort]].
   *
   * @tparam F
   *   the effect the client runs in
@@ -24,5 +22,11 @@ trait BinaryHttpPort[F[_]]:
     *   what to send; its body is built the same way as for a textual request
     * @param redactedUri
     *   the safe rendering of the target, for an adapter that reports what it dialled
+    * @param maxBodyBytes
+    *   how many bytes of body the caller is willing to hold; see [[HttpPort.send]]
     */
-  def sendBinary(request: CodebergRequest, redactedUri: String): F[Either[TransportFailure, BinaryResponse]]
+  def sendBinary(
+      request: CodebergRequest,
+      redactedUri: String,
+      maxBodyBytes: Long,
+  ): F[Either[TransportFailure, BinaryResponse]]

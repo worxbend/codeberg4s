@@ -30,7 +30,11 @@ final class BinaryPipelineSuite extends FunSuite:
       extends BinaryHttpPort[Result]:
     private var remaining: List[Either[TransportFailure, BinaryResponse]] = responses
 
-    def sendBinary(request: CodebergRequest, redactedUri: String): Result[Either[TransportFailure, BinaryResponse]] =
+    def sendBinary(
+        request: CodebergRequest,
+        redactedUri: String,
+        maxBodyBytes: Long,
+    ): Result[Either[TransportFailure, BinaryResponse]] =
       remaining match
         case head :: tail => remaining = tail; Right(head)
         case Nil          => Right(Left(TransportFailure(com.worxbend.codeberg4s.TransportCause.Unknown("exhausted"))))

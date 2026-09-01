@@ -93,6 +93,16 @@ final class ApiPipelineSuite extends FunSuite:
     assertEquals(result, Right("payload"))
     assertEquals(http.uris, Vector("https://codeberg.org/api/v1/repos/owner/name/issues?page=1&token=***"))
 
+  test("an ordinary call reads its body under the configured response bound"):
+    given Decode[String] = body => Right(body.text)
+    val http             = FakeHttpPort.always(responseOf(200, "payload"))
+
+    val result = pipelineOf(http, FakeTimer(0L), silent, stubErrorBody)
+      .call[String](listing, RetryEligibility.IdempotentOnly)
+
+    assertEquals(result, Right("payload"))
+    assertEquals(http.bounds, Vector(config.maxResponseBodyBytes))
+
   test("a 404 becomes an Api failure carrying the parsed error body and the request id"):
     given Decode[String] = body => Right(body.text)
     val http             = FakeHttpPort.always(responseOf(404, forgejoErrorBody, "x-request-id" -> List("abc123")))

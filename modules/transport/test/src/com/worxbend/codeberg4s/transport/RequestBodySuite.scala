@@ -54,7 +54,7 @@ final class RequestBodySuite extends FunSuite:
       headers   = Nil,
       body      = Some(body),
     )
-    port.send(request, "probe").value match
+    port.send(request, "probe", CodebergConfig.DefaultMaxResponseBodyBytes).value match
       case Some(Success(answer)) => (answer, recording.allInteractions.map(_._1))
       case other                 => fail(s"expected the send to have completed, got $other")
 

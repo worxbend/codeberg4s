@@ -15,20 +15,24 @@ import scala.collection.mutable.ListBuffer
   */
 final class FakeHttpPort(outcomes: Vector[Either[TransportFailure, CodebergResponse]]) extends HttpPort[Exec.Result]:
 
-  private val recorded = ListBuffer.empty[(CodebergRequest, String)]
+  private val recorded = ListBuffer.empty[(CodebergRequest, String, Long)]
 
   override def send(
       request: CodebergRequest,
       redactedUri: String,
+      maxBodyBytes: Long,
   ): Exec.Result[Either[TransportFailure, CodebergResponse]] =
-    recorded.append((request, redactedUri)).discard
+    recorded.append((request, redactedUri, maxBodyBytes)).discard
     Right(outcomes(math.min(recorded.size - 1, outcomes.size - 1)))
 
   /** Every request this port was asked to send, in order. */
-  def requests: Vector[CodebergRequest] = recorded.toVector.map((request, _) => request)
+  def requests: Vector[CodebergRequest] = recorded.toVector.map((request, _, _) => request)
 
   /** Every redacted URI the pipeline handed over — the security-relevant half of a send. */
-  def uris: Vector[String] = recorded.toVector.map((_, uri) => uri)
+  def uris: Vector[String] = recorded.toVector.map((_, uri, _) => uri)
+
+  /** The body bound each send was given — how the pipeline says "this one is an archive". */
+  def bounds: Vector[Long] = recorded.toVector.map((_, _, bound) => bound)
 
   /** How many times the port was called. */
   def sends: Int = recorded.size

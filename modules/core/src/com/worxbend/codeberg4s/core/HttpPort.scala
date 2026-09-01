@@ -3,9 +3,9 @@ package com.worxbend.codeberg4s.core
 /** The port every transport adapter implements — the single hole through which this library reaches the network.
   *
   * '''Failure contract.''' A `Left` means no complete response was produced: DNS, TLS, connection, timeout, or a body
-  * that passed [[com.worxbend.codeberg4s.CodebergConfig.maxResponseBodyBytes]] and was abandoned part-read. Every HTTP
-  * status, including `4xx` and `5xx`, arrives as a `Right`; deciding what a status means belongs to [[StatusMapping]],
-  * not to the adapter. An implementation must therefore not throw and must not translate a status into a failure.
+  * that passed the bound the caller asked for and was abandoned part-read. Every HTTP status, including `4xx` and
+  * `5xx`, arrives as a `Right`; deciding what a status means belongs to [[StatusMapping]], not to the adapter. An
+  * implementation must therefore not throw and must not translate a status into a failure.
   *
   * '''Security contract.''' `redactedUri` is what gets recorded in a [[com.worxbend.codeberg4s.CallContext]], so an
   * implementation must log or report that value and never the URI it actually dialled — see [[Redaction.uri]]. Adding
@@ -22,5 +22,15 @@ trait HttpPort[F[_]]:
     *   the call to make, with unencoded path segments and no credentials
     * @param redactedUri
     *   the URI as it may be shown to a human, already percent-encoded and stripped of credential material
+    * @param maxBodyBytes
+    *   how many bytes of response body the caller is willing to hold. The bound belongs to the call rather than to the
+    *   adapter because it differs per operation: an archive download asks for
+    *   [[com.worxbend.codeberg4s.CodebergConfig.maxDownloadBodyBytes]] where every other call asks for the smaller
+    *   [[com.worxbend.codeberg4s.CodebergConfig.maxResponseBodyBytes]]. An implementation that reads more than this
+    *   must abandon the body as [[com.worxbend.codeberg4s.TransportCause.ResponseTooLarge]]
     */
-  def send(request: CodebergRequest, redactedUri: String): F[Either[TransportFailure, CodebergResponse]]
+  def send(
+      request: CodebergRequest,
+      redactedUri: String,
+      maxBodyBytes: Long,
+  ): F[Either[TransportFailure, CodebergResponse]]

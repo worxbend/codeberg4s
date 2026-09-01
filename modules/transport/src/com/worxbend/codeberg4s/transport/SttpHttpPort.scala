@@ -77,16 +77,15 @@ import java.util.concurrent.Executor
   * own backend configures the connect timeout on that backend.
   *
   * '''Response size.''' Every request carries a byte bound, because this library reads whole bodies into memory and
-  * never streams. [[send]] applies [[com.worxbend.codeberg4s.CodebergConfig.maxResponseBodyBytes]] and [[sendBinary]]
-  * applies the larger [[com.worxbend.codeberg4s.CodebergConfig.maxDownloadBodyBytes]]; passing either abandons the
-  * response as [[com.worxbend.codeberg4s.TransportCause.ResponseTooLarge]]. Unlike the connect timeout this holds for a
-  * caller-supplied backend too, since sttp models it per request.
+  * never streams. The bound is the `maxBodyBytes` the caller passes rather than one this class picks: the pipeline
+  * knows whether it is fetching a JSON document or a CI artifact, and this class does not. Passing the bound abandons
+  * the response as [[com.worxbend.codeberg4s.TransportCause.ResponseTooLarge]]. Unlike the connect timeout this holds
+  * for a caller-supplied backend too, since sttp models it per request.
   *
   * @param backend
   *   the sttp backend requests are sent on, owned and closed by the caller
   * @param config
-  *   the instance to talk to, the credentials to use, the user agent to send, and the read timeout and response-body
-  *   bounds to apply
+  *   the instance to talk to, the credentials to use, the user agent to send, and the read timeout to apply
   */
 final class SttpHttpPort(
     backend: Backend[Future],
@@ -129,25 +128,25 @@ final class SttpHttpPort(
     * `redactedUri` is deliberately unused: it exists so an adapter that reports what it dialled reports the safe
     * rendering, and this adapter reports nothing at all.
     */
-  override def send(request: CodebergRequest, redactedUri: String): Future[Either[TransportFailure, CodebergResponse]] =
-    dispatch(request, config.maxResponseBodyBytes, SttpHttpPort.succeed)
+  override def send(
+      request: CodebergRequest,
+      redactedUri: String,
+      maxBodyBytes: Long,
+  ): Future[Either[TransportFailure, CodebergResponse]] =
+    dispatch(request, maxBodyBytes, SttpHttpPort.succeed)
 
   /** Sends `request` and reports what came back as a [[com.worxbend.codeberg4s.core.BinaryResponse]] instead.
     *
-    * Identical to [[send]] apart from the response type it assembles and the body bound it applies, because both read
-    * the body the same way now. Two methods remain because core still has two response types; see
+    * Identical to [[send]] apart from the response type it assembles, because both read the body the same way now and
+    * both take their bound from the caller. Two methods remain because core still has two response types; see
     * [[com.worxbend.codeberg4s.core.BinaryResponse]] for why that is expected to change.
-    *
-    * The bound is [[com.worxbend.codeberg4s.CodebergConfig.maxDownloadBodyBytes]] rather than
-    * [[com.worxbend.codeberg4s.CodebergConfig.maxResponseBodyBytes]]: this is the path the ZIP-fetching operations
-    * under `client.downloads` take, and a CI artifact is legitimately far bigger than the largest JSON document Forgejo
-    * will produce.
     */
   override def sendBinary(
       request: CodebergRequest,
       redactedUri: String,
+      maxBodyBytes: Long,
   ): Future[Either[TransportFailure, BinaryResponse]] =
-    dispatch(request, config.maxDownloadBodyBytes, SttpHttpPort.succeedBinary)
+    dispatch(request, maxBodyBytes, SttpHttpPort.succeedBinary)
 
   /** Deliberately opaque: this object holds the configured credentials, so it renders nothing about its state. */
   override def toString: String = "SttpHttpPort"

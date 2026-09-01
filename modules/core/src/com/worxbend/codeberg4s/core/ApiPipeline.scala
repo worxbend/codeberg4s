@@ -76,7 +76,9 @@ final class ApiPipeline[F[_]](
     *   the decoded value, or a [[com.worxbend.codeberg4s.CodebergError]] in `F`'s error channel
     */
   def call[A](request: CodebergRequest, eligibility: RetryEligibility)(using decode: Decode[A]): F[A] =
-    perform(request, eligibility, http.send)((ctx, response) => decoded[A](ctx, response.body))
+    perform(request, eligibility, config.maxResponseBodyBytes, http.send)((ctx, response) =>
+      decoded[A](ctx, response.body)
+    )
 
   /** As [[call]], but for an endpoint that answers `204` or whose body is deliberately ignored.
     *
@@ -84,7 +86,7 @@ final class ApiPipeline[F[_]](
     * call. Non-2xx statuses are classified exactly as in [[call]].
     */
   def callUnit(request: CodebergRequest, eligibility: RetryEligibility): F[Unit] =
-    perform(request, eligibility, http.send)((_, _) => Right(()))
+    perform(request, eligibility, config.maxResponseBodyBytes, http.send)((_, _) => Right(()))
 
   /** As [[call]], but assembles a [[com.worxbend.codeberg4s.paging.Page]] from the response's paging headers.
     *
@@ -97,13 +99,16 @@ final class ApiPipeline[F[_]](
     *   the window that was requested; it is kept on the returned page
     */
   def callPage[A](request: CodebergRequest, params: PageParams)(using decode: Decode[Vector[A]]): F[Page[A]] =
-    perform(request, RetryEligibility.IdempotentOnly, http.send): (ctx, response) =>
+    perform(request, RetryEligibility.IdempotentOnly, config.maxResponseBodyBytes, http.send): (ctx, response) =>
       decoded[Vector[A]](ctx, response.body).map(items => Pages.from(response, params, items))
 
   /** Sends `request` and returns its body as bytes, for the endpoints that answer an archive rather than text.
     *
     * The transport that serves bytes is passed here rather than held on the pipeline, so that the many operations which
     * never need one are unaffected and every existing [[HttpPort]] fake keeps compiling.
+    *
+    * The body bound is [[com.worxbend.codeberg4s.CodebergConfig.maxDownloadBodyBytes]], chosen here rather than by the
+    * adapter, because it is this operation and not the transport that knows it is fetching an archive.
     *
     * Retry, telemetry, status mapping and `CallContext` behave exactly as they do for a textual call. An error body is
     * still JSON text even on an endpoint whose success body is binary, so a non-2xx response is decoded with the
@@ -112,25 +117,29 @@ final class ApiPipeline[F[_]](
     * Always [[RetryEligibility.IdempotentOnly]] — every endpoint that answers bytes in this API is a `GET`.
     */
   def callBinary(request: CodebergRequest, binary: BinaryHttpPort[F]): F[BinaryResponse] =
-    perform(request, RetryEligibility.IdempotentOnly, binary.sendBinary)((_, response) => Right(response))
+    perform(request, RetryEligibility.IdempotentOnly, config.maxDownloadBodyBytes, binary.sendBinary)((_, response) =>
+      Right(response)
+    )
 
   /** Runs one call to completion: retry the attempts, then report and raise whatever the engine gave up with.
     *
     * `send` is what makes this serve both transports. It is the port method to call — [[HttpPort.send]] or
-    * [[BinaryHttpPort.sendBinary]] — and `R` is whatever that port answers with; everything downstream of the send
-    * reads a response only through [[ApiPipeline.ResponseFacts]], so retry, telemetry, status mapping and `CallContext`
-    * are written once and cannot drift between a textual call and a download.
+    * [[BinaryHttpPort.sendBinary]] — `maxBodyBytes` is the bound that call reads its body under, and `R` is whatever
+    * that port answers with; everything downstream of the send reads a response only through
+    * [[ApiPipeline.ResponseFacts]], so retry, telemetry, status mapping and `CallContext` are written once and cannot
+    * drift between a textual call and a download.
     */
   private def perform[R, A](
       request: CodebergRequest,
       eligibility: RetryEligibility,
-      send: (CodebergRequest, String) => F[Either[TransportFailure, R]],
+      maxBodyBytes: Long,
+      send: (CodebergRequest, String, Long) => F[Either[TransportFailure, R]],
   )(
       onSuccess: (CallContext, R) => Either[CodebergError, A]
   )(using facts: ApiPipeline.ResponseFacts[R]): F[A] =
     val uri      = redactedUri(request)
     val attempts = engine.runWith(request.operation, request.method, eligibility)(_ =>
-      attemptOnce(request, uri, send, onSuccess)
+      attemptOnce(request, uri, maxBodyBytes, send, onSuccess)
     )
     exec.attempt(attempts).flatMap:
       case Right(value) => exec.pure(value)
@@ -149,12 +158,13 @@ final class ApiPipeline[F[_]](
   private def attemptOnce[R, A](
       request: CodebergRequest,
       uri: String,
-      send: (CodebergRequest, String) => F[Either[TransportFailure, R]],
+      maxBodyBytes: Long,
+      send: (CodebergRequest, String, Long) => F[Either[TransportFailure, R]],
       onSuccess: (CallContext, R) => Either[CodebergError, A],
   )(using facts: ApiPipeline.ResponseFacts[R]): F[AttemptOutcome[A]] =
     timer.nowMillis.flatMap: started =>
       observe(telemetry.onRequest(contextOf(request, uri, None, 0L))).flatMap: _ =>
-        send(request, uri).flatMap: sent =>
+        send(request, uri, maxBodyBytes).flatMap: sent =>
           timer.nowMillis.flatMap: finished =>
             settle(request, uri, finished - started, sent, onSuccess)
 

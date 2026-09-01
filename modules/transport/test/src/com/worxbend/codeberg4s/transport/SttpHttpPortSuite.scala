@@ -218,31 +218,26 @@ final class SttpHttpPortSuite extends FunSuite:
     causeOf(wrapped).map: cause =>
       assertEquals(cause, TransportCause.ResponseTooLarge("Stream length limit of 1024 bytes exceeded"))
 
-  test("a textual request carries the configured response-body bound"):
+  test("a request carries the bound the caller asked for, not one the adapter chose"):
     val backend = recording(respondingOk)
     val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
 
     send(port, awkwardRequest).map: _ =>
       assertEquals(sent(backend).options.maxResponseBodyLength, Some(CodebergConfig.DefaultMaxResponseBodyBytes))
 
-  test("a download carries the larger download bound instead"):
+  test("a larger bound reaches sttp unchanged, which is how an archive download is served"):
     val backend = recording(respondingOk)
     val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
 
-    port.sendBinary(awkwardRequest, "https://forge.example/api/v1/repos/ow%20ner").map: _ =>
+    send(port, awkwardRequest, CodebergConfig.DefaultMaxDownloadBodyBytes).map: _ =>
       assertEquals(sent(backend).options.maxResponseBodyLength, Some(CodebergConfig.DefaultMaxDownloadBodyBytes))
 
-  test("both bounds are taken from the config rather than hardcoded"):
-    val config  = configFor(Auth.Anonymous).copy(maxResponseBodyBytes = 111L, maxDownloadBodyBytes = 222L)
-    val textual = recording(respondingOk)
-    val binary  = recording(respondingOk)
+  test("the byte-carrying send takes its bound from the caller too"):
+    val backend = recording(respondingOk)
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
 
-    for
-      _ <- send(SttpHttpPort(textual, config), awkwardRequest)
-      _ <- SttpHttpPort(binary, config).sendBinary(awkwardRequest, "https://forge.example/api/v1")
-    yield
-      assertEquals(sent(textual).options.maxResponseBodyLength, Some(111L))
-      assertEquals(sent(binary).options.maxResponseBodyLength, Some(222L))
+    port.sendBinary(awkwardRequest, "https://forge.example/api/v1", 222L).map: _ =>
+      assertEquals(sent(backend).options.maxResponseBodyLength, Some(222L))
 
   test("an exception this library does not recognise is unknown, never dropped"):
     causeOf(new IllegalStateException("something else entirely")).map: cause =>
@@ -288,8 +283,9 @@ final class SttpHttpPortSuite extends FunSuite:
   private def send(
       port: SttpHttpPort,
       request: CodebergRequest,
+      maxBodyBytes: Long = CodebergConfig.DefaultMaxResponseBodyBytes,
   ): Future[Either[TransportFailure, CodebergResponse]] =
-    port.send(request, "https://forge.example/api/v1/repos/ow%20ner")
+    port.send(request, "https://forge.example/api/v1/repos/ow%20ner", maxBodyBytes)
 
   private def causeOf(error: Throwable): Future[TransportCause] =
     val port = SttpHttpPort(failingWith(error), configFor(Auth.Anonymous))
