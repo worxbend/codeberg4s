@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
+import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.hooks.wire.{HookQueries, WikiPageOptionsDto}
@@ -247,13 +248,13 @@ object RepositoryWikiApi:
       exec.attempt(rail.revisions(owner, name, pageName, params))
 
   private def listPagesRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    HookRequests.read(ListPagesOperation, wikiPath(owner, name) :+ "pages", HookQueries.paging(params))
+    read(ListPagesOperation, wikiPath(owner, name) :+ "pages", HookQueries.paging(params))
 
   private def pageRequest(owner: Owner, name: RepoName, pageName: WikiPageName): CodebergRequest =
-    HookRequests.read(GetPageOperation, pagePath(owner, name, pageName), Nil)
+    read(GetPageOperation, pagePath(owner, name, pageName), Nil)
 
   private def createPageRequest(owner: Owner, name: RepoName, command: CreateWikiPage): CodebergRequest =
-    HookRequests.write(
+    write(
       CreatePageOperation,
       HttpMethod.Post,
       wikiPath(owner, name) :+ "new",
@@ -266,7 +267,7 @@ object RepositoryWikiApi:
       pageName: WikiPageName,
       command: EditWikiPage,
   ): CodebergRequest =
-    HookRequests.write(
+    write(
       EditPageOperation,
       HttpMethod.Patch,
       pagePath(owner, name, pageName),
@@ -274,7 +275,7 @@ object RepositoryWikiApi:
     )
 
   private def deletePageRequest(owner: Owner, name: RepoName, pageName: WikiPageName): CodebergRequest =
-    HookRequests.remove(DeletePageOperation, pagePath(owner, name, pageName))
+    remove(DeletePageOperation, pagePath(owner, name, pageName))
 
   private def revisionsRequest(
       owner: Owner,
@@ -282,7 +283,7 @@ object RepositoryWikiApi:
       pageName: WikiPageName,
       params: PageParams,
   ): CodebergRequest =
-    HookRequests.read(
+    read(
       ListRevisionsOperation,
       wikiPath(owner, name) ++ ("revisions" :: pageName.segments),
       HookQueries.revisionPaging(params),

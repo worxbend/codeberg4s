@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
+import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.{CodebergError, Owner, RepoName}
 
@@ -122,13 +123,13 @@ object RepositoryIssueConfigApi:
       exec.attempt(rail.templates(owner, name))
 
   private def getRequest(owner: Owner, name: RepoName): CodebergRequest =
-    HookRequests.read(GetOperation, issueConfigPath(owner, name), Nil)
+    read(GetOperation, issueConfigPath(owner, name), Nil)
 
   private def validateRequest(owner: Owner, name: RepoName): CodebergRequest =
-    HookRequests.read(ValidateOperation, issueConfigPath(owner, name) :+ "validate", Nil)
+    read(ValidateOperation, issueConfigPath(owner, name) :+ "validate", Nil)
 
   private def templatesRequest(owner: Owner, name: RepoName): CodebergRequest =
-    HookRequests.read(TemplatesOperation, HookRequests.repositoryPath(owner, name) :+ "issue_templates", Nil)
+    read(TemplatesOperation, HookRequests.repositoryPath(owner, name) :+ "issue_templates", Nil)
 
   private def issueConfigPath(owner: Owner, name: RepoName): List[String] =
     HookRequests.repositoryPath(owner, name) :+ "issue_config"

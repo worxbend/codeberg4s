@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
-import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RequestBody, RetryEligibility}
+import com.worxbend.codeberg4s.core.CodebergRequest.{empty, read, remove, write}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.repositories.hooks.wire.RepositoryFlagWire
 import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
 
@@ -204,13 +205,13 @@ object RepositoryFlagApi:
       exec.attempt(rail.delete(owner, name, flag))
 
   private def listRequest(owner: Owner, name: RepoName): CodebergRequest =
-    HookRequests.read(ListOperation, flagsPath(owner, name), Nil)
+    read(ListOperation, flagsPath(owner, name), Nil)
 
   private def checkRequest(owner: Owner, name: RepoName, flag: RepositoryFlag): CodebergRequest =
-    HookRequests.read(CheckOperation, flagPath(owner, name, flag), Nil)
+    read(CheckOperation, flagPath(owner, name, flag), Nil)
 
   private def replaceAllRequest(owner: Owner, name: RepoName, flags: Vector[RepositoryFlag]): CodebergRequest =
-    HookRequests.write(
+    write(
       ReplaceAllOperation,
       HttpMethod.Put,
       flagsPath(owner, name),
@@ -218,20 +219,13 @@ object RepositoryFlagApi:
     )
 
   private def deleteAllRequest(owner: Owner, name: RepoName): CodebergRequest =
-    HookRequests.remove(DeleteAllOperation, flagsPath(owner, name))
+    remove(DeleteAllOperation, flagsPath(owner, name))
 
   private def addRequest(owner: Owner, name: RepoName, flag: RepositoryFlag): CodebergRequest =
-    CodebergRequest(
-      operation = AddOperation,
-      method    = HttpMethod.Put,
-      path      = flagPath(owner, name, flag),
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Empty),
-    )
+    empty(AddOperation, HttpMethod.Put, flagPath(owner, name, flag))
 
   private def deleteRequest(owner: Owner, name: RepoName, flag: RepositoryFlag): CodebergRequest =
-    HookRequests.remove(DeleteOperation, flagPath(owner, name, flag))
+    remove(DeleteOperation, flagPath(owner, name, flag))
 
   private def flagsPath(owner: Owner, name: RepoName): List[String] =
     HookRequests.repositoryPath(owner, name) :+ "flags"

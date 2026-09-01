@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
-import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RequestBody, RetryEligibility}
+import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, remove, write}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.hooks.wire.{HookOptionDto, HookQueries}
 import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
@@ -321,13 +322,13 @@ object RepositoryHookApi:
       exec.attempt(rail.deleteGitHook(owner, name, hook))
 
   private def listRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    HookRequests.read(ListOperation, hooksPath(owner, name), HookQueries.paging(params))
+    read(ListOperation, hooksPath(owner, name), HookQueries.paging(params))
 
   private def getRequest(owner: Owner, name: RepoName, id: HookId): CodebergRequest =
-    HookRequests.read(GetOperation, hookPath(owner, name, id), Nil)
+    read(GetOperation, hookPath(owner, name, id), Nil)
 
   private def createRequest(owner: Owner, name: RepoName, command: CreateHook): CodebergRequest =
-    HookRequests.write(
+    write(
       CreateOperation,
       HttpMethod.Post,
       hooksPath(owner, name),
@@ -335,7 +336,7 @@ object RepositoryHookApi:
     )
 
   private def editRequest(owner: Owner, name: RepoName, id: HookId, command: EditHook): CodebergRequest =
-    HookRequests.write(
+    write(
       EditOperation,
       HttpMethod.Patch,
       hookPath(owner, name, id),
@@ -343,23 +344,16 @@ object RepositoryHookApi:
     )
 
   private def deleteRequest(owner: Owner, name: RepoName, id: HookId): CodebergRequest =
-    HookRequests.remove(DeleteOperation, hookPath(owner, name, id))
+    remove(DeleteOperation, hookPath(owner, name, id))
 
   private def testRequest(owner: Owner, name: RepoName, id: HookId, ref: Option[String]): CodebergRequest =
-    CodebergRequest(
-      operation = TestOperation,
-      method    = HttpMethod.Post,
-      path      = hookPath(owner, name, id) :+ "tests",
-      query     = HookQueries.hookTest(ref),
-      headers   = Nil,
-      body      = None,
-    )
+    bodiless(TestOperation, HttpMethod.Post, hookPath(owner, name, id) :+ "tests", HookQueries.hookTest(ref))
 
   private def listGitHooksRequest(owner: Owner, name: RepoName): CodebergRequest =
-    HookRequests.read(ListGitHooksOperation, gitHooksPath(owner, name), Nil)
+    read(ListGitHooksOperation, gitHooksPath(owner, name), Nil)
 
   private def gitHookRequest(owner: Owner, name: RepoName, hook: GitHookName): CodebergRequest =
-    HookRequests.read(GetGitHookOperation, gitHookPath(owner, name, hook), Nil)
+    read(GetGitHookOperation, gitHookPath(owner, name, hook), Nil)
 
   private def editGitHookRequest(
       owner: Owner,
@@ -367,7 +361,7 @@ object RepositoryHookApi:
       hook: GitHookName,
       command: EditGitHook,
   ): CodebergRequest =
-    HookRequests.write(
+    write(
       EditGitHookOperation,
       HttpMethod.Patch,
       gitHookPath(owner, name, hook),
@@ -375,7 +369,7 @@ object RepositoryHookApi:
     )
 
   private def deleteGitHookRequest(owner: Owner, name: RepoName, hook: GitHookName): CodebergRequest =
-    HookRequests.remove(DeleteGitHookOperation, gitHookPath(owner, name, hook))
+    remove(DeleteGitHookOperation, gitHookPath(owner, name, hook))
 
   private def hooksPath(owner: Owner, name: RepoName): List[String] =
     HookRequests.repositoryPath(owner, name) :+ "hooks"
@@ -388,48 +382,3 @@ object RepositoryHookApi:
 
   private def gitHookPath(owner: Owner, name: RepoName, hook: GitHookName): List[String] =
     gitHooksPath(owner, name) :+ hook.value
-
-/** The three request shapes the four API classes of this package build.
-  *
-  * Shared rather than repeated once per class, because four copies of the same six-line constructor call is exactly the
-  * duplication `docs/LEDGER.md` records as a review-blocking defect — and because a copy that quietly forgot to leave
-  * `headers` empty would be indistinguishable from one that did not until a credential appeared in a log.
-  */
-private[hooks] object HookRequests:
-
-  /** A `GET` with no body. */
-  def read(operation: String, path: List[String], query: List[(String, String)]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Get,
-      path      = path,
-      query     = query,
-      headers   = Nil,
-      body      = None,
-    )
-
-  /** A mutating call carrying a JSON body. */
-  def write(operation: String, method: HttpMethod, path: List[String], body: String): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = method,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = Some(RequestBody.Json(body)),
-    )
-
-  /** A `DELETE` with no body. */
-  def remove(operation: String, path: List[String]): CodebergRequest =
-    CodebergRequest(
-      operation = operation,
-      method    = HttpMethod.Delete,
-      path      = path,
-      query     = Nil,
-      headers   = Nil,
-      body      = None,
-    )
-
-  /** The `/repos/{owner}/{repo}` prefix every route in this package shares. */
-  def repositoryPath(owner: Owner, name: RepoName): List[String] =
-    List("repos", owner.value, name.value)
