@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.pulls
 
+import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.organizations.Organization
 import com.worxbend.codeberg4s.organizations.Team
@@ -196,7 +197,7 @@ final class ReviewCommandSuite extends FunSuite:
   private def account: User =
     User(
       id                       = 1L,
-      login                    = "mfenniak",
+      login                    = Owner("mfenniak"),
       fullName                 = None,
       email                    = None,
       avatarUrl                = None,

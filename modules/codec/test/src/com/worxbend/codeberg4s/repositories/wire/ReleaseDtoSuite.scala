@@ -36,7 +36,7 @@ final class ReleaseDtoSuite extends FunSuite with GoldenFixtures:
     assertEquals(release.isPrerelease, false)
     assertEquals(release.createdAt, Some(Instant.parse("2026-07-30T20:59:53Z")))
     assertEquals(release.publishedAt, Some(Instant.parse("2026-07-30T20:59:53Z")))
-    assertEquals(release.author.map(_.login), Some("release-team"))
+    assertEquals(release.author.map(_.login.value), Some("release-team"))
 
   test("the release notes survive as Markdown"):
     assert(domain("repository/release-latest.json").body.exists(_.nonEmpty))

@@ -24,7 +24,7 @@ final class PullRequestDtoSuite extends FunSuite with GoldenFixtures:
     assertEquals(pull.id, 2786975L)
     assertEquals(pull.number.value, 13731L)
     assertEquals(pull.title, "fix(package/pypi): response header based on PEP691")
-    assertEquals(pull.author.map(_.login), Some("trim21"))
+    assertEquals(pull.author.map(_.login.value), Some("trim21"))
     assertEquals(pull.isDraft, false)
     assertEquals(pull.isLocked, false)
     assertEquals(pull.allowsMaintainerEdit, true)
@@ -54,7 +54,7 @@ final class PullRequestDtoSuite extends FunSuite with GoldenFixtures:
     assertEquals(pull.dueDate, None)
 
   test("requested reviewers are read, and are not the same thing as reviews"):
-    assertEquals(open.requestedReviewers.map(_.login), Vector("Gusted", "Cyborus"))
+    assertEquals(open.requestedReviewers.map(_.login.value), Vector("Gusted", "Cyborus"))
 
   test("labels embedded in a pull request convert with the rest of it"):
     val pull = open
@@ -94,7 +94,7 @@ final class PullRequestDtoSuite extends FunSuite with GoldenFixtures:
     merged.state match
       case PullRequestState.Merged(at, by, commit) =>
         assertEquals(at, Some(Instant.parse("2026-08-01T17:15:31Z")))
-        assertEquals(by.map(_.login), Some("mfenniak"))
+        assertEquals(by.map(_.login.value), Some("mfenniak"))
         assertEquals(commit.map(_.value), Some("38615e78ed86c1eaaadd086f00a807ea4cc96a19"))
       case other                                   => fail(s"expected a merged pull request, got $other")
 

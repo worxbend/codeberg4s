@@ -18,7 +18,7 @@ final class CommentDtoSuite extends FunSuite with GoldenFixtures:
     val comment = comments.head
 
     assertEquals(comment.id.value, 20366420L)
-    assertEquals(comment.author.map(_.login), Some("jkassel"))
+    assertEquals(comment.author.map(_.login.value), Some("jkassel"))
     assertEquals(comment.issueUrl, Some("https://codeberg.org/Codeberg/Community/issues/2966"))
     assertEquals(comment.createdAt, Some(Instant.parse("2026-07-31T17:20:04Z")))
     assert(comment.body.exists(_.startsWith("Happening to me too")), comment.body.toString)

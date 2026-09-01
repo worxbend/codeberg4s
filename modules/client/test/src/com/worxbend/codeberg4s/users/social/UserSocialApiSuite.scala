@@ -55,7 +55,7 @@ final class UserSocialApiSuite extends FunSuite with ClientSuiteHarness:
     onApi(backend): api =>
       api.following(PageParams.First).map: page =>
         assertEquals(pathOf(backend), s"$Root/user/following")
-        assertEquals(page.items.map(_.login), Vector("earl-warren"))
+        assertEquals(page.items.map(_.login.value), Vector("earl-warren"))
 
   test("a listing ends where rel=next says it ends, not where a short page suggests"):
     onApi(responding(200, UserSocialApiSuite.UserListBody, UserSocialApiSuite.PagedHeaders)): api =>

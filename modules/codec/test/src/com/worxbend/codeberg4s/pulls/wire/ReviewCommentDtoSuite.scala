@@ -32,7 +32,7 @@ final class ReviewCommentDtoSuite extends FunSuite:
         assertEquals(comment.originalPosition, 0L)
         assertEquals(comment.extraLinesCount, 2L)
         assertEquals(comment.commit.map(_.value), Some("48079baa8d387f3ab770cc144c367409ddc2a879"))
-        assertEquals(comment.author.map(_.login), Some("mfenniak"))
+        assertEquals(comment.author.map(_.login.value), Some("mfenniak"))
         assertEquals(comment.createdAt, Some(Instant.parse("2026-08-01T16:16:13Z")))
       case Left(failure)  => fail(s"could not convert the comment: $failure")
 

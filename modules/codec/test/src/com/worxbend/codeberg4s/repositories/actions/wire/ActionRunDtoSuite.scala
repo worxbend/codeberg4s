@@ -66,7 +66,7 @@ final class ActionRunDtoSuite extends FunSuite:
     assertEquals(domain(body).id.value, 1L)
 
   test("the trigger user is decoded through the shared user model"):
-    assertEquals(domain(ActionRunDtoSuite.FullBody).triggerUser.map(_.login), Some("earl-warren"))
+    assertEquals(domain(ActionRunDtoSuite.FullBody).triggerUser.map(_.login.value), Some("earl-warren"))
 
   test("a trigger user that cannot be converted fails at its own path"):
     assertEquals(failurePath("""{"id":1,"trigger_user":{"id":9}}"""), Some("$.trigger_user.login"))

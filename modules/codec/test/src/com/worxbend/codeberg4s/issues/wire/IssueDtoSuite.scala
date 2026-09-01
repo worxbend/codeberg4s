@@ -24,7 +24,7 @@ final class IssueDtoSuite extends FunSuite with GoldenFixtures:
     assertEquals(issue.id, 6557096L)
     assertEquals(issue.number.value, 2966L)
     assertEquals(issue.title, "Git HTTPS smart HTTP endpoint returns 403 \"Bye\" for all repositories")
-    assertEquals(issue.author.map(_.login), Some("personanon5"))
+    assertEquals(issue.author.map(_.login.value), Some("personanon5"))
     assertEquals(issue.commentCount, 2L)
     assertEquals(issue.isLocked, false)
     assertEquals(issue.htmlUrl, Some("https://codeberg.org/Codeberg/Community/issues/2966"))

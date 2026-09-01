@@ -55,7 +55,7 @@ final class UserApiSuite extends FunSuite:
     onApi(responding(200, UserApiSuite.UserBody)): users =>
       users.current().map: user =>
         assertEquals(user.id, 73579L)
-        assertEquals(user.login, "earl-warren")
+        assertEquals(user.login.value, "earl-warren")
         assertEquals(user.fullName, Some("Earl Warren"))
         assertEquals(user.followersCount, 47L)
 
@@ -71,7 +71,7 @@ final class UserApiSuite extends FunSuite:
 
   test("get maps an organisation-shaped payload to a user, because the wire does not distinguish them"):
     onApi(responding(200, UserApiSuite.OrganizationShapedBody)): users =>
-      users.get(Handle).map(user => assertEquals(user.login, "forgejo"))
+      users.get(Handle).map(user => assertEquals(user.login.value, "forgejo"))
 
   // --- searching ------------------------------------------------------------
 
@@ -79,7 +79,7 @@ final class UserApiSuite extends FunSuite:
     onApi(responding(200, UserApiSuite.SearchBody)): users =>
       users.search("earl", FirstPage).map: page =>
         assertEquals(page.size, 2)
-        assertEquals(page.items.map(_.login), Vector("0x20fearless", "earl-warren"))
+        assertEquals(page.items.map(_.login.value), Vector("0x20fearless", "earl-warren"))
 
   test("search sends the keyword as q, alongside page and limit"):
     recording(200, UserApiSuite.SearchBody): (backend, users) =>

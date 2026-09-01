@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.users
 
+import com.worxbend.codeberg4s.Owner
+
 import java.time.Instant
 
 /** An account on a Codeberg or Forgejo instance.
@@ -20,7 +22,8 @@ import java.time.Instant
   * @param id
   *   the instance-local numeric identifier
   * @param login
-  *   the handle in URLs — the value that becomes a [[com.worxbend.codeberg4s.Owner]]
+  *   the handle in URLs, already validated as an [[com.worxbend.codeberg4s.Owner]], so it can be handed straight back
+  *   to any endpoint that takes an owner
   * @param fullName
   *   the display name, absent when the account left it blank
   * @param email
@@ -32,7 +35,7 @@ import java.time.Instant
   */
 final case class User private[codeberg4s] (
     id: Long,
-    login: String,
+    login: Owner,
     fullName: Option[String],
     email: Option[String],
     avatarUrl: Option[String],

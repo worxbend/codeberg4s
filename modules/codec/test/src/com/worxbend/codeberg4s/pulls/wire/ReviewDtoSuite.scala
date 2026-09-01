@@ -19,7 +19,7 @@ final class ReviewDtoSuite extends FunSuite with GoldenFixtures:
 
   test("the golden review listing decodes all three rows"):
     assertEquals(reviews.map(_.id.value), Vector(1654064L, 1654067L, 1654076L))
-    assertEquals(reviews.flatMap(_.author).map(_.login), Vector("Gusted", "patdyn", "mfenniak"))
+    assertEquals(reviews.flatMap(_.author).map(_.login.value), Vector("Gusted", "patdyn", "mfenniak"))
 
   test("two of the three rows are review requests, not reviews"):
     assertEquals(
@@ -30,7 +30,7 @@ final class ReviewDtoSuite extends FunSuite with GoldenFixtures:
   test("the approval converts field for field"):
     reviews.lift(2) match
       case Some(review) =>
-        assertEquals(review.author.map(_.login), Some("mfenniak"))
+        assertEquals(review.author.map(_.login.value), Some("mfenniak"))
         assertEquals(review.commit.map(_.value), Some("48079baa8d387f3ab770cc144c367409ddc2a879"))
         assertEquals(review.isOfficial, true)
         assertEquals(review.isStale, false)

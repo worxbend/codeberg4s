@@ -208,7 +208,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
       api.listCollaborators(Handle, Name, window(2, 25)).map: page =>
         assertEquals(pathOf(backend), s"$Endpoint/collaborators")
         assertEquals(queryOf(backend), List("page" -> "2", "limit" -> "25"))
-        assertEquals(page.items.map(_.login), Vector("alice"))
+        assertEquals(page.items.map(_.login.value), Vector("alice"))
 
   test("the collaborator listing ends where rel=next says it ends, not where a short page suggests"):
     onApi(responding(200, RepositoryAccessApiSuite.UserListBody, RepositoryAccessApiSuite.PagedHeaders)): api =>
@@ -275,7 +275,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
         assertEquals(access.permission, Some(TeamPermission.Write))
         assertEquals(access.rawPermission, Some("write"))
         assertEquals(access.roleName, Some("Collaborator"))
-        assertEquals(access.user.login, "alice")
+        assertEquals(access.user.login.value, "alice")
 
   // --- deploy keys ----------------------------------------------------------
 

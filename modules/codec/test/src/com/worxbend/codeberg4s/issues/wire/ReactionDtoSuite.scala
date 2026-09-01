@@ -34,7 +34,7 @@ final class ReactionDtoSuite extends FunSuite:
     val reaction = decoded(Full)
 
     assertEquals(reaction.content.value, "+1")
-    assertEquals(reaction.user.map(_.login), Some("jkassel"))
+    assertEquals(reaction.user.map(_.login.value), Some("jkassel"))
     assertEquals(reaction.createdAt, Some(Instant.parse("2026-07-31T15:20:04Z")))
 
   test("JSON null and an absent key decode identically, for every optional field"):

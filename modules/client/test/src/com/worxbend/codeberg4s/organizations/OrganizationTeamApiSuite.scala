@@ -130,7 +130,7 @@ final class OrganizationTeamApiSuite extends FunSuite with OrganizationStubs:
       api.teamAdmin
         .member(Maintainers, Account)
         .map: user =>
-          assertEquals(user.login, "earl-warren")
+          assertEquals(user.login.value, "earl-warren")
           assertEquals(user.id, 73579L)
 
   test("a team-membership write carries no body, because the path is the whole statement"):

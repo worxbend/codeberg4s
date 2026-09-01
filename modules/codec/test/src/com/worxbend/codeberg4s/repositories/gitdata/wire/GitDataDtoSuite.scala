@@ -181,7 +181,7 @@ final class GitDataDtoSuite extends FunSuite:
     assertEquals(status.state, Some(CommitStatusState.Success))
     assertEquals(status.context, Some("ci/woodpecker/push"))
     assertEquals(status.created, Some(Instant.parse("2026-07-30T19:14:15Z")))
-    assertEquals(status.creator.map(_.login), Some("ada"))
+    assertEquals(status.creator.map(_.login.value), Some("ada"))
 
   test("a status whose verdict this library does not recognise keeps every other field"):
     val status = domain(decode[CommitStatusDto]("""{"id":1,"status":"cancelled","context":"x"}""").toDomain)

@@ -25,6 +25,22 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **`User.login` is an `Owner`, not a `String`.** The handle is what every
+  endpoint that addresses a user or a repository takes, and until now a caller
+  who had just read a `User` had to push its `login` back through `Owner.from`
+  and handle an `Either` that could not fail — the value came from the same
+  payload the library had already accepted. `UserDto.toDomainAt` now validates
+  `login` where the user is read, so the model carries an already-valid
+  `Owner`. `RepositoryDto` no longer validates the owner's login a second time
+  of its own; it builds the slug from `owner.login`.
+
+  **Breaking:** `user.login` no longer is a `String`. Where you need the text —
+  printing it, comparing it to a string — write `user.login.value`. Where you
+  were passing it to an endpoint, drop the `Owner.from` round trip and pass it
+  straight through. A payload whose `login` cannot be an `Owner` (blank, or
+  containing a `/`) is now a `DecodingFailed` at `$.login` instead of decoding
+  into a model nobody could use.
+
 - **Wire DTOs share one conversion capability, `codec.WireModel[A]`.** Every DTO
   declared its own `toDomain` as `toDomainAt(JsonPath.Root)` — the same member,
   written out 75 times — and 44 of them also carried a companion `toDomainAll`

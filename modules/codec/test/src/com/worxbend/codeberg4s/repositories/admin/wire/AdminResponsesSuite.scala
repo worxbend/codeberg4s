@@ -187,7 +187,7 @@ final class AdminResponsesSuite extends FunSuite:
     assertEquals(activity.refName, Some("refs/heads/main"))
     assertEquals(activity.content, Some("""{"Commits":[]}"""))
     assertEquals(activity.isPrivate, false)
-    assertEquals(activity.actor.map(_.login), Some("octocat"))
+    assertEquals(activity.actor.map(_.login.value), Some("octocat"))
     assertEquals(activity.repository.map(_.slug.name.value), Some("b"))
     assertEquals(activity.comment.map(_.id.value), Some(77L))
     assertEquals(activity.createdAt.map(_.toString), Some("2026-07-30T19:14:15Z"))

@@ -132,7 +132,7 @@ final class OrganizationApiSuite extends FunSuite with ClientSuiteHarness:
   test("orgs.members.list yields the User model wave 1 owns, not a second membership type"):
     onApi(responding(200, OrganizationApiSuite.MemberListBody)): api =>
       api.members(Org, PageParams.First).map: page =>
-        assertEquals(page.items.map(_.login), Vector("earl-warren"))
+        assertEquals(page.items.map(_.login.value), Vector("earl-warren"))
         assertEquals(page.items.map(_.id), Vector(73579L))
 
   test("orgs.repos.list yields the Repository model wave 2 owns"):

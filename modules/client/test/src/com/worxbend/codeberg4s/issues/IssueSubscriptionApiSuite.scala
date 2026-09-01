@@ -41,7 +41,7 @@ final class IssueSubscriptionApiSuite extends FunSuite with IssueLaneHarness:
           "https://forge.example/api/v1/repos/Codeberg/Community/issues/2966/subscriptions",
         )
         assertEquals(queryOf(backend), List("page" -> "2", "limit" -> "25"))
-        assertEquals(page.items.map(_.login), Vector("jkassel"))
+        assertEquals(page.items.map(_.login.value), Vector("jkassel"))
 
   test("the check reads the token's own status from a /check sub-path"):
     val backend = RecordingBackend(responding(200, WatchBody))

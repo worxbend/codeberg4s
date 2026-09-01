@@ -68,7 +68,7 @@ final class UserDtoSuite extends FunSuite with GoldenFixtures:
     val user = domainUser("user/user-single.json")
 
     assertEquals(user.id, 73579L)
-    assertEquals(user.login, "earl-warren")
+    assertEquals(user.login.value, "earl-warren")
     assertEquals(user.fullName, Some("Earl Warren"))
     assertEquals(user.visibility, Some(UserVisibility.Public))
     assertEquals(user.followersCount, 47L)
@@ -91,7 +91,7 @@ final class UserDtoSuite extends FunSuite with GoldenFixtures:
   test("golden /users/forgejo converts to the domain"):
     val user = domainUser("user/user-single-org-shaped.json")
 
-    assertEquals(user.login, "forgejo")
+    assertEquals(user.login.value, "forgejo")
     assertEquals(user.website, Some("https://forgejo.org"))
     assertEquals(user.followingCount, 0L)
 
@@ -132,7 +132,7 @@ final class UserDtoSuite extends FunSuite with GoldenFixtures:
       .flatMap(_.toDomain) match
       case Right(user)   =>
         assertEquals(user.id, 9L)
-        assertEquals(user.login, "someone")
+        assertEquals(user.login.value, "someone")
         assertEquals(user.followersCount, 0L)
         assertEquals(user.visibility, None)
         assertEquals(user.lastLoginAt, None)
@@ -148,6 +148,11 @@ final class UserDtoSuite extends FunSuite with GoldenFixtures:
       case Left(failure) => assertEquals(failure.path.render, "$.login")
       case Right(user)   => fail(s"expected a failure, converted $user")
 
+  test("a login that could forge a request path is rejected where the user is read"):
+    Json.decode[UserDto]("""{"id":9,"login":"someone/../admin"}""").flatMap(_.toDomain) match
+      case Left(failure) => assertEquals(failure.path.render, "$.login")
+      case Right(user)   => fail(s"expected a failure, converted $user")
+
   test("a nested user reports its failure at the nested path, not at the document root"):
     Json.decode[UserDto]("""{}""").flatMap(_.toDomainAt(JsonPath.Root.index(2).field("owner"))) match
       case Left(failure) => assertEquals(failure.path.render, "$[2].owner.id")
@@ -157,7 +162,7 @@ final class UserDtoSuite extends FunSuite with GoldenFixtures:
     Json.decode[UserDto]("""{"id":1,"login":"a","visibility":"quantum"}""").flatMap(_.toDomain) match
       case Right(user)   =>
         assertEquals(user.visibility, None)
-        assertEquals(user.login, "a")
+        assertEquals(user.login.value, "a")
       case Left(failure) => fail(s"a new visibility must not break decoding: ${failure.message}")
 
   test("a truncated user body is a DecodeFailure, not an exception"):

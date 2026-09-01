@@ -51,7 +51,7 @@ final class PullRequestApiSuite extends FunSuite with ClientSuiteHarness:
         assertEquals(pull.number.value, 13726L)
         assertEquals(pull.title, "fix: bad quoting in hook scripts")
         assertEquals(pull.state.isMerged, true)
-        assertEquals(pull.author.map(_.login), Some("patdyn"))
+        assertEquals(pull.author.map(_.login.value), Some("patdyn"))
 
   test("a single-pull-request read targets /repos/{owner}/{repo}/pulls/{index} on the configured instance"):
     val backend = RecordingBackend(responding(200, PullRequestApiSuite.MergedBody))
@@ -128,7 +128,7 @@ final class PullRequestApiSuite extends FunSuite with ClientSuiteHarness:
       api.listCommits(Handle, Name, Number, PageParams.First).map: page =>
         assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/forgejo/forgejo/pulls/13726/commits")
         assertEquals(page.items.map(_.sha.value), Vector(Head.value))
-        assertEquals(page.items.flatMap(_.author).map(_.login), Vector("patdyn"))
+        assertEquals(page.items.flatMap(_.author).map(_.login.value), Vector("patdyn"))
 
   test("pulls.files.list decodes the changed files and their counts"):
     val backend = RecordingBackend(responding(200, PullRequestApiSuite.FileListBody))

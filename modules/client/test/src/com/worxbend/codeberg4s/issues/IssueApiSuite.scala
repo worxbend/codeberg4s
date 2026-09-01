@@ -45,7 +45,7 @@ final class IssueApiSuite extends FunSuite with ClientSuiteHarness:
         assertEquals(issue.number.value, 2966L)
         assertEquals(issue.title, "Bye")
         assertEquals(issue.state, LifecycleState.Open)
-        assertEquals(issue.author.map(_.login), Some("personanon5"))
+        assertEquals(issue.author.map(_.login.value), Some("personanon5"))
 
   test("a single-issue read targets /repos/{owner}/{repo}/issues/{index} on the configured instance"):
     val backend = RecordingBackend(responding(200, IssueApiSuite.IssueBody))

@@ -35,7 +35,7 @@ final class CommitDtoSuite extends FunSuite with GoldenFixtures:
   test("the account and the Git identity are kept apart"):
     val commit = domain("repository/commits-list.json").head
 
-    assertEquals(commit.author.map(_.login), Some("viceice-bot"))
+    assertEquals(commit.author.map(_.login.value), Some("viceice-bot"))
     assertEquals(commit.details.flatMap(_.author).flatMap(_.name), Some("Renovate Bot"))
     assertEquals(commit.details.flatMap(_.author).flatMap(_.username), None, "a CommitUser carries no username")
 

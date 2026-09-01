@@ -1,9 +1,9 @@
 package com.worxbend.codeberg4s.users.wire
 
-import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.{User, UserVisibility}
+import com.worxbend.codeberg4s.{JsonPath, Owner}
 
 /** Forgejo's `User` model, field for field.
   *
@@ -44,9 +44,13 @@ final case class UserDto(
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
-    * Fails only on `id` and `login`. Those two are what every consumer of an embedded user needs — a login is what
-    * becomes an [[com.worxbend.codeberg4s.Owner]], and an id is what distinguishes two accounts after a rename.
-    * Everything else is genuinely optional and stays optional.
+    * Fails only on `id` and `login`. Those two are what every consumer of an embedded user needs — a login '''is''' an
+    * [[com.worxbend.codeberg4s.Owner]], and an id is what distinguishes two accounts after a rename. Everything else is
+    * genuinely optional and stays optional.
+    *
+    * `login` goes through [[com.worxbend.codeberg4s.Owner.from]] here, so a handle that would forge a request path is
+    * rejected at the one place a user is read rather than at each of the places one is used. That is why the model can
+    * offer `login` as an `Owner` with no `Either` for the caller to unwrap.
     *
     * Counts absent from the payload become `0` rather than failing: a reduced embedded user carries no
     * `followers_count`, and reading that as "zero followers" is the same answer the API would give. `visibility` that
@@ -55,7 +59,7 @@ final case class UserDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, User] =
     for
       identifier <- Wire.required(at, "id", id)
-      handle     <- Wire.required(at, "login", login)
+      handle     <- Wire.validated(at, "login", login)(Owner.from)
     yield User(
       id                       = identifier,
       login                    = handle,

@@ -291,7 +291,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
              api.assignees(Handle, Name).map: people =>
                assertEquals(pathOf(assigning), s"$Endpoint/assignees")
                assertEquals(queryOf(assigning), Nil)
-               assertEquals(people.map(_.login), Vector("octocat"))
+               assertEquals(people.map(_.login.value), Vector("octocat"))
       _ <- onApi(reviewing)(api =>
              api.reviewers(Handle, Name).map(_ => assertEquals(pathOf(reviewing), s"$Endpoint/reviewers"))
            )

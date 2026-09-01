@@ -87,7 +87,7 @@ final class ForgejoContainerSuite extends IntegrationSuite with TestContainerFor
 
   test("the issued token authenticates, which is only true if the scheme is `Authorization: token`"):
     forgejo.client.users.current().map: user =>
-      assertEquals(user.login, ForgejoContainer.Admin.username)
+      assertEquals(user.login.value, ForgejoContainer.Admin.username)
       assertEquals(user.isAdmin, true)
 
   test("the repository created for this run decodes from a live payload"):
@@ -97,7 +97,7 @@ final class ForgejoContainerSuite extends IntegrationSuite with TestContainerFor
       assertEquals(repository.defaultBranch, Some(ForgejoContainer.DefaultBranch))
       assertEquals(repository.isPrivate, false)
       assertEquals(repository.isEmpty, false)
-      assertEquals(repository.owner.login, ForgejoContainer.Admin.username)
+      assertEquals(repository.owner.login.value, ForgejoContainer.Admin.username)
 
   // --- issues ----------------------------------------------------------------
 
@@ -113,7 +113,7 @@ final class ForgejoContainerSuite extends IntegrationSuite with TestContainerFor
       assertEquals(read.body, Some("filed by the integration suite"))
       assertEquals(read.state, LifecycleState.Open)
       assertEquals(read.isPullRequest, false)
-      assertEquals(read.author.map(user => user.login), Some(ForgejoContainer.Admin.username))
+      assertEquals(read.author.map(user => user.login.value), Some(ForgejoContainer.Admin.username))
 
   test("a full page still reports a next one, because the Link header decides and not the item count"):
     val window = PageParams(PageNumber.First, orFail(PageSize.from(2)))

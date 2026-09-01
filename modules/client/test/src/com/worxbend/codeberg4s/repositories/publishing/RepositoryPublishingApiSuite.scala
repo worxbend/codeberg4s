@@ -346,7 +346,7 @@ final class RepositoryPublishingApiSuite extends FunSuite with ClientSuiteHarnes
         assertEquals(methodOf(backend), "POST")
         assertEquals(pathOf(backend), s"$Base/generate")
         assertEquals(bodyOf(backend), """{"owner":"forgejo","name":"forgejo","git_content":true}""")
-        assertEquals(repository.owner.login, "forgejo")
+        assertEquals(repository.owner.login.value, "forgejo")
 
   test("repos.generate is never retried, because a repeat creates a second repository"):
     val backend = RecordingBackend(flaky(201, RepositoryPublishingApiSuite.RepositoryBody))

@@ -99,8 +99,9 @@ final case class RepositoryDto(
     * Four things are required, because without them there is no repository to speak of: `id`, `name`, `owner`, and the
     * owner's `login`. The last two are what build the [[com.worxbend.codeberg4s.repositories.RepoSlug]], and the slug
     * is what every other repository endpoint takes as its argument — a `Repository` that cannot address itself would be
-    * useless. `name` and the owner's `login` additionally go through their smart constructors, so a value containing a
-    * slash is rejected here rather than forging a path later.
+    * useless. `name` goes through [[com.worxbend.codeberg4s.RepoName.from]] here, so a value containing a slash is
+    * rejected rather than forging a path later; the owner's `login` is already an [[com.worxbend.codeberg4s.Owner]] by
+    * the time [[com.worxbend.codeberg4s.users.wire.UserDto.toDomainAt]] hands the user back.
     *
     * Everything else is optional or defaulted. Absent counts become `0`, absent flags become `false`, and an absent
     * `topics` becomes an empty `Vector` — the reduced repository objects Forgejo embeds in pull requests and
@@ -114,12 +115,11 @@ final case class RepositoryDto(
       repoName    <- Wire.validated(at, "name", name)(RepoName.from)
       ownerDto    <- Wire.required(at, "owner", owner)
       ownerModel  <- ownerDto.toDomainAt(at.field("owner"))
-      ownerHandle <- Wire.validated(at.field("owner"), "login", ownerDto.login)(Owner.from)
       parentModel <- Wire.nested(at, "parent", parent)(_.toDomainAt(_))
     yield Repository(
       id                   = identifier,
-      slug                 = RepoSlug(ownerHandle, repoName),
-      fullName             = fullName.getOrElse(s"${ownerHandle.value}/${repoName.value}"),
+      slug                 = RepoSlug(ownerModel.login, repoName),
+      fullName             = fullName.getOrElse(s"${ownerModel.login.value}/${repoName.value}"),
       owner                = ownerModel,
       description          = description,
       htmlUrl              = htmlUrl,

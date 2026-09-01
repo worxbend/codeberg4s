@@ -53,7 +53,7 @@ final class CodebergClientSuite extends FunSuite with ClientSuiteHarness:
       client.repos.get(Handle, Name).map: repository =>
         assertEquals(repository.id, 12345L)
         assertEquals(repository.slug.value, "forgejo/forgejo")
-        assertEquals(repository.owner.login, "forgejo")
+        assertEquals(repository.owner.login.value, "forgejo")
         assertEquals(repository.starsCount, 1234L)
         assertEquals(repository.topics, Vector("git", "forge"))
 

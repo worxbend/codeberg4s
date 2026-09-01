@@ -42,7 +42,7 @@ final class PublicKeyDtoSuite extends FunSuite:
     assertEquals(key.isReadOnly, false)
     assertEquals(key.isVerified, true)
     assertEquals(key.createdAt, Some(Instant.parse("2022-11-26T17:56:24Z")))
-    assertEquals(key.owner.map(_.login), Some("earl-warren"))
+    assertEquals(key.owner.map(_.login.value), Some("earl-warren"))
 
   test("the zero-time sentinel is carried verbatim by the DTO and folded away by the domain"):
     assertEquals(decodeKey(PublicKeyDtoSuite.FullKey).updatedAt, Some("0001-01-01T00:00:00Z"))
