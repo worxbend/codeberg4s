@@ -1,12 +1,8 @@
 package com.worxbend.codeberg4s.notifications.wire
 
-import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.notifications.NotificationQuery
 import com.worxbend.codeberg4s.notifications.NotificationStatus
 import com.worxbend.codeberg4s.notifications.NotificationSubjectFilter
-import com.worxbend.codeberg4s.paging.PageNumber
-import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.paging.PageSize
 
 import munit.FunSuite
 
@@ -77,13 +73,3 @@ final class NotificationQueriesSuite extends FunSuite:
         "since"        -> "2026-07-01T00:00:00Z",
       ),
     )
-
-  test("paging sends page and limit together, because a limit alone is silently ignored"):
-    val window = PageParams(orFail(PageNumber.from(3)), orFail(PageSize.from(25)))
-
-    assertEquals(NotificationQueries.paging(window), List("page" -> "3", "limit" -> "25"))
-
-  private def orFail[A](result: Either[ValidationError, A]): A =
-    result match
-      case Right(value) => value
-      case Left(error)  => fail(s"invalid fixture: ${error.field} ${error.message}")

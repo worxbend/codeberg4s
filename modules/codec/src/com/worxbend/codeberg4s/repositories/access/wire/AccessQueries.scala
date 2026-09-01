@@ -1,7 +1,5 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
-import com.worxbend.codeberg4s.codec.PagingQuery
-import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.repositories.access.DeployKeyQuery
 
 /** The query strings this group's endpoints send.
@@ -20,15 +18,6 @@ import com.worxbend.codeberg4s.repositories.access.DeployKeyQuery
   * [[com.worxbend.codeberg4s.paging.Page]] for these two.
   */
 private[codeberg4s] object AccessQueries:
-
-  /** The `page` and `limit` parameters of a paged listing.
-    *
-    * Both are always sent, and the pair is rendered by [[com.worxbend.codeberg4s.codec.PagingQuery.window]], which
-    * carries the measurement behind that rule: a `limit` sent without a `page` is silently ignored by some Forgejo
-    * endpoints, which is how a client accidentally pulls an unbounded collection.
-    */
-  def paging(params: PageParams): List[(String, String)] =
-    PagingQuery.window(params)
 
   /** The filters of the deploy key listing, in the order the spec declares them.
     *

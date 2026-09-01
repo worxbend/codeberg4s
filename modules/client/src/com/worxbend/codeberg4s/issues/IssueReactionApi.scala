@@ -1,8 +1,9 @@
 package com.worxbend.codeberg4s.issues
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{read, removeWithBody, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
-import com.worxbend.codeberg4s.issues.wire.{EditReactionOptionDto, IssueQueries}
+import com.worxbend.codeberg4s.issues.wire.EditReactionOptionDto
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
 
@@ -265,7 +266,7 @@ object IssueReactionApi:
       number: IssueNumber,
       params: PageParams,
   ): CodebergRequest =
-    read(ListOnIssueOperation, issueReactionsPath(owner, name, number), IssueQueries.paging(params))
+    read(ListOnIssueOperation, issueReactionsPath(owner, name, number), PagingQuery.window(params))
 
   private def addToIssueRequest(
       owner: Owner,

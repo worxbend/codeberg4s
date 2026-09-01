@@ -78,9 +78,6 @@ final class GitDataRequestSuite extends FunSuite:
 
   // --- queries --------------------------------------------------------------
 
-  test("a paged listing always sends both halves, because a limit alone is silently ignored"):
-    assertEquals(GitDataQueries.paging(window(2, 25)), List("page" -> "2", "limit" -> "25"))
-
   test("the tree listing spells the size per_page, which no other route in the library does"):
     assertEquals(GitDataQueries.treeWindow(window(3, 50), false), List("page" -> "3", "per_page" -> "50"))
 

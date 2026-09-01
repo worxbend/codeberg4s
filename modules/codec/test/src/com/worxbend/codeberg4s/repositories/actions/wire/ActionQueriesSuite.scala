@@ -1,9 +1,6 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.paging.PageNumber
-import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.paging.PageSize
 import com.worxbend.codeberg4s.repositories.CommitSha
 import com.worxbend.codeberg4s.repositories.actions.ActionRunQuery
 import com.worxbend.codeberg4s.repositories.actions.ActionStatus
@@ -22,9 +19,6 @@ import munit.FunSuite
   * lets the client suite assert on whole query lists.
   */
 final class ActionQueriesSuite extends FunSuite:
-
-  test("paging sends page and limit together, because limit alone is silently ignored"):
-    assertEquals(ActionQueries.paging(window(2, 25)), List("page" -> "2", "limit" -> "25"))
 
   test("an empty run query sends nothing at all"):
     assertEquals(ActionQueries.runs(ActionRunQuery.Empty), Nil)
@@ -94,9 +88,6 @@ final class ActionQueriesSuite extends FunSuite:
 
   test("a named attempt is sent as a one-based number"):
     assertEquals(ActionQueries.jobLogs(Some(orFail(JobAttempt.from(3L)))), List("attempt" -> "3"))
-
-  private def window(page: Int, size: Int): PageParams =
-    PageParams(orFail(PageNumber.from(page)), orFail(PageSize.from(size)))
 
   private def orFail[A](result: Either[ValidationError, A]): A =
     result match

@@ -4,9 +4,6 @@ import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.paging.PageNumber
-import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.paging.PageSize
 import com.worxbend.codeberg4s.repositories.RepoSlug
 import com.worxbend.codeberg4s.users.social.ActivityFeedQuery
 import com.worxbend.codeberg4s.users.social.ArmoredSignature
@@ -112,9 +109,6 @@ final class SocialRequestSuite extends FunSuite:
 
   // --- queries --------------------------------------------------------------
 
-  test("paging always sends both keys, because a lone limit is silently ignored"):
-    assertEquals(SocialQueries.paging(window(2, 25)), List("page" -> "2", "limit" -> "25"))
-
   test("an unset activity filter sends nothing at all"):
     assertEquals(SocialQueries.activityFeeds(ActivityFeedQuery.Empty), Nil)
 
@@ -149,9 +143,6 @@ final class SocialRequestSuite extends FunSuite:
 
   private def slug: RepoSlug =
     RepoSlug(orFail(Owner.from("forgejo")), orFail(RepoName.from("forgejo")))
-
-  private def window(page: Int, size: Int): PageParams =
-    PageParams(orFail(PageNumber.from(page)), orFail(PageSize.from(size)))
 
   private def orFail[A](result: Either[ValidationError, A]): A =
     result match

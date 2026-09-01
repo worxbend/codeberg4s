@@ -1,14 +1,10 @@
 package com.worxbend.codeberg4s.users.social
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
-import com.worxbend.codeberg4s.users.social.wire.{
-  CreateGpgKeyOptionDto,
-  CreateKeyOptionDto,
-  SocialQueries,
-  VerifyGpgKeyOptionDto
-}
+import com.worxbend.codeberg4s.users.social.wire.{CreateGpgKeyOptionDto, CreateKeyOptionDto, VerifyGpgKeyOptionDto}
 import com.worxbend.codeberg4s.users.{PublicKey, Username}
 import com.worxbend.codeberg4s.{CodebergError, HttpMethod}
 
@@ -312,10 +308,10 @@ object UserKeyApi:
     remove(DeleteKeyOperation, keyPath(id))
 
   private def gpgKeysRequest(params: PageParams): CodebergRequest =
-    read(GpgKeysOperation, List("user", "gpg_keys"), SocialQueries.paging(params))
+    read(GpgKeysOperation, List("user", "gpg_keys"), PagingQuery.window(params))
 
   private def gpgKeysOfRequest(username: Username, params: PageParams): CodebergRequest =
-    read(GpgKeysOfOperation, List("users", username.value, "gpg_keys"), SocialQueries.paging(params))
+    read(GpgKeysOfOperation, List("users", username.value, "gpg_keys"), PagingQuery.window(params))
 
   private def gpgKeyRequest(id: GpgKeyId): CodebergRequest =
     read(GpgKeyOperation, gpgKeyPath(id), Nil)

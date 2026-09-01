@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
@@ -857,7 +858,7 @@ object RepositoryGitApi:
     read(
       GetCombinedStatusOperation,
       commitsPath(owner, name) ++ ref.segments :+ "status",
-      GitDataQueries.paging(params),
+      PagingQuery.window(params),
     )
 
   private def statusesRequest(
@@ -870,7 +871,7 @@ object RepositoryGitApi:
     read(
       ListStatusesOperation,
       commitsPath(owner, name) ++ ref.segments :+ "statuses",
-      GitDataQueries.commitStatuses(query) ++ GitDataQueries.paging(params),
+      GitDataQueries.commitStatuses(query) ++ PagingQuery.window(params),
     )
 
   private def commitPullRequest(owner: Owner, name: RepoName, sha: CommitSha): CodebergRequest =

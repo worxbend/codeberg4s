@@ -5,9 +5,8 @@ import com.worxbend.codeberg4s.paging.PageParams
 /** How a [[com.worxbend.codeberg4s.paging.PageParams]] is written into a query string.
   *
   * A paging window has three spellings across the Forgejo API and no more, so all three live here and each wire name —
-  * `page`, `limit`, `per_page` — is written exactly once in the library, as rule 4 of [[WireConventions]] requires. The
-  * per-group `*Queries` objects keep their own `paging` method as the name their API class calls, but the pair of
-  * strings itself comes from here.
+  * `page`, `limit`, `per_page` — is written exactly once in the library, as rule 4 of [[WireConventions]] requires.
+  * Every paged endpoint calls one of the three functions below directly; there is no per-group alias in between.
   *
   * '''Why one renderer rather than one per endpoint group.''' Before this object the same two-element list appeared in
   * sixteen places. Each copy was a chance for one group to drift — to send a `limit` without a `page`, or to keep the

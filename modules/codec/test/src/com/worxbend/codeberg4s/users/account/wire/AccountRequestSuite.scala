@@ -2,9 +2,6 @@ package com.worxbend.codeberg4s.users.account.wire
 
 import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.paging.PageNumber
-import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.paging.PageSize
 import com.worxbend.codeberg4s.repositories.BranchName
 import com.worxbend.codeberg4s.users.account.AvatarImage
 import com.worxbend.codeberg4s.users.account.CreateRepository
@@ -139,9 +136,6 @@ final class AccountRequestSuite extends FunSuite:
 
   // --- queries --------------------------------------------------------------
 
-  test("paging always sends both parameters, page first"):
-    assertEquals(AccountQueries.paging(window(2, 25)), List("page" -> "2", "limit" -> "25"))
-
   test("the default ordering sends no order_by, so the instance chooses"):
     assertEquals(AccountQueries.repositoryOrder(RepositoryOrder.Default), Nil)
 
@@ -168,9 +162,6 @@ final class AccountRequestSuite extends FunSuite:
 
   private def branchName(value: String): BranchName =
     orFail(BranchName.from(value))
-
-  private def window(page: Int, size: Int): PageParams =
-    PageParams(orFail(PageNumber.from(page)), orFail(PageSize.from(size)))
 
   private def orFail[A](result: Either[ValidationError, A]): A =
     result match

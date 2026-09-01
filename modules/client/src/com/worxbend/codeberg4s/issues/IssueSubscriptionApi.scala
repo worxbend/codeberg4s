@@ -1,8 +1,8 @@
 package com.worxbend.codeberg4s.issues
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{empty, read}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
-import com.worxbend.codeberg4s.issues.wire.IssueQueries
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.users.User
 import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName}
@@ -194,7 +194,7 @@ object IssueSubscriptionApi:
       number: IssueNumber,
       params: PageParams,
   ): CodebergRequest =
-    read(ListOperation, subscriptionsPath(owner, name, number), IssueQueries.paging(params))
+    read(ListOperation, subscriptionsPath(owner, name, number), PagingQuery.window(params))
 
   private def checkRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
     read(CheckOperation, subscriptionsPath(owner, name, number) :+ "check", Nil)

@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.pulls
 
 import com.worxbend.codeberg4s.client.WireDecode
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.codec.{ArrayElements, Json}
 import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, empty, read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RetryEligibility}
@@ -1107,7 +1108,7 @@ object PullRequestApi:
       query: PullRequestQuery,
       params: PageParams,
   ): CodebergRequest =
-    read(ListOperation, pullsPath(owner, name), PullRequestQueries.pulls(query) ++ PullRequestQueries.paging(params))
+    read(ListOperation, pullsPath(owner, name), PullRequestQueries.pulls(query) ++ PagingQuery.window(params))
 
   private def getRequest(owner: Owner, name: RepoName, number: PullRequestNumber): CodebergRequest =
     read(GetOperation, pullPath(owner, name, number), Nil)
@@ -1147,7 +1148,7 @@ object PullRequestApi:
       number: PullRequestNumber,
       params: PageParams,
   ): CodebergRequest =
-    read(ListReviewsOperation, pullPath(owner, name, number) :+ "reviews", PullRequestQueries.paging(params))
+    read(ListReviewsOperation, pullPath(owner, name, number) :+ "reviews", PagingQuery.window(params))
 
   private def commitsRequest(
       owner: Owner,
@@ -1155,7 +1156,7 @@ object PullRequestApi:
       number: PullRequestNumber,
       params: PageParams,
   ): CodebergRequest =
-    read(ListCommitsOperation, pullPath(owner, name, number) :+ "commits", PullRequestQueries.paging(params))
+    read(ListCommitsOperation, pullPath(owner, name, number) :+ "commits", PagingQuery.window(params))
 
   private def filesRequest(
       owner: Owner,
@@ -1163,7 +1164,7 @@ object PullRequestApi:
       number: PullRequestNumber,
       params: PageParams,
   ): CodebergRequest =
-    read(ListFilesOperation, pullPath(owner, name, number) :+ "files", PullRequestQueries.paging(params))
+    read(ListFilesOperation, pullPath(owner, name, number) :+ "files", PagingQuery.window(params))
 
   private def pinnedRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(ListPinnedOperation, pullsPath(owner, name) :+ "pinned", Nil)

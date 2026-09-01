@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.users.social
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.issues.TrackedTime
@@ -556,10 +557,10 @@ object UserSocialApi:
       exec.attempt(rail.heatmap(username))
 
   private def followersRequest(params: PageParams): CodebergRequest =
-    read(FollowersOperation, List("user", "followers"), SocialQueries.paging(params))
+    read(FollowersOperation, List("user", "followers"), PagingQuery.window(params))
 
   private def followingRequest(params: PageParams): CodebergRequest =
-    read(FollowingOperation, List("user", "following"), SocialQueries.paging(params))
+    read(FollowingOperation, List("user", "following"), PagingQuery.window(params))
 
   private def followRequest(username: Username): CodebergRequest =
     bodiless(FollowOperation, HttpMethod.Put, followingPath(username))
@@ -582,10 +583,10 @@ object UserSocialApi:
     )
 
   private def starredRequest(params: PageParams): CodebergRequest =
-    read(StarredOperation, List("user", "starred"), SocialQueries.paging(params))
+    read(StarredOperation, List("user", "starred"), PagingQuery.window(params))
 
   private def starredByRequest(username: Username, params: PageParams): CodebergRequest =
-    read(StarredByOperation, List("users", username.value, "starred"), SocialQueries.paging(params))
+    read(StarredByOperation, List("users", username.value, "starred"), PagingQuery.window(params))
 
   private def starRequest(owner: Owner, name: RepoName): CodebergRequest =
     bodiless(StarOperation, HttpMethod.Put, starredPath(owner, name))
@@ -597,10 +598,10 @@ object UserSocialApi:
     read(IsStarredOperation, starredPath(owner, name), Nil)
 
   private def subscriptionsRequest(params: PageParams): CodebergRequest =
-    read(SubscriptionsOperation, List("user", "subscriptions"), SocialQueries.paging(params))
+    read(SubscriptionsOperation, List("user", "subscriptions"), PagingQuery.window(params))
 
   private def subscriptionsOfRequest(username: Username, params: PageParams): CodebergRequest =
-    read(SubscriptionsOfOperation, List("users", username.value, "subscriptions"), SocialQueries.paging(params))
+    read(SubscriptionsOfOperation, List("users", username.value, "subscriptions"), PagingQuery.window(params))
 
   private def blockRequest(username: Username): CodebergRequest =
     bodiless(BlockOperation, HttpMethod.Put, List("user", "block", username.value))
@@ -609,16 +610,16 @@ object UserSocialApi:
     bodiless(UnblockOperation, HttpMethod.Put, List("user", "unblock", username.value))
 
   private def blockedRequest(params: PageParams): CodebergRequest =
-    read(BlockedOperation, List("user", "list_blocked"), SocialQueries.paging(params))
+    read(BlockedOperation, List("user", "list_blocked"), PagingQuery.window(params))
 
   private def stopWatchesRequest(params: PageParams): CodebergRequest =
-    read(StopWatchesOperation, List("user", "stopwatches"), SocialQueries.paging(params))
+    read(StopWatchesOperation, List("user", "stopwatches"), PagingQuery.window(params))
 
   private def trackedTimesRequest(window: TrackedTimeWindow, params: PageParams): CodebergRequest =
     read(
       TrackedTimesOperation,
       List("user", "times"),
-      SocialQueries.trackedTimes(window) ++ SocialQueries.paging(params),
+      SocialQueries.trackedTimes(window) ++ PagingQuery.window(params),
     )
 
   private def activityFeedsRequest(
@@ -629,7 +630,7 @@ object UserSocialApi:
     read(
       ActivityFeedsOperation,
       List("users", username.value, "activities", "feeds"),
-      SocialQueries.activityFeeds(query) ++ SocialQueries.paging(params),
+      SocialQueries.activityFeeds(query) ++ PagingQuery.window(params),
     )
 
   private def heatmapRequest(username: Username): CodebergRequest =

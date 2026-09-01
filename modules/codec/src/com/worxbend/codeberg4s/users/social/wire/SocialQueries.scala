@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.users.social.wire
 
-import com.worxbend.codeberg4s.codec.{PagingQuery, Timestamps}
-import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.codec.Timestamps
 import com.worxbend.codeberg4s.users.social.{ActivityFeedQuery, TrackedTimeWindow}
 
 import java.time.format.DateTimeFormatter
@@ -14,7 +13,8 @@ import java.time.format.DateTimeFormatter
   * wire spelling is written exactly once. It also means the shape of a request can be asserted on directly, without a
   * stub backend.
   *
-  * '''Only parameters the caller set are emitted''', except for paging, which is always both keys.
+  * '''Only parameters the caller set are emitted.''' The paging window is not rendered here at all: it comes from
+  * [[com.worxbend.codeberg4s.codec.PagingQuery]], which every paged endpoint calls directly.
   */
 private[codeberg4s] object SocialQueries:
 
@@ -29,15 +29,6 @@ private[codeberg4s] object SocialQueries:
 
   /** The wire key of the upper bound of a tracked-time window. */
   val BeforeKey: String = "before"
-
-  /** The `page` and `limit` parameters of a paged listing.
-    *
-    * Both are always sent, and the pair is rendered by [[com.worxbend.codeberg4s.codec.PagingQuery.window]], which
-    * carries the measurement behind that rule: a `limit` sent without a `page` is silently ignored by some Forgejo
-    * endpoints, which is how a client accidentally pulls an unbounded collection.
-    */
-  def paging(params: PageParams): List[(String, String)] =
-    PagingQuery.window(params)
 
   /** The filters of the activity-feed listing, in the order the spec declares them.
     *

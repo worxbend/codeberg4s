@@ -1,9 +1,5 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
-import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.paging.PageNumber
-import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.paging.PageSize
 import com.worxbend.codeberg4s.repositories.access.DeployKeyQuery
 
 import munit.FunSuite
@@ -15,9 +11,6 @@ import munit.FunSuite
   * legitimately repeat elsewhere in the library.
   */
 final class AccessQueriesSuite extends FunSuite:
-
-  test("paging always states both parameters, so a limit is never sent without a page"):
-    assertEquals(AccessQueries.paging(window(2, 25)), List("page" -> "2", "limit" -> "25"))
 
   test("an empty deploy key query sends no filter at all"):
     assertEquals(AccessQueries.deployKeys(DeployKeyQuery.Empty), Nil)
@@ -36,11 +29,3 @@ final class AccessQueriesSuite extends FunSuite:
       AccessQueries.deployKeys(DeployKeyQuery.Empty.forKeyId(91L).withFingerprint("SHA256:abc")),
       List("key_id" -> "91", "fingerprint" -> "SHA256:abc"),
     )
-
-  private def window(page: Int, size: Int): PageParams =
-    PageParams(orFail(PageNumber.from(page)), orFail(PageSize.from(size)))
-
-  private def orFail[A](result: Either[ValidationError, A]): A =
-    result match
-      case Right(value) => value
-      case Left(error)  => fail(s"invalid fixture: ${error.field} ${error.message}")

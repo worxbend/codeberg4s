@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.organizations.actions
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.organizations.OrgName
@@ -485,7 +486,7 @@ object OrganizationActionApi:
     if command.renamedTo.isEmpty then RetryEligibility.AlwaysRetry else RetryEligibility.Never
 
   private def listRunnersRequest(org: OrgName, visibility: RunnerVisibility, params: PageParams): CodebergRequest =
-    read(ListRunnersOperation, runnersPath(org), ActionQueries.runners(visibility) ++ ActionQueries.paging(params))
+    read(ListRunnersOperation, runnersPath(org), ActionQueries.runners(visibility) ++ PagingQuery.window(params))
 
   private def runnerRequest(org: OrgName, id: RunnerId): CodebergRequest =
     read(GetRunnerOperation, runnerPath(org, id), Nil)
@@ -503,7 +504,7 @@ object OrganizationActionApi:
     read(SearchRunnerJobsOperation, runnersPath(org) :+ "jobs", ActionQueries.runnerJobs(labels))
 
   private def listSecretsRequest(org: OrgName, params: PageParams): CodebergRequest =
-    read(ListSecretsOperation, secretsPath(org), ActionQueries.paging(params))
+    read(ListSecretsOperation, secretsPath(org), PagingQuery.window(params))
 
   private def setSecretRequest(org: OrgName, secret: SecretName, value: SecretValue): CodebergRequest =
     write(SetSecretOperation, HttpMethod.Put, secretPath(org, secret), SecretOptionDto.render(value))
@@ -512,7 +513,7 @@ object OrganizationActionApi:
     remove(DeleteSecretOperation, secretPath(org, secret))
 
   private def listVariablesRequest(org: OrgName, params: PageParams): CodebergRequest =
-    read(ListVariablesOperation, variablesPath(org), ActionQueries.paging(params))
+    read(ListVariablesOperation, variablesPath(org), PagingQuery.window(params))
 
   private def variableRequest(org: OrgName, name: VariableName): CodebergRequest =
     read(GetVariableOperation, variablePath(org, name), Nil)

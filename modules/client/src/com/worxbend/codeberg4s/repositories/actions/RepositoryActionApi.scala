@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.actions
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, CodebergResponse, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
@@ -836,7 +837,7 @@ object RepositoryActionApi:
     read(
       ListArtifactsOperation,
       artifactsPath(owner, name),
-      ActionQueries.artifacts(query) ++ ActionQueries.paging(params),
+      ActionQueries.artifacts(query) ++ PagingQuery.window(params),
     )
 
   private def artifactRequest(owner: Owner, name: RepoName, id: ArtifactId): CodebergRequest =
@@ -857,7 +858,7 @@ object RepositoryActionApi:
       query: ActionRunQuery,
       params: PageParams,
   ): CodebergRequest =
-    read(ListRunsOperation, runsPath(owner, name), ActionQueries.runs(query) ++ ActionQueries.paging(params))
+    read(ListRunsOperation, runsPath(owner, name), ActionQueries.runs(query) ++ PagingQuery.window(params))
 
   private def runRequest(owner: Owner, name: RepoName, id: RunId): CodebergRequest =
     read(GetRunOperation, runPath(owner, name, id), Nil)
@@ -878,7 +879,7 @@ object RepositoryActionApi:
     read(
       ListRunArtifactsOperation,
       runPath(owner, name, id) :+ "artifacts",
-      ActionQueries.artifacts(query) ++ ActionQueries.paging(params),
+      ActionQueries.artifacts(query) ++ PagingQuery.window(params),
     )
 
   private def listRunJobsRequest(owner: Owner, name: RepoName, id: RunId): CodebergRequest =
@@ -905,7 +906,7 @@ object RepositoryActionApi:
     read(
       ListRunnersOperation,
       runnersPath(owner, name),
-      ActionQueries.runners(visibility) ++ ActionQueries.paging(params),
+      ActionQueries.runners(visibility) ++ PagingQuery.window(params),
     )
 
   private def runnerRequest(owner: Owner, name: RepoName, id: RunnerId): CodebergRequest =
@@ -941,11 +942,11 @@ object RepositoryActionApi:
     read(
       ListTasksOperation,
       actionsPath(owner, name) :+ "tasks",
-      ActionQueries.tasks(query) ++ ActionQueries.paging(params),
+      ActionQueries.tasks(query) ++ PagingQuery.window(params),
     )
 
   private def listSecretsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListSecretsOperation, secretsPath(owner, name), ActionQueries.paging(params))
+    read(ListSecretsOperation, secretsPath(owner, name), PagingQuery.window(params))
 
   private def setSecretRequest(
       owner: Owner,
@@ -959,7 +960,7 @@ object RepositoryActionApi:
     remove(DeleteSecretOperation, secretPath(owner, name, secret))
 
   private def listVariablesRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListVariablesOperation, variablesPath(owner, name), ActionQueries.paging(params))
+    read(ListVariablesOperation, variablesPath(owner, name), PagingQuery.window(params))
 
   private def variableRequest(owner: Owner, name: RepoName, variableName: VariableName): CodebergRequest =
     read(GetVariableOperation, variablePath(owner, name, variableName), Nil)

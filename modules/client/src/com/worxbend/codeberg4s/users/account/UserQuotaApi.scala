@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.users.account
 
 import com.worxbend.codeberg4s.CodebergError
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
@@ -184,13 +185,13 @@ object UserQuotaApi:
     read(CheckOperation, quotaPath :+ "check", AccountQueries.quotaCheck(subject))
 
   private def artifactsRequest(params: PageParams): CodebergRequest =
-    read(ArtifactsOperation, quotaPath :+ "artifacts", AccountQueries.paging(params))
+    read(ArtifactsOperation, quotaPath :+ "artifacts", PagingQuery.window(params))
 
   private def attachmentsRequest(params: PageParams): CodebergRequest =
-    read(AttachmentsOperation, quotaPath :+ "attachments", AccountQueries.paging(params))
+    read(AttachmentsOperation, quotaPath :+ "attachments", PagingQuery.window(params))
 
   private def packagesRequest(params: PageParams): CodebergRequest =
-    read(PackagesOperation, quotaPath :+ "packages", AccountQueries.paging(params))
+    read(PackagesOperation, quotaPath :+ "packages", PagingQuery.window(params))
 
   private def quotaPath: List[String] =
     AccountRequests.path("quota")

@@ -1,7 +1,5 @@
 package com.worxbend.codeberg4s.users.account.wire
 
-import com.worxbend.codeberg4s.codec.PagingQuery
-import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.users.account.{QuotaSubject, RepositoryOrder}
 
 /** The query strings the `/user` account endpoints send.
@@ -24,15 +22,6 @@ private[codeberg4s] object AccountQueries:
 
   /** The query parameter `GET /user/quota/check` takes its subject from. */
   val SubjectParameter: String = "subject"
-
-  /** The `page` and `limit` parameters of a paged listing.
-    *
-    * Both are always sent, and the pair is rendered by [[com.worxbend.codeberg4s.codec.PagingQuery.window]], which
-    * carries the measurement behind that rule: a `limit` sent without a `page` is silently ignored by some Forgejo
-    * endpoints, which is how a client accidentally pulls an unbounded collection.
-    */
-  def paging(params: PageParams): List[(String, String)] =
-    PagingQuery.window(params)
 
   /** The `order_by` parameter of the repository listing.
     *

@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.issues
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.issues.wire.{AddTimeOptionDto, IssueQueries}
@@ -301,7 +302,7 @@ object IssueTimeApi:
     read(
       ListOperation,
       timesPath(owner, name, number),
-      IssueQueries.trackedTimes(query) ++ IssueQueries.paging(params),
+      IssueQueries.trackedTimes(query) ++ PagingQuery.window(params),
     )
 
   private def addRequest(

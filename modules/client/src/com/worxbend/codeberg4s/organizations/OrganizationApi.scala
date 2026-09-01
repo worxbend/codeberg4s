@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.organizations
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.organizations.actions.OrganizationActionApi
@@ -1003,7 +1004,7 @@ object OrganizationApi:
     read(GetOperation, OrganizationRequests.organizationPath(org), Nil)
 
   private def listRequest(params: PageParams): CodebergRequest =
-    read(ListOperation, List(OrganizationRequests.OrgsSegment), window(params))
+    read(ListOperation, List(OrganizationRequests.OrgsSegment), PagingQuery.window(params))
 
   private def createRequest(command: CreateOrganization): CodebergRequest =
     write(
@@ -1044,7 +1045,7 @@ object OrganizationApi:
     bodiless(DeleteAvatarOperation, HttpMethod.Delete, avatarPath(org))
 
   private def repositoriesRequest(org: OrgName, params: PageParams): CodebergRequest =
-    read(RepositoriesOperation, reposPath(org), window(params))
+    read(RepositoriesOperation, reposPath(org), PagingQuery.window(params))
 
   private def createRepositoryRequest(org: OrgName, command: CreateRepository): CodebergRequest =
     write(
@@ -1066,7 +1067,7 @@ object OrganizationApi:
     )
 
   private def membersRequest(org: OrgName, params: PageParams): CodebergRequest =
-    read(MembersOperation, membersPath(org), window(params))
+    read(MembersOperation, membersPath(org), PagingQuery.window(params))
 
   private def isMemberRequest(org: OrgName, username: Username): CodebergRequest =
     read(IsMemberOperation, memberPath(org, username), Nil)
@@ -1075,7 +1076,7 @@ object OrganizationApi:
     bodiless(RemoveMemberOperation, HttpMethod.Delete, memberPath(org, username))
 
   private def publicMembersRequest(org: OrgName, params: PageParams): CodebergRequest =
-    read(PublicMembersOperation, publicMembersPath(org), window(params))
+    read(PublicMembersOperation, publicMembersPath(org), PagingQuery.window(params))
 
   private def isPublicMemberRequest(org: OrgName, username: Username): CodebergRequest =
     read(IsPublicMemberOperation, publicMemberPath(org, username), Nil)
@@ -1090,7 +1091,7 @@ object OrganizationApi:
     read(
       BlockedUsersOperation,
       OrganizationRequests.organizationPath(org) :+ "list_blocked",
-      window(params),
+      PagingQuery.window(params),
     )
 
   private def blockUserRequest(org: OrgName, username: Username): CodebergRequest =
@@ -1111,17 +1112,17 @@ object OrganizationApi:
     read(
       TeamsOperation,
       OrganizationRequests.organizationPath(org) :+ OrganizationRequests.TeamsSegment,
-      window(params),
+      PagingQuery.window(params),
     )
 
   private def getTeamRequest(id: TeamId): CodebergRequest =
     read(GetTeamOperation, OrganizationRequests.teamPath(id), Nil)
 
   private def teamMembersRequest(id: TeamId, params: PageParams): CodebergRequest =
-    read(TeamMembersOperation, OrganizationRequests.teamPath(id) :+ "members", window(params))
+    read(TeamMembersOperation, OrganizationRequests.teamPath(id) :+ "members", PagingQuery.window(params))
 
   private def teamRepositoriesRequest(id: TeamId, params: PageParams): CodebergRequest =
-    read(TeamRepositoriesOperation, OrganizationRequests.teamPath(id) :+ "repos", window(params))
+    read(TeamRepositoriesOperation, OrganizationRequests.teamPath(id) :+ "repos", PagingQuery.window(params))
 
   private def activitiesRequest(org: OrgName, date: Option[LocalDate], params: PageParams): CodebergRequest =
     read(
@@ -1134,14 +1135,14 @@ object OrganizationApi:
     read(
       UserOrganizationsOperation,
       OrganizationRequests.userPath(username) :+ OrganizationRequests.OrgsSegment,
-      window(params),
+      PagingQuery.window(params),
     )
 
   private def currentUserOrganizationsRequest(params: PageParams): CodebergRequest =
     read(
       CurrentUserOrganizationsOperation,
       List("user", OrganizationRequests.OrgsSegment),
-      window(params),
+      PagingQuery.window(params),
     )
 
   private def userPermissionsRequest(username: Username, org: OrgName): CodebergRequest =
@@ -1168,12 +1169,3 @@ object OrganizationApi:
 
   private def publicMemberPath(org: OrgName, username: Username): List[String] =
     publicMembersPath(org) :+ username.value
-
-  /** The `page` and `limit` parameters, in the order Forgejo's own `Link` header writes them.
-    *
-    * Delegates to [[com.worxbend.codeberg4s.organizations.wire.OrganizationQueries.paging]] rather than spelling the
-    * two names again: `page` and `limit` are wire spellings, and rule 4 of
-    * [[com.worxbend.codeberg4s.codec.WireConventions]] says a wire spelling is written exactly once.
-    */
-  private def window(params: PageParams): List[(String, String)] =
-    OrganizationQueries.paging(params)

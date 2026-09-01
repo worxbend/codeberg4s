@@ -1,8 +1,8 @@
 package com.worxbend.codeberg4s.organizations
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
-import com.worxbend.codeberg4s.organizations.wire.OrganizationQueries
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.hooks.wire.HookOptionDto
 import com.worxbend.codeberg4s.repositories.hooks.{CreateHook, EditHook, HookId, Webhook}
@@ -232,7 +232,7 @@ object OrganizationHookApi:
       exec.attempt(rail.delete(org, id))
 
   private def listRequest(org: OrgName, params: PageParams): CodebergRequest =
-    read(ListOperation, hooksPath(org), OrganizationQueries.paging(params))
+    read(ListOperation, hooksPath(org), PagingQuery.window(params))
 
   private def getRequest(org: OrgName, id: HookId): CodebergRequest =
     read(GetOperation, hookPath(org, id), Nil)

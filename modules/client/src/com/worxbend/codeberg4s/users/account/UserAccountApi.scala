@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.users.account
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, removeWithBody, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.organizations.Team
@@ -398,7 +399,7 @@ object UserAccountApi:
     read(
       RepositoriesOperation,
       repositoriesPath,
-      AccountQueries.paging(params) ++ AccountQueries.repositoryOrder(order),
+      PagingQuery.window(params) ++ AccountQueries.repositoryOrder(order),
     )
 
   private def createRepositoryRequest(command: CreateRepository): CodebergRequest =
@@ -410,7 +411,7 @@ object UserAccountApi:
     )
 
   private def teamsRequest(params: PageParams): CodebergRequest =
-    read(TeamsOperation, AccountRequests.path("teams"), AccountQueries.paging(params))
+    read(TeamsOperation, AccountRequests.path("teams"), PagingQuery.window(params))
 
   private def settingsPath: List[String] =
     AccountRequests.path("settings")

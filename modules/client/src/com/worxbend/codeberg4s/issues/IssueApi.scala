@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.issues
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, remove, removeWithBody, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.issues.wire.{
@@ -752,7 +753,7 @@ object IssueApi:
     read(
       SearchOperation,
       List("repos", "issues", "search"),
-      IssueQueries.search(query) ++ IssueQueries.paging(params),
+      IssueQueries.search(query) ++ PagingQuery.window(params),
     )
 
   private def deleteRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
@@ -791,7 +792,7 @@ object IssueApi:
       number: IssueNumber,
       params: PageParams,
   ): CodebergRequest =
-    read(ListBlocksOperation, blocksPath(owner, name, number), IssueQueries.paging(params))
+    read(ListBlocksOperation, blocksPath(owner, name, number), PagingQuery.window(params))
 
   private def addBlockRequest(
       owner: Owner,
@@ -824,7 +825,7 @@ object IssueApi:
       number: IssueNumber,
       params: PageParams,
   ): CodebergRequest =
-    read(ListDependenciesOperation, dependenciesPath(owner, name, number), IssueQueries.paging(params))
+    read(ListDependenciesOperation, dependenciesPath(owner, name, number), PagingQuery.window(params))
 
   private def addDependencyRequest(
       owner: Owner,
@@ -861,7 +862,7 @@ object IssueApi:
     read(
       TimelineOperation,
       IssueRequests.issuePath(owner, name, number) :+ "timeline",
-      IssueQueries.comments(query) ++ IssueQueries.paging(params),
+      IssueQueries.comments(query) ++ PagingQuery.window(params),
     )
 
   private def pinPath(owner: Owner, name: RepoName, number: IssueNumber): List[String] =
@@ -874,7 +875,7 @@ object IssueApi:
     IssueRequests.issuePath(owner, name, number) :+ "dependencies"
 
   private def listRequest(owner: Owner, name: RepoName, query: IssueQuery, params: PageParams): CodebergRequest =
-    read(ListOperation, IssueRequests.issuesPath(owner, name), IssueQueries.issues(query) ++ IssueQueries.paging(params))
+    read(ListOperation, IssueRequests.issuesPath(owner, name), IssueQueries.issues(query) ++ PagingQuery.window(params))
 
   private def getRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
     read(GetOperation, IssueRequests.issuePath(owner, name, number), Nil)
@@ -901,7 +902,7 @@ object IssueApi:
       number: IssueNumber,
       params: PageParams,
   ): CodebergRequest =
-    read(ListCommentsOperation, IssueRequests.issuePath(owner, name, number) :+ "comments", IssueQueries.paging(params))
+    read(ListCommentsOperation, IssueRequests.issuePath(owner, name, number) :+ "comments", PagingQuery.window(params))
 
   private def createCommentRequest(
       owner: Owner,
@@ -917,7 +918,7 @@ object IssueApi:
     )
 
   private def listLabelsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListLabelsOperation, IssueRequests.labelsPath(owner, name), IssueQueries.paging(params))
+    read(ListLabelsOperation, IssueRequests.labelsPath(owner, name), PagingQuery.window(params))
 
   private def createLabelRequest(owner: Owner, name: RepoName, command: CreateLabel): CodebergRequest =
     write(
@@ -936,7 +937,7 @@ object IssueApi:
     read(
       ListMilestonesOperation,
       IssueRequests.milestonesPath(owner, name),
-      IssueQueries.milestones(state) ++ IssueQueries.paging(params),
+      IssueQueries.milestones(state) ++ PagingQuery.window(params),
     )
 
   private def getMilestoneRequest(owner: Owner, name: RepoName, id: MilestoneId): CodebergRequest =

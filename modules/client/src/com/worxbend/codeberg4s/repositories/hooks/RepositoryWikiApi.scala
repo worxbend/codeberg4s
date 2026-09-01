@@ -1,9 +1,10 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
-import com.worxbend.codeberg4s.repositories.hooks.wire.{HookQueries, WikiPageOptionsDto}
+import com.worxbend.codeberg4s.repositories.hooks.wire.WikiPageOptionsDto
 import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
@@ -162,8 +163,8 @@ final class RepositoryWikiApi private[codeberg4s] (pipeline: ApiPipeline[Future]
     *
     * '''Only `page` is sent, never `limit`.''' The spec declares no `limit` for this operation, so the instance chooses
     * the page size and the size half of the requested window does not reach the wire; see
-    * [[com.worxbend.codeberg4s.repositories.hooks.wire.HookQueries.revisionPaging]]. Where the collection ends is still
-    * decided by the `Link` header, as everywhere else.
+    * [[com.worxbend.codeberg4s.codec.PagingQuery.pageOnly]]. Where the collection ends is still decided by the `Link`
+    * header, as everywhere else.
     *
     * '''Failures.''' The group contract above.
     */
@@ -248,7 +249,7 @@ object RepositoryWikiApi:
       exec.attempt(rail.revisions(owner, name, pageName, params))
 
   private def listPagesRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListPagesOperation, wikiPath(owner, name) :+ "pages", HookQueries.paging(params))
+    read(ListPagesOperation, wikiPath(owner, name) :+ "pages", PagingQuery.window(params))
 
   private def pageRequest(owner: Owner, name: RepoName, pageName: WikiPageName): CodebergRequest =
     read(GetPageOperation, pagePath(owner, name, pageName), Nil)
@@ -286,7 +287,7 @@ object RepositoryWikiApi:
     read(
       ListRevisionsOperation,
       wikiPath(owner, name) ++ ("revisions" :: pageName.segments),
-      HookQueries.revisionPaging(params),
+      PagingQuery.pageOnly(params),
     )
 
   private def wikiPath(owner: Owner, name: RepoName): List[String] =

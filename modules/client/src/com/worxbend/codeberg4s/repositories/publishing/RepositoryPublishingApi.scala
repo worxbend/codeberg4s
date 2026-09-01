@@ -611,7 +611,7 @@ object RepositoryPublishingApi:
       id: ReleaseId,
       params: PageParams,
   ): CodebergRequest =
-    read(ListAssetsOperation, assetsPath(owner, name, id), window(params))
+    read(ListAssetsOperation, assetsPath(owner, name, id), PagingQuery.window(params))
 
   private def uploadAssetRequest(
       owner: Owner,
@@ -683,11 +683,6 @@ object RepositoryPublishingApi:
       RepositoryRequests.repositoryPath(templateOwner, templateName) :+ "generate",
       GenerateRepoOptionDto.render(command),
     )
-
-  /** A `DELETE` with no body at all, which is what every deletion in this group is. */
-  /** The `page` and `limit` window, rendered by [[com.worxbend.codeberg4s.codec.PagingQuery.window]]. */
-  private def window(params: PageParams): List[(String, String)] =
-    PagingQuery.window(params)
 
   private def releasesPath(owner: Owner, name: RepoName): List[String] =
     RepositoryRequests.repositoryPath(owner, name) :+ "releases"

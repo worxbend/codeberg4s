@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.access
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.organizations.Team
@@ -815,7 +816,7 @@ object RepositoryAccessApi:
     remove(DeleteTagProtectionOperation, tagProtectionPath(owner, name, id))
 
   private def listCollaboratorsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListCollaboratorsOperation, collaboratorsPath(owner, name), AccessQueries.paging(params))
+    read(ListCollaboratorsOperation, collaboratorsPath(owner, name), PagingQuery.window(params))
 
   private def checkCollaboratorRequest(owner: Owner, name: RepoName, collaborator: Username): CodebergRequest =
     read(CheckCollaboratorOperation, collaboratorPath(owner, name, collaborator), Nil)
@@ -848,7 +849,7 @@ object RepositoryAccessApi:
     read(
       ListDeployKeysOperation,
       deployKeysPath(owner, name),
-      AccessQueries.deployKeys(query) ++ AccessQueries.paging(params),
+      AccessQueries.deployKeys(query) ++ PagingQuery.window(params),
     )
 
   private def deployKeyRequest(owner: Owner, name: RepoName, id: DeployKeyId): CodebergRequest =

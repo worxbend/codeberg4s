@@ -382,36 +382,31 @@ object RepositoryApi:
     read(GetOperation, RepositoryRequests.repositoryPath(owner, name), Nil)
 
   private def searchRequest(term: String, params: PageParams): CodebergRequest =
-    read(SearchOperation, RepositoryRequests.reposPath :+ "search", ("q" -> term) :: window(params))
+    read(SearchOperation, RepositoryRequests.reposPath :+ "search", ("q" -> term) :: PagingQuery.window(params))
 
   private def branchesRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListBranchesOperation, RepositoryRequests.repositoryPath(owner, name) :+ "branches", window(params))
+    read(ListBranchesOperation, RepositoryRequests.repositoryPath(owner, name) :+ "branches", PagingQuery.window(params))
 
   private def branchRequest(owner: Owner, name: RepoName, branch: BranchName): CodebergRequest =
     read(GetBranchOperation, (RepositoryRequests.repositoryPath(owner, name) :+ "branches") ++ branch.segments, Nil)
 
   private def tagsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListTagsOperation, RepositoryRequests.repositoryPath(owner, name) :+ "tags", window(params))
+    read(ListTagsOperation, RepositoryRequests.repositoryPath(owner, name) :+ "tags", PagingQuery.window(params))
 
   private def commitsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListCommitsOperation, RepositoryRequests.repositoryPath(owner, name) :+ "commits", window(params))
+    read(ListCommitsOperation, RepositoryRequests.repositoryPath(owner, name) :+ "commits", PagingQuery.window(params))
 
   private def releasesRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListReleasesOperation, RepositoryRequests.repositoryPath(owner, name) :+ "releases", window(params))
+    read(ListReleasesOperation, RepositoryRequests.repositoryPath(owner, name) :+ "releases", PagingQuery.window(params))
 
   private def releaseRequest(owner: Owner, name: RepoName, id: ReleaseId): CodebergRequest =
     read(GetReleaseOperation, RepositoryRequests.repositoryPath(owner, name) ++ List("releases", id.value.toString), Nil)
 
   private def topicsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListTopicsOperation, RepositoryRequests.repositoryPath(owner, name) :+ "topics", window(params))
+    read(ListTopicsOperation, RepositoryRequests.repositoryPath(owner, name) :+ "topics", PagingQuery.window(params))
 
   private def contentsRequest(owner: Owner, name: RepoName, path: ContentPath): CodebergRequest =
     read(GetContentsOperation, (RepositoryRequests.repositoryPath(owner, name) :+ "contents") ++ path.segments, Nil)
 
   private def forksRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListForksOperation, RepositoryRequests.repositoryPath(owner, name) :+ "forks", window(params))
-
-  /** Every operation in this group is a `GET` that carries no body and adds no header of its own. */
-  /** The `page` and `limit` window, rendered by [[com.worxbend.codeberg4s.codec.PagingQuery.window]]. */
-  private def window(params: PageParams): List[(String, String)] =
-    PagingQuery.window(params)
+    read(ListForksOperation, RepositoryRequests.repositoryPath(owner, name) :+ "forks", PagingQuery.window(params))

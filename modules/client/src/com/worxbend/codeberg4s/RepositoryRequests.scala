@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s
 
-/** The `/repos` path prefixes every repository-scoped API in the library builds on, so that
-  * `/repos/{owner}/{repo}` is spelled once rather than in every package that hangs a route off it.
+/** The `/repos` path prefixes every repository-scoped API in the library builds on, so that `/repos/{owner}/{repo}` is
+  * spelled once rather than in every package that hangs a route off it.
   *
   * The request shapes these paths are handed to live in the companion of
   * [[com.worxbend.codeberg4s.core.CodebergRequest]]. That companion is deliberately free of endpoint vocabulary — it

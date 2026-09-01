@@ -25,22 +25,13 @@ private[codeberg4s] object OrganizationQueries:
     */
   private val ActivityDate: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE
 
-  /** The `page` and `limit` parameters of a paged listing.
-    *
-    * Both are always sent, and the pair is rendered by [[com.worxbend.codeberg4s.codec.PagingQuery.window]], which
-    * carries the measurement behind that rule: a `limit` sent without a `page` is silently ignored by some Forgejo
-    * endpoints, which is how a client accidentally pulls an unbounded collection.
-    */
-  def paging(params: PageParams): List[(String, String)] =
-    PagingQuery.window(params)
-
   /** The parameters of `GET /orgs/{org}/labels`: an optional ordering, then the window.
     *
     * `sort` is omitted entirely when the caller named no ordering; see
     * [[com.worxbend.codeberg4s.organizations.OrganizationLabelSort]] for why there is no case meaning "the default".
     */
   def labels(sort: Option[OrganizationLabelSort], params: PageParams): List[(String, String)] =
-    sort.toList.map(order => "sort" -> order.wireValue) ++ paging(params)
+    sort.toList.map(order => "sort" -> order.wireValue) ++ PagingQuery.window(params)
 
   /** The parameters of the two activity feeds: an optional day, then the window.
     *
@@ -49,7 +40,7 @@ private[codeberg4s] object OrganizationQueries:
     * needs a range asks for one day at a time.
     */
   def activities(date: Option[LocalDate], params: PageParams): List[(String, String)] =
-    date.toList.map(day => "date" -> day.format(ActivityDate)) ++ paging(params)
+    date.toList.map(day => "date" -> day.format(ActivityDate)) ++ PagingQuery.window(params)
 
   /** The parameters of `GET /orgs/{org}/teams/search`: the optional text, the optional description flag, the window.
     *
@@ -64,7 +55,7 @@ private[codeberg4s] object OrganizationQueries:
   ): List[(String, String)] =
     text.toList.map(keywords => "q" -> keywords)
       ++ includeDescription.toList.map(flag => "include_desc" -> flag.toString)
-      ++ paging(params)
+      ++ PagingQuery.window(params)
 
   /** The one required parameter of `GET /orgs/{org}/quota/check`.
     *

@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.admin
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, remove, removeWithBody, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.issues.wire.IssueQueries
@@ -1204,7 +1205,7 @@ object RepositoryAdminApi:
     bodiless(SyncMirrorOperation, HttpMethod.Post, RepositoryRequests.repositoryPath(owner, name) :+ "mirror-sync")
 
   private def pushMirrorsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListPushMirrorsOperation, pushMirrorsPath(owner, name), AdminQueries.paging(params))
+    read(ListPushMirrorsOperation, pushMirrorsPath(owner, name), PagingQuery.window(params))
 
   private def pushMirrorRequest(owner: Owner, name: RepoName, mirror: MirrorName): CodebergRequest =
     read(GetPushMirrorOperation, pushMirrorsPath(owner, name) :+ mirror.value, Nil)
@@ -1256,14 +1257,14 @@ object RepositoryAdminApi:
     read(
       ListStargazersOperation,
       RepositoryRequests.repositoryPath(owner, name) :+ "stargazers",
-      AdminQueries.paging(params)
+      PagingQuery.window(params)
     )
 
   private def subscribersRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
     read(
       ListSubscribersOperation,
       RepositoryRequests.repositoryPath(owner, name) :+ "subscribers",
-      AdminQueries.paging(params)
+      PagingQuery.window(params)
     )
 
   private def createBranchRequest(owner: Owner, name: RepoName, command: CreateBranch): CodebergRequest =
@@ -1345,7 +1346,7 @@ object RepositoryAdminApi:
     read(
       ListActivityFeedOperation,
       RepositoryRequests.repositoryPath(owner, name) ++ List("activities", "feeds"),
-      AdminQueries.activities(date) ++ AdminQueries.paging(params),
+      AdminQueries.activities(date) ++ PagingQuery.window(params),
     )
 
   private def languagesRequest(owner: Owner, name: RepoName): CodebergRequest =
@@ -1369,7 +1370,7 @@ object RepositoryAdminApi:
     read(
       ListTrackedTimesOperation,
       timesPath(owner, name),
-      IssueQueries.trackedTimes(query) ++ AdminQueries.paging(params),
+      IssueQueries.trackedTimes(query) ++ PagingQuery.window(params),
     )
 
   private def trackedTimesForRequest(owner: Owner, name: RepoName, user: Username): CodebergRequest =
@@ -1379,7 +1380,7 @@ object RepositoryAdminApi:
     read(
       SearchTopicsOperation,
       List("topics", "search"),
-      AdminQueries.topicSearch(keyword) ++ AdminQueries.paging(params),
+      AdminQueries.topicSearch(keyword) ++ PagingQuery.window(params),
     )
 
   private def pushMirrorsPath(owner: Owner, name: RepoName): List[String] =

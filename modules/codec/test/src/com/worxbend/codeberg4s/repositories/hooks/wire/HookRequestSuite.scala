@@ -2,9 +2,6 @@ package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.paging.PageNumber
-import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.paging.PageSize
 import com.worxbend.codeberg4s.repositories.hooks.CreateHook
 import com.worxbend.codeberg4s.repositories.hooks.CreateWikiPage
 import com.worxbend.codeberg4s.repositories.hooks.EditGitHook
@@ -151,12 +148,6 @@ final class HookRequestSuite extends FunSuite:
 
   // --- query strings --------------------------------------------------------
 
-  test("a paged listing sends page and limit together, because limit alone is silently ignored"):
-    assertEquals(HookQueries.paging(window(2, 25)), List("page" -> "2", "limit" -> "25"))
-
-  test("the revision listing sends page alone, because the spec declares no limit for it"):
-    assertEquals(HookQueries.revisionPaging(window(3, 25)), List("page" -> "3"))
-
   test("a hook test sends a ref only when the caller named one"):
     assertEquals(HookQueries.hookTest(Some("refs/heads/main")), List("ref" -> "refs/heads/main"))
     assertEquals(HookQueries.hookTest(None), Nil)
@@ -172,9 +163,6 @@ final class HookRequestSuite extends FunSuite:
 
   private def flag(value: String): RepositoryFlag =
     orFail(RepositoryFlag.from(value))
-
-  private def window(number: Int, size: Int): PageParams =
-    PageParams(orFail(PageNumber.from(number)), orFail(PageSize.from(size)))
 
   private def orFail[A](result: Either[ValidationError, A]): A =
     result match

@@ -5,9 +5,6 @@ import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.issues.LabelId
 import com.worxbend.codeberg4s.issues.MilestoneId
 import com.worxbend.codeberg4s.issues.StateFilter
-import com.worxbend.codeberg4s.paging.PageNumber
-import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.paging.PageSize
 import com.worxbend.codeberg4s.pulls.PullRequestHead
 import com.worxbend.codeberg4s.pulls.PullRequestQuery
 import com.worxbend.codeberg4s.pulls.PullRequestSort
@@ -20,12 +17,6 @@ final class PullRequestQueriesSuite extends FunSuite:
 
   test("an empty query sends nothing, so Forgejo applies its own default of open only"):
     assertEquals(PullRequestQueries.pulls(PullRequestQuery.Empty), Nil)
-
-  test("paging always sends both parameters, because limit alone is silently ignored"):
-    assertEquals(
-      PullRequestQueries.paging(PageParams(orFail(PageNumber.from(3)), orFail(PageSize.from(25)))),
-      List("page" -> "3", "limit" -> "25"),
-    )
 
   test("only the filters the caller set are emitted, in the order the spec declares them"):
     val query = PullRequestQuery.Empty

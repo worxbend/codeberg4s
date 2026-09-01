@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.organizations
 
 import com.worxbend.codeberg4s.CodebergError
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.organizations.wire.OrganizationQueries
@@ -210,13 +211,13 @@ object OrganizationQuotaApi:
     read(CheckOperation, quotaPath(org) :+ "check", OrganizationQueries.quotaCheck(subject))
 
   private def artifactsRequest(org: OrgName, params: PageParams): CodebergRequest =
-    read(ArtifactsOperation, quotaPath(org) :+ "artifacts", OrganizationQueries.paging(params))
+    read(ArtifactsOperation, quotaPath(org) :+ "artifacts", PagingQuery.window(params))
 
   private def attachmentsRequest(org: OrgName, params: PageParams): CodebergRequest =
-    read(AttachmentsOperation, quotaPath(org) :+ "attachments", OrganizationQueries.paging(params))
+    read(AttachmentsOperation, quotaPath(org) :+ "attachments", PagingQuery.window(params))
 
   private def packagesRequest(org: OrgName, params: PageParams): CodebergRequest =
-    read(PackagesOperation, quotaPath(org) :+ "packages", OrganizationQueries.paging(params))
+    read(PackagesOperation, quotaPath(org) :+ "packages", PagingQuery.window(params))
 
   private def quotaPath(org: OrgName): List[String] =
     OrganizationRequests.organizationPath(org) :+ QuotaSegment

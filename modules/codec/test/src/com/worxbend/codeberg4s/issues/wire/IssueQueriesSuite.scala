@@ -5,9 +5,6 @@ import com.worxbend.codeberg4s.issues.IssueQuery
 import com.worxbend.codeberg4s.issues.LabelName
 import com.worxbend.codeberg4s.issues.MilestoneTitle
 import com.worxbend.codeberg4s.issues.StateFilter
-import com.worxbend.codeberg4s.paging.PageNumber
-import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.paging.PageSize
 
 import munit.FunSuite
 
@@ -88,18 +85,9 @@ final class IssueQueriesSuite extends FunSuite:
       ),
     )
 
-  test("paging always sends page as well as limit, because limit alone is silently ignored"):
-    assertEquals(IssueQueries.paging(window(2, 25)), List("page" -> "2", "limit" -> "25"))
-
-  test("the first page is sent explicitly rather than left to the instance"):
-    assertEquals(IssueQueries.paging(PageParams.First), List("page" -> "1", "limit" -> "30"))
-
   test("the milestone listing always states a state, since Forgejo's silent default is open only"):
     assertEquals(IssueQueries.milestones(StateFilter.All), List("state" -> "all"))
     assertEquals(IssueQueries.milestones(StateFilter.Open), List("state" -> "open"))
-
-  private def window(page: Int, size: Int): PageParams =
-    PageParams(orFail(PageNumber.from(page)), orFail(PageSize.from(size)))
 
   private def orFail[A](result: Either[ValidationError, A]): A =
     result match

@@ -11,21 +11,18 @@ import com.worxbend.codeberg4s.repositories.gitdata.{CommitInclude, CommitStatus
   * spellings, and a wire spelling is written once. Parameter order is fixed so a recorded request is comparable between
   * runs.
   *
-  * '''Only parameters the caller set are emitted''', with one deliberate exception: [[paging]] and [[treeWindow]]
-  * always send both halves of the window. `golden/MANIFEST.md` records that a limit without a page is silently ignored
-  * by Forgejo, which is how a client accidentally pulls an unbounded collection.
+  * '''Only parameters the caller set are emitted''', with one deliberate exception: [[treeWindow]] always sends both
+  * halves of the window. `golden/MANIFEST.md` records that a limit without a page is silently ignored by Forgejo, which
+  * is how a client accidentally pulls an unbounded collection.
   */
 private[codeberg4s] object GitDataQueries:
-
-  /** The `page` and `limit` parameters, as almost every Forgejo listing spells them. */
-  def paging(params: PageParams): List[(String, String)] =
-    PagingQuery.window(params)
 
   /** The window of `GET /repos/{owner}/{repo}/git/trees/{sha}`, which spells the size `per_page`.
     *
     * '''This endpoint is the odd one out.''' Every other paged route in the library takes `limit`; the tree route
     * declares `per_page` and ignores it entirely, which is why the window comes from
-    * [[com.worxbend.codeberg4s.codec.PagingQuery.perPageWindow]] and not from [[paging]].
+    * [[com.worxbend.codeberg4s.codec.PagingQuery.perPageWindow]] and not from the usual
+    * [[com.worxbend.codeberg4s.codec.PagingQuery.window]].
     *
     * @param recursive
     *   whether to descend into subtrees; emitted only when `true`, since `false` is the instance's own default

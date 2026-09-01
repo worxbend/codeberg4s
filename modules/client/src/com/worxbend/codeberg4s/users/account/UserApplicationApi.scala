@@ -1,9 +1,10 @@
 package com.worxbend.codeberg4s.users.account
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
-import com.worxbend.codeberg4s.users.account.wire.{AccountOptionDto, AccountQueries}
+import com.worxbend.codeberg4s.users.account.wire.AccountOptionDto
 import com.worxbend.codeberg4s.{CodebergError, HttpMethod}
 
 import scala.concurrent.Future
@@ -206,7 +207,7 @@ object UserApplicationApi:
       exec.attempt(rail.delete(id))
 
   private def listRequest(params: PageParams): CodebergRequest =
-    read(ListOperation, applicationsPath, AccountQueries.paging(params))
+    read(ListOperation, applicationsPath, PagingQuery.window(params))
 
   private def getRequest(id: OAuth2ApplicationId): CodebergRequest =
     read(GetOperation, applicationPath(id), Nil)

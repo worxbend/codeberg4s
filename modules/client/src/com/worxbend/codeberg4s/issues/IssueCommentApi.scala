@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.issues
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.issues.wire.{EditIssueCommentOptionDto, IssueQueries}
@@ -249,7 +250,7 @@ object IssueCommentApi:
     read(
       ListForRepositoryOperation,
       IssueRequests.issuesPath(owner, name) :+ "comments",
-      IssueQueries.comments(query) ++ IssueQueries.paging(params),
+      IssueQueries.comments(query) ++ PagingQuery.window(params),
     )
 
   private def getRequest(owner: Owner, name: RepoName, id: CommentId): CodebergRequest =

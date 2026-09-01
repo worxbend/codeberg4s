@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
@@ -322,7 +323,7 @@ object RepositoryHookApi:
       exec.attempt(rail.deleteGitHook(owner, name, hook))
 
   private def listRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListOperation, hooksPath(owner, name), HookQueries.paging(params))
+    read(ListOperation, hooksPath(owner, name), PagingQuery.window(params))
 
   private def getRequest(owner: Owner, name: RepoName, id: HookId): CodebergRequest =
     read(GetOperation, hookPath(owner, name, id), Nil)

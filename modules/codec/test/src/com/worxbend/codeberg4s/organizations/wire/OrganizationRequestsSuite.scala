@@ -170,9 +170,6 @@ final class OrganizationRequestsSuite extends FunSuite:
 
   // --- query strings --------------------------------------------------------
 
-  test("paging always sends page and limit together"):
-    assertEquals(OrganizationQueries.paging(window(2, 25)), List("page" -> "2", "limit" -> "25"))
-
   test("a label listing without an ordering sends no sort parameter at all"):
     assertEquals(OrganizationQueries.labels(None, window(1, 30)), List("page" -> "1", "limit" -> "30"))
 

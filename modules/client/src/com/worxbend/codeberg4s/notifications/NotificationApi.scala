@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.notifications
 
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.notifications.wire.{NotificationCountDto, NotificationQueries, NotificationThreadDto}
@@ -267,7 +268,7 @@ object NotificationApi:
     read(
       ListOperation,
       NotificationsPath,
-      NotificationQueries.notifications(query) ++ NotificationQueries.paging(params),
+      NotificationQueries.notifications(query) ++ PagingQuery.window(params),
     )
 
   private val markAllReadRequest: CodebergRequest =
@@ -291,7 +292,7 @@ object NotificationApi:
     read(
       ListRepositoryOperation,
       repositoryNotificationsPath(owner, name),
-      NotificationQueries.notifications(query) ++ NotificationQueries.paging(params),
+      NotificationQueries.notifications(query) ++ PagingQuery.window(params),
     )
 
   private def markRepositoryReadRequest(owner: Owner, name: RepoName): CodebergRequest =

@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.users.account
 
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
@@ -421,7 +422,7 @@ object UserActionApi:
     read(
       ListRunnersOperation,
       runnersPath,
-      ActionQueries.runners(visibility) ++ ActionQueries.paging(params),
+      ActionQueries.runners(visibility) ++ PagingQuery.window(params),
     )
 
   private def runnerRequest(id: RunnerId): CodebergRequest =
@@ -451,7 +452,7 @@ object UserActionApi:
     remove(DeleteSecretOperation, secretPath(secret))
 
   private def listVariablesRequest(params: PageParams): CodebergRequest =
-    read(ListVariablesOperation, variablesPath, ActionQueries.paging(params))
+    read(ListVariablesOperation, variablesPath, PagingQuery.window(params))
 
   private def variableRequest(name: VariableName): CodebergRequest =
     read(GetVariableOperation, variablePath(name), Nil)
