@@ -10,6 +10,19 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- **`PageWalk.attempt.all` / `.fold` / `.foreach`** — the page walk on the
+  `.attempt` rail. They take an `.attempt` listing
+  (`PageParams => Future[Either[CodebergError, Page[A]]]`) and answer
+  `Future[Either[CodebergError, B]]`, stopping at the first `Left` and reporting
+  a walk that hit `PageWalk.MaxPages` as `Left(WalkTruncated(...))`. Until now
+  the one non-trivial helper in the library existed only on the exception rail,
+  so an `.attempt` caller had to hand-write the loop the helper exists to state
+  once. Both rails run that single loop — the plain `PageWalk.all` / `fold` /
+  `foreach` are now the `.attempt` loop with a `Left` turned back into a failed
+  `Future`, and their behaviour is unchanged.
+
 ### Changed
 
 - **The two ZIP downloads moved to `client.repos.actions`,** and the root-level

@@ -538,9 +538,20 @@ PageWalk.all(client.firstPage): params =>
 `PageWalk.fold` and `PageWalk.foreach` are the bounded-memory forms — reach for
 those on a repository with tens of thousands of issues.
 
+`PageWalk.attempt.all` / `.fold` / `.foreach` are the same three walks on the
+`.attempt` rail: they take an `.attempt` listing and answer
+`Future[Either[CodebergError, ...]]`, so a walk never forces you off the rail
+the rest of your code is on.
+
+```scala
+PageWalk.attempt.all(client.firstPage): params =>
+  client.issues.attempt.list(owner, name, IssueQuery.Empty, params)
+```
+
 A walk visits at most `PageWalk.MaxPages` (10 000) pages, so an instance that
 offers a next page forever cannot hang your process. Reaching that cap with the
-server still offering another page **fails** the `Future` with
+server still offering another page **fails** the `Future` — or, on the
+`.attempt` rail, yields `Left` — with
 `WalkTruncated(pagesVisited, resumeFrom)` rather than handing back what it had
 gathered: a short answer shaped exactly like a complete one is the failure mode
 this whole section exists to prevent. `resumeFrom` is the window the walk was

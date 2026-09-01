@@ -205,6 +205,53 @@ final class PageWalkSuite extends FunSuite:
 
     assertEquals(counted, PageWalk.MaxPages)
 
+  test("the attempt rail gathers every item across every page, in order"):
+    val listing = Listing(count = 3, size = 4)
+
+    val items = await(PageWalk.attempt.all(PageParams.First)(params => listing.fetch(params).map(Right(_))))
+
+    assertEquals(items, Right(Vector.range(0, 12)))
+
+  test("an error page yields a Left and stops the walk there"):
+    // The mirror of "a failing page fails the whole walk". The rails differ in
+    // how the failure is spelled, never in which pages are visited.
+    val visited = ListBuffer.empty[Int]
+    val denied  = CodebergError.Validation("page", "the listing went away mid-walk")
+
+    def fetch(params: PageParams): Future[Either[CodebergError, Page[Int]]] =
+      visited.append(params.page.value)
+      if params.page.value >= 2 then Future.successful(Left(denied))
+      else Future.successful(Right(Page(Vector(1), params, None, PageNumber.from(2).toOption, None)))
+
+    val result = await(PageWalk.attempt.fold(PageParams.First, 0)(fetch)((count, page) => count + page.items.size))
+
+    assertEquals(result, Left(denied))
+    assertEquals(visited.toList, List(1, 2))
+
+  test("hitting the page cap yields Left(WalkTruncated) carrying the window to resume from"):
+    val size  = PageSize.from(7).toOption.getOrElse(PageSize.Default)
+    val start = PageParams(PageNumber.First, size)
+
+    def fetch(params: PageParams): Future[Either[CodebergError, Page[Int]]] =
+      Future.successful(Right(Page(Vector(1), params, None, PageNumber.from(params.page.value + 1).toOption, None)))
+
+    val result = await(PageWalk.attempt.fold(start, 0)(fetch)((count, page) => count + page.items.size))
+
+    assertEquals(result, Left(CodebergError.WalkTruncated(PageWalk.MaxPages, PageParams(cappedPage, size))))
+
+  test("the attempt rail runs the effect once per page and reports success"):
+    val listing = Listing(count = 3, size = 2)
+    val sizes   = ListBuffer.empty[Int]
+
+    val result = await(
+      PageWalk.attempt.foreach(PageParams.First)(params => listing.fetch(params).map(Right(_)))(page =>
+        sizes.append(page.items.size).discard
+      )
+    )
+
+    assertEquals(result, Right(()))
+    assertEquals(sizes.toList, List(2, 2, 2))
+
   /** The page a capped walk is offered and declines: one past the last it fetched. */
   private val cappedPage: PageNumber =
     PageNumber.from(PageWalk.MaxPages + 1).toOption.getOrElse(PageNumber.First)

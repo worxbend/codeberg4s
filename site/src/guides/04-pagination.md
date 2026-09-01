@@ -285,6 +285,39 @@ Three shapes, and the choice between them is about memory:
 | `PageWalk.all` | `Future[Vector[A]]` | the whole collection is small enough to hold |
 | `PageWalk.fold` | `Future[B]` | you are aggregating — a count, a maximum, a running total |
 | `PageWalk.foreach` | `Future[Unit]` | each page is written somewhere and then forgotten |
+| `PageWalk.attempt.all` | `Future[Either[CodebergError, Vector[A]]]` | as `all`, on the `.attempt` rail |
+| `PageWalk.attempt.fold` | `Future[Either[CodebergError, B]]` | as `fold`, on the `.attempt` rail |
+| `PageWalk.attempt.foreach` | `Future[Either[CodebergError, Unit]]` | as `foreach`, on the `.attempt` rail |
+
+The bottom three walk the `.attempt` listings — the ones returning
+`Either[CodebergError, Page[A]]` — and answer in the same shape, so a walk never
+forces you off the rail the rest of your code is on:
+
+```scala mdoc:compile-only
+import com.worxbend.codeberg4s.CodebergClient
+import com.worxbend.codeberg4s.CodebergError
+import com.worxbend.codeberg4s.issues.Issue
+import com.worxbend.codeberg4s.issues.IssueQuery
+import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.paging.PageWalk
+import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.RepoName
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+
+def every(client: CodebergClient, owner: Owner, name: RepoName)(using
+    ExecutionContext): Future[Either[CodebergError, Vector[Issue]]] =
+  PageWalk.attempt.all(PageParams.First): params =>
+    client.issues.attempt.list(owner, name, IssueQuery.Empty, params)
+```
+
+The returned `Future` never fails: a page that came back `Left` stops the walk
+and becomes the walk's `Left`, and hitting the page cap becomes
+`Left(WalkTruncated(pagesVisited, resumeFrom))`. Both rails run the same loop —
+the `.attempt` one is the implementation and the plain one is that loop with a
+`Left` turned back into a failed `Future` — so picking a rail is a choice of
+error style, never of behaviour.
 
 `fold` and `foreach` are the ones to reach for on a large repository. `all`
 holds every item, which is exactly what no operation in this library does by
