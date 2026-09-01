@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories
 
+import java.util.Locale
+
 /** What a commit did to one file.
   *
   * These are the values Forgejo derives from Git's own status letters. `golden/repository/commits-list.json` only ever
@@ -38,7 +40,7 @@ object CommitFileStatus:
     * caller the whole commit. Matching is case-insensitive because nothing guarantees the casing but observation.
     */
   def parse(value: String): Option[CommitFileStatus] =
-    value.trim.toLowerCase match
+    value.trim.toLowerCase(Locale.ROOT) match
       case "added"     => Some(Added)
       case "modified"  => Some(Modified)
       case "removed"   => Some(Removed)

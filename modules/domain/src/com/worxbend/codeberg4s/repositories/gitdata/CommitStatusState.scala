@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
+import java.util.Locale
+
 /** The verdict one CI check reported for a commit.
   *
   * Forgejo's `CommitStatusState`, whose own description names six values: `pending`, `success`, `error`, `failure`,
@@ -38,7 +40,7 @@ object CommitStatusState:
     * status word must not cost the caller the rest of the listing.
     */
   def parse(value: String): Option[CommitStatusState] =
-    value.trim.toLowerCase match
+    value.trim.toLowerCase(Locale.ROOT) match
       case "pending" => Some(Pending)
       case "success" => Some(Success)
       case "error"   => Some(Error)

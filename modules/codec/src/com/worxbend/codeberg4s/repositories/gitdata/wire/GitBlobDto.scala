@@ -6,6 +6,8 @@ import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.gitdata.GitBlob
 import com.worxbend.codeberg4s.repositories.{CommitSha, FileContent}
 
+import java.util.Locale
+
 /** Forgejo's `GitBlob` model, field for field.
   *
   * '''Derived from `spec/swagger.v1.json`, not from a capture.''' No golden fixture exists for the blob endpoints, so
@@ -55,7 +57,7 @@ final case class GitBlobDto(
     */
   private def fileContent: Option[FileContent] =
     content.map: payload =>
-      encoding.map(_.trim.toLowerCase) match
+      encoding.map(_.trim.toLowerCase(Locale.ROOT)) match
         case Some("base64") => FileContent.Base64(payload)
         case _              => FileContent.Opaque(encoding, payload)
 

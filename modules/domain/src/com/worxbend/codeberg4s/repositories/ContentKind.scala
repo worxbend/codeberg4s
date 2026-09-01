@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories
 
+import java.util.Locale
+
 /** What a repository entry is, from the `type` field Forgejo puts on every content object.
   *
   * This is the '''second''' discriminator on the contents endpoint and it is independent of the first. The first is the
@@ -31,7 +33,7 @@ object ContentKind:
     * other fields mean anything, so guessing it would produce a plausible and wrong entry.
     */
   def parse(value: String): Option[ContentKind] =
-    value.trim.toLowerCase match
+    value.trim.toLowerCase(Locale.ROOT) match
       case "file"      => Some(File)
       case "dir"       => Some(Directory)
       case "symlink"   => Some(Symlink)

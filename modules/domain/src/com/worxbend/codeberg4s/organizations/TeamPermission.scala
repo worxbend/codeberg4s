@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.organizations
 
+import java.util.Locale
+
 /** What a team may do — with the organisation's repositories, or with one unit of them.
   *
   * This is the one closed set the pinned spec actually declares: `definitions.Team.permission` carries an explicit
@@ -41,7 +43,7 @@ object TeamPermission:
     * declares the spelling and no capture proves it.
     */
   def parse(value: String): Option[TeamPermission] =
-    value.trim.toLowerCase match
+    value.trim.toLowerCase(Locale.ROOT) match
       case "none"  => Some(NoAccess)
       case "read"  => Some(Read)
       case "write" => Some(Write)

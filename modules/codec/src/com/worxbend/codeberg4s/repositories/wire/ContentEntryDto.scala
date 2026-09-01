@@ -5,6 +5,8 @@ import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.{CommitSha, ContentEntry, ContentKind, ContentMeta, ContentPath, FileContent}
 
+import java.util.Locale
+
 /** Forgejo's `ContentsResponse` — one entry of a repository's contents.
   *
   * This is the element type of '''both''' arms of the union described in
@@ -125,7 +127,7 @@ final case class ContentEntryDto(
     */
   private def fileContent: Option[FileContent] =
     content.map: payload =>
-      encoding.map(_.trim.toLowerCase) match
+      encoding.map(_.trim.toLowerCase(Locale.ROOT)) match
         case Some("base64") => FileContent.Base64(payload)
         case _              => FileContent.Opaque(encoding, payload)
 

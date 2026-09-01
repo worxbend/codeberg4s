@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.users
 
+import java.util.Locale
+
 /** How much of an account Forgejo shows to whom.
   *
   * Forgejo's `VisibleType` has exactly these three values and renders them lowercase on the wire. Modelling it as an
@@ -25,7 +27,7 @@ object UserVisibility:
     * Matching is case-insensitive because nothing guarantees the casing but observation.
     */
   def parse(value: String): Option[UserVisibility] =
-    value.trim.toLowerCase match
+    value.trim.toLowerCase(Locale.ROOT) match
       case "public"  => Some(Public)
       case "limited" => Some(Limited)
       case "private" => Some(Private)

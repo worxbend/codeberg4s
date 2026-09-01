@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access
 
+import java.util.Locale
+
 /** The access level a collaborator is granted — the `permission` of `AddCollaboratorOption`.
   *
   * ==Why this is not `organizations.TeamPermission`==
@@ -46,7 +48,7 @@ object CollaboratorPermission:
     * because no response model carries this narrow enum — see the type's own note on the read side.
     */
   def parse(value: String): Option[CollaboratorPermission] =
-    value.trim.toLowerCase match
+    value.trim.toLowerCase(Locale.ROOT) match
       case "read"  => Some(Read)
       case "write" => Some(Write)
       case "admin" => Some(Admin)

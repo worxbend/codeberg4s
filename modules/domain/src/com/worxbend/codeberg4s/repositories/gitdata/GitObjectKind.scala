@@ -1,5 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
+import java.util.Locale
+
 /** What kind of object a Git id points at: the four object types Git itself defines.
   *
   * Forgejo sends this as the `type` field of a [[GitReference]]'s target, of an [[AnnotatedTag]]'s target, and of every
@@ -33,7 +35,7 @@ object GitObjectKind:
     * the caller one descriptive field; failing would cost them the whole tree page it arrived in.
     */
   def parse(value: String): Option[GitObjectKind] =
-    value.trim.toLowerCase match
+    value.trim.toLowerCase(Locale.ROOT) match
       case "blob"   => Some(Blob)
       case "tree"   => Some(Tree)
       case "commit" => Some(Commit)
