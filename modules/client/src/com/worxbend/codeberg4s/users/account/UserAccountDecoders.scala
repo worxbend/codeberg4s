@@ -13,20 +13,6 @@ import com.worxbend.codeberg4s.quota.wire.{
 }
 import com.worxbend.codeberg4s.quota.{QuotaInfo, QuotaUsedArtifact, QuotaUsedAttachment, QuotaUsedPackage}
 import com.worxbend.codeberg4s.repositories.Repository
-import com.worxbend.codeberg4s.repositories.actions.wire.{
-  ActionRunJobDto,
-  ActionRunnerDto,
-  ActionVariableDto,
-  RegisteredRunnerDto,
-  RegistrationTokenDto
-}
-import com.worxbend.codeberg4s.repositories.actions.{
-  ActionRunJob,
-  ActionRunner,
-  ActionVariable,
-  RegisteredRunner,
-  RunnerRegistrationToken
-}
 import com.worxbend.codeberg4s.repositories.hooks.Webhook
 import com.worxbend.codeberg4s.repositories.hooks.wire.WebhookDto
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
@@ -39,11 +25,13 @@ import com.worxbend.codeberg4s.users.account.wire.{EmailDto, OAuth2ApplicationDt
   *
   * ==Most of these read someone else's model, on purpose==
   *
-  * The `/user/actions` routes answer the same `ActionRunner`, `ActionVariable`, `RunJob`, `RegisterRunnerResponse` and
-  * `RegistrationToken` payloads as their repository-scoped twins, and `/user/hooks` answers the same `Hook`;
-  * `/user/repos` answers `Repository` and `/user/teams` answers `Team`. Only the path differs, so this object reaches
-  * for the existing DTOs rather than defining a second set — `docs/LEDGER.md` treats a fork of a shared model as a
-  * review-blocking defect, and two decoders for one payload would drift the first time Forgejo added a field.
+  * `/user/hooks` answers the same `Hook` as the repository-scoped route, `/user/repos` answers `Repository` and
+  * `/user/teams` answers `Team`. Only the path differs, so this object reaches for the existing DTOs rather than
+  * defining a second set — `docs/LEDGER.md` treats a fork of a shared model as a review-blocking defect, and two
+  * decoders for one payload would drift the first time Forgejo added a field. The `/user/actions` routes go one step
+  * further: their runner, variable, job and registration payloads are decoded by
+  * [[com.worxbend.codeberg4s.repositories.actions.ActionDecoders]], which all three Actions surfaces share, so they
+  * appear nowhere below.
   *
   * The five shapes that genuinely are new to this group — an OAuth2 application, an email address, the account's
   * settings, its quota, and the three quota usage listings — live in [[com.worxbend.codeberg4s.users.account.wire]]
@@ -122,41 +110,6 @@ private[account] object UserAccountDecoders:
   /** A bare array of team objects, as the account's team listing returns it. */
   val teams: Decode[Vector[Team]] =
     WireDecode.vector(Json.decoder[Vector[TeamDto]])(TeamDto.toDomainAll)
-
-  /** One runner object. */
-  val runner: Decode[ActionRunner] =
-    WireDecode.single(Json.decoder[ActionRunnerDto])(_.toDomain)
-
-  /** A bare array of runner objects. */
-  val runners: Decode[Vector[ActionRunner]] =
-    WireDecode.vector(Json.decoder[Vector[ActionRunnerDto]])(ActionRunnerDto.toDomainAll)
-
-  /** A bare array of job objects, as the runner job search returns it. */
-  val jobs: Decode[Vector[ActionRunJob]] =
-    WireDecode.vector(Json.decoder[Vector[ActionRunJobDto]])(ActionRunJobDto.toDomainAll)
-
-  /** The `{id, uuid, token}` object a runner registration returns, whose `token` is a live credential.
-    *
-    * Marked [[com.worxbend.codeberg4s.core.Decode.sensitive]]: anyone holding that token can attach a runner that
-    * executes workflow code, so a payload that does not decode must not put an excerpt of this body into
-    * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]].
-    */
-  val registeredRunner: Decode[RegisteredRunner] =
-    Decode.sensitive(WireDecode.single(Json.decoder[RegisteredRunnerDto])(_.toDomain))
-
-  /** The one-key object the registration-token endpoint returns — the same credential with nothing around it, and
-    * [[com.worxbend.codeberg4s.core.Decode.sensitive]] for the same reason as [[registeredRunner]].
-    */
-  val registrationToken: Decode[RunnerRegistrationToken] =
-    Decode.sensitive(WireDecode.single(Json.decoder[RegistrationTokenDto])(_.toDomain))
-
-  /** One variable object. */
-  val variable: Decode[ActionVariable] =
-    WireDecode.single(Json.decoder[ActionVariableDto])(_.toDomain)
-
-  /** A bare array of variable objects. */
-  val variables: Decode[Vector[ActionVariable]] =
-    WireDecode.vector(Json.decoder[Vector[ActionVariableDto]])(ActionVariableDto.toDomainAll)
 
   /** One webhook object. */
   val webhook: Decode[Webhook] =

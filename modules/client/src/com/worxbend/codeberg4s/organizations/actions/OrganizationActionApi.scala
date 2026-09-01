@@ -12,6 +12,7 @@ import com.worxbend.codeberg4s.repositories.actions.wire.{
   VariableOptionDto
 }
 import com.worxbend.codeberg4s.repositories.actions.{
+  ActionDecoders,
   ActionRunJob,
   ActionRunner,
   ActionSecret,
@@ -50,8 +51,8 @@ import scala.concurrent.Future
   * spelling of one concept, which rule 1 of [[com.worxbend.codeberg4s.codec.WireConventions]] calls a review-blocking
   * defect.
   *
-  * The one thing that could not be reused is the decoder table; see [[OrganizationActionDecoders]] for exactly why, and
-  * for what would remove the duplication.
+  * The decoder table is reused too: the shapes these routes answer are decoded by
+  * [[com.worxbend.codeberg4s.repositories.actions.ActionDecoders]], the object all three Actions surfaces share.
   *
   * ==What is here that is not on the repository surface, and the reverse==
   *
@@ -133,7 +134,7 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     */
   def listRunners(org: OrgName, visibility: RunnerVisibility, params: PageParams): Future[Page[ActionRunner]] =
     pipeline.callPage(OrganizationActionApi.listRunnersRequest(org, visibility, params), params)(using
-      OrganizationActionDecoders.runners)
+      ActionDecoders.runners)
 
   /** Reads one of an organisation's runners — `GET /orgs/{org}/actions/runners/{runner_id}`.
     *
@@ -143,7 +144,7 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     */
   def runner(org: OrgName, id: RunnerId): Future[ActionRunner] =
     pipeline.call(OrganizationActionApi.runnerRequest(org, id), RetryEligibility.IdempotentOnly)(using
-      OrganizationActionDecoders.runner)
+      ActionDecoders.runner)
 
   /** Registers a runner against the organisation — `POST /orgs/{org}/actions/runners`.
     *
@@ -163,7 +164,7 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     */
   def registerRunner(org: OrgName, command: RegisterRunner): Future[RegisteredRunner] =
     pipeline.call(OrganizationActionApi.registerRunnerRequest(org, command), RetryEligibility.Never)(using
-      OrganizationActionDecoders.registeredRunner)
+      ActionDecoders.registeredRunner)
 
   /** Deletes one of an organisation's runners — `DELETE /orgs/{org}/actions/runners/{runner_id}`.
     *
@@ -199,7 +200,7 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     */
   def runnerRegistrationToken(org: OrgName): Future[RunnerRegistrationToken] =
     pipeline.call(OrganizationActionApi.registrationTokenRequest(org), RetryEligibility.IdempotentOnly)(using
-      OrganizationActionDecoders.registrationToken)
+      ActionDecoders.registrationToken)
 
   /** Finds the organisation's jobs waiting for a runner with the given labels — `GET /orgs/{org}/actions/runners/jobs`.
     *
@@ -216,7 +217,7 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     */
   def searchRunnerJobs(org: OrgName, labels: Vector[RunnerLabel]): Future[Vector[ActionRunJob]] =
     pipeline.call(OrganizationActionApi.searchRunnerJobsRequest(org, labels), RetryEligibility.IdempotentOnly)(using
-      OrganizationActionDecoders.jobs)
+      ActionDecoders.jobs)
 
   // --- secrets --------------------------------------------------------------
 
@@ -230,8 +231,7 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     * '''Failures.''' The group contract above.
     */
   def listSecrets(org: OrgName, params: PageParams): Future[Page[ActionSecret]] =
-    pipeline.callPage(OrganizationActionApi.listSecretsRequest(org, params), params)(using
-      OrganizationActionDecoders.secrets)
+    pipeline.callPage(OrganizationActionApi.listSecretsRequest(org, params), params)(using ActionDecoders.secrets)
 
   /** Creates or replaces an organisation secret — `PUT /orgs/{org}/actions/secrets/{secretname}`.
     *
@@ -289,8 +289,7 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     * '''Failures.''' The group contract above.
     */
   def listVariables(org: OrgName, params: PageParams): Future[Page[ActionVariable]] =
-    pipeline.callPage(OrganizationActionApi.listVariablesRequest(org, params), params)(using
-      OrganizationActionDecoders.variables)
+    pipeline.callPage(OrganizationActionApi.listVariablesRequest(org, params), params)(using ActionDecoders.variables)
 
   /** Reads one organisation variable — `GET /orgs/{org}/actions/variables/{variablename}`.
     *
@@ -298,7 +297,7 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     */
   def variable(org: OrgName, name: VariableName): Future[ActionVariable] =
     pipeline.call(OrganizationActionApi.variableRequest(org, name), RetryEligibility.IdempotentOnly)(using
-      OrganizationActionDecoders.variable)
+      ActionDecoders.variable)
 
   /** Creates an organisation variable — `POST /orgs/{org}/actions/variables/{variablename}`.
     *

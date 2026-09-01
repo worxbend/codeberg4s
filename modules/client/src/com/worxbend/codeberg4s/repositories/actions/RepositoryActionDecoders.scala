@@ -8,14 +8,8 @@ import com.worxbend.codeberg4s.miscellaneous.PlainText
 import com.worxbend.codeberg4s.repositories.actions.wire.{
   ActionArtifactDto,
   ActionRunDto,
-  ActionRunJobDto,
-  ActionRunnerDto,
-  ActionSecretDto,
   ActionTaskDto,
-  ActionVariableDto,
   DispatchedWorkflowRunDto,
-  RegisteredRunnerDto,
-  RegistrationTokenDto,
   WorkflowRunsEnvelopeDto
 }
 
@@ -57,49 +51,18 @@ private[actions] object RepositoryActionDecoders:
     WireDecode.single(Json.decoder[WorkflowRunsEnvelopeDto[ActionRunDto]]): envelope =>
       ActionRunDto.toDomainAll(RepositoryActionDecoders.EntriesPath, envelope.entries)
 
-  /** A bare array of job objects, as both the run's job listing and the runner job search return it. */
-  val jobs: Decode[Vector[ActionRunJob]] =
-    WireDecode.vector(Json.decoder[Vector[ActionRunJobDto]])(ActionRunJobDto.toDomainAll)
-
   /** The same envelope as [[runs]], carrying tasks. The key is `workflow_runs` there too; see the envelope's note. */
   val tasks: Decode[Vector[ActionTask]] =
     WireDecode.single(Json.decoder[WorkflowRunsEnvelopeDto[ActionTaskDto]]): envelope =>
       ActionTaskDto.toDomainAll(RepositoryActionDecoders.EntriesPath, envelope.entries)
 
-  /** One runner object. */
-  val runner: Decode[ActionRunner] =
-    WireDecode.single(Json.decoder[ActionRunnerDto])(_.toDomain)
-
-  /** A bare array of runner objects. */
-  val runners: Decode[Vector[ActionRunner]] =
-    WireDecode.vector(Json.decoder[Vector[ActionRunnerDto]])(ActionRunnerDto.toDomainAll)
-
-  /** The `{id, uuid, token}` object a runner registration returns, whose `token` is a live credential.
+  /** Every shape the organisation and account Actions surfaces answer too, decoded by [[ActionDecoders]].
     *
-    * Marked [[com.worxbend.codeberg4s.core.Decode.sensitive]]: anyone holding that token can attach a runner that
-    * executes workflow code, so a payload that does not decode must not put an excerpt of this body into
-    * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]].
+    * These are re-exported rather than re-derived so that this object stays the one decoder table
+    * [[RepositoryActionApi]] reads, while the definitions — including the
+    * [[com.worxbend.codeberg4s.core.Decode.sensitive]] marking on the two credential-carrying shapes — exist once.
     */
-  val registeredRunner: Decode[RegisteredRunner] =
-    Decode.sensitive(WireDecode.single(Json.decoder[RegisteredRunnerDto])(_.toDomain))
-
-  /** The one-key object the registration-token endpoint returns — the same credential with nothing around it, and
-    * [[com.worxbend.codeberg4s.core.Decode.sensitive]] for the same reason as [[registeredRunner]].
-    */
-  val registrationToken: Decode[RunnerRegistrationToken] =
-    Decode.sensitive(WireDecode.single(Json.decoder[RegistrationTokenDto])(_.toDomain))
-
-  /** A bare array of secret objects — names and timestamps, never values. */
-  val secrets: Decode[Vector[ActionSecret]] =
-    WireDecode.vector(Json.decoder[Vector[ActionSecretDto]])(ActionSecretDto.toDomainAll)
-
-  /** One variable object. */
-  val variable: Decode[ActionVariable] =
-    WireDecode.single(Json.decoder[ActionVariableDto])(_.toDomain)
-
-  /** A bare array of variable objects. */
-  val variables: Decode[Vector[ActionVariable]] =
-    WireDecode.vector(Json.decoder[Vector[ActionVariableDto]])(ActionVariableDto.toDomainAll)
+  export ActionDecoders.{jobs, registeredRunner, registrationToken, runner, runners, secrets, variable, variables}
 
   /** The dispatch acknowledgement, which is present only when the request asked for it.
     *

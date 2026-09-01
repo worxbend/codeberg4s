@@ -11,6 +11,7 @@ import com.worxbend.codeberg4s.repositories.actions.wire.{
   VariableOptionDto
 }
 import com.worxbend.codeberg4s.repositories.actions.{
+  ActionDecoders,
   ActionRunJob,
   ActionRunner,
   ActionVariable,
@@ -117,14 +118,14 @@ final class UserActionApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     *   [[com.worxbend.codeberg4s.repositories.actions.RunnerVisibility]] for why this is not a `Boolean`
     */
   def listRunners(visibility: RunnerVisibility, params: PageParams): Future[Page[ActionRunner]] =
-    pipeline.callPage(UserActionApi.listRunnersRequest(visibility, params), params)(using UserAccountDecoders.runners)
+    pipeline.callPage(UserActionApi.listRunnersRequest(visibility, params), params)(using ActionDecoders.runners)
 
   /** Reads one of the account's runners — `GET /user/actions/runners/{runner_id}`.
     *
     * '''Failures.''' The group contract above.
     */
   def runner(id: RunnerId): Future[ActionRunner] =
-    pipeline.call(UserActionApi.runnerRequest(id), RetryEligibility.IdempotentOnly)(using UserAccountDecoders.runner)
+    pipeline.call(UserActionApi.runnerRequest(id), RetryEligibility.IdempotentOnly)(using ActionDecoders.runner)
 
   /** Registers a runner against the account — `POST /user/actions/runners`.
     *
@@ -143,7 +144,7 @@ final class UserActionApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     */
   def registerRunner(command: RegisterRunner): Future[RegisteredRunner] =
     pipeline.call(UserActionApi.registerRunnerRequest(command), RetryEligibility.Never)(using
-      UserAccountDecoders.registeredRunner)
+      ActionDecoders.registeredRunner)
 
   /** Deletes one of the account's runners — `DELETE /user/actions/runners/{runner_id}`.
     *
@@ -174,7 +175,7 @@ final class UserActionApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     */
   def runnerRegistrationToken(): Future[RunnerRegistrationToken] =
     pipeline.call(UserActionApi.runnerRegistrationTokenRequest, RetryEligibility.IdempotentOnly)(using
-      UserAccountDecoders.registrationToken)
+      ActionDecoders.registrationToken)
 
   /** Finds the account's jobs waiting for a runner with the given labels — `GET /user/actions/runners/jobs`.
     *
@@ -190,7 +191,7 @@ final class UserActionApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     */
   def searchRunnerJobs(labels: Vector[RunnerLabel]): Future[Vector[ActionRunJob]] =
     pipeline.call(UserActionApi.searchRunnerJobsRequest(labels), RetryEligibility.IdempotentOnly)(using
-      UserAccountDecoders.jobs)
+      ActionDecoders.jobs)
 
   // --- secrets --------------------------------------------------------------
 
@@ -244,15 +245,14 @@ final class UserActionApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     * '''Failures.''' The group contract above.
     */
   def listVariables(params: PageParams): Future[Page[ActionVariable]] =
-    pipeline.callPage(UserActionApi.listVariablesRequest(params), params)(using UserAccountDecoders.variables)
+    pipeline.callPage(UserActionApi.listVariablesRequest(params), params)(using ActionDecoders.variables)
 
   /** Reads one of the account's variables — `GET /user/actions/variables/{variablename}`.
     *
     * '''Failures.''' The group contract above.
     */
   def variable(name: VariableName): Future[ActionVariable] =
-    pipeline.call(UserActionApi.variableRequest(name), RetryEligibility.IdempotentOnly)(using
-      UserAccountDecoders.variable)
+    pipeline.call(UserActionApi.variableRequest(name), RetryEligibility.IdempotentOnly)(using ActionDecoders.variable)
 
   /** Creates one of the account's variables — `POST /user/actions/variables/{variablename}`.
     *
