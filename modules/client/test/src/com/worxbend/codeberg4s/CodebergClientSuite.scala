@@ -51,7 +51,7 @@ final class CodebergClientSuite extends FunSuite with ClientSuiteHarness:
   test("repos.get maps the instance's payload to a domain repository"):
     onClient(responding(200, CodebergClientSuite.RepositoryBody)): client =>
       client.repos.get(Handle, Name).map: repository =>
-        assertEquals(repository.id, 12345L)
+        assertEquals(repository.id.value, 12345L)
         assertEquals(repository.slug.value, "forgejo/forgejo")
         assertEquals(repository.owner.login.value, "forgejo")
         assertEquals(repository.starsCount, 1234L)

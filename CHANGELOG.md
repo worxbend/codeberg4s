@@ -25,6 +25,21 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **`Repository.id` is a `RepositoryId`, and `RepositoryId` moved to
+  `com.worxbend.codeberg4s.repositories`.** `repos.admin.byId` already took a
+  `RepositoryId` while the model handed back a bare `Long`, so addressing a
+  repository by the id it had just reported meant a `RepositoryId.from` round
+  trip. The type could not simply be used by the model where it was, under
+  `repositories.admin`: a model every endpoint group returns cannot depend on a
+  type declared inside one of them, so it now sits beside `Repository`.
+
+  **Breaking:** import `com.worxbend.codeberg4s.repositories.RepositoryId`
+  instead of `com.worxbend.codeberg4s.repositories.admin.RepositoryId`. Write
+  `repository.id.value` for the number; pass `repository.id` straight to
+  `repos.admin.byId`. An `id` of `0` or below — which is what an unset Go field
+  looks like — is now a decoding failure at `$.id` rather than an identifier no
+  endpoint would accept.
+
 - **`Repository.defaultBranch` is an `Option[BranchName]` and
   `Repository.topics` a `Vector[Topic]`.** Both were bare strings, so reading a
   repository and then asking for that branch, or adding to that topic set,

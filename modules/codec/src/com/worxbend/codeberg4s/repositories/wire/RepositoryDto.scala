@@ -3,7 +3,7 @@ package com.worxbend.codeberg4s.repositories.wire
 import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.publishing.Topic
-import com.worxbend.codeberg4s.repositories.{BranchName, RepoSlug, Repository}
+import com.worxbend.codeberg4s.repositories.{BranchName, RepoSlug, Repository, RepositoryId}
 import com.worxbend.codeberg4s.users.wire.UserDto
 import com.worxbend.codeberg4s.{JsonPath, Owner, RepoName}
 
@@ -98,11 +98,14 @@ final case class RepositoryDto(
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
     * Four things are required, because without them there is no repository to speak of: `id`, `name`, `owner`, and the
-    * owner's `login`. The last two are what build the [[com.worxbend.codeberg4s.repositories.RepoSlug]], and the slug
-    * is what every other repository endpoint takes as its argument — a `Repository` that cannot address itself would be
-    * useless. `name` goes through [[com.worxbend.codeberg4s.RepoName.from]] here, so a value containing a slash is
-    * rejected rather than forging a path later; the owner's `login` is already an [[com.worxbend.codeberg4s.Owner]] by
-    * the time [[com.worxbend.codeberg4s.users.wire.UserDto.toDomainAt]] hands the user back.
+    * owner's `login`. `id` is a [[com.worxbend.codeberg4s.repositories.RepositoryId]], so an identifier Forgejo could
+    * never have issued — `0` or a negative number — is refused rather than being carried into a request path by
+    * `repos.admin.byId`. The last two are what build the [[com.worxbend.codeberg4s.repositories.RepoSlug]], and the
+    * slug is what every other repository endpoint takes as its argument — a `Repository` that cannot address itself
+    * would be useless. `name` goes through [[com.worxbend.codeberg4s.RepoName.from]] here, so a value containing a
+    * slash is rejected rather than forging a path later; the owner's `login` is already an
+    * [[com.worxbend.codeberg4s.Owner]] by the time [[com.worxbend.codeberg4s.users.wire.UserDto.toDomainAt]] hands the
+    * user back.
     *
     * Everything else is optional or defaulted. Absent counts become `0`, absent flags become `false`, and an absent
     * `topics` becomes an empty `Vector` — the reduced repository objects Forgejo embeds in pull requests and
@@ -120,7 +123,7 @@ final case class RepositoryDto(
     */
   def toDomainAt(at: JsonPath): Either[DecodeFailure, Repository] =
     for
-      identifier  <- Wire.required(at, "id", id)
+      identifier  <- Wire.validated(at, "id", id)(RepositoryId.from)
       repoName    <- Wire.validated(at, "name", name)(RepoName.from)
       ownerDto    <- Wire.required(at, "owner", owner)
       ownerModel  <- ownerDto.toDomainAt(at.field("owner"))

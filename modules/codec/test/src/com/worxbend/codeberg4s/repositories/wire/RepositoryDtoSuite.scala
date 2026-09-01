@@ -74,7 +74,7 @@ final class RepositoryDtoSuite extends FunSuite with GoldenFixtures:
   test("golden /repos/forgejo/forgejo converts to the domain"):
     val repository = domainRepo("repository/repo-single.json")
 
-    assertEquals(repository.id, 73144L)
+    assertEquals(repository.id.value, 73144L)
     assertEquals(repository.slug.value, "forgejo/forgejo")
     assertEquals(repository.fullName, "forgejo/forgejo")
     assertEquals(repository.owner.login.value, "forgejo")
@@ -102,7 +102,7 @@ final class RepositoryDtoSuite extends FunSuite with GoldenFixtures:
   test("golden /repos/codeberg/Community decodes and converts"):
     val repository = domainRepo("repository/repo-single-community.json")
 
-    assertEquals(repository.id, 1L)
+    assertEquals(repository.id.value, 1L)
     assertEquals(repository.slug.value, "Codeberg/Community")
     assertEquals(repository.fullName, "Codeberg/Community")
     assertEquals(repository.owner.login.value, "Codeberg")
@@ -185,6 +185,11 @@ final class RepositoryDtoSuite extends FunSuite with GoldenFixtures:
       .flatMap(_.toDomain) match
       case Right(repository) => assertEquals(repository.topics.map(_.value), Vector.empty[String])
       case Left(failure)     => fail(s"a null array must not fail: ${failure.path.render} ${failure.message}")
+
+  test("an id Forgejo could never have issued fails rather than reaching a request path"):
+    Json.decode[RepositoryDto]("""{"id":0,"name":"r","owner":{"id":2,"login":"o"}}""").flatMap(_.toDomain) match
+      case Left(failure)     => assertEquals(failure.path.render, "$.id")
+      case Right(repository) => fail(s"expected a failure, converted $repository")
 
   test("a topic that could not go back into a request path fails the repository, by position"):
     Json.decode[RepositoryDto]("""{"id":1,"name":"r","owner":{"id":2,"login":"o"},"topics":["ok","bad/topic"]}""")

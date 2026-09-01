@@ -11,6 +11,7 @@ import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.repositories.BranchName
 import com.worxbend.codeberg4s.repositories.CommitSha
 import com.worxbend.codeberg4s.repositories.ContentPath
+import com.worxbend.codeberg4s.repositories.RepositoryId
 import com.worxbend.codeberg4s.repositories.gitdata.RefName
 import com.worxbend.codeberg4s.users.Username
 

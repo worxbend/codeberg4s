@@ -18,7 +18,7 @@ import com.worxbend.codeberg4s.repositories.admin.wire.{
   TransferRepoOptionDto
 }
 import com.worxbend.codeberg4s.repositories.gitdata.{FileChange, RefName}
-import com.worxbend.codeberg4s.repositories.{Branch, BranchName, ContentEntry, ContentPath, Repository}
+import com.worxbend.codeberg4s.repositories.{Branch, BranchName, ContentEntry, ContentPath, Repository, RepositoryId}
 import com.worxbend.codeberg4s.users.{User, Username}
 import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
 

@@ -17,7 +17,7 @@ import java.time.Instant
   * whose parent is a complete repository object, while `golden/repository/repo-single.json` sends `parent: null`.
   *
   * @param id
-  *   the instance-local numeric identifier, stable across renames
+  *   the instance-wide identifier, stable across renames and transfers, and what `repos.admin.byId` takes
   * @param slug
   *   the validated `owner/name` pair, safe to interpolate into a request path
   * @param fullName
@@ -37,7 +37,7 @@ import java.time.Instant
   *   absent unless the repository is archived; Forgejo sends the Unix epoch as its "never" sentinel
   */
 final case class Repository private[codeberg4s] (
-    id: Long,
+    id: RepositoryId,
     slug: RepoSlug,
     fullName: String,
     owner: User,

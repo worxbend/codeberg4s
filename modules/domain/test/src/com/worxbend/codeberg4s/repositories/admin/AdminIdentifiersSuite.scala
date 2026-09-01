@@ -6,19 +6,12 @@ import munit.FunSuite
 
 /** The identifiers this group validates.
   *
-  * Three of them are positive integers and one is a path segment; the interesting cases are the boundary and the values
+  * Two of them are positive integers and one is a path segment; the interesting cases are the boundary and the values
   * that would forge a path, since [[MirrorName]] is interpolated into a request URI.
+  * [[com.worxbend.codeberg4s.repositories.RepositoryId]] is covered by its own suite, beside the model that carries
+  * one.
   */
 final class AdminIdentifiersSuite extends FunSuite:
-
-  test("a repository id accepts the smallest value Forgejo assigns"):
-    assertEquals(RepositoryId.from(1L).map(_.value), Right(1L))
-
-  test("a repository id rejects zero, which is what an unset Go field looks like"):
-    assertEquals(RepositoryId.from(0L).swap.toOption.map(_.field), Some("repositoryId"))
-
-  test("a repository id rejects a negative value"):
-    assert(RepositoryId.from(-1L).isLeft, "a negative repository id must be rejected")
 
   test("a topic id reports its own field name, so a caller knows which argument was wrong"):
     assertEquals(TopicId.from(0L).swap.toOption.map(_.field), Some("topicId"))
