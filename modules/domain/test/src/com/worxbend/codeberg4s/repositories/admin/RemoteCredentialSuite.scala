@@ -87,7 +87,7 @@ final class RemoteCredentialSuite extends FunSuite:
     assert(failure.describe.contains(RemoteCredential.Redacted), "the mask should appear where the credential was")
 
   test("a rejected credential is described by its field alone, and the failure never carries material"):
-    val failure = RemoteCredential.from("").swap.toOption.map(error => CodebergError.Validation(error).describe)
+    val failure = RemoteCredential.from("").swap.toOption.map(_.describe)
 
     assertEquals(failure, Some("invalid remoteCredential: must not be empty"))
 

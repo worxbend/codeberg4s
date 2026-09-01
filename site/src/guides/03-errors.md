@@ -15,7 +15,7 @@ a match.
 | `Transport(ctx, cause)` | nothing reached the server at all | a safe read may be retried; the library already did, unless you turned retries off |
 | `Api(ctx, status, body)` | the server answered with a non-2xx status | branch on `status` |
 | `DecodingFailed(ctx, snippet, path, cause)` | a 2xx payload did not match the model | retrying will not help; `path` and `snippet` are what a bug report needs |
-| `Validation(error)` | a smart constructor rejected an argument, before any request was built | fix the argument |
+| `Validation(field, message)` | a smart constructor rejected an argument, before any request was built | fix the argument |
 | `RetriesExhausted(ctx, attempts, last)` | the retry engine gave up | react to `last`; it is preserved verbatim |
 | `WalkTruncated(pagesVisited, resumeFrom)` | a walk over every page hit its page cap while the server was still offering another | walk again from `resumeFrom`, or narrow the query |
 
@@ -246,6 +246,13 @@ Every remote failure carries one:
 
 `Validation` is the one case with no context, because there is no call yet: the
 argument was rejected before a request was built.
+
+`ValidationError` is another name for that same case — the name smart
+constructors use in their result type, so `Owner.from(raw)` reads as
+`Either[ValidationError, Owner]`. Because it *is* a `CodebergError`, a smart
+constructor and a client call sequence in one `for`-comprehension:
+`Either`'s `flatMap` widens the left type to `CodebergError` on its own, and
+nothing has to be mapped from one error type to another in between.
 
 `error.describe` renders all of it as one bounded, secret-free line — every
 free-form fragment is truncated at 512 characters, and a `422` carrying hundreds

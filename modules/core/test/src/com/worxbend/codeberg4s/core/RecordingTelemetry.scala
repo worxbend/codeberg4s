@@ -54,7 +54,7 @@ object RecordingTelemetry:
 
   /** What a failing sink reports. It must never reach the caller of a request. */
   val Exploded: CodebergError =
-    CodebergError.Validation(ValidationError("telemetry", "the sink itself failed"))
+    ValidationError("telemetry", "the sink itself failed")
 
   /** The case name of an error, which is all an ordering assertion needs. */
   def nameOf(error: CodebergError): String =
@@ -62,6 +62,6 @@ object RecordingTelemetry:
       case CodebergError.Transport(_, _)            => "Transport"
       case CodebergError.Api(_, _, _, _)            => "Api"
       case CodebergError.DecodingFailed(_, _, _, _) => "DecodingFailed"
-      case CodebergError.Validation(_)              => "Validation"
+      case CodebergError.Validation(_, _)           => "Validation"
       case CodebergError.RetriesExhausted(_, _, _)  => "RetriesExhausted"
       case CodebergError.WalkTruncated(_, _)        => "WalkTruncated"

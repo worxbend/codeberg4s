@@ -70,7 +70,7 @@ final class CodebergErrorProps extends PropertyBase:
   property("a server-supplied message and a validation reason are truncated".tag(Property)):
     forAllNoShrink(oversized) { text =>
       within("Api(body.message)", CodebergError.Api(ordinaryContext, 500, ApiErrorBody(Some(text), None, Nil), None)) &&
-      within("Validation(message)", CodebergError.Validation(ValidationError("owner", text))) &&
+      within("Validation(message)", ValidationError("owner", text)) &&
       within("Transport(cause detail)", CodebergError.Transport(ordinaryContext, TransportCause.Unknown(text)))
     }
 

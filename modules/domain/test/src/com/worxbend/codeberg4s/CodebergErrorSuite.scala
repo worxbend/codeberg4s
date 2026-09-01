@@ -71,10 +71,36 @@ final class CodebergErrorSuite extends FunSuite:
     assert(error.describe.contains("$.owner.login"), error.describe)
 
   test("describe of a validation failure names the field"):
-    val error: CodebergError = CodebergError.Validation(ValidationError("pageSize", "must be between 1 and 50"))
+    val error: CodebergError = ValidationError("pageSize", "must be between 1 and 50")
 
     assert(error.describe.contains("pageSize"), error.describe)
     assert(error.describe.contains("must be between 1 and 50"), error.describe)
+
+  test("a smart constructor and a remote call share one for-comprehension"):
+    // The reason Validation is a case of CodebergError at all: without it the
+    // two Eithers below have unrelated left types and cannot be sequenced.
+    def remoteCall(owner: Owner): Either[CodebergError, String] =
+      Right(s"$owner answered")
+
+    val sequenced: Either[CodebergError, String] =
+      for
+        owner  <- Owner.from("forgejo")
+        answer <- remoteCall(owner)
+      yield answer
+
+    assertEquals(sequenced, Right("forgejo answered"))
+
+  test("a rejected argument stops that comprehension with the validation failure"):
+    def remoteCall(owner: Owner): Either[CodebergError, String] =
+      Right(s"$owner answered")
+
+    val sequenced: Either[CodebergError, String] =
+      for
+        owner  <- Owner.from("forgejo/forgejo")
+        answer <- remoteCall(owner)
+      yield answer
+
+    assertEquals(sequenced, Left(ValidationError("owner", "must not contain a slash")))
 
   test("describe of exhausted retries keeps the last failure"):
     val last: CodebergError  = CodebergError.Transport(Context, TransportCause.Dns("no such host"))

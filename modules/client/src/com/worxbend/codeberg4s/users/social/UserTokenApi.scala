@@ -124,8 +124,8 @@ final class UserTokenApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usi
     * telemetry errors '''and''' hits a malformed `201` on this endpoint would have recorded the token.
     *
     * '''Failures.''' The group contract above; a decoding failure means the payload carried no `id`, or no usable
-    * `sha1` — and [[com.worxbend.codeberg4s.ValidationError]] never echoes a rejected value, so the reason text does
-    * not carry the credential either.
+    * `sha1` — and [[com.worxbend.codeberg4s.CodebergError.Validation]] never echoes a rejected value, so the reason
+    * text does not carry the credential either.
     */
   def create(username: Username, command: CreateAccessToken): Future[CreatedAccessToken] =
     pipeline.call(UserTokenApi.createRequest(username, command), RetryEligibility.Never)(using

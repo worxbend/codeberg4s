@@ -137,8 +137,8 @@ object HandlingErrors:
       case CodebergError.DecodingFailed(ctx, snippet, path, cause) =>
         s"${ctx.operation} answered 2xx but ${path.render} did not decode ($cause); body began $snippet"
 
-      case CodebergError.Validation(problem) =>
-        s"rejected before any request was built — invalid ${problem.field}: ${problem.message}"
+      case CodebergError.Validation(field, message) =>
+        s"rejected before any request was built — invalid $field: $message"
 
       case CodebergError.RetriesExhausted(ctx, attempts, last) =>
         // `last` is never discarded, so a 429 that outlived the policy is still

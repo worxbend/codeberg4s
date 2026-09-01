@@ -12,7 +12,7 @@ final class ExecSuite extends FunSuite:
 
   private val exec: Exec[Exec.Result] = Exec[Exec.Result]
 
-  private val failure: CodebergError = CodebergError.Validation(ValidationError("owner", "must not be blank"))
+  private val failure: CodebergError = ValidationError("owner", "must not be blank")
 
   test("pure lifts a value into the success channel"):
     assertEquals(exec.pure(1), Right(1))

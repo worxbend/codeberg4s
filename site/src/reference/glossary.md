@@ -266,7 +266,10 @@ A function that validates its input and returns the type or an error, instead of
 a public constructor that trusts you. Here they are called `from` (`Owner.from`,
 `ApiToken.from`, `PageSize.from`) or `of` (`CreateIssue.of`,
 `MergePullRequest.using`), and they return `Either[ValidationError, A]` when they
-can fail.
+can fail. `ValidationError` is the name of `CodebergError.Validation`, the case
+of the error family that carries a rejected argument, so a smart constructor and
+a client call can be sequenced in a single `for`-comprehension without mapping
+one error type onto another first.
 
 The identifiers that validate as URI path segments — `Owner`, `RepoName`,
 `BranchName`, `TagName`, `Username`, `OrgName` and the rest — also take a string

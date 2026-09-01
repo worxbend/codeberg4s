@@ -1,7 +1,6 @@
 package com.worxbend.codeberg4s.core
 
 import com.worxbend.codeberg4s.CallContext
-import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.ValidationError
 
@@ -21,6 +20,6 @@ final class TelemetrySuite extends FunSuite:
     assertEquals(telemetry.onResponse(context, 200), Right(()))
 
   test("the no-op sink succeeds on an error"):
-    val error = CodebergError.Validation(ValidationError("owner", "must not be blank"))
+    val error = ValidationError("owner", "must not be blank")
 
     assertEquals(telemetry.onError(context, error), Right(()))

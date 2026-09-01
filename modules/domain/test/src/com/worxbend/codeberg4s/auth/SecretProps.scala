@@ -80,7 +80,7 @@ final class SecretProps extends PropertyBase:
         JsonPath.of("auth", "token"),
         s"$token",
       ),
-      "Validation"       -> CodebergError.Validation(ValidationError("apiToken", s"$token")),
+      "Validation"       -> ValidationError("apiToken", s"$token"),
       "RetriesExhausted" -> CodebergError.RetriesExhausted(
         context,
         3,

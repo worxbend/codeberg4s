@@ -10,7 +10,28 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- **`ValidationError` is now the case `CodebergError.Validation`** rather than a
+  standalone `final case class` wrapped by that case. `ValidationError` remains
+  a usable name — it is a type alias for the case, with an `apply` and an
+  `unapply` — so smart constructors still read as
+  `Either[ValidationError, Owner]`.
+
+  The point is composition. A pre-flight validation failure and a remote failure
+  now travel on one channel, so a smart constructor and a client call sequence
+  in a single `for`-comprehension: `Either`'s `flatMap` widens the left type to
+  `CodebergError` by itself, and nothing has to be mapped from one error type to
+  another in between.
+
+  BREAKING CHANGE: `CodebergError.Validation` takes the two fields directly
+  instead of wrapping a `ValidationError`. Rewrite
+  `CodebergError.Validation(ValidationError(field, message))` as
+  `ValidationError(field, message)`, and a match of the shape
+  `case CodebergError.Validation(problem) => problem.field` as
+  `case CodebergError.Validation(field, message) => field`. Reading `.field` and
+  `.message` off a value already typed as the failure is unchanged, and so is
+  every smart constructor's result type.
 
 ## [0.1.0] — unreleased
 

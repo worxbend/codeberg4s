@@ -115,7 +115,8 @@ private[social] object SocialDecoders:
     *
     * Read verbatim and then validated, so a body that is blank — which cannot be signed — is a
     * [[com.worxbend.codeberg4s.core.DecodeFailure]] at the document root rather than a token-shaped emptiness handed to
-    * a caller. The failure carries [[com.worxbend.codeberg4s.ValidationError.message]] and never the rejected body.
+    * a caller. The failure carries [[com.worxbend.codeberg4s.CodebergError.Validation.message]] and never the rejected
+    * body.
     */
   val verificationToken: Decode[GpgKeyToken] =
     (body: ResponseBody) =>

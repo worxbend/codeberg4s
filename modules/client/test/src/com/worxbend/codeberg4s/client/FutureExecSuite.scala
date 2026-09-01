@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger
   */
 final class FutureExecSuite extends FunSuite:
 
-  private val Failed: CodebergError = CodebergError.Validation(ValidationError("owner", "must not be blank"))
+  private val Failed: CodebergError = ValidationError("owner", "must not be blank")
 
   private val Defect: Throwable = IllegalStateException("a defect is not a CodebergError")
 

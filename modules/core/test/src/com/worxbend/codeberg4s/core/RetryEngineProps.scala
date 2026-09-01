@@ -88,7 +88,7 @@ final class RetryEngineProps extends PropertyBase:
         )
         .map(cause  => CodebergError.Transport(context, cause)),
       Gen.const(CodebergError.DecodingFailed(context, "{", JsonPath.Root, "unexpected end of input")),
-      Gen.const(CodebergError.Validation(ValidationError("owner", "must not be blank"))),
+      Gen.const(ValidationError("owner", "must not be blank")),
       Gen.const(
         CodebergError.RetriesExhausted(context, 2, CodebergError.Transport(context, TransportCause.Timeout("read")))
       ),

@@ -40,8 +40,18 @@ enum CodebergError:
   /** A 2xx payload could not be decoded. `snippet` is a bounded excerpt of the body, `path` says where it broke. */
   case DecodingFailed(ctx: CallContext, snippet: String, path: JsonPath, cause: String)
 
-  /** A smart constructor rejected an argument before any request was built. */
-  case Validation(error: ValidationError)
+  /** A smart constructor rejected an argument before any request was built.
+    *
+    * This case is also known as [[ValidationError]], the alias smart constructors name in their result type. It carries
+    * no [[CallContext]] because validation runs before a request exists.
+    *
+    * @param field
+    *   the lower-camel-case name of the rejected concept, stable enough to branch on — `"owner"`, `"repoName"`,
+    *   `"apiToken"`, `"baseUri"`, `"pageSize"`
+    * @param message
+    *   a short, human-readable reason, lowercase and without a trailing period. It never contains credential material.
+    */
+  case Validation(field: String, message: String)
 
   /** The retry engine ran out of attempts. `last` preserves the failure of the final attempt. */
   case RetriesExhausted(ctx: CallContext, attempts: Int, last: CodebergError)
@@ -90,8 +100,8 @@ object CodebergError:
           s"${renderContext(ctx)} responded $status: $message${renderDetails(body.errors)}${renderRetryAfter(retryAfter)}"
         case DecodingFailed(ctx, snippet, path, cause) =>
           s"${renderContext(ctx)} could not decode ${bound(path.render)}: ${bound(cause)}; body was ${bound(snippet)}"
-        case Validation(problem)                       =>
-          s"invalid ${problem.field}: ${bound(problem.message)}"
+        case Validation(field, message)                =>
+          s"invalid $field: ${bound(message)}"
         case RetriesExhausted(ctx, attempts, last)     =>
           s"${renderContext(ctx)} gave up after $attempts attempts; last failure: ${bound(last.describe)}"
         case WalkTruncated(pagesVisited, resumeFrom)   =>
