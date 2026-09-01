@@ -265,4 +265,4 @@ final class RetryEngineSuite extends FunSuite:
       Right(AttemptOutcome.failed(error))
 
   private def apiFailure(status: Int): CodebergError =
-    CodebergError.Api(context, status, ApiErrorBody.Empty)
+    CodebergError.Api(context, status, ApiErrorBody.Empty, None)

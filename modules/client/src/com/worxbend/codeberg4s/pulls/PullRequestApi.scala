@@ -402,9 +402,9 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     )
 
     exec.flatMap(exec.attempt(probe)):
-      case Right(_)                                 => exec.pure(true)
-      case Left(CodebergError.Api(_, NotMerged, _)) => exec.pure(false)
-      case Left(error)                              => exec.raise(error)
+      case Right(_)                                    => exec.pure(true)
+      case Left(CodebergError.Api(_, NotMerged, _, _)) => exec.pure(false)
+      case Left(error)                                 => exec.raise(error)
 
   /** Cancels a merge that was scheduled but has not happened — `DELETE /repos/{owner}/{repo}/pulls/{index}/merge`.
     *

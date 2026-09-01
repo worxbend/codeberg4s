@@ -995,9 +995,9 @@ object OrganizationApi:
     val asked = pipeline.callUnit(request, RetryEligibility.IdempotentOnly)
 
     exec.flatMap(exec.attempt(asked)):
-      case Right(_)                                  => exec.pure(true)
-      case Left(CodebergError.Api(_, NotAMember, _)) => exec.pure(false)
-      case Left(error)                               => exec.raise(error)
+      case Right(_)                                     => exec.pure(true)
+      case Left(CodebergError.Api(_, NotAMember, _, _)) => exec.pure(false)
+      case Left(error)                                  => exec.raise(error)
 
   private def getRequest(org: OrgName): CodebergRequest =
     read(GetOperation, OrganizationRequests.organizationPath(org), Nil)

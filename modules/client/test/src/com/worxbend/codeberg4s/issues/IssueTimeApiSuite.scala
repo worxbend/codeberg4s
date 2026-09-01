@@ -152,8 +152,8 @@ final class IssueTimeApiSuite extends FunSuite with IssueLaneHarness:
   test("a 403 carries the stopwatch operation id, so an alert can name the endpoint"):
     onApi(responding(403, IssueTimeApiSuite.ForbiddenBody)): api =>
       api.attempt.startStopwatch(Handle, Name, Number).map:
-        case Left(CodebergError.Api(ctx, _, _)) => assertEquals(ctx.operation, IssueTimeApi.StartStopwatchOperation)
-        case other                              => fail(s"expected an Api failure, got $other")
+        case Left(CodebergError.Api(ctx, _, _, _)) => assertEquals(ctx.operation, IssueTimeApi.StartStopwatchOperation)
+        case other                                 => fail(s"expected an Api failure, got $other")
 
   test("an entry with no time becomes DecodingFailed at $.time, never a silent zero"):
     onApi(responding(200, """{"id":474}""")): api =>

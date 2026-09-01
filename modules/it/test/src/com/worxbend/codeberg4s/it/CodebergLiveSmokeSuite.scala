@@ -98,10 +98,10 @@ final class CodebergLiveSmokeSuite extends IntegrationSuite:
   test("a repository that does not exist is a 404 carrying Forgejo's errors array"):
     live: codeberg =>
       codeberg.repos.attempt.get(orFail(Owner.from("definitely")), orFail(RepoName.from("nonexistent-xyz"))).map:
-        case Left(CodebergError.Api(_, status, body)) =>
+        case Left(CodebergError.Api(_, status, body, _)) =>
           assertEquals(status, 404)
           assert(body.errors.nonEmpty, s"the 404 carried no errors array, only ${body.message}")
-        case other                                    =>
+        case other                                       =>
           fail(s"expected an Api failure, got $other")
 
   // --- helpers ---------------------------------------------------------------

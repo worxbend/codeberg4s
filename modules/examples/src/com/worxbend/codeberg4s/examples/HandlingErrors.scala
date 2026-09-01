@@ -48,8 +48,9 @@ import scala.concurrent.{Await, ExecutionContext, Future}
   *   - `RetriesExhausted` — the retry engine gave up, wrapping the failure that ended it;
   *   - `WalkTruncated` — a walk over every page hit its page cap with pages still to come.
   *
-  * A `404` is `Api(ctx, 404, body)`. A `429` is `Api(ctx, 429, body)`, or a `RetriesExhausted` wrapping one once the
-  * policy has run out of attempts. Nothing else exists to match on.
+  * A `404` is `Api(ctx, 404, body, None)`. A `429` is `Api(ctx, 429, body, retryAfter)` — where `retryAfter` is the
+  * delay the server asked for, when it sent a usable one — or a `RetriesExhausted` wrapping one once the policy has run
+  * out of attempts. Nothing else exists to match on.
   */
 object HandlingErrors:
 
@@ -119,10 +120,10 @@ object HandlingErrors:
     */
   private def classify(error: CodebergError): String =
     error match
-      case CodebergError.Api(ctx, 404, _) =>
+      case CodebergError.Api(ctx, 404, _, _) =>
         s"404 from ${ctx.operation}: no such repository, or one this token cannot see — Forgejo does not distinguish"
 
-      case CodebergError.Api(ctx, status, body) =>
+      case CodebergError.Api(ctx, status, body, _) =>
         val message = body.message.getOrElse("no message from the server")
         s"$status from ${ctx.operation} after ${ctx.durationMs}ms: $message"
 

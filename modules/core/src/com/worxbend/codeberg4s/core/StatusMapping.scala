@@ -2,6 +2,8 @@ package com.worxbend.codeberg4s.core
 
 import com.worxbend.codeberg4s.{ApiErrorBody, CallContext, CodebergError}
 
+import scala.concurrent.duration.FiniteDuration
+
 /** What an HTTP status means to this library.
   *
   * The mapping lives in one place so that no endpoint invents its own reading of a status code, and so that the set of
@@ -39,6 +41,14 @@ object StatusMapping:
     * [[com.worxbend.codeberg4s.ApiErrorBody.Empty]] rather than a second failure. The status is preserved verbatim so
     * that a caller can branch on `404` against `409` without this library having to enumerate every endpoint's
     * vocabulary.
+    *
+    * `retryAfter` is whatever the response's `Retry-After` header yielded, already parsed by the caller; it travels
+    * onto the error so that a caller handling a `429` itself can schedule a backoff from the value the server sent.
     */
-  def toError(ctx: CallContext, status: Int, body: ApiErrorBody): CodebergError =
-    CodebergError.Api(ctx, status, body)
+  def toError(
+      ctx: CallContext,
+      status: Int,
+      body: ApiErrorBody,
+      retryAfter: Option[FiniteDuration],
+  ): CodebergError =
+    CodebergError.Api(ctx, status, body, retryAfter)

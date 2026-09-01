@@ -69,7 +69,7 @@ final class CodebergErrorProps extends PropertyBase:
 
   property("a server-supplied message and a validation reason are truncated".tag(Property)):
     forAllNoShrink(oversized) { text =>
-      within("Api(body.message)", CodebergError.Api(ordinaryContext, 500, ApiErrorBody(Some(text), None, Nil))) &&
+      within("Api(body.message)", CodebergError.Api(ordinaryContext, 500, ApiErrorBody(Some(text), None, Nil), None)) &&
       within("Validation(message)", CodebergError.Validation(ValidationError("owner", text))) &&
       within("Transport(cause detail)", CodebergError.Transport(ordinaryContext, TransportCause.Unknown(text)))
     }
@@ -99,7 +99,7 @@ final class CodebergErrorProps extends PropertyBase:
     forAllNoShrink(Gen.choose(500, 2000)) { count =>
       within(
         "Api(body.errors)",
-        CodebergError.Api(ordinaryContext, 422, ApiErrorBody(None, None, List.fill(count)("field is required"))),
+        CodebergError.Api(ordinaryContext, 422, ApiErrorBody(None, None, List.fill(count)("field is required")), None),
       )
     }
 
@@ -117,7 +117,7 @@ final class CodebergErrorProps extends PropertyBase:
 
   property("describe never loses the status a caller branches on".tag(Property)):
     forAllNoShrink(Gen.choose(400, 599), oversized) { (status, text) =>
-      val rendered = CodebergError.Api(ordinaryContext, status, ApiErrorBody(Some(text), None, Nil)).describe
+      val rendered = CodebergError.Api(ordinaryContext, status, ApiErrorBody(Some(text), None, Nil), None).describe
 
       Prop.propBoolean(rendered.contains(status.toString)).label(s"$status is missing from the rendering")
     }

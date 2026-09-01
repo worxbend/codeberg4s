@@ -548,14 +548,14 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
   test("a 423 is an Api failure — it is what every write against an archived repository answers"):
     onApi(responding(423, RepositoryAdminApiSuite.ArchivedBody)): api =>
       api.attempt.createFile(Handle, Name, Path, CreateFile.of(FileBytes.ofText("x"))).map:
-        case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 423)
-        case other                                 => fail(s"expected an Api failure, got $other")
+        case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 423)
+        case other                                    => fail(s"expected an Api failure, got $other")
 
   test("a 409 from a guarded update is an Api failure, which is how a concurrent edit surfaces"):
     onApi(responding(409, RepositoryAdminApiSuite.ConflictBody)): api =>
       api.attempt.updateFile(Handle, Name, Path, UpdateFile.of(FileBytes.ofText("x"), Sha)).map:
-        case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 409)
-        case other                                 => fail(s"expected an Api failure, got $other")
+        case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 409)
+        case other                                    => fail(s"expected an Api failure, got $other")
 
   test("a 200 whose payload does not fit the model becomes DecodingFailed, never an escaping codec exception"):
     onApi(responding(200, """{"remote_address":"https://example.test"}""")): api =>

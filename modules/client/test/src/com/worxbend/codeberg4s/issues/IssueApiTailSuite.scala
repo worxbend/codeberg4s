@@ -257,8 +257,8 @@ final class IssueApiTailSuite extends FunSuite with IssueLaneHarness:
 
   private def operation[A](result: Either[CodebergError, A]): String =
     result match
-      case Left(CodebergError.Api(ctx, _, _)) => ctx.operation
-      case other                              => fail(s"expected an Api failure, got $other")
+      case Left(CodebergError.Api(ctx, _, _, _)) => ctx.operation
+      case other                                 => fail(s"expected an Api failure, got $other")
 
   private def onApi[A](backend: Backend[Future])(use: IssueApi => Future[A]): Future[A] =
     onPipeline(backend)(pipeline => use(IssueApi(pipeline)))

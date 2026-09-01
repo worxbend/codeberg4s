@@ -268,8 +268,8 @@ final class NotificationApiSuite extends FunSuite with ClientSuiteHarness:
   test("a 400 is an Api failure too — Forgejo uses it for validation alongside 422"):
     onApi(responding(400, NotificationApiSuite.ValidationBody)): api =>
       api.attempt.list(NotificationQuery.Empty, PageParams.First).map:
-        case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 400)
-        case other                                 => fail(s"expected an Api failure, got $other")
+        case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 400)
+        case other                                    => fail(s"expected an Api failure, got $other")
 
   test("a 401 carries the operation id, so an alert can name the endpoint"):
     onApi(responding(401, NotificationApiSuite.UnauthorizedBody)): api =>

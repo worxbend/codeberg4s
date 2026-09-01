@@ -410,7 +410,7 @@ def fallback: Repository
 
 val repository: Future[Repository] =
   client.repos.get(owner, name).recover:
-    case CodebergException(CodebergError.Api(_, 404, _)) => fallback
+    case CodebergException(CodebergError.Api(_, 404, _, _)) => fallback
 ```
 
 Any case you do not handle stays a failed `Future`, carrying the same value.

@@ -175,8 +175,9 @@ final class ApiPipeline[F[_]](
         observe(telemetry.onResponse(ctx, status)).flatMap: _ =>
           if StatusMapping.isSuccess(status) then succeed(ctx, response, onSuccess)
           else
-            val error = StatusMapping.toError(ctx, status, parsedErrorBody(facts.errorBody(response)))
-            failedWith(ctx, error, facts.retryAfter(response))
+            val retryAfter = facts.retryAfter(response)
+            val error      = StatusMapping.toError(ctx, status, parsedErrorBody(facts.errorBody(response)), retryAfter)
+            failedWith(ctx, error, retryAfter)
 
   private def succeed[R, A](
       ctx: CallContext,

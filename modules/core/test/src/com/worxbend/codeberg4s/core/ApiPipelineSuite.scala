@@ -107,6 +107,7 @@ final class ApiPipelineSuite extends FunSuite:
           contextOf("issues.list", HttpMethod.Get, Some("abc123")),
           404,
           ApiErrorBody(Some("GetUserByName"), Some("https://codeberg.org/api/swagger"), List(forgejoErrorBody)),
+          None,
         )
       ),
     )
@@ -140,6 +141,16 @@ final class ApiPipelineSuite extends FunSuite:
 
     assertEquals(result, Right("payload"))
     assertEquals(timer.sleeps, Vector(2.seconds))
+
+  test("the Retry-After the server sent reaches the caller on the error"):
+    val http = FakeHttpPort.always(responseOf(429, "slow down", "retry-after" -> List("2")))
+
+    val result = pipelineOf(http, FakeTimer(0L), silent, stubErrorBody)
+      .callUnit(creation, RetryEligibility.Never)
+
+    result match
+      case Left(CodebergError.Api(_, 429, _, retryAfter)) => assertEquals(retryAfter, Some(2.seconds))
+      case other                                          => fail(s"expected a 429 carrying Retry-After, got $other")
 
   test("a mutating call is not repeated under IdempotentOnly, whatever the status"):
     val timer = FakeTimer(0L)
@@ -308,7 +319,7 @@ final class ApiPipelineSuite extends FunSuite:
 
     assertEquals(
       result,
-      Left(CodebergError.Api(contextOf("issues.list", HttpMethod.Get, None), 422, ApiErrorBody.Empty)),
+      Left(CodebergError.Api(contextOf("issues.list", HttpMethod.Get, None), 422, ApiErrorBody.Empty, None)),
     )
 
   test("an empty error body becomes Empty without consulting the parser"):
@@ -320,7 +331,7 @@ final class ApiPipelineSuite extends FunSuite:
 
     assertEquals(
       result,
-      Left(CodebergError.Api(contextOf("issues.list", HttpMethod.Get, None), 500, ApiErrorBody.Empty)),
+      Left(CodebergError.Api(contextOf("issues.list", HttpMethod.Get, None), 500, ApiErrorBody.Empty, None)),
     )
 
   test("callUnit succeeds on a 204 and never looks at the body"):
@@ -344,6 +355,7 @@ final class ApiPipelineSuite extends FunSuite:
           contextOf("issues.list", HttpMethod.Get, None),
           403,
           ApiErrorBody(Some("GetUserByName"), Some("https://codeberg.org/api/swagger"), List(forgejoErrorBody)),
+          None,
         )
       ),
     )
@@ -406,8 +418,8 @@ final class ApiPipelineSuite extends FunSuite:
       .call[String](listing, RetryEligibility.Never)
 
     result match
-      case Left(CodebergError.Api(ctx, _, _)) => assertEquals(ctx.durationMs, 7L)
-      case other                              => fail(s"expected an Api failure, got $other")
+      case Left(CodebergError.Api(ctx, _, _, _)) => assertEquals(ctx.durationMs, 7L)
+      case other                                 => fail(s"expected an Api failure, got $other")
 
 /** A [[Timer]] whose clock advances by a fixed step on every reading.
   *

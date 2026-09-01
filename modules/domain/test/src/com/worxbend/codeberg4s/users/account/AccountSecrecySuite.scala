@@ -102,7 +102,7 @@ final class AccountSecrecySuite extends FunSuite:
 
   /** The worst case an API failure can carry: the rendered application as the message of an error body. */
   private def apiFailure(value: OAuth2Application): CodebergError =
-    CodebergError.Api(context, 422, ApiErrorBody(Some(value.toString), None, Nil))
+    CodebergError.Api(context, 422, ApiErrorBody(Some(value.toString), None, Nil), None)
 
   private def context: CallContext =
     CallContext("users.account.applications.create", HttpMethod.Post, "https://forge.example/api/v1/user", None, 3L)

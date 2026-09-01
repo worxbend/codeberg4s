@@ -60,7 +60,7 @@ object RecordingTelemetry:
   def nameOf(error: CodebergError): String =
     error match
       case CodebergError.Transport(_, _)            => "Transport"
-      case CodebergError.Api(_, _, _)               => "Api"
+      case CodebergError.Api(_, _, _, _)            => "Api"
       case CodebergError.DecodingFailed(_, _, _, _) => "DecodingFailed"
       case CodebergError.Validation(_)              => "Validation"
       case CodebergError.RetriesExhausted(_, _, _)  => "RetriesExhausted"

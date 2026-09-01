@@ -127,8 +127,8 @@ trait HookApiSuite extends FunSuite:
   /** The operation, status and message of an `Api` failure, for comparing the two rails. */
   protected def summary(error: CodebergError): (String, Int, Option[String]) =
     error match
-      case CodebergError.Api(ctx, status, body) => (ctx.operation, status, body.message)
-      case other                                => fail(s"expected an Api failure, got ${other.describe}")
+      case CodebergError.Api(ctx, status, body, _) => (ctx.operation, status, body.message)
+      case other                                   => fail(s"expected an Api failure, got ${other.describe}")
 
   /** A pagination window. */
   protected def window(number: Int, size: Int): PageParams =

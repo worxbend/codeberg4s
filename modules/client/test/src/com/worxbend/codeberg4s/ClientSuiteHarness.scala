@@ -160,20 +160,20 @@ trait ClientSuiteHarness:
   /** The operation, status and message of an `Api` failure, which is what "the same failure" means here. */
   def summary(error: CodebergError): (String, Int, Option[String]) =
     error match
-      case CodebergError.Api(ctx, status, body) => (ctx.operation, status, body.message)
-      case other                                => fail(s"expected an Api failure, got ${other.describe}")
+      case CodebergError.Api(ctx, status, body, _) => (ctx.operation, status, body.message)
+      case other                                   => fail(s"expected an Api failure, got ${other.describe}")
 
   /** The operation id a failed call carried, so a test can assert an alert could name it. */
   def operationOf[A](result: Either[CodebergError, A]): String =
     result match
-      case Left(CodebergError.Api(ctx, _, _)) => ctx.operation
-      case other                              => fail(s"expected an Api failure, got $other")
+      case Left(CodebergError.Api(ctx, _, _, _)) => ctx.operation
+      case other                                 => fail(s"expected an Api failure, got $other")
 
   /** The per-field messages a failed call carried back from the forge. */
   def detailsOf[A](result: Either[CodebergError, A]): List[String] =
     result match
-      case Left(CodebergError.Api(_, _, body)) => body.errors
-      case other                               => fail(s"expected an Api failure, got $other")
+      case Left(CodebergError.Api(_, _, body, _)) => body.errors
+      case other                                  => fail(s"expected an Api failure, got $other")
 
   /** Unwraps a smart constructor in a fixture, failing the test rather than the call under test. */
   def orFail[A](result: Either[ValidationError, A]): A =

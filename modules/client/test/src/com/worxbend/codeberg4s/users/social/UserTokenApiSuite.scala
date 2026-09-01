@@ -203,8 +203,8 @@ final class UserTokenApiSuite extends FunSuite with ClientSuiteHarness:
   test("a 400 is an Api failure too — Forgejo uses it for validation on this endpoint"):
     onApi(responding(400, UserTokenApiSuite.ValidationBody)): api =>
       api.attempt.create(Handle, orFail(CreateAccessToken.named("ci"))).map:
-        case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 400)
-        case other                                 => fail(s"expected an Api failure, got $other")
+        case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 400)
+        case other                                    => fail(s"expected an Api failure, got $other")
 
   test("a failure carries the operation id of the endpoint it came from, so an alert can name it"):
     onApi(responding(403, UserTokenApiSuite.ForbiddenBody)): api =>

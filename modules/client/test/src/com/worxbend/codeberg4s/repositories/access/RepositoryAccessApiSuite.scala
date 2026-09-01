@@ -235,8 +235,8 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
   test("a 404 from the collaborator check reaches the typed rail as the no it is"):
     onApi(responding(404, RepositoryAccessApiSuite.NotFoundBody)): api =>
       api.attempt.checkCollaborator(Handle, Name, Collaborator).map:
-        case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 404)
-        case other                                 => fail(s"expected an Api failure, got $other")
+        case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 404)
+        case other                                    => fail(s"expected an Api failure, got $other")
 
   test("repos.collaborators.add PUTs the level under the key the spec names"):
     val backend = RecordingBackend(responding(204, ""))
@@ -419,14 +419,14 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
   test("a 423 on a protection write is an Api failure like any other status"):
     onApi(responding(423, RepositoryAccessApiSuite.ArchivedBody)): api =>
       api.attempt.createBranchProtection(Handle, Name, CreateBranchProtection.on(Rule)).map:
-        case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 423)
-        case other                                 => fail(s"expected an Api failure, got $other")
+        case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 423)
+        case other                                    => fail(s"expected an Api failure, got $other")
 
   test("a 405 on a team endpoint is an Api failure too — it is what a user-owned repository answers"):
     onApi(responding(405, RepositoryAccessApiSuite.NotAnOrgBody)): api =>
       api.attempt.listTeams(Handle, Name).map:
-        case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 405)
-        case other                                 => fail(s"expected an Api failure, got $other")
+        case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 405)
+        case other                                    => fail(s"expected an Api failure, got $other")
 
   test("a 200 whose payload does not fit the model becomes DecodingFailed, never an escaping codec exception"):
     onApi(responding(200, """{"enable_push":true}""")): api =>

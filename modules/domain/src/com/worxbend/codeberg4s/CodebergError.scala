@@ -2,6 +2,8 @@ package com.worxbend.codeberg4s
 
 import com.worxbend.codeberg4s.paging.PageParams
 
+import scala.concurrent.duration.FiniteDuration
+
 /** Every failure this library reports, as one closed family.
   *
   * Recoverable failures are values: no operation throws for a `404`, a timeout, or a malformed payload. Each remote
@@ -23,8 +25,17 @@ enum CodebergError:
   /** The request never produced a response. */
   case Transport(ctx: CallContext, cause: TransportCause)
 
-  /** The server answered with a non-2xx status. `body` is the parsed Forgejo payload, or [[ApiErrorBody.Empty]]. */
-  case Api(ctx: CallContext, status: Int, body: ApiErrorBody)
+  /** The server answered with a non-2xx status. `body` is the parsed Forgejo payload, or [[ApiErrorBody.Empty]].
+    *
+    * `retryAfter` is the delay the server asked for in its `Retry-After` header, so a caller that catches a `429`
+    * outside the retry engine — or reads the `last` of a [[CodebergError.RetriesExhausted]] — can schedule its own
+    * backoff without re-reading headers it no longer has.
+    *
+    * It is `None` when the header was absent, blank, or in the HTTP-date form this library deliberately does not parse.
+    * On a `429` that means "no usable hint was sent", '''not''' "retrying straight away is safe": with no hint, pick a
+    * backoff of your own.
+    */
+  case Api(ctx: CallContext, status: Int, body: ApiErrorBody, retryAfter: Option[FiniteDuration])
 
   /** A 2xx payload could not be decoded. `snippet` is a bounded excerpt of the body, `path` says where it broke. */
   case DecodingFailed(ctx: CallContext, snippet: String, path: JsonPath, cause: String)
@@ -74,9 +85,9 @@ object CodebergError:
       error match
         case Transport(ctx, cause)                     =>
           s"${renderContext(ctx)} transport failure: ${bound(cause.describe)}"
-        case Api(ctx, status, body)                    =>
+        case Api(ctx, status, body, retryAfter)        =>
           val message = body.message.fold("no message from the server")(bound)
-          s"${renderContext(ctx)} responded $status: $message${renderDetails(body.errors)}"
+          s"${renderContext(ctx)} responded $status: $message${renderDetails(body.errors)}${renderRetryAfter(retryAfter)}"
         case DecodingFailed(ctx, snippet, path, cause) =>
           s"${renderContext(ctx)} could not decode ${bound(path.render)}: ${bound(cause)}; body was ${bound(snippet)}"
         case Validation(problem)                       =>
@@ -97,6 +108,10 @@ object CodebergError:
     * count so nothing looks silently complete.
     */
   private val MaxDetails: Int = 8
+
+  private def renderRetryAfter(retryAfter: Option[FiniteDuration]): String =
+    // A duration this library parsed itself, so it is already bounded.
+    retryAfter.fold("")(delay => s"; retry after ${delay.toSeconds}s")
 
   private def renderContext(ctx: CallContext): String =
     // Every fragment here is bounded because two of the three are chosen by the

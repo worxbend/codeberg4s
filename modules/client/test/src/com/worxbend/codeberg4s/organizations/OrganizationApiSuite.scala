@@ -228,8 +228,8 @@ final class OrganizationApiSuite extends FunSuite with ClientSuiteHarness:
   test("a 400 is an Api failure too — Forgejo uses it for validation alongside 422"):
     onApi(responding(400, OrganizationApiSuite.NotFoundBody)): api =>
       api.attempt.list(PageParams.First).map:
-        case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 400)
-        case other                                 => fail(s"expected an Api failure, got $other")
+        case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 400)
+        case other                                    => fail(s"expected an Api failure, got $other")
 
   test("a 200 whose payload does not fit the model becomes DecodingFailed, never an escaping codec exception"):
     onApi(responding(200, """{"name":"forgejo"}""")): api =>

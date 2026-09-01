@@ -110,8 +110,8 @@ final class IssueMilestoneApiSuite extends FunSuite with IssueLaneHarness:
   test("a 404 carries the edit operation id, so an alert can name the endpoint"):
     onApi(responding(404, IssueLaneHarness.NotFoundBody)): api =>
       api.attempt.edit(Handle, Name, Release, EditMilestone.Empty).map:
-        case Left(CodebergError.Api(ctx, _, _)) => assertEquals(ctx.operation, IssueMilestoneApi.EditOperation)
-        case other                              => fail(s"expected an Api failure, got $other")
+        case Left(CodebergError.Api(ctx, _, _, _)) => assertEquals(ctx.operation, IssueMilestoneApi.EditOperation)
+        case other                                 => fail(s"expected an Api failure, got $other")
 
   test("a milestone with no state becomes DecodingFailed at $.state, because the domain has no third case"):
     onApi(responding(201, """{"id":1,"title":"v1.0"}""")): api =>

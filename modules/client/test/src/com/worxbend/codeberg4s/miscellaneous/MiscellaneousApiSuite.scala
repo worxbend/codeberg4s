@@ -173,8 +173,8 @@ final class MiscellaneousApiSuite extends FunSuite with ClientSuiteHarness:
   test("the 404 this endpoint declares is a failure, unlike the empty body"):
     onApi(responding(404, MiscellaneousApiSuite.NotFoundBody)): api =>
       api.attempt.sshSigningKey().map:
-        case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 404)
-        case other                                 => fail(s"expected an Api failure, got $other")
+        case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 404)
+        case other                                    => fail(s"expected an Api failure, got $other")
 
   // --- the template catalogues ----------------------------------------------
 

@@ -380,9 +380,9 @@ final class UserSocialApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     val sent = pipeline.callUnit(request, RetryEligibility.IdempotentOnly)
 
     exec.flatMap(exec.attempt(sent)):
-      case Right(_)                                            => exec.pure(true)
-      case Left(CodebergError.Api(_, UserSocialApi.Absent, _)) => exec.pure(false)
-      case Left(error)                                         => exec.raise(error)
+      case Right(_)                                               => exec.pure(true)
+      case Left(CodebergError.Api(_, UserSocialApi.Absent, _, _)) => exec.pure(false)
+      case Left(error)                                            => exec.raise(error)
 
 /** The requests this group issues and its typed rail. */
 object UserSocialApi:

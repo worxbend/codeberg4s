@@ -485,8 +485,8 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
   test("a 400 is an Api failure too — Forgejo uses it for validation alongside 422"):
     onApi(responding(400, RepositoryActionApiSuite.ValidationBody)): api =>
       api.attempt.listRuns(Handle, Name, ActionRunQuery.Empty, PageParams.First).map:
-        case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 400)
-        case other                                 => fail(s"expected an Api failure, got $other")
+        case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 400)
+        case other                                    => fail(s"expected an Api failure, got $other")
 
   test("a 200 whose payload does not fit the model becomes DecodingFailed, never an escaping codec exception"):
     onApi(responding(200, """{"title":"no id"}""")): api =>

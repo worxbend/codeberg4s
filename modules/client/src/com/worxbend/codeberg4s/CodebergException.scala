@@ -10,7 +10,7 @@ import scala.util.control.NoStackTrace
   *
   * {{{
   * client.repos.get(owner, name).recover:
-  *   case CodebergException(CodebergError.Api(_, 404, _)) => fallbackRepository
+  *   case CodebergException(CodebergError.Api(_, 404, _, _)) => fallbackRepository
   * }}}
   *
   * '''Security contract.''' The message is [[CodebergError.describe]], which is built only from the redacted

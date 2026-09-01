@@ -115,13 +115,13 @@ final class IssueCommentApiSuite extends FunSuite with IssueLaneHarness:
 
     onApi(backend): api =>
       api.attempt.deleteDeprecated(Handle, Name, Number, CommentRef).map:
-        case Left(CodebergError.Api(ctx, _, _)) =>
+        case Left(CodebergError.Api(ctx, _, _, _)) =>
           assertEquals(ctx.operation, IssueCommentApi.DeleteDeprecatedOperation)
           assertEquals(
             pathOf(backend),
             "https://forge.example/api/v1/repos/Codeberg/Community/issues/2966/comments/20366420",
           )
-        case other                              => fail(s"expected an Api failure, got $other")
+        case other                                 => fail(s"expected an Api failure, got $other")
 
   test("a 404 reaches both rails as the very same failure"):
     onApi(responding(404, IssueLaneHarness.NotFoundBody)): api =>

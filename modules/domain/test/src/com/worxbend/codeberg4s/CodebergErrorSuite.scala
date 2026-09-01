@@ -5,6 +5,8 @@ import com.worxbend.codeberg4s.auth.Auth
 
 import munit.FunSuite
 
+import scala.concurrent.duration.DurationInt
+
 final class CodebergErrorSuite extends FunSuite:
 
   private val Context: CallContext = CallContext(
@@ -25,19 +27,29 @@ final class CodebergErrorSuite extends FunSuite:
 
   test("describe reports the status and the server message of an api failure"):
     val body                 = ApiErrorBody(Some("repository does not exist"), None, Nil)
-    val error: CodebergError = CodebergError.Api(Context, 404, body)
+    val error: CodebergError = CodebergError.Api(Context, 404, body, None)
 
     assert(error.describe.contains("404"), error.describe)
     assert(error.describe.contains("repository does not exist"), error.describe)
 
+  test("describe reports the Retry-After the server asked for"):
+    val error: CodebergError = CodebergError.Api(Context, 429, ApiErrorBody.Empty, Some(30.seconds))
+
+    assert(error.describe.contains("retry after 30s"), error.describe)
+
+  test("describe says nothing about waiting when the server sent no usable Retry-After"):
+    val error: CodebergError = CodebergError.Api(Context, 429, ApiErrorBody.Empty, None)
+
+    assert(!error.describe.contains("retry after"), error.describe)
+
   test("describe copes with an api failure that carried no message"):
-    val error: CodebergError = CodebergError.Api(Context, 500, ApiErrorBody.Empty)
+    val error: CodebergError = CodebergError.Api(Context, 500, ApiErrorBody.Empty, None)
 
     assert(error.describe.contains("500"), error.describe)
 
   test("describe lists the per-field errors of a validation response"):
     val body                 = ApiErrorBody(Some("invalid"), None, List("title is required", "body is too long"))
-    val error: CodebergError = CodebergError.Api(Context, 422, body)
+    val error: CodebergError = CodebergError.Api(Context, 422, body, None)
 
     assert(error.describe.contains("title is required"), error.describe)
     assert(error.describe.contains("body is too long"), error.describe)
@@ -77,7 +89,7 @@ final class CodebergErrorSuite extends FunSuite:
     val config               = CodebergConfig(Auth.Token(token(secret)))
     val body                 = ApiErrorBody(Some(s"rejected credentials ${config.auth}"), None, Nil)
     val error: CodebergError =
-      CodebergError.Api(Context.copy(uri = s"${config.baseUri.value}/repos/forgejo/forgejo"), 401, body)
+      CodebergError.Api(Context.copy(uri = s"${config.baseUri.value}/repos/forgejo/forgejo"), 401, body, None)
     val described            = error.describe
 
     assert(!described.contains(secret), "describe leaked the token")

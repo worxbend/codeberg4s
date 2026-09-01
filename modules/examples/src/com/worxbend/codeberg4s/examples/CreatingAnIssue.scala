@@ -167,8 +167,8 @@ object CreatingAnIssue:
   /** Turns the statuses a write actually produces into the next thing to try. */
   private def explain(error: CodebergError): Unit =
     error match
-      case CodebergError.Api(_, 401, _) => ExampleConsole.line(s"  $TokenVariable was not accepted at all")
-      case CodebergError.Api(_, 403, _) => ExampleConsole.line("  the token lacks write:issue on this repository")
-      case CodebergError.Api(_, 404, _) => ExampleConsole.line("  no such repository, or the token cannot see it")
-      case CodebergError.Api(_, 422, _) => ExampleConsole.line("  the instance rejected the payload")
-      case _                            => ExampleConsole.line("  see the description above")
+      case CodebergError.Api(_, 401, _, _) => ExampleConsole.line(s"  $TokenVariable was not accepted at all")
+      case CodebergError.Api(_, 403, _, _) => ExampleConsole.line("  the token lacks write:issue on this repository")
+      case CodebergError.Api(_, 404, _, _) => ExampleConsole.line("  no such repository, or the token cannot see it")
+      case CodebergError.Api(_, 422, _, _) => ExampleConsole.line("  the instance rejected the payload")
+      case _                               => ExampleConsole.line("  see the description above")

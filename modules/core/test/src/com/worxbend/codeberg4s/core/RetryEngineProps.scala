@@ -62,7 +62,7 @@ final class RetryEngineProps extends PropertyBase:
     Gen.oneOf(
       Gen
         .oneOf(StatusMapping.RetryableStatuses.toVector)
-        .map(status => CodebergError.Api(context, status, ApiErrorBody.Empty)),
+        .map(status => CodebergError.Api(context, status, ApiErrorBody.Empty, None)),
       Gen
         .oneOf[TransportCause](
           TransportCause.ConnectionFailed("connection reset"),
@@ -79,7 +79,7 @@ final class RetryEngineProps extends PropertyBase:
       Gen
         .choose(400, 599)
         .suchThat(status => !StatusMapping.isRetryable(status))
-        .map(status => CodebergError.Api(context, status, ApiErrorBody.Empty)),
+        .map(status => CodebergError.Api(context, status, ApiErrorBody.Empty, None)),
       Gen
         .oneOf[TransportCause](
           TransportCause.Tls("certificate expired"),

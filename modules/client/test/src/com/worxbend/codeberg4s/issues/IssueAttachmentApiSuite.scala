@@ -168,10 +168,10 @@ final class IssueAttachmentApiSuite extends FunSuite with IssueLaneHarness:
   test("a 413 carries the upload operation id, so an alert can name the endpoint"):
     onApi(responding(413, IssueAttachmentApiSuite.TooLargeBody)): api =>
       api.attempt.uploadToIssue(Handle, Name, Number, upload).map:
-        case Left(CodebergError.Api(ctx, status, _)) =>
+        case Left(CodebergError.Api(ctx, status, _, _)) =>
           assertEquals(ctx.operation, IssueAttachmentApi.UploadToIssueOperation)
           assertEquals(status, 413)
-        case other                                   => fail(s"expected an Api failure, got $other")
+        case other                                      => fail(s"expected an Api failure, got $other")
 
   test("a 200 whose payload has no name becomes DecodingFailed at $.name"):
     onApi(responding(200, """{"id":88}""")): api =>

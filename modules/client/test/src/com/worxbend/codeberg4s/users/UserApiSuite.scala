@@ -238,8 +238,8 @@ final class UserApiSuite extends FunSuite:
   /** An `Api` failure projected onto the parts that do not depend on wall-clock time, so two calls are comparable. */
   private def summary(error: CodebergError): (String, Int, Option[String]) =
     error match
-      case CodebergError.Api(ctx, status, body) => (ctx.operation, status, body.message)
-      case other                                => fail(s"expected an Api failure, got ${other.describe}")
+      case CodebergError.Api(ctx, status, body, _) => (ctx.operation, status, body.message)
+      case other                                   => fail(s"expected an Api failure, got ${other.describe}")
 
   // --- fixtures -------------------------------------------------------------
 

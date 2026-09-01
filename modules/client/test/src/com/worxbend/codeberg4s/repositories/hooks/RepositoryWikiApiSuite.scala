@@ -145,14 +145,14 @@ final class RepositoryWikiApiSuite extends HookApiSuite:
   test("a 423 on a write is an ordinary Api failure, which is how an archived repository refuses"):
     onApi(responding(423, HookApiSuite.NotFoundBody)): api =>
       api.attempt.deletePage(Handle, Name, Home).map:
-        case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 423)
-        case other                                 => fail(s"expected an Api failure, got $other")
+        case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 423)
+        case other                                    => fail(s"expected an Api failure, got $other")
 
   test("a 413 on a create is an ordinary Api failure, which is how a quota refuses"):
     onApi(responding(413, HookApiSuite.NotFoundBody)): api =>
       api.attempt.createPage(Handle, Name, CreateWikiPage.ofText(Home, "x")).map:
-        case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 413)
-        case other                                 => fail(s"expected an Api failure, got $other")
+        case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 413)
+        case other                                    => fail(s"expected an Api failure, got $other")
 
   test("a page payload with no title becomes DecodingFailed at the field that was missing"):
     onApi(responding(200, """{"content_base64":"aGk="}""")): api =>

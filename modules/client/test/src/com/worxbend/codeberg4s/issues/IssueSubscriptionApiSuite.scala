@@ -96,10 +96,10 @@ final class IssueSubscriptionApiSuite extends FunSuite with IssueLaneHarness:
   test("a 304 is a failure, not a success — subscribing somebody else needs to be an administrator"):
     onApi(responding(304, "")): api =>
       api.attempt.subscribe(Handle, Name, Number, Follower).map:
-        case Left(CodebergError.Api(ctx, status, _)) =>
+        case Left(CodebergError.Api(ctx, status, _, _)) =>
           assertEquals(status, 304)
           assertEquals(ctx.operation, IssueSubscriptionApi.SubscribeOperation)
-        case other                                   => fail(s"expected an Api failure, got $other")
+        case other                                      => fail(s"expected an Api failure, got $other")
 
   test("a 404 reaches both rails as the very same failure"):
     onApi(responding(404, IssueLaneHarness.NotFoundBody)): api =>

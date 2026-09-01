@@ -194,8 +194,8 @@ final class UserKeyApiSuite extends FunSuite with ClientSuiteHarness:
   test("a 422 is an Api failure, which is how a signature that did not verify arrives"):
     onApi(responding(422, UserKeyApiSuite.ValidationBody)): api =>
       api.attempt.createGpgKey(orFail(CreateGpgKey.of("BLOCK"))).map:
-        case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 422)
-        case other                                 => fail(s"expected an Api failure, got $other")
+        case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 422)
+        case other                                    => fail(s"expected an Api failure, got $other")
 
   test("a 200 whose payload does not fit the model becomes DecodingFailed, never an escaping codec exception"):
     onApi(responding(200, """{"key_id": "3AA5C34371567BD2"}""")): api =>

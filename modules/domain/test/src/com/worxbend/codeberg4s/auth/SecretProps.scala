@@ -72,6 +72,7 @@ final class SecretProps extends PropertyBase:
         context,
         401,
         ApiErrorBody(Some(s"$token"), Some(s"$token"), List(s"$token")),
+        None,
       ),
       "DecodingFailed"   -> CodebergError.DecodingFailed(
         context,

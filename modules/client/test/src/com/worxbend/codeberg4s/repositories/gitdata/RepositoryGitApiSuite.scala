@@ -422,9 +422,9 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
   test("a 423 on an archived repository is an Api failure carrying the operation id"):
     onApi(responding(423, RepositoryGitApiSuite.ValidationBody)): api =>
       api.attempt.applyDiffPatch(Handle, Name, ApplyDiffPatch.of("--- a")).map:
-        case Left(CodebergError.Api(ctx, status, _)) =>
+        case Left(CodebergError.Api(ctx, status, _, _)) =>
           assertEquals((ctx.operation, status), (RepositoryGitApi.ApplyDiffPatchOperation, 423))
-        case other                                   => fail(s"expected an Api failure, got $other")
+        case other                                      => fail(s"expected an Api failure, got $other")
 
   // --- harness --------------------------------------------------------------
 

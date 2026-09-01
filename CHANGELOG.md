@@ -113,6 +113,17 @@ now because the tag is what freezes the surface.
   `EditComment`, `CreatePullRequest`, `BranchProtectionSettings`,
   `CreateDeployKey`, `DeployKeyQuery`, `CreateWikiPage`, `EditWikiPage`,
   `ActivityFeedQuery`, `TrackedTimeWindow`.
+- **`CodebergError.Api` carries a fourth field, `retryAfter`.** The pipeline
+  already parsed the server's `Retry-After` header for the retry engine, but
+  the value stopped there: a caller that handled a `429` itself — or read the
+  `last` of a `RetriesExhausted` — had the status and nothing to schedule a
+  backoff from. `Api` is now
+  `Api(ctx, status, body, retryAfter: Option[FiniteDuration])`, and `describe`
+  appends `; retry after 30s` when a delay is present. Pattern matches add one
+  wildcard (`case CodebergError.Api(_, 404, _, _)`); constructions in test code
+  pass `None`. `None` on a `429` means the instance sent no usable hint — the
+  header was absent, blank, or in the HTTP-date form this library does not
+  parse — not that an immediate retry is safe.
 - **`organizations.BlockedUser` and `organizations.BlockId` are gone.** The
   organisation and account block lists return the same two-property Forgejo
   model, and it was declared twice. Import

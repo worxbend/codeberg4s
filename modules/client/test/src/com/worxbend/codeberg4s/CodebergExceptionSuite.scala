@@ -9,7 +9,7 @@ final class CodebergExceptionSuite extends FunSuite:
     CallContext("repos.get", HttpMethod.Get, "https://codeberg.org/api/v1/repos/forgejo/forgejo", None, 12L)
 
   private val Failure: CodebergError =
-    CodebergError.Api(Context, 404, ApiErrorBody(Some("The target couldn't be found."), None, Nil))
+    CodebergError.Api(Context, 404, ApiErrorBody(Some("The target couldn't be found."), None, Nil), None)
 
   test("the message is the error's redacted description"):
     assertEquals(CodebergException(Failure).getMessage, Failure.describe)

@@ -194,8 +194,8 @@ final class RepositoryApiSuite extends FunSuite:
 
   private def summary(error: CodebergError): (String, Int, Option[String]) =
     error match
-      case CodebergError.Api(ctx, status, body) => (ctx.operation, status, body.message)
-      case other                                => fail(s"expected an Api failure, got ${other.describe}")
+      case CodebergError.Api(ctx, status, body, _) => (ctx.operation, status, body.message)
+      case other                                   => fail(s"expected an Api failure, got ${other.describe}")
 
   private def operationOf[A](result: Either[CodebergError, A]): Option[String] =
     result.swap.toOption.map(error => summary(error)._1)

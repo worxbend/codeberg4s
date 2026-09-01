@@ -158,7 +158,7 @@ object RetryEngine:
   private[core] def isRetryable(error: CodebergError): Boolean =
     error match
       case CodebergError.Transport(_, cause)        => isRetryable(cause)
-      case CodebergError.Api(_, status, _)          => StatusMapping.isRetryable(status)
+      case CodebergError.Api(_, status, _, _)       => StatusMapping.isRetryable(status)
       case CodebergError.DecodingFailed(_, _, _, _) => false
       case CodebergError.Validation(_)              => false
       case CodebergError.RetriesExhausted(_, _, _)  => false
@@ -184,7 +184,7 @@ object RetryEngine:
   private[core] def contextOf(operation: String, method: HttpMethod, error: CodebergError): CallContext =
     error match
       case CodebergError.Transport(ctx, _)            => ctx
-      case CodebergError.Api(ctx, _, _)               => ctx
+      case CodebergError.Api(ctx, _, _, _)            => ctx
       case CodebergError.DecodingFailed(ctx, _, _, _) => ctx
       case CodebergError.RetriesExhausted(ctx, _, _)  => ctx
       case CodebergError.Validation(_)                => CallContext(operation, method, UnknownUri, None, 0L)

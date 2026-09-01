@@ -186,8 +186,8 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
   test("a 403 from the membership probe still fails, so an unreadable organisation is not a non-member"):
     onApi(responding(403, OrganizationStubs.UnauthorizedBody)): api =>
       api.attempt.isMember(Org, Account).map:
-        case Left(CodebergError.Api(_, status, _)) => assertEquals(status, 403)
-        case other                                 => fail(s"expected an Api failure, got $other")
+        case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 403)
+        case other                                    => fail(s"expected an Api failure, got $other")
 
   test("the two membership probes are different paths, not one with a flag"):
     val member       = RecordingBackend(responding(204, ""))

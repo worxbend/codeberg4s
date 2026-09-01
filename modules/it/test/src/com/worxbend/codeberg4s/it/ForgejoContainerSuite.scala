@@ -186,8 +186,8 @@ final class ForgejoContainerSuite extends IntegrationSuite with TestContainerFor
 
   private def statusOf[A](result: Either[CodebergError, A]): Int =
     result match
-      case Left(CodebergError.Api(_, status, _)) => status
-      case other                                 => fail(s"expected an Api failure, got $other")
+      case Left(CodebergError.Api(_, status, _, _)) => status
+      case other                                    => fail(s"expected an Api failure, got $other")
 
   private def orFail[A](result: Either[ValidationError, A]): A =
     result match

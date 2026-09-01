@@ -7,6 +7,8 @@ import com.worxbend.codeberg4s.HttpMethod
 
 import munit.FunSuite
 
+import scala.concurrent.duration.DurationInt
+
 final class StatusMappingSuite extends FunSuite:
 
   private val context: CallContext =
@@ -52,4 +54,12 @@ final class StatusMappingSuite extends FunSuite:
   test("toError keeps the status and the parsed body beside the call context"):
     val body = ApiErrorBody(Some("repository does not exist"), None, Nil)
 
-    assertEquals(StatusMapping.toError(context, 404, body), CodebergError.Api(context, 404, body))
+    assertEquals(StatusMapping.toError(context, 404, body, None), CodebergError.Api(context, 404, body, None))
+
+  test("toError carries the parsed Retry-After onto the error"):
+    val body = ApiErrorBody(Some("too many requests"), None, Nil)
+
+    assertEquals(
+      StatusMapping.toError(context, 429, body, Some(30.seconds)),
+      CodebergError.Api(context, 429, body, Some(30.seconds)),
+    )
