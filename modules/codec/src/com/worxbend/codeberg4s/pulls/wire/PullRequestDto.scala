@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.wire.{LabelDto, MilestoneDto}
 import com.worxbend.codeberg4s.pulls.{PullRequest, PullRequestNumber, PullRequestState}
@@ -70,7 +70,7 @@ final case class PullRequestDto(
     updatedAt: Option[String],
     pinOrder: Option[Long],
     flow: Option[Long],
-):
+) extends WireModel[PullRequest]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -145,10 +145,6 @@ final case class PullRequestDto(
       createdAt            = Timestamps.parseOptional(createdAt),
       updatedAt            = Timestamps.parseOptional(updatedAt),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, PullRequest] =
-    toDomainAt(JsonPath.Root)
 
   private def usersAt(at: JsonPath, field: String, dtos: Vector[UserDto]): Either[DecodeFailure, Vector[User]] =
     ArrayElements.convert(at.field(field), dtos)((dto, path) => dto.toDomainAt(path))

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.actions.{RegisteredRunner, RunnerId, RunnerRegistrationToken}
 
@@ -19,7 +19,7 @@ final case class RegisteredRunnerDto(
     id: Option[Long],
     uuid: Option[String],
     token: Option[String],
-):
+) extends WireModel[RegisteredRunner]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -40,10 +40,6 @@ final case class RegisteredRunnerDto(
           uuid  = uuid,
           token = credential,
         )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, RegisteredRunner] =
-    toDomainAt(JsonPath.Root)
 
 object RegisteredRunnerDto:
 

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.actions.{ActionRun, RunId}
 import com.worxbend.codeberg4s.users.wire.UserDto
@@ -56,7 +56,7 @@ final case class ActionRunDto(
     started: Option[String],
     stopped: Option[String],
     updated: Option[String],
-):
+) extends WireModel[ActionRun]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -97,10 +97,6 @@ final case class ActionRunDto(
       stoppedAt         = Timestamps.parseOptional(stopped),
       updatedAt         = Timestamps.parseOptional(updated),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, ActionRun] =
-    toDomainAt(JsonPath.Root)
 
 object ActionRunDto:
 

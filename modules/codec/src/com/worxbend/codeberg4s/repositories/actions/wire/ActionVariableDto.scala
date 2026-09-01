@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.actions.{ActionVariable, VariableName}
 
@@ -19,7 +19,7 @@ final case class ActionVariableDto(
     data: Option[String],
     ownerId: Option[Long],
     repoId: Option[Long],
-):
+) extends WireModel[ActionVariable]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -41,10 +41,6 @@ final case class ActionVariableDto(
       ownerId = ActionWire.identifier(ownerId),
       repoId  = ActionWire.identifier(repoId),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, ActionVariable] =
-    toDomainAt(JsonPath.Root)
 
 object ActionVariableDto:
 

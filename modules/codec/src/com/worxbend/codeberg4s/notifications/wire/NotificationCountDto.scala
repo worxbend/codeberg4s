@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.notifications.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.notifications.UnreadCount
 
@@ -15,7 +15,7 @@ import com.worxbend.codeberg4s.notifications.UnreadCount
   *   the `new` key, renamed because `new` is a Scala keyword. The wire spelling appears once, in the reader, per rule 4
   *   of [[com.worxbend.codeberg4s.codec.WireConventions]]
   */
-final case class NotificationCountDto(unread: Option[Long]):
+final case class NotificationCountDto(unread: Option[Long]) extends WireModel[UnreadCount]:
 
   /** Converts to the domain, reporting the path of the offending field relative to `at`.
     *
@@ -25,10 +25,6 @@ final case class NotificationCountDto(unread: Option[Long]):
     */
   def toDomainAt(at: JsonPath): Either[DecodeFailure, UnreadCount] =
     Wire.validated(at, "new", unread)(UnreadCount.from)
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, UnreadCount] =
-    toDomainAt(JsonPath.Root)
 
 object NotificationCountDto:
 

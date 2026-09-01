@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.gitdata.{CommitStatus, CommitStatusState}
 import com.worxbend.codeberg4s.users.wire.UserDto
@@ -41,7 +41,7 @@ final case class CommitStatusDto(
     createdAt: Option[String],
     updatedAt: Option[String],
     url: Option[String],
-):
+) extends WireModel[CommitStatus]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -65,10 +65,6 @@ final case class CommitStatusDto(
       updated     = Timestamps.parseOptional(updatedAt),
       url         = url,
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, CommitStatus] =
-    toDomainAt(JsonPath.Root)
 
 object CommitStatusDto:
 

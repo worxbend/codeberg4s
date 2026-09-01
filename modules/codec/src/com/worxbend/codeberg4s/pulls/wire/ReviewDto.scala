@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.pulls.{Review, ReviewId, ReviewState}
 import com.worxbend.codeberg4s.repositories.CommitSha
@@ -38,7 +38,7 @@ final case class ReviewDto(
     pullRequestUrl: Option[String],
     submittedAt: Option[String],
     updatedAt: Option[String],
-):
+) extends WireModel[Review]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -71,10 +71,6 @@ final case class ReviewDto(
       submittedAt    = Timestamps.parseOptional(submittedAt),
       updatedAt      = Timestamps.parseOptional(updatedAt),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, Review] =
-    toDomainAt(JsonPath.Root)
 
 object ReviewDto:
 

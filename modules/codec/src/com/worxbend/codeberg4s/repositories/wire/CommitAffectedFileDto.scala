@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.{CommitFile, CommitFileStatus}
 
@@ -12,7 +12,7 @@ import com.worxbend.codeberg4s.repositories.{CommitFile, CommitFileStatus}
   * @param status
   *   the `status` key; every element of `golden/repository/commits-list.json` reports `modified`
   */
-final case class CommitAffectedFileDto(filename: Option[String], status: Option[String]):
+final case class CommitAffectedFileDto(filename: Option[String], status: Option[String]) extends WireModel[CommitFile]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *

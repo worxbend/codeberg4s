@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.users.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.PublicKey
 
@@ -32,7 +32,7 @@ final case class PublicKeyDto(
     verified: Option[Boolean],
     createdAt: Option[String],
     updatedAt: Option[String],
-):
+) extends WireModel[PublicKey]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -60,10 +60,6 @@ final case class PublicKeyDto(
       createdAt   = Timestamps.parseOptional(createdAt),
       updatedAt   = Timestamps.parseOptional(updatedAt),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, PublicKey] =
-    toDomainAt(JsonPath.Root)
 
 object PublicKeyDto:
 

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.miscellaneous.LicenseTemplate
 
@@ -26,7 +26,7 @@ final case class LicenseTemplateDto(
     key: Option[String],
     name: Option[String],
     url: Option[String],
-):
+) extends WireModel[LicenseTemplate]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -45,10 +45,6 @@ final case class LicenseTemplateDto(
           url            = url,
         )
       )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, LicenseTemplate] =
-    toDomainAt(JsonPath.Root)
 
 object LicenseTemplateDto:
 

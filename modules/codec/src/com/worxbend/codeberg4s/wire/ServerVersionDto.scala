@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.wire
 
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.{JsonPath, ServerVersion}
 
@@ -15,7 +15,7 @@ import com.worxbend.codeberg4s.{JsonPath, ServerVersion}
   * @param version
   *   the `version` key, blank folded to `None`
   */
-final case class ServerVersionDto(version: Option[String]):
+final case class ServerVersionDto(version: Option[String]) extends WireModel[ServerVersion]:
 
   /** Converts to the domain, reporting the path of the offending field relative to `at`.
     *
@@ -24,10 +24,6 @@ final case class ServerVersionDto(version: Option[String]):
     */
   def toDomainAt(at: JsonPath): Either[DecodeFailure, ServerVersion] =
     Wire.required(at, "version", version).map(ServerVersion.apply)
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, ServerVersion] =
-    toDomainAt(JsonPath.Root)
 
 object ServerVersionDto:
 

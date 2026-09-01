@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.{Reaction, ReactionContent}
 import com.worxbend.codeberg4s.users.wire.UserDto
@@ -16,7 +16,8 @@ import com.worxbend.codeberg4s.users.wire.UserDto
   * the spec declares the field as a bare string with no `enum`, so a custom emoji an instance has been configured with
   * decodes exactly like `+1`.
   */
-final case class ReactionDto(content: Option[String], user: Option[UserDto], createdAt: Option[String]):
+final case class ReactionDto(content: Option[String], user: Option[UserDto], createdAt: Option[String])
+    extends WireModel[Reaction]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -29,10 +30,6 @@ final case class ReactionDto(content: Option[String], user: Option[UserDto], cre
       emoji   <- Wire.validated(at, "content", content)(ReactionContent.from)
       reactor <- Wire.nested(at, "user", user)(_.toDomainAt(_))
     yield Reaction(content = emoji, user = reactor, createdAt = Timestamps.parseOptional(createdAt))
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, Reaction] =
-    toDomainAt(JsonPath.Root)
 
 object ReactionDto:
 

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.miscellaneous.ServerApiSettings
 
@@ -26,7 +26,7 @@ final case class ServerApiSettingsDto(
     defaultPagingNum: Option[Long],
     defaultGitTreesPerPage: Option[Long],
     defaultMaxBlobSize: Option[Long],
-):
+) extends WireModel[ServerApiSettings]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -45,10 +45,6 @@ final case class ServerApiSettingsDto(
       gitTreesPerPage  = defaultGitTreesPerPage,
       maxBlobSizeBytes = defaultMaxBlobSize,
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, ServerApiSettings] =
-    toDomainAt(JsonPath.Root)
 
 object ServerApiSettingsDto:
 

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.users.account.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.account.{Email, EmailAddress}
 
@@ -22,7 +22,7 @@ final case class EmailDto(
     verified: Option[Boolean],
     userId: Option[Long],
     username: Option[String],
-):
+) extends WireModel[Email]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -41,10 +41,6 @@ final case class EmailDto(
           userId     = userId,
           username   = username,
         )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, Email] =
-    toDomainAt(JsonPath.Root)
 
 object EmailDto:
 

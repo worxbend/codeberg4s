@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.LabelColor
 import com.worxbend.codeberg4s.miscellaneous.TemplateLabel
@@ -28,7 +28,7 @@ final case class TemplateLabelDto(
     description: Option[String],
     exclusive: Option[Boolean],
     name: Option[String],
-):
+) extends WireModel[TemplateLabel]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -52,10 +52,6 @@ final case class TemplateLabelDto(
           isExclusive = exclusive.getOrElse(false),
         )
       )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, TemplateLabel] =
-    toDomainAt(JsonPath.Root)
 
 object TemplateLabelDto:
 

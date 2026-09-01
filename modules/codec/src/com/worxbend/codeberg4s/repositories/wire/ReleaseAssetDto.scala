@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.ReleaseAsset
 
@@ -34,7 +34,7 @@ final case class ReleaseAssetDto(
     uuid: Option[String],
     browserDownloadUrl: Option[String],
     assetType: Option[String],
-):
+) extends WireModel[ReleaseAsset]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *

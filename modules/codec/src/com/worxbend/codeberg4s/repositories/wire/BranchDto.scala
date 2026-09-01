@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.{Branch, BranchName}
 
@@ -42,7 +42,7 @@ final case class BranchDto(
     userCanPush: Option[Boolean],
     userCanMerge: Option[Boolean],
     effectiveBranchProtectionName: Option[String],
-):
+) extends WireModel[Branch]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -70,10 +70,6 @@ final case class BranchDto(
       userCanMerge                  = userCanMerge.getOrElse(false),
       effectiveBranchProtectionName = effectiveBranchProtectionName,
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, Branch] =
-    toDomainAt(JsonPath.Root)
 
 object BranchDto:
 

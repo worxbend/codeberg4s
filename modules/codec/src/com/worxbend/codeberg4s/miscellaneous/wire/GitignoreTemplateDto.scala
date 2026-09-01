@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.miscellaneous.GitignoreTemplate
 
@@ -19,7 +19,7 @@ import com.worxbend.codeberg4s.miscellaneous.GitignoreTemplate
 final case class GitignoreTemplateDto(
     name: Option[String],
     source: Option[String],
-):
+) extends WireModel[GitignoreTemplate]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -28,10 +28,6 @@ final case class GitignoreTemplateDto(
     */
   def toDomainAt(at: JsonPath): Either[DecodeFailure, GitignoreTemplate] =
     Wire.required(at, "source", source).map(text => GitignoreTemplate(name = name, source = text))
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, GitignoreTemplate] =
-    toDomainAt(JsonPath.Root)
 
 object GitignoreTemplateDto:
 

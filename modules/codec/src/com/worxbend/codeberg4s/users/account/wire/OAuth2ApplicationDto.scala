@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.users.account.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.account.{ClientSecret, OAuth2Application, OAuth2ApplicationId}
 
@@ -30,7 +30,7 @@ final case class OAuth2ApplicationDto(
     redirectUris: Vector[String],
     confidentialClient: Option[Boolean],
     created: Option[String],
-):
+) extends WireModel[OAuth2Application]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -59,10 +59,6 @@ final case class OAuth2ApplicationDto(
           isConfidentialClient = confidentialClient.getOrElse(false),
           createdAt            = Timestamps.parseOptional(created),
         )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, OAuth2Application] =
-    toDomainAt(JsonPath.Root)
 
 object OAuth2ApplicationDto:
 

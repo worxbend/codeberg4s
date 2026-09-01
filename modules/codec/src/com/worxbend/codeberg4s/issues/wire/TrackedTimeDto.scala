@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.{TrackedTime, TrackedTimeId}
 
@@ -28,7 +28,7 @@ final case class TrackedTimeDto(
     userId: Option[Long],
     userName: Option[String],
     created: Option[String],
-):
+) extends WireModel[TrackedTime]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -55,10 +55,6 @@ final case class TrackedTimeDto(
       userName  = userName,
       createdAt = Timestamps.parseOptional(created),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, TrackedTime] =
-    toDomainAt(JsonPath.Root)
 
 object TrackedTimeDto:
 

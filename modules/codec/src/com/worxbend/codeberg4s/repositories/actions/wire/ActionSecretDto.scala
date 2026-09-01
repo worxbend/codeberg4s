@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.actions.{ActionSecret, SecretName}
 
@@ -18,7 +18,7 @@ import com.worxbend.codeberg4s.repositories.actions.{ActionSecret, SecretName}
 final case class ActionSecretDto(
     name: Option[String],
     createdAt: Option[String],
-):
+) extends WireModel[ActionSecret]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -30,10 +30,6 @@ final case class ActionSecretDto(
     Wire
       .validated(at, "name", name)(SecretName.from)
       .map(secret => ActionSecret(name = secret, createdAt = Timestamps.parseOptional(createdAt)))
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, ActionSecret] =
-    toDomainAt(JsonPath.Root)
 
 object ActionSecretDto:
 

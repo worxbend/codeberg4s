@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.users.social.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.social.HeatmapEntry
 
@@ -28,7 +28,7 @@ import java.time.Instant
   * @param contributions
   *   the `contributions` key
   */
-final case class HeatmapEntryDto(timestamp: Option[Long], contributions: Option[Long]):
+final case class HeatmapEntryDto(timestamp: Option[Long], contributions: Option[Long]) extends WireModel[HeatmapEntry]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -42,10 +42,6 @@ final case class HeatmapEntryDto(timestamp: Option[Long], contributions: Option[
       moment <- Wire.required(at, "timestamp", timestamp)
       count  <- Wire.required(at, "contributions", contributions)
     yield HeatmapEntry(at = Instant.ofEpochSecond(moment), contributions = count)
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, HeatmapEntry] =
-    toDomainAt(JsonPath.Root)
 
 object HeatmapEntryDto:
 

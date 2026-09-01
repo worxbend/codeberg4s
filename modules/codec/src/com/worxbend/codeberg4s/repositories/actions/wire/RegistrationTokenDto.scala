@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.actions.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.actions.RunnerRegistrationToken
 
@@ -12,7 +12,7 @@ import com.worxbend.codeberg4s.repositories.actions.RunnerRegistrationToken
   * Same handling note as [[RegisteredRunnerDto]]: the raw string lives here only long enough to become a
   * [[com.worxbend.codeberg4s.repositories.actions.RunnerRegistrationToken]], which masks itself.
   */
-final case class RegistrationTokenDto(token: Option[String]):
+final case class RegistrationTokenDto(token: Option[String]) extends WireModel[RunnerRegistrationToken]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -21,10 +21,6 @@ final case class RegistrationTokenDto(token: Option[String]):
     */
   def toDomainAt(at: JsonPath): Either[DecodeFailure, RunnerRegistrationToken] =
     Wire.validated(at, "token", token)(RunnerRegistrationToken.from)
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, RunnerRegistrationToken] =
-    toDomainAt(JsonPath.Root)
 
 object RegistrationTokenDto:
 

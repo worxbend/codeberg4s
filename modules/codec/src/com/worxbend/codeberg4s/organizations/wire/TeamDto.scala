@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.organizations.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.organizations.{Team, TeamId, TeamPermission}
 
@@ -33,7 +33,7 @@ final case class TeamDto(
     unitsMap: Map[String, String],
     canCreateOrgRepo: Option[Boolean],
     includesAllRepositories: Option[Boolean],
-):
+) extends WireModel[Team]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -61,10 +61,6 @@ final case class TeamDto(
       canCreateOrgRepo        = canCreateOrgRepo.getOrElse(false),
       includesAllRepositories = includesAllRepositories.getOrElse(false),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, Team] =
-    toDomainAt(JsonPath.Root)
 
 object TeamDto:
 

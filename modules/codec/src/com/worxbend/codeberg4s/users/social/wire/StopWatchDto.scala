@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.users.social.wire
 
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.RepoSlug
 import com.worxbend.codeberg4s.users.social.StopWatch
@@ -48,7 +48,7 @@ final case class StopWatchDto(
     repoName: Option[String],
     repoOwnerName: Option[String],
     seconds: Option[Long],
-):
+) extends WireModel[StopWatch]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -79,10 +79,6 @@ final case class StopWatchDto(
           durationText = duration,
           createdAt    = Timestamps.parseOptional(created),
         )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, StopWatch] =
-    toDomainAt(JsonPath.Root)
 
   private def slug: Option[RepoSlug] =
     for

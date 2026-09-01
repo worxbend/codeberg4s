@@ -2,7 +2,7 @@ package com.worxbend.codeberg4s.users.social.wire
 
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.auth.ApiToken
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.wire.RepositoryMetaDto
 import com.worxbend.codeberg4s.repositories.RepoSlug
@@ -53,7 +53,7 @@ final case class AccessTokenDto(
     tokenLastEight: Option[String],
     repositories: Vector[RepositoryMetaDto],
     created: Option[String],
-):
+) extends WireModel[AccessToken]:
 
   /** Every field except the credential, which is replaced by a constant mask.
     *
@@ -91,10 +91,6 @@ final case class AccessTokenDto(
           repositories = slugs,
           createdAt    = Timestamps.parseOptional(created),
         )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, AccessToken] =
-    toDomainAt(JsonPath.Root)
 
   /** Converts to the domain '''with''' the credential, reporting failure paths relative to `at`.
     *

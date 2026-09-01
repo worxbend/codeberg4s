@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.{Release, ReleaseId, TagName}
 import com.worxbend.codeberg4s.users.wire.UserDto
@@ -67,7 +67,7 @@ final case class ReleaseDto(
     author: Option[UserDto],
     assets: Vector[ReleaseAssetDto],
     archiveDownloadCount: Option[ArchiveDownloadCountDto],
-):
+) extends WireModel[Release]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -101,10 +101,6 @@ final case class ReleaseDto(
       assets            = attached,
       archiveDownloads  = archiveDownloadCount.map(_.toDomain),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, Release] =
-    toDomainAt(JsonPath.Root)
 
 object ReleaseDto:
 

@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.repositories.wire
 
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.{RepoSlug, Repository}
 import com.worxbend.codeberg4s.users.wire.UserDto
@@ -92,7 +92,7 @@ final case class RepositoryDto(
     objectFormatName: Option[String],
     mirrorUpdated: Option[String],
     topics: Vector[String],
-):
+) extends WireModel[Repository]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -158,10 +158,6 @@ final case class RepositoryDto(
       updatedAt            = Timestamps.parseOptional(updatedAt),
       archivedAt           = Timestamps.parseOptional(archivedAt),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, Repository] =
-    toDomainAt(JsonPath.Root)
 
 object RepositoryDto:
 

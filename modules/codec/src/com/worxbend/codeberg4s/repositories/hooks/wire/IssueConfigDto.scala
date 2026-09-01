@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.hooks.{IssueConfig, IssueConfigValidation, IssueContactLink}
 
@@ -13,7 +13,7 @@ final case class IssueContactLinkDto(
     name: Option[String],
     url: Option[String],
     about: Option[String],
-):
+) extends WireModel[IssueContactLink]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -26,10 +26,6 @@ final case class IssueContactLinkDto(
       label       <- Wire.required(at, "name", name)
       destination <- Wire.required(at, "url", url)
     yield IssueContactLink(name = label, url = destination, about = about)
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, IssueContactLink] =
-    toDomainAt(JsonPath.Root)
 
 object IssueContactLinkDto:
 
@@ -52,7 +48,7 @@ object IssueContactLinkDto:
 final case class IssueConfigDto(
     blankIssuesEnabled: Option[Boolean],
     contactLinks: Vector[IssueContactLinkDto],
-):
+) extends WireModel[IssueConfig]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -64,10 +60,6 @@ final case class IssueConfigDto(
     ArrayElements
       .convert(at.field(IssueConfigDto.ContactLinksKey), contactLinks)((dto, path) => dto.toDomainAt(path))
       .map(links => IssueConfig(blankIssuesEnabled = blankIssuesEnabled, contactLinks = links))
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, IssueConfig] =
-    toDomainAt(JsonPath.Root)
 
 object IssueConfigDto:
 
@@ -92,7 +84,7 @@ object IssueConfigDto:
 final case class IssueConfigValidationDto(
     valid: Option[Boolean],
     message: Option[String],
-):
+) extends WireModel[IssueConfigValidation]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -104,10 +96,6 @@ final case class IssueConfigValidationDto(
     Wire
       .required(at, "valid", valid)
       .map(verdict => IssueConfigValidation(isValid = verdict, message = message))
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, IssueConfigValidation] =
-    toDomainAt(JsonPath.Root)
 
 object IssueConfigValidationDto:
 

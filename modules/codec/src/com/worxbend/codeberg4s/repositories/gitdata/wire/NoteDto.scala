@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.gitdata.GitNote
 import com.worxbend.codeberg4s.repositories.wire.CommitDto
@@ -16,7 +16,7 @@ import com.worxbend.codeberg4s.repositories.wire.CommitDto
   * @param commit
   *   the `commit` key
   */
-final case class NoteDto(message: Option[String], commit: Option[CommitDto]):
+final case class NoteDto(message: Option[String], commit: Option[CommitDto]) extends WireModel[GitNote]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -26,10 +26,6 @@ final case class NoteDto(message: Option[String], commit: Option[CommitDto]):
     */
   def toDomainAt(at: JsonPath): Either[DecodeFailure, GitNote] =
     Wire.nested(at, "commit", commit)(_.toDomainAt(_)).map(target => GitNote(message = message, commit = target))
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, GitNote] =
-    toDomainAt(JsonPath.Root)
 
 object NoteDto:
 

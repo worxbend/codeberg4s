@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.{AttachmentId, AttachmentKind, IssueAttachment}
 
@@ -25,7 +25,7 @@ final case class AttachmentDto(
     uuid: Option[String],
     browserDownloadUrl: Option[String],
     attachmentType: Option[String],
-):
+) extends WireModel[IssueAttachment]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -51,10 +51,6 @@ final case class AttachmentDto(
       browserDownloadUrl = browserDownloadUrl,
       createdAt          = Timestamps.parseOptional(createdAt),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, IssueAttachment] =
-    toDomainAt(JsonPath.Root)
 
 object AttachmentDto:
 

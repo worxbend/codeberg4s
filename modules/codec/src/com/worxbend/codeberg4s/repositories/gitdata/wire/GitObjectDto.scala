@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.CommitSha
 import com.worxbend.codeberg4s.repositories.gitdata.{GitObjectKind, GitObjectRef}
@@ -20,7 +20,8 @@ import com.worxbend.codeberg4s.repositories.gitdata.{GitObjectKind, GitObjectRef
   * @param url
   *   the `url` key
   */
-final case class GitObjectDto(sha: Option[String], objectType: Option[String], url: Option[String]):
+final case class GitObjectDto(sha: Option[String], objectType: Option[String], url: Option[String])
+    extends WireModel[GitObjectRef]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *

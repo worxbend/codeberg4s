@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.notifications.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.notifications.{NotificationThread, NotificationThreadId}
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
@@ -37,7 +37,7 @@ final case class NotificationThreadDto(
     url: Option[String],
     subject: Option[NotificationSubjectDto],
     repository: Option[RepositoryDto],
-):
+) extends WireModel[NotificationThread]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -65,10 +65,6 @@ final case class NotificationThreadDto(
       url        = url,
       updatedAt  = Timestamps.parseOptional(updatedAt),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, NotificationThread] =
-    toDomainAt(JsonPath.Root)
 
 object NotificationThreadDto:
 

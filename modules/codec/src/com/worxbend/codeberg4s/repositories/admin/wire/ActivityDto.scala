@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.wire.CommentDto
 import com.worxbend.codeberg4s.repositories.admin.{ActivityId, ActivityOperation, RepositoryActivity}
@@ -61,7 +61,7 @@ final case class ActivityDto(
     userId: Option[Long],
     isPrivate: Option[Boolean],
     created: Option[String],
-):
+) extends WireModel[RepositoryActivity]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -91,10 +91,6 @@ final case class ActivityDto(
       isPrivate  = isPrivate.getOrElse(false),
       createdAt  = Timestamps.parseOptional(created),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, RepositoryActivity] =
-    toDomainAt(JsonPath.Root)
 
 object ActivityDto:
 

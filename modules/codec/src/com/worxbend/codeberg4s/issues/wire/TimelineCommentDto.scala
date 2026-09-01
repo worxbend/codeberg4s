@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.{CommentId, TimelineEvent}
 import com.worxbend.codeberg4s.users.wire.UserDto
@@ -52,7 +52,7 @@ final case class TimelineCommentDto(
     pullRequestUrl: Option[String],
     createdAt: Option[String],
     updatedAt: Option[String],
-):
+) extends WireModel[TimelineEvent]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -110,10 +110,6 @@ final case class TimelineCommentDto(
       createdAt       = Timestamps.parseOptional(createdAt),
       updatedAt       = Timestamps.parseOptional(updatedAt),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, TimelineEvent] =
-    toDomainAt(JsonPath.Root)
 
 object TimelineCommentDto:
 

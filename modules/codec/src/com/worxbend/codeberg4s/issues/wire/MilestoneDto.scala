@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.{LifecycleState, Milestone, MilestoneId}
 
@@ -25,7 +25,7 @@ final case class MilestoneDto(
     closedAt: Option[String],
     createdAt: Option[String],
     updatedAt: Option[String],
-):
+) extends WireModel[Milestone]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -55,10 +55,6 @@ final case class MilestoneDto(
       createdAt        = Timestamps.parseOptional(createdAt),
       updatedAt        = Timestamps.parseOptional(updatedAt),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, Milestone] =
-    toDomainAt(JsonPath.Root)
 
 object MilestoneDto:
 

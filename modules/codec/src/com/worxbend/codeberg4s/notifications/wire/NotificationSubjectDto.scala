@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.notifications.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.notifications.{NotificationSubject, NotificationSubjectType}
 
@@ -41,7 +41,7 @@ final case class NotificationSubjectDto(
     htmlUrl: Option[String],
     latestCommentUrl: Option[String],
     latestCommentHtmlUrl: Option[String],
-):
+) extends WireModel[NotificationSubject]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -69,10 +69,6 @@ final case class NotificationSubjectDto(
           latestCommentUrl     = latestCommentUrl,
           latestCommentHtmlUrl = latestCommentHtmlUrl,
         )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, NotificationSubject] =
-    toDomainAt(JsonPath.Root)
 
 object NotificationSubjectDto:
 

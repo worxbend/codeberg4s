@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.CommitDetails
 
@@ -31,7 +31,7 @@ final case class RepoCommitDto(
     message: Option[String],
     tree: Option[CommitMetaDto],
     verification: Option[VerificationDto],
-):
+) extends WireModel[CommitDetails]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *

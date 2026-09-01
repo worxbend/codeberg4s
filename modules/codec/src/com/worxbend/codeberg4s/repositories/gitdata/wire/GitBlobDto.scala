@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.gitdata.GitBlob
 import com.worxbend.codeberg4s.repositories.{CommitSha, FileContent}
@@ -32,7 +32,7 @@ final case class GitBlobDto(
     sha: Option[String],
     size: Option[Long],
     url: Option[String],
-):
+) extends WireModel[GitBlob]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -45,10 +45,6 @@ final case class GitBlobDto(
     Wire
       .validated(at, "sha", sha)(CommitSha.from)
       .map(id => GitBlob(sha = id, size = size.getOrElse(0L), content = fileContent, url = url))
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, GitBlob] =
-    toDomainAt(JsonPath.Root)
 
   /** Pairs `content` with `encoding`, exactly as the contents endpoint's DTO does, since the wire pair is the same.
     *

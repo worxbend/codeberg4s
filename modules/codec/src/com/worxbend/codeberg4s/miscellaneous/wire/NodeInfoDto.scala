@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.miscellaneous.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.miscellaneous.{NodeInfo, NodeInfoServices, NodeInfoSoftware, NodeInfoUsage, NodeInfoUsers}
 
@@ -38,7 +38,7 @@ final case class NodeInfoDto(
     services: Option[NodeInfoServicesDto],
     usage: Option[NodeInfoUsageDto],
     openRegistrations: Option[Boolean],
-):
+) extends WireModel[NodeInfo]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -63,10 +63,6 @@ final case class NodeInfoDto(
       usage                = usage.map(_.toDomainValue),
       hasOpenRegistrations = openRegistrations.getOrElse(false),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, NodeInfo] =
-    toDomainAt(JsonPath.Root)
 
 object NodeInfoDto:
 
@@ -103,7 +99,7 @@ final case class NodeInfoSoftwareDto(
     version: Option[String],
     repository: Option[String],
     homepage: Option[String],
-):
+) extends WireModel[NodeInfoSoftware]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *

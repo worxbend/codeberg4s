@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.pulls.PullRequestBranch
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
@@ -36,7 +36,7 @@ final case class PullRequestBranchDto(
     sha: Option[String],
     repoId: Option[Long],
     repo: Option[RepositoryDto],
-):
+) extends WireModel[PullRequestBranch]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -60,10 +60,6 @@ final case class PullRequestBranchDto(
       repositoryId = repoId,
       repository   = repository,
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, PullRequestBranch] =
-    toDomainAt(JsonPath.Root)
 
 object PullRequestBranchDto:
 

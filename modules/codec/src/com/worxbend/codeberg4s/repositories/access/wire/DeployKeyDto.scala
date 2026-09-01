@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.access.{DeployKey, DeployKeyId}
 import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
@@ -63,7 +63,7 @@ final case class DeployKeyDto(
     repository: Option[RepositoryDto],
     readOnly: Option[Boolean],
     createdAt: Option[String],
-):
+) extends WireModel[DeployKey]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -91,10 +91,6 @@ final case class DeployKeyDto(
       isReadOnly  = readOnly.getOrElse(false),
       createdAt   = Timestamps.parseOptional(createdAt),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, DeployKey] =
-    toDomainAt(JsonPath.Root)
 
 object DeployKeyDto:
 

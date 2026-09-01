@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.{Commit, CommitSha}
 import com.worxbend.codeberg4s.users.wire.UserDto
@@ -45,7 +45,7 @@ final case class CommitDto(
     parents: Vector[CommitMetaDto],
     files: Vector[CommitAffectedFileDto],
     stats: Option[CommitStatsDto],
-):
+) extends WireModel[Commit]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -73,10 +73,6 @@ final case class CommitDto(
       files     = changed,
       stats     = stats.map(_.toDomain),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, Commit] =
-    toDomainAt(JsonPath.Root)
 
 object CommitDto:
 

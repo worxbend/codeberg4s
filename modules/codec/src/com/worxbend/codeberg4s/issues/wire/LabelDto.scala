@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.{Label, LabelColor, LabelId}
 
@@ -23,7 +23,7 @@ final case class LabelDto(
     exclusive: Option[Boolean],
     isArchived: Option[Boolean],
     url: Option[String],
-):
+) extends WireModel[Label]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -49,10 +49,6 @@ final case class LabelDto(
       isArchived  = isArchived.getOrElse(false),
       url         = url,
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, Label] =
-    toDomainAt(JsonPath.Root)
 
 object LabelDto:
 

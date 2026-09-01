@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.admin.FileChangeSet
 import com.worxbend.codeberg4s.repositories.gitdata.wire.FileCommitDto
@@ -25,7 +25,7 @@ final case class FilesResponseDto(
     commit: Option[FileCommitDto],
     files: Vector[ContentEntryDto],
     verification: Option[VerificationDto],
-):
+) extends WireModel[FileChangeSet]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -40,10 +40,6 @@ final case class FilesResponseDto(
       written <- Wire.nested(at, "commit", commit)(_.toDomainAt(_))
       entries <- ArrayElements.convert(at.field("files"), files)((dto, path) => dto.toDomainAt(path))
     yield FileChangeSet(commit = written, files = entries, verification = verification.map(_.toDomain))
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, FileChangeSet] =
-    toDomainAt(JsonPath.Root)
 
 object FilesResponseDto:
 

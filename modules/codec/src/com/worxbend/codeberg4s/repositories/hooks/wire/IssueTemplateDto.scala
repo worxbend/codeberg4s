@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.hooks.{IssueFormField, IssueFormFieldType, IssueTemplate}
 
@@ -70,7 +70,7 @@ final case class IssueTemplateDto(
     labels: Vector[String],
     ref: Option[String],
     fields: Vector[IssueFormFieldDto],
-):
+) extends WireModel[IssueTemplate]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -92,10 +92,6 @@ final case class IssueTemplateDto(
           ref      = ref,
           fields   = fields.map(_.toDomain),
         )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, IssueTemplate] =
-    toDomainAt(JsonPath.Root)
 
 object IssueTemplateDto:
 

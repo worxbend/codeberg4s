@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.{CommitSha, ContentEntry, ContentKind, ContentMeta, ContentPath, FileContent}
 
@@ -70,7 +70,7 @@ final case class ContentEntryDto(
     htmlUrl: Option[String],
     gitUrl: Option[String],
     downloadUrl: Option[String],
-):
+) extends WireModel[ContentEntry]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -107,10 +107,6 @@ final case class ContentEntryDto(
         case ContentKind.Directory => ContentEntry.Directory(meta)
         case ContentKind.Symlink   => ContentEntry.Symlink(meta, target)
         case ContentKind.Submodule => ContentEntry.Submodule(meta, submoduleGitUrl)
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, ContentEntry] =
-    toDomainAt(JsonPath.Root)
 
   private def kindAt(at: JsonPath): Either[DecodeFailure, ContentKind] =
     Wire

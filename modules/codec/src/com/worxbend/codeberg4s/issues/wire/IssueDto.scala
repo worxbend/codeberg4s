@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.{Issue, IssueNumber, LifecycleState}
 import com.worxbend.codeberg4s.users.User
@@ -58,7 +58,7 @@ final case class IssueDto(
     closedAt: Option[String],
     createdAt: Option[String],
     updatedAt: Option[String],
-):
+) extends WireModel[Issue]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -109,10 +109,6 @@ final case class IssueDto(
       createdAt      = Timestamps.parseOptional(createdAt),
       updatedAt      = Timestamps.parseOptional(updatedAt),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, Issue] =
-    toDomainAt(JsonPath.Root)
 
   private def assigneesAt(at: JsonPath): Either[DecodeFailure, Vector[User]] =
     ArrayElements.convert(at.field("assignees"), assignees)((dto, path) => dto.toDomainAt(path))

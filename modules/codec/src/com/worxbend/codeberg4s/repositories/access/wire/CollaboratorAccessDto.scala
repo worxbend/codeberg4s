@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.organizations.TeamPermission
 import com.worxbend.codeberg4s.repositories.access.CollaboratorAccess
@@ -38,7 +38,7 @@ final case class CollaboratorAccessDto(
     permission: Option[String],
     roleName: Option[String],
     user: Option[UserDto],
-):
+) extends WireModel[CollaboratorAccess]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -61,10 +61,6 @@ final case class CollaboratorAccessDto(
         roleName      = roleName,
       )
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, CollaboratorAccess] =
-    toDomainAt(JsonPath.Root)
 
   private def accountAt(at: JsonPath): Either[DecodeFailure, User] =
     for

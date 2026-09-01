@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.pulls.ChangedFile
 import com.worxbend.codeberg4s.repositories.CommitFileStatus
@@ -27,7 +27,7 @@ final case class ChangedFileDto(
     htmlUrl: Option[String],
     contentsUrl: Option[String],
     rawUrl: Option[String],
-):
+) extends WireModel[ChangedFile]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -48,10 +48,6 @@ final case class ChangedFileDto(
         contentsUrl      = contentsUrl,
         rawUrl           = rawUrl,
       )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, ChangedFile] =
-    toDomainAt(JsonPath.Root)
 
 object ChangedFileDto:
 

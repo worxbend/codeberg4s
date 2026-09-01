@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.hooks.{HookConfig, HookId, HookType, Webhook}
 
@@ -39,7 +39,7 @@ final case class WebhookDto(
     active: Option[Boolean],
     createdAt: Option[String],
     updatedAt: Option[String],
-):
+) extends WireModel[Webhook]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -63,10 +63,6 @@ final case class WebhookDto(
           createdAt     = Timestamps.parseOptional(createdAt),
           updatedAt     = Timestamps.parseOptional(updatedAt),
         )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, Webhook] =
-    toDomainAt(JsonPath.Root)
 
   /** The config map with the top-level `content_type` folded in; see the class note on why it appears twice. */
   private def configuration: HookConfig =

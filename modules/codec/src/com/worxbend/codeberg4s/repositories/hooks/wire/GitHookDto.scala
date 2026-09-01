@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.hooks.{GitHook, GitHookName}
 
@@ -18,7 +18,7 @@ final case class GitHookDto(
     name: Option[String],
     isActive: Option[Boolean],
     content: Option[String],
-):
+) extends WireModel[GitHook]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -34,10 +34,6 @@ final case class GitHookDto(
     Wire
       .validated(at, "name", name)(GitHookName.from)
       .map(hookName => GitHook(name = hookName, isActive = isActive, content = content))
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, GitHook] =
-    toDomainAt(JsonPath.Root)
 
 object GitHookDto:
 

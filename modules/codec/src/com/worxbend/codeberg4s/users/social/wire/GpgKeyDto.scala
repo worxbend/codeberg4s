@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.users.social.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.social.{GpgKey, GpgKeyEmail, GpgKeyId, OpenPgpKeyId}
 
@@ -16,7 +16,7 @@ import com.worxbend.codeberg4s.users.social.{GpgKey, GpgKeyEmail, GpgKeyId, Open
   * @param verified
   *   the `verified` key
   */
-final case class GpgKeyEmailDto(email: Option[String], verified: Option[Boolean]):
+final case class GpgKeyEmailDto(email: Option[String], verified: Option[Boolean]) extends WireModel[GpgKeyEmail]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -27,10 +27,6 @@ final case class GpgKeyEmailDto(email: Option[String], verified: Option[Boolean]
     Wire
       .required(at, "email", email)
       .map(address => GpgKeyEmail(email = address, isVerified = verified.getOrElse(false)))
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, GpgKeyEmail] =
-    toDomainAt(JsonPath.Root)
 
 object GpgKeyEmailDto:
 
@@ -108,7 +104,7 @@ final case class GpgKeyDto(
     verified: Option[Boolean],
     created: Option[String],
     expires: Option[String],
-):
+) extends WireModel[GpgKey]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -148,10 +144,6 @@ final case class GpgKeyDto(
       createdAt         = Timestamps.parseOptional(created),
       expiresAt         = Timestamps.parseOptional(expires),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, GpgKey] =
-    toDomainAt(JsonPath.Root)
 
 object GpgKeyDto:
 

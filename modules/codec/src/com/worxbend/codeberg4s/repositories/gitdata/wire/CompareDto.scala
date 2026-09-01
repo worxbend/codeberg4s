@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.gitdata.CommitComparison
 import com.worxbend.codeberg4s.repositories.wire.{CommitAffectedFileDto, CommitDto}
@@ -23,7 +23,7 @@ final case class CompareDto(
     totalCommits: Option[Long],
     commits: Vector[CommitDto],
     files: Vector[CommitAffectedFileDto],
-):
+) extends WireModel[CommitComparison]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -35,10 +35,6 @@ final case class CompareDto(
       history <- ArrayElements.convert(at.field("commits"), commits)((dto, path) => dto.toDomainAt(path))
       changed <- ArrayElements.convert(at.field("files"), files)((dto, path) => dto.toDomainAt(path))
     yield CommitComparison(totalCommits = totalCommits.getOrElse(0L), commits = history, files = changed)
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, CommitComparison] =
-    toDomainAt(JsonPath.Root)
 
 object CompareDto:
 

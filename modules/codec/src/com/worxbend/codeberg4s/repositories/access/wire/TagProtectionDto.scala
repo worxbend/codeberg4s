@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.access.{TagProtection, TagProtectionId}
 
@@ -43,7 +43,7 @@ final case class TagProtectionDto(
     whitelistTeams: Vector[String],
     createdAt: Option[String],
     updatedAt: Option[String],
-):
+) extends WireModel[TagProtection]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -67,10 +67,6 @@ final case class TagProtectionDto(
       createdAt          = Timestamps.parseOptional(createdAt),
       updatedAt          = Timestamps.parseOptional(updatedAt),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, TagProtection] =
-    toDomainAt(JsonPath.Root)
 
 object TagProtectionDto:
 

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.{CommitRef, CommitSha}
 
@@ -17,7 +17,8 @@ import com.worxbend.codeberg4s.repositories.{CommitRef, CommitSha}
   *   the `created` key as a raw string. Forgejo sends its zero-time sentinel here for a tree, which
   *   [[com.worxbend.codeberg4s.codec.Timestamps]] folds into absence during conversion
   */
-final case class CommitMetaDto(url: Option[String], sha: Option[String], created: Option[String]):
+final case class CommitMetaDto(url: Option[String], sha: Option[String], created: Option[String])
+    extends WireModel[CommitRef]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *

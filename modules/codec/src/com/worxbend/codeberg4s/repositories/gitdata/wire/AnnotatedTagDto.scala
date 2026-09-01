@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.gitdata.AnnotatedTag
 import com.worxbend.codeberg4s.repositories.wire.{ArchiveDownloadCountDto, GitIdentityDto, VerificationDto}
@@ -41,7 +41,7 @@ final case class AnnotatedTagDto(
     verification: Option[VerificationDto],
     archiveDownloadCount: Option[ArchiveDownloadCountDto],
     url: Option[String],
-):
+) extends WireModel[AnnotatedTag]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -63,10 +63,6 @@ final case class AnnotatedTagDto(
       archiveDownloads = archiveDownloadCount.map(_.toDomain),
       url              = url,
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, AnnotatedTag] =
-    toDomainAt(JsonPath.Root)
 
 object AnnotatedTagDto:
 

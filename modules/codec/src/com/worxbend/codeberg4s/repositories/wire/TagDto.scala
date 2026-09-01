@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.{CommitSha, Tag, TagName}
 
@@ -32,7 +32,7 @@ final case class TagDto(
     zipballUrl: Option[String],
     tarballUrl: Option[String],
     archiveDownloadCount: Option[ArchiveDownloadCountDto],
-):
+) extends WireModel[Tag]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -53,10 +53,6 @@ final case class TagDto(
       tarballUrl       = tarballUrl,
       archiveDownloads = archiveDownloadCount.map(_.toDomain),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, Tag] =
-    toDomainAt(JsonPath.Root)
 
 object TagDto:
 

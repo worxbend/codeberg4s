@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.users.social.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.social.{BlockId, BlockedUser}
 
@@ -16,7 +16,7 @@ import com.worxbend.codeberg4s.users.social.{BlockId, BlockedUser}
   * @param created
   *   the `created_at` key as a raw string
   */
-final case class BlockedUserDto(blockId: Option[Long], created: Option[String]):
+final case class BlockedUserDto(blockId: Option[Long], created: Option[String]) extends WireModel[BlockedUser]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -28,10 +28,6 @@ final case class BlockedUserDto(blockId: Option[Long], created: Option[String]):
     Wire
       .validated(at, "block_id", blockId)(BlockId.from)
       .map(identifier => BlockedUser(blockId = identifier, createdAt = Timestamps.parseOptional(created)))
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, BlockedUser] =
-    toDomainAt(JsonPath.Root)
 
 object BlockedUserDto:
 

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.hooks.{WikiCommit, WikiPage, WikiPageMeta}
 import com.worxbend.codeberg4s.repositories.wire.GitIdentityDto
@@ -24,7 +24,7 @@ final case class WikiCommitDto(
     author: Option[GitIdentityDto],
     committer: Option[GitIdentityDto],
     message: Option[String],
-):
+) extends WireModel[WikiCommit]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -45,10 +45,6 @@ final case class WikiCommitDto(
           committer = committer.map(_.toDomain),
           message   = message,
         )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, WikiCommit] =
-    toDomainAt(JsonPath.Root)
 
 object WikiCommitDto:
 
@@ -89,7 +85,7 @@ final case class WikiPageDto(
     subUrl: Option[String],
     lastCommit: Option[WikiCommitDto],
     commitCount: Option[Long],
-):
+) extends WireModel[WikiPage]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -114,10 +110,6 @@ final case class WikiPageDto(
       lastCommit  = revision,
       commitCount = commitCount,
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, WikiPage] =
-    toDomainAt(JsonPath.Root)
 
 object WikiPageDto:
 
@@ -162,7 +154,7 @@ final case class WikiPageMetaDto(
     htmlUrl: Option[String],
     subUrl: Option[String],
     lastCommit: Option[WikiCommitDto],
-):
+) extends WireModel[WikiPageMeta]:
 
   /** Converts to the domain, reporting failure paths relative to `at`. `title` is required, for the reason
     * [[WikiPageDto.toDomainAt]] gives.
@@ -172,10 +164,6 @@ final case class WikiPageMetaDto(
       pageTitle <- Wire.required(at, "title", title)
       revision  <- WikiPageDto.revision(at, lastCommit)
     yield WikiPageMeta(title = pageTitle, htmlUrl = htmlUrl, subUrl = subUrl, lastCommit = revision)
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, WikiPageMeta] =
-    toDomainAt(JsonPath.Root)
 
 object WikiPageMetaDto:
 

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.admin.{MirrorName, PushMirror}
 
@@ -47,7 +47,7 @@ final case class PushMirrorDto(
     publicKey: Option[String],
     created: Option[String],
     lastUpdate: Option[String],
-):
+) extends WireModel[PushMirror]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -75,10 +75,6 @@ final case class PushMirrorDto(
           createdAt     = Timestamps.parseOptional(created),
           lastUpdateAt  = Timestamps.parseOptional(lastUpdate),
         )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, PushMirror] =
-    toDomainAt(JsonPath.Root)
 
 object PushMirrorDto:
 

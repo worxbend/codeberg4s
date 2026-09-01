@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.users.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.{User, UserVisibility}
 
@@ -40,7 +40,7 @@ final case class UserDto(
     followingCount: Option[Long],
     starredReposCount: Option[Long],
     username: Option[String],
-):
+) extends WireModel[User]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -79,10 +79,6 @@ final case class UserDto(
       createdAt                = Timestamps.parseOptional(created),
       lastLoginAt              = Timestamps.parseOptional(lastLogin),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, User] =
-    toDomainAt(JsonPath.Root)
 
 object UserDto:
 

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.gitdata.{GitReference, RefName}
 
@@ -17,7 +17,8 @@ import com.worxbend.codeberg4s.repositories.gitdata.{GitReference, RefName}
   * @param obj
   *   the `object` key, renamed because `object` is a Scala keyword
   */
-final case class ReferenceDto(ref: Option[String], url: Option[String], obj: Option[GitObjectDto]):
+final case class ReferenceDto(ref: Option[String], url: Option[String], obj: Option[GitObjectDto])
+    extends WireModel[GitReference]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -30,10 +31,6 @@ final case class ReferenceDto(ref: Option[String], url: Option[String], obj: Opt
       name   <- Wire.validated(at, "ref", ref)(RefName.from)
       target <- Wire.nested(at, "object", obj)(_.toDomainAt(_))
     yield GitReference(name = name, url = url, target = target)
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, GitReference] =
-    toDomainAt(JsonPath.Root)
 
 object ReferenceDto:
 

@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.admin.{TopicId, TopicSummary}
 
@@ -28,7 +28,7 @@ final case class TopicSummaryDto(
     repoCount: Option[Long],
     created: Option[String],
     updated: Option[String],
-):
+) extends WireModel[TopicSummary]:
 
   /** Converts to the domain, reporting failure paths relative to `at`.
     *
@@ -47,10 +47,6 @@ final case class TopicSummaryDto(
       createdAt       = Timestamps.parseOptional(created),
       updatedAt       = Timestamps.parseOptional(updated),
     )
-
-  /** [[toDomainAt]] for a payload that is the whole response body. */
-  def toDomain: Either[DecodeFailure, TopicSummary] =
-    toDomainAt(JsonPath.Root)
 
 object TopicSummaryDto:
 
