@@ -1,9 +1,18 @@
 package com.worxbend.codeberg4s.examples
 
-import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.issues.{Issue, IssueQuery}
-import com.worxbend.codeberg4s.paging.{Page, PageNumber, PageParams, PageSize}
-import com.worxbend.codeberg4s.{CodebergClient, CodebergConfig, Owner, RepoName, ValidationError}
+import com.worxbend.codeberg4s.{
+  Auth,
+  CodebergClient,
+  CodebergConfig,
+  Owner,
+  Page,
+  PageNumber,
+  PageParams,
+  PageSize,
+  RepoName,
+  ValidationError
+}
 
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext, Future}

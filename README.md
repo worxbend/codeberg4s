@@ -86,21 +86,18 @@ client.close()
 ```
 
 The single wildcard import works because the root package re-exports the
-everyday surface — `Auth`, `Page`, `PageParams`, and `PageSize` — next to the
-types that already live there (`CodebergClient`, `CodebergConfig`, `Owner`,
-`RepoName`, `ValidationError`, …). The re-export list is deliberately short:
-more specialised types keep one canonical import from their own sub-package,
-as the examples below show.
+everyday surface — `ApiToken`, `Auth`, `Page`, `PageNumber`, `PageParams` and
+`PageSize` — next to the types that already live there (`CodebergClient`,
+`CodebergConfig`, `Owner`, `RepoName`, `ValidationError`, …). The re-export
+list is deliberately short: more specialised types keep one canonical import
+from their own sub-package, as the examples below show.
 
 Authenticating is a different `Auth` and nothing else. A token is validated on
 the way in, so a blank or control-character-bearing string never reaches a
 request header:
 
 ```scala
-import com.worxbend.codeberg4s.CodebergConfig
-import com.worxbend.codeberg4s.ValidationError
-import com.worxbend.codeberg4s.auth.ApiToken
-import com.worxbend.codeberg4s.auth.Auth
+import com.worxbend.codeberg4s.*
 
 val config: Either[ValidationError, CodebergConfig] =
   ApiToken
