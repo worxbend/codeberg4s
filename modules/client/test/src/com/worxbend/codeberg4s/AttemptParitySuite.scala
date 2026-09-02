@@ -150,6 +150,10 @@ object AttemptParitySuite:
       classOf[repositories.publishing.RepositoryPublishingApi],
       classOf[repositories.publishing.RepositoryPublishingApi.Attempt],
     ),
+    Pair(
+      classOf[repositories.publishing.ReleaseAssetApi],
+      classOf[repositories.publishing.ReleaseAssetApi.Attempt],
+    ),
     Pair(classOf[users.UserApi], classOf[users.UserApi.Attempt]),
     Pair(classOf[users.account.UserAccountApi], classOf[users.account.UserAccountApi.Attempt]),
     Pair(classOf[users.account.UserActionApi], classOf[users.account.UserActionApi.Attempt]),

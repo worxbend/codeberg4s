@@ -1,32 +1,25 @@
 package com.worxbend.codeberg4s.repositories.publishing
 
-import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{empty, read, remove, write}
-import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RequestBody, RetryEligibility}
-import com.worxbend.codeberg4s.paging.{Page, PageParams}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
+import com.worxbend.codeberg4s.repositories.publishing.PublishingRequests.{releasePath, releasesPath}
 import com.worxbend.codeberg4s.repositories.publishing.wire.{
   CreateForkOptionDto,
   CreateReleaseOptionDto,
   CreateTagOptionDto,
-  EditAttachmentOptionsDto,
   EditReleaseOptionDto,
   GenerateRepoOptionDto,
   RepoTopicOptionsDto
 }
-import com.worxbend.codeberg4s.repositories.{
-  Release,
-  ReleaseAsset,
-  ReleaseId,
-  Repository,
-  RepositoryDecoders,
-  Tag,
-  TagName
-}
+import com.worxbend.codeberg4s.repositories.{Release, ReleaseId, Repository, RepositoryDecoders, Tag, TagName}
 import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
 
-/** The publishing surface of a repository: releases and their attachments, tags, topics, forking and templating.
+/** The publishing surface of a repository: releases, tags, topics, forking and templating.
+  *
+  * The files attached to a release are on [[assets]], a group of its own: an asset is a file rather than a record, and
+  * uploading one is the only multipart request this library sends.
   *
   * Reached as `client.repos.publishing`. Both error rails are here (ADR-0005): the methods on this class fail the
   * `Future` with [[com.worxbend.codeberg4s.CodebergException]], and the same operations on
@@ -85,6 +78,9 @@ final class RepositoryPublishingApi private[codeberg4s] (pipeline: ApiPipeline[F
 
   /** The same operations, with failures as values instead of as a failed `Future`. */
   val attempt: RepositoryPublishingApi.Attempt = RepositoryPublishingApi.Attempt(this)
+
+  /** The files attached to a release. */
+  val assets: ReleaseAssetApi = ReleaseAssetApi(pipeline)
 
   // --- releases -------------------------------------------------------------
 
@@ -181,94 +177,6 @@ final class RepositoryPublishingApi private[codeberg4s] (pipeline: ApiPipeline[F
     pipeline.callUnit(RepositoryPublishingApi.deleteReleaseByTagRequest(owner, name, tag), RetryEligibility.Never)
 
   // --- release assets -------------------------------------------------------
-
-  /** Lists a release's attachments — `GET /repos/{owner}/{repo}/releases/{id}/assets`.
-    *
-    * '''Paging on this endpoint is weaker than on a repository listing, and a caller has to know it.''' The pinned spec
-    * declares no `page` or `limit` parameter for this operation. Both are still sent, because they cost nothing and
-    * Forgejo honours them wherever it supports them — but two things follow:
-    *
-    *   - the returned page always reports itself as the last one, since `nextPage` is read from `rel="next"` and there
-    *     is no `Link` header to read it from;
-    *   - an instance that ignores the parameters answers every request with the '''complete''' attachment list, so
-    *     asking for page two may return the same items as page one rather than nothing.
-    *
-    * A release carries tens of attachments, not thousands — `golden/repository/release-latest.json` has twenty-one — so
-    * the whole list arriving at once is the expected case rather than a hazard.
-    *
-    * '''Failures.''' The group contract above.
-    */
-  def assets(owner: Owner, name: RepoName, id: ReleaseId, params: PageParams): Future[Page[ReleaseAsset]] =
-    pipeline.callPage(RepositoryPublishingApi.assetsRequest(owner, name, id, params), params)(using
-      PublishingDecoders.assets)
-
-  /** Uploads a file and attaches it to a release — `POST /repos/{owner}/{repo}/releases/{id}/assets`.
-    *
-    * '''The only `multipart/form-data` request this library sends.''' The bytes go in a part named `attachment`, which
-    * is the name the spec declares, and [[UploadAsset.name]] — when set — goes in the `name` query parameter, which is
-    * what Forgejo stores the attachment as. The boundary is chosen by the transport, never here.
-    *
-    * '''The bytes are held in memory, whole.''' A caller uploading a multi-gigabyte artefact should not use this
-    * method; streaming an upload is a different shape of API that this library does not offer yet, and pretending
-    * otherwise by accepting an `InputStream` it would immediately drain would be worse than saying so.
-    *
-    * '''Never retried.''' A repeat attaches the file twice: Forgejo does not reject a duplicate attachment name, so a
-    * retried upload leaves two identical assets with different ids — and it re-sends every byte, which for a release
-    * artefact is exactly the request a caller least wants repeated blindly.
-    *
-    * '''Failures.''' The group contract above. `413` means the repository's or the instance's quota is exhausted, and
-    * `400` is what Forgejo answers for a part it could not read. Success is `201`.
-    *
-    * @param upload
-    *   the file to attach; built from [[UploadAsset.of]], which has already rejected a file name that could inject a
-    *   header
-    */
-  def uploadAsset(owner: Owner, name: RepoName, id: ReleaseId, upload: UploadAsset): Future[ReleaseAsset] =
-    pipeline.call(RepositoryPublishingApi.uploadAssetRequest(owner, name, id, upload), RetryEligibility.Never)(using
-      PublishingDecoders.asset)
-
-  /** Reads one attachment's metadata — `GET /repos/{owner}/{repo}/releases/{id}/assets/{attachment_id}`.
-    *
-    * '''Metadata, not bytes.''' The payload is the same `Attachment` object that appears inside a release's `assets`;
-    * fetching the file itself means following [[com.worxbend.codeberg4s.repositories.ReleaseAsset.browserDownloadUrl]]
-    * with an HTTP client of the caller's choosing, because an arbitrarily large body belongs in a stream and not in a
-    * `String`.
-    *
-    * '''Failures.''' The group contract above; `404` additionally covers "that attachment belongs to another release".
-    */
-  def getAsset(owner: Owner, name: RepoName, id: ReleaseId, asset: AssetId): Future[ReleaseAsset] =
-    pipeline.call(
-      RepositoryPublishingApi.getAssetRequest(owner, name, id, asset),
-      RetryEligibility.IdempotentOnly,
-    )(using PublishingDecoders.asset)
-
-  /** Renames an attachment — `PATCH /repos/{owner}/{repo}/releases/{id}/assets/{attachment_id}`.
-    *
-    * '''This never replaces the bytes''', only the metadata; see [[EditAsset]].
-    *
-    * '''Never retried''', for the reason [[editRelease]] gives: a partial update is applied to whatever the resource
-    * has become.
-    *
-    * '''Failures.''' The group contract above. Setting [[EditAsset.browserDownloadUrl]] on an ordinary uploaded
-    * attachment is rejected, since the spec allows it only for an external one. Success is `201` here rather than `200`
-    * — Forgejo's own choice, and success either way.
-    */
-  def editAsset(owner: Owner, name: RepoName, id: ReleaseId, asset: AssetId, command: EditAsset): Future[ReleaseAsset] =
-    pipeline.call(
-      RepositoryPublishingApi.editAssetRequest(owner, name, id, asset, command),
-      RetryEligibility.Never,
-    )(using PublishingDecoders.asset)
-
-  /** Removes an attachment from a release — `DELETE /repos/{owner}/{repo}/releases/{id}/assets/{attachment_id}`.
-    *
-    * '''Never retried''' — see the group's retry note.
-    *
-    * '''Failures.''' The group contract above. Success is `204` with no body.
-    */
-  def deleteAsset(owner: Owner, name: RepoName, id: ReleaseId, asset: AssetId): Future[Unit] =
-    pipeline.callUnit(RepositoryPublishingApi.deleteAssetRequest(owner, name, id, asset), RetryEligibility.Never)
-
-  // --- tags -----------------------------------------------------------------
 
   /** Creates a tag — `POST /repos/{owner}/{repo}/tags`.
     *
@@ -419,21 +327,6 @@ object RepositoryPublishingApi:
   /** The stable operation id of [[RepositoryPublishingApi.deleteReleaseByTag]]. */
   val DeleteReleaseByTagOperation: String = "repos.releases.deleteByTag"
 
-  /** The stable operation id of [[RepositoryPublishingApi.assets]]. */
-  val ListAssetsOperation: String = "repos.releases.assets.list"
-
-  /** The stable operation id of [[RepositoryPublishingApi.uploadAsset]]. */
-  val UploadAssetOperation: String = "repos.releases.assets.upload"
-
-  /** The stable operation id of [[RepositoryPublishingApi.getAsset]]. */
-  val GetAssetOperation: String = "repos.releases.assets.get"
-
-  /** The stable operation id of [[RepositoryPublishingApi.editAsset]]. */
-  val EditAssetOperation: String = "repos.releases.assets.edit"
-
-  /** The stable operation id of [[RepositoryPublishingApi.deleteAsset]]. */
-  val DeleteAssetOperation: String = "repos.releases.assets.delete"
-
   /** The stable operation id of [[RepositoryPublishingApi.createTag]]. */
   val CreateTagOperation: String = "repos.tags.create"
 
@@ -457,9 +350,6 @@ object RepositoryPublishingApi:
 
   /** The stable operation id of [[RepositoryPublishingApi.generate]]. */
   val GenerateOperation: String = "repos.generate"
-
-  /** The form field name Forgejo expects an uploaded release asset in, per `spec/swagger.v1.json`. */
-  val AssetFieldName: String = "attachment"
 
   /** The typed rail of [[RepositoryPublishingApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as
     * a value.
@@ -497,52 +387,6 @@ object RepositoryPublishingApi:
     /** [[RepositoryPublishingApi.deleteReleaseByTag]] with its failure as a value. */
     def deleteReleaseByTag(owner: Owner, name: RepoName, tag: TagName): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.deleteReleaseByTag(owner, name, tag))
-
-    /** [[RepositoryPublishingApi.assets]] with its failure as a value. */
-    def assets(
-        owner: Owner,
-        name: RepoName,
-        id: ReleaseId,
-        params: PageParams,
-    ): Future[Either[CodebergError, Page[ReleaseAsset]]] =
-      exec.attempt(rail.assets(owner, name, id, params))
-
-    /** [[RepositoryPublishingApi.uploadAsset]] with its failure as a value. */
-    def uploadAsset(
-        owner: Owner,
-        name: RepoName,
-        id: ReleaseId,
-        upload: UploadAsset,
-    ): Future[Either[CodebergError, ReleaseAsset]] =
-      exec.attempt(rail.uploadAsset(owner, name, id, upload))
-
-    /** [[RepositoryPublishingApi.getAsset]] with its failure as a value. */
-    def getAsset(
-        owner: Owner,
-        name: RepoName,
-        id: ReleaseId,
-        asset: AssetId,
-    ): Future[Either[CodebergError, ReleaseAsset]] =
-      exec.attempt(rail.getAsset(owner, name, id, asset))
-
-    /** [[RepositoryPublishingApi.editAsset]] with its failure as a value. */
-    def editAsset(
-        owner: Owner,
-        name: RepoName,
-        id: ReleaseId,
-        asset: AssetId,
-        command: EditAsset,
-    ): Future[Either[CodebergError, ReleaseAsset]] =
-      exec.attempt(rail.editAsset(owner, name, id, asset, command))
-
-    /** [[RepositoryPublishingApi.deleteAsset]] with its failure as a value. */
-    def deleteAsset(
-        owner: Owner,
-        name: RepoName,
-        id: ReleaseId,
-        asset: AssetId,
-    ): Future[Either[CodebergError, Unit]] =
-      exec.attempt(rail.deleteAsset(owner, name, id, asset))
 
     /** [[RepositoryPublishingApi.createTag]] with its failure as a value. */
     def createTag(owner: Owner, name: RepoName, command: CreateTag): Future[Either[CodebergError, Tag]] =
@@ -605,47 +449,6 @@ object RepositoryPublishingApi:
   private def deleteReleaseByTagRequest(owner: Owner, name: RepoName, tag: TagName): CodebergRequest =
     remove(DeleteReleaseByTagOperation, releaseByTagPath(owner, name, tag))
 
-  private def assetsRequest(
-      owner: Owner,
-      name: RepoName,
-      id: ReleaseId,
-      params: PageParams,
-  ): CodebergRequest =
-    read(ListAssetsOperation, assetsPath(owner, name, id), PagingQuery.window(params))
-
-  private def uploadAssetRequest(
-      owner: Owner,
-      name: RepoName,
-      id: ReleaseId,
-      upload: UploadAsset,
-  ): CodebergRequest =
-    CodebergRequest.upload(
-      UploadAssetOperation,
-      assetsPath(owner, name, id),
-      upload.name.map(stored => "name" -> stored).toList,
-      RequestBody.Multipart(AssetFieldName, upload.fileName, upload.content, upload.mediaType),
-    )
-
-  private def getAssetRequest(owner: Owner, name: RepoName, id: ReleaseId, asset: AssetId): CodebergRequest =
-    read(GetAssetOperation, assetPath(owner, name, id, asset), Nil)
-
-  private def editAssetRequest(
-      owner: Owner,
-      name: RepoName,
-      id: ReleaseId,
-      asset: AssetId,
-      command: EditAsset,
-  ): CodebergRequest =
-    write(
-      EditAssetOperation,
-      HttpMethod.Patch,
-      assetPath(owner, name, id, asset),
-      EditAttachmentOptionsDto.render(command),
-    )
-
-  private def deleteAssetRequest(owner: Owner, name: RepoName, id: ReleaseId, asset: AssetId): CodebergRequest =
-    remove(DeleteAssetOperation, assetPath(owner, name, id, asset))
-
   private def createTagRequest(owner: Owner, name: RepoName, command: CreateTag): CodebergRequest =
     write(CreateTagOperation, HttpMethod.Post, tagsPath(owner, name), CreateTagOptionDto.render(command))
 
@@ -684,21 +487,9 @@ object RepositoryPublishingApi:
       GenerateRepoOptionDto.render(command),
     )
 
-  private def releasesPath(owner: Owner, name: RepoName): List[String] =
-    RepositoryRequests.repositoryPath(owner, name) :+ "releases"
-
-  private def releasePath(owner: Owner, name: RepoName, id: ReleaseId): List[String] =
-    releasesPath(owner, name) :+ id.value.toString
-
   /** `…/releases/tags/{tag}`, with the tag decomposed so a `/` in it reaches the wire as a real separator. */
   private def releaseByTagPath(owner: Owner, name: RepoName, tag: TagName): List[String] =
     (releasesPath(owner, name) :+ "tags") ++ tag.segments
-
-  private def assetsPath(owner: Owner, name: RepoName, id: ReleaseId): List[String] =
-    releasePath(owner, name, id) :+ "assets"
-
-  private def assetPath(owner: Owner, name: RepoName, id: ReleaseId, asset: AssetId): List[String] =
-    assetsPath(owner, name, id) :+ asset.value.toString
 
   private def tagsPath(owner: Owner, name: RepoName): List[String] =
     RepositoryRequests.repositoryPath(owner, name) :+ "tags"

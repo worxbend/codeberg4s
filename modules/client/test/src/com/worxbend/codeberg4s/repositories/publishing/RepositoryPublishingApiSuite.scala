@@ -152,20 +152,20 @@ final class RepositoryPublishingApiSuite extends FunSuite with ClientSuiteHarnes
     val backend = RecordingBackend(responding(200, RepositoryPublishingApiSuite.AssetListBody))
 
     onApi(backend): api =>
-      api.assets(Handle, Name, Id, window(2, 25)).map: page =>
+      api.assets.assets(Handle, Name, Id, window(2, 25)).map: page =>
         assertEquals(pathOf(backend), s"$Base/releases/11189746/assets")
         assertEquals(queryOf(backend), List("page" -> "2", "limit" -> "25"))
         assertEquals(page.items.map(_.name), Vector("forgejo-16.0.2-linux-amd64"))
 
   test("an attachment listing with no Link header reports itself as the last page, whatever the total says"):
     onApi(responding(200, RepositoryPublishingApiSuite.AssetListBody)): api =>
-      api.assets(Handle, Name, Id, PageParams.First).map: page =>
+      api.assets.assets(Handle, Name, Id, PageParams.First).map: page =>
         assertEquals(page.isLast, true)
         assertEquals(page.nextPage, None)
 
   test("a bad element of an attachment listing reports its position, all the way through the pipeline"):
     onApi(responding(200, """[{"id":1,"name":"a"},{"id":2}]""")): api =>
-      api.attempt.assets(Handle, Name, Id, PageParams.First).map:
+      api.assets.attempt.assets(Handle, Name, Id, PageParams.First).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$[1].name")
         case other                                             => fail(s"expected a decoding failure, got $other")
 
@@ -174,7 +174,7 @@ final class RepositoryPublishingApiSuite extends FunSuite with ClientSuiteHarnes
     val upload  = orFail(UploadAsset.of("forgejo-16.0.2-linux-amd64", RepositoryPublishingApiSuite.Bytes))
 
     onApi(backend): api =>
-      api.uploadAsset(Handle, Name, Id, upload).map: asset =>
+      api.assets.uploadAsset(Handle, Name, Id, upload).map: asset =>
         assertEquals(methodOf(backend), "POST")
         assertEquals(pathOf(backend), s"$Base/releases/11189746/assets")
         assertEquals(partsOf(backend), List("attachment" -> Some("forgejo-16.0.2-linux-amd64")))
@@ -185,14 +185,14 @@ final class RepositoryPublishingApiSuite extends FunSuite with ClientSuiteHarnes
     val upload  = orFail(UploadAsset.of("out.tar.gz", RepositoryPublishingApiSuite.Bytes))
 
     onApi(backend): api =>
-      api.uploadAsset(Handle, Name, Id, upload).map(_ => assertEquals(queryOf(backend), Nil))
+      api.assets.uploadAsset(Handle, Name, Id, upload).map(_ => assertEquals(queryOf(backend), Nil))
 
   test("an upload sends the name query parameter when the stored name differs from the file name"):
     val backend = RecordingBackend(responding(201, RepositoryPublishingApiSuite.AssetBody))
     val upload  = orFail(UploadAsset.of("out.tar.gz", RepositoryPublishingApiSuite.Bytes))
 
     onApi(backend): api =>
-      api
+      api.assets
         .uploadAsset(Handle, Name, Id, upload.named("forgejo-16.0.2-linux-amd64"))
         .map(_ => assertEquals(queryOf(backend), List("name" -> "forgejo-16.0.2-linux-amd64")))
 
@@ -201,7 +201,7 @@ final class RepositoryPublishingApiSuite extends FunSuite with ClientSuiteHarnes
     val upload  = orFail(UploadAsset.of("checksums.txt", RepositoryPublishingApiSuite.Bytes))
 
     onApi(backend): api =>
-      api.attempt
+      api.assets.attempt
         .uploadAsset(Handle, Name, Id, upload)
         .map: outcome =>
           assert(outcome.isLeft, s"a 503 on upload must not be retried into a success, got $outcome")
@@ -211,7 +211,7 @@ final class RepositoryPublishingApiSuite extends FunSuite with ClientSuiteHarnes
     val backend = RecordingBackend(responding(200, RepositoryPublishingApiSuite.AssetBody))
 
     onApi(backend): api =>
-      api.getAsset(Handle, Name, Id, Attachment).map: asset =>
+      api.assets.getAsset(Handle, Name, Id, Attachment).map: asset =>
         assertEquals(methodOf(backend), "GET")
         assertEquals(pathOf(backend), s"$Base/releases/11189746/assets/1730449")
         assertEquals(asset.browserDownloadUrl, Some("https://forge.example/a"))
@@ -220,7 +220,7 @@ final class RepositoryPublishingApiSuite extends FunSuite with ClientSuiteHarnes
     val backend = RecordingBackend(responding(201, RepositoryPublishingApiSuite.AssetBody))
 
     onApi(backend): api =>
-      api
+      api.assets
         .editAsset(Handle, Name, Id, Attachment, EditAsset.Empty.renamedTo("checksums.txt"))
         .map: _ =>
           assertEquals(methodOf(backend), "PATCH")
@@ -231,7 +231,7 @@ final class RepositoryPublishingApiSuite extends FunSuite with ClientSuiteHarnes
     val backend = RecordingBackend(responding(204, ""))
 
     onApi(backend): api =>
-      api.deleteAsset(Handle, Name, Id, Attachment).map: _ =>
+      api.assets.deleteAsset(Handle, Name, Id, Attachment).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
         assertEquals(pathOf(backend), s"$Base/releases/11189746/assets/1730449")
 
@@ -393,17 +393,17 @@ final class RepositoryPublishingApiSuite extends FunSuite with ClientSuiteHarnes
 
     onApi(responding(413, RepositoryPublishingApiSuite.QuotaBody)): api =>
       for
-        raised <- api.uploadAsset(Handle, Name, Id, upload).failed
-        typed  <- api.attempt.uploadAsset(Handle, Name, Id, upload)
+        raised <- api.assets.uploadAsset(Handle, Name, Id, upload).failed
+        typed  <- api.assets.attempt.uploadAsset(Handle, Name, Id, upload)
       yield assertRailsAgree(raised, typed)
 
   test("a 413 carries the upload operation id, so an alert can name the endpoint"):
     val upload = orFail(UploadAsset.of("checksums.txt", RepositoryPublishingApiSuite.Bytes))
 
     onApi(responding(413, RepositoryPublishingApiSuite.QuotaBody)): api =>
-      api.attempt
+      api.assets.attempt
         .uploadAsset(Handle, Name, Id, upload)
-        .map(outcome => assertEquals(operationOf(outcome), RepositoryPublishingApi.UploadAssetOperation))
+        .map(outcome => assertEquals(operationOf(outcome), ReleaseAssetApi.UploadAssetOperation))
 
   test("a 200 whose payload does not fit the model becomes DecodingFailed, never an escaping codec exception"):
     onApi(responding(200, """{"name":"v1"}""")): api =>

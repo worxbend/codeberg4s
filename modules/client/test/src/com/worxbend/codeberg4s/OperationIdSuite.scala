@@ -140,6 +140,7 @@ object OperationIdSuite:
     "com.worxbend.codeberg4s.repositories.hooks.RepositoryIssueConfigApi"     -> Set("repos"),
     "com.worxbend.codeberg4s.repositories.hooks.RepositoryWikiApi"            -> Set("repos.wiki"),
     "com.worxbend.codeberg4s.repositories.publishing.RepositoryPublishingApi" -> Set("repos"),
+    "com.worxbend.codeberg4s.repositories.publishing.ReleaseAssetApi"         -> Set("repos.releases.assets"),
     "com.worxbend.codeberg4s.users.UserApi"                                   -> Set("users"),
     "com.worxbend.codeberg4s.users.account.UserAccountApi"                    -> Set("users.account"),
     "com.worxbend.codeberg4s.users.account.UserActionApi"                     -> Set("users.account.actions"),

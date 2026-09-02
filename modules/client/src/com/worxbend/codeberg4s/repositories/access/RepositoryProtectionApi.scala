@@ -16,8 +16,8 @@ import scala.concurrent.Future
   * Reached as `client.repos.access.protections`. It is a group of its own rather than more methods on
   * [[RepositoryAccessApi]] because that class had grown past what a reader can hold in their head, and because the
   * split falls on a real line: [[RepositoryAccessApi]] answers '''who''' may reach the repository, and this answers
-  * '''what''' they may do to a ref once they are in. The endpoints, the models and the retry decisions are unchanged
-  * by the move.
+  * '''what''' they may do to a ref once they are in. The endpoints, the models and the retry decisions are unchanged by
+  * the move.
   *
   * Both error rails are here (ADR-0005): the methods on this class fail the `Future` with
   * [[com.worxbend.codeberg4s.CodebergException]], and the same operations on [[RepositoryProtectionApi.attempt]] never
@@ -26,10 +26,10 @@ import scala.concurrent.Future
   *
   * ==Branch and tag protections are not the same shape==
   *
-  * A branch protection is a large record with a dozen independent switches and several allow-lists; a tag protection
-  * is a pattern and a list of accounts allowed to move tags matching it. They are together because they are the two
-  * halves of one question — which refs are not freely writable — and apart from every other operation on the access
-  * surface for the same reason.
+  * A branch protection is a large record with a dozen independent switches and several allow-lists; a tag protection is
+  * a pattern and a list of accounts allowed to move tags matching it. They are together because they are the two halves
+  * of one question — which refs are not freely writable — and apart from every other operation on the access surface
+  * for the same reason.
   *
   * ==Failures==
   *
@@ -87,8 +87,10 @@ final class RepositoryProtectionApi private[codeberg4s] (pipeline: ApiPipeline[F
     *   the rule's own name, which is a glob and not a branch
     */
   def branchProtection(owner: Owner, name: RepoName, rule: BranchRuleName): Future[BranchProtection] =
-    pipeline.call(RepositoryProtectionApi.branchProtectionRequest(owner, name, rule), RetryEligibility.IdempotentOnly)(using
-      RepositoryAccessDecoders.branchProtection)
+    pipeline.call(
+      RepositoryProtectionApi.branchProtectionRequest(owner, name, rule),
+      RetryEligibility.IdempotentOnly
+    )(using RepositoryAccessDecoders.branchProtection)
 
   /** Creates a branch protection rule — `POST /repos/{owner}/{repo}/branch_protections`.
     *
@@ -108,8 +110,10 @@ final class RepositoryProtectionApi private[codeberg4s] (pipeline: ApiPipeline[F
       name: RepoName,
       command: CreateBranchProtection,
   ): Future[BranchProtection] =
-    pipeline.call(RepositoryProtectionApi.createBranchProtectionRequest(owner, name, command), RetryEligibility.Never)(using
-      RepositoryAccessDecoders.branchProtection)
+    pipeline.call(
+      RepositoryProtectionApi.createBranchProtectionRequest(owner, name, command),
+      RetryEligibility.Never
+    )(using RepositoryAccessDecoders.branchProtection)
 
   /** Changes a branch protection rule — `PATCH /repos/{owner}/{repo}/branch_protections/{name}`.
     *
@@ -187,8 +191,10 @@ final class RepositoryProtectionApi private[codeberg4s] (pipeline: ApiPipeline[F
     * '''Failures.''' The group contract above, `423` included.
     */
   def createTagProtection(owner: Owner, name: RepoName, command: CreateTagProtection): Future[TagProtection] =
-    pipeline.call(RepositoryProtectionApi.createTagProtectionRequest(owner, name, command), RetryEligibility.Never)(using
-      RepositoryAccessDecoders.tagProtection)
+    pipeline.call(
+      RepositoryProtectionApi.createTagProtectionRequest(owner, name, command),
+      RetryEligibility.Never
+    )(using RepositoryAccessDecoders.tagProtection)
 
   /** Changes a tag protection rule — `PATCH /repos/{owner}/{repo}/tag_protections/{id}`.
     *
@@ -205,8 +211,10 @@ final class RepositoryProtectionApi private[codeberg4s] (pipeline: ApiPipeline[F
       id: TagProtectionId,
       command: EditTagProtection,
   ): Future[TagProtection] =
-    pipeline.call(RepositoryProtectionApi.editTagProtectionRequest(owner, name, id, command), RetryEligibility.Never)(using
-      RepositoryAccessDecoders.tagProtection)
+    pipeline.call(
+      RepositoryProtectionApi.editTagProtectionRequest(owner, name, id, command),
+      RetryEligibility.Never
+    )(using RepositoryAccessDecoders.tagProtection)
 
   /** Removes a tag protection rule — `DELETE /repos/{owner}/{repo}/tag_protections/{id}`.
     *
@@ -257,12 +265,12 @@ object RepositoryProtectionApi:
   /** The stable operation id of [[RepositoryProtectionApi.deleteTagProtection]]. */
   val DeleteTagProtectionOperation: String = "repos.tagProtections.delete"
 
-  /** The typed rail of [[RepositoryProtectionApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]]
-    * as a value.
+  /** The typed rail of [[RepositoryProtectionApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as
+    * a value.
     *
-    * Obtained as `client.repos.access.protections.attempt`. Each method is the convenience-rail method with its
-    * failure channel materialised and nothing else, so an operation exists on exactly one of the rails only if it is
-    * missing from both.
+    * Obtained as `client.repos.access.protections.attempt`. Each method is the convenience-rail method with its failure
+    * channel materialised and nothing else, so an operation exists on exactly one of the rails only if it is missing
+    * from both.
     */
   final class Attempt private[codeberg4s] (rail: RepositoryProtectionApi)(using exec: Exec[Future]):
 

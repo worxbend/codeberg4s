@@ -25,6 +25,14 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **The release assets moved to `client.repos.publishing.assets`.** Five
+  operations — `assets`, `uploadAsset`, `getAsset`, `editAsset`, `deleteAsset` —
+  are now on `ReleaseAssetApi`, reached as `client.repos.publishing.assets`,
+  with their names, arguments, endpoints, operation ids and retry decisions
+  unchanged. An asset is a file rather than a record, and uploading one is the
+  only multipart request this library sends, which is what makes it a group of
+  its own rather than five more methods beside the release record.
+
 - **The branch and tag protections moved to
   `client.repos.access.protections`.** `client.repos.access` answered two
   questions at once: who may reach a repository, and what they may do to a ref
