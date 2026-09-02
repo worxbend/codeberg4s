@@ -173,19 +173,19 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
 
   test("orgs.members.check reads a 204 as membership"):
     onApi(responding(204, "")): api =>
-      api.isMember(Org, Account).map(member => assertEquals(member, true))
+      api.members.isMember(Org, Account).map(member => assertEquals(member, true))
 
   test("orgs.members.check reads a 404 as an answer, not as a failure"):
     onApi(responding(404, "")): api =>
-      api.isMember(Org, Account).map(member => assertEquals(member, false))
+      api.members.isMember(Org, Account).map(member => assertEquals(member, false))
 
   test("a 404 from the membership probe is a Right(false) on the typed rail too"):
     onApi(responding(404, "")): api =>
-      api.attempt.isMember(Org, Account).map(result => assertEquals(result, Right(false)))
+      api.members.attempt.isMember(Org, Account).map(result => assertEquals(result, Right(false)))
 
   test("a 403 from the membership probe still fails, so an unreadable organisation is not a non-member"):
     onApi(responding(403, OrganizationStubs.UnauthorizedBody)): api =>
-      api.attempt.isMember(Org, Account).map:
+      api.members.attempt.isMember(Org, Account).map:
         case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 403)
         case other                                    => fail(s"expected an Api failure, got $other")
 
@@ -194,8 +194,8 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
     val publicMember = RecordingBackend(responding(204, ""))
 
     for
-      _ <- onApi(member)(api => api.isMember(Org, Account))
-      _ <- onApi(publicMember)(api => api.isPublicMember(Org, Account))
+      _ <- onApi(member)(api => api.members.isMember(Org, Account))
+      _ <- onApi(publicMember)(api => api.members.isPublicMember(Org, Account))
     yield
       assertEquals(pathOf(member), "https://forge.example/api/v1/orgs/forgejo/members/earl-warren")
       assertEquals(pathOf(publicMember), "https://forge.example/api/v1/orgs/forgejo/public_members/earl-warren")
@@ -208,9 +208,9 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
     val concealed  = RecordingBackend(responding(204, ""))
 
     for
-      _ <- onApi(removed)(api => api.removeMember(Org, Account))
-      _ <- onApi(publicised)(api => api.publicizeMember(Org, Account))
-      _ <- onApi(concealed)(api => api.concealMember(Org, Account))
+      _ <- onApi(removed)(api => api.members.removeMember(Org, Account))
+      _ <- onApi(publicised)(api => api.members.publicizeMember(Org, Account))
+      _ <- onApi(concealed)(api => api.members.concealMember(Org, Account))
     yield
       assertEquals(
         (methodOf(removed), pathOf(removed)),
@@ -229,13 +229,13 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
     val backend = RecordingBackend(responding(204, ""))
 
     onApi(backend): api =>
-      api.publicizeMember(Org, Account).map(_ => assertEquals(bodyOf(backend), NoBody))
+      api.members.publicizeMember(Org, Account).map(_ => assertEquals(bodyOf(backend), NoBody))
 
   test("no membership write is retried, because an organisation handle is not an identifier"):
     val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
-      api.attempt
+      api.members.attempt
         .publicizeMember(Org, Account)
         .map(_ => assertEquals(attemptsOn(backend), 1, "a membership write was repeated"))
 
@@ -246,8 +246,8 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
     val unblocked = RecordingBackend(responding(204, ""))
 
     for
-      _ <- onApi(blocked)(api => api.blockUser(Org, Account))
-      _ <- onApi(unblocked)(api => api.unblockUser(Org, Account))
+      _ <- onApi(blocked)(api => api.members.blockUser(Org, Account))
+      _ <- onApi(unblocked)(api => api.members.unblockUser(Org, Account))
     yield
       assertEquals(
         (methodOf(blocked), pathOf(blocked)),
@@ -262,7 +262,7 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
     val backend = RecordingBackend(responding(200, """[{"block_id":41,"created_at":"2026-02-09T10:11:12Z"}]"""))
 
     onApi(backend): api =>
-      api
+      api.members
         .blockedUsers(Org, window(2, 5))
         .map: page =>
           assertEquals(pathOf(backend), "https://forge.example/api/v1/orgs/forgejo/list_blocked")
@@ -301,7 +301,7 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
     val backend = RecordingBackend(responding(200, "[]"))
 
     onApi(backend): api =>
-      api
+      api.members
         .currentUserOrganizations(window(1, 10))
         .map: _ =>
           assertEquals(pathOf(backend), "https://forge.example/api/v1/user/orgs")
@@ -311,7 +311,7 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
     val backend = RecordingBackend(responding(200, """{"is_owner":false,"can_read":true}"""))
 
     onApi(backend): api =>
-      api
+      api.members
         .userPermissions(Account, Org)
         .map: permissions =>
           assertEquals(
@@ -323,7 +323,7 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
 
   test("an absent permission flag reads as 'may not' all the way through the pipeline"):
     onApi(responding(200, "{}")): api =>
-      api
+      api.members
         .userPermissions(Account, Org)
         .map(permissions => assertEquals(permissions, OrganizationPermissions(false, false, false, false, false)))
 
@@ -352,31 +352,31 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
   test("a 404 on the block listing reaches both rails identically"):
     onApi(responding(404, OrganizationStubs.NotFoundBody)): api =>
       for
-        raised <- api.blockedUsers(Org, PageParams.First).failed
-        typed  <- api.attempt.blockedUsers(Org, PageParams.First)
+        raised <- api.members.blockedUsers(Org, PageParams.First).failed
+        typed  <- api.members.attempt.blockedUsers(Org, PageParams.First)
       yield
-        assertEquals(operationOf(typed), OrganizationApi.BlockedUsersOperation)
+        assertEquals(operationOf(typed), OrganizationMemberApi.BlockedUsersOperation)
         assertRailsAgree(raised, typed)
 
   test("a 401 on the authenticated organisation listing reaches both rails identically"):
     onApi(responding(401, OrganizationStubs.UnauthorizedBody)): api =>
       for
-        raised <- api.currentUserOrganizations(PageParams.First).failed
-        typed  <- api.attempt.currentUserOrganizations(PageParams.First)
+        raised <- api.members.currentUserOrganizations(PageParams.First).failed
+        typed  <- api.members.attempt.currentUserOrganizations(PageParams.First)
       yield
-        assertEquals(operationOf(typed), OrganizationApi.CurrentUserOrganizationsOperation)
+        assertEquals(operationOf(typed), OrganizationMemberApi.CurrentUserOrganizationsOperation)
         assertRailsAgree(raised, typed)
 
   test("a 401 fails the convenience rail with a CodebergException carrying the Api failure"):
     onApi(responding(401, OrganizationStubs.UnauthorizedBody)): api =>
-      api.blockedUsers(Org, PageParams.First).failed.map:
+      api.members.blockedUsers(Org, PageParams.First).failed.map:
         case CodebergException(error) =>
-          assertEquals(summary(error), (OrganizationApi.BlockedUsersOperation, 401, Some("token is required")))
+          assertEquals(summary(error), (OrganizationMemberApi.BlockedUsersOperation, 401, Some("token is required")))
         case other                    => fail(s"expected a CodebergException, got $other")
 
   test("a bad element of the block listing reports its position all the way through the pipeline"):
     onApi(responding(200, """[{"block_id":1},{"block_id":0}]""")): api =>
-      api.attempt.blockedUsers(Org, PageParams.First).map:
+      api.members.attempt.blockedUsers(Org, PageParams.First).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$[1].block_id")
         case other                                             => fail(s"expected a decoding failure, got $other")
 

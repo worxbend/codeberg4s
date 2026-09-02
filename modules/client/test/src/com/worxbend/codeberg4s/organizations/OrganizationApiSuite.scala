@@ -85,8 +85,8 @@ final class OrganizationApiSuite extends FunSuite with ClientSuiteHarness:
     val publicMembers = RecordingBackend(responding(200, "[]"))
 
     for
-      _ <- onApi(members)(api => api.members(Org, PageParams.First))
-      _ <- onApi(publicMembers)(api => api.publicMembers(Org, PageParams.First))
+      _ <- onApi(members)(api => api.members.members(Org, PageParams.First))
+      _ <- onApi(publicMembers)(api => api.members.publicMembers(Org, PageParams.First))
     yield
       assertEquals(pathOf(members), "https://forge.example/api/v1/orgs/forgejo/members")
       assertEquals(pathOf(publicMembers), "https://forge.example/api/v1/orgs/forgejo/public_members")
@@ -116,7 +116,7 @@ final class OrganizationApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, "[]"))
 
     onApi(backend): api =>
-      api
+      api.members
         .userOrganizations(Account, window(3, 10))
         .map: _ =>
           assertEquals(pathOf(backend), "https://forge.example/api/v1/users/earl-warren/orgs")
@@ -131,7 +131,7 @@ final class OrganizationApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("orgs.members.list yields the User model wave 1 owns, not a second membership type"):
     onApi(responding(200, OrganizationApiSuite.MemberListBody)): api =>
-      api.members(Org, PageParams.First).map: page =>
+      api.members.members(Org, PageParams.First).map: page =>
         assertEquals(page.items.map(_.login.value), Vector("earl-warren"))
         assertEquals(page.items.map(_.id), Vector(73579L))
 
@@ -194,10 +194,10 @@ final class OrganizationApiSuite extends FunSuite with ClientSuiteHarness:
   test("the 401 an anonymous /users/{username}/orgs answers reaches both rails identically"):
     onApi(responding(401, OrganizationApiSuite.UnauthorizedBody)): api =>
       for
-        raised <- api.userOrganizations(Account, PageParams.First).failed
-        typed  <- api.attempt.userOrganizations(Account, PageParams.First)
+        raised <- api.members.userOrganizations(Account, PageParams.First).failed
+        typed  <- api.members.attempt.userOrganizations(Account, PageParams.First)
       yield
-        assertEquals(operationOf(typed), OrganizationApi.UserOrganizationsOperation)
+        assertEquals(operationOf(typed), OrganizationMemberApi.UserOrganizationsOperation)
         assertRailsAgree(raised, typed)
 
   test("a 404 on a single-organisation read reaches both rails identically"):
@@ -221,8 +221,8 @@ final class OrganizationApiSuite extends FunSuite with ClientSuiteHarness:
   test("a 403 on a member listing reaches both rails identically"):
     onApi(responding(403, OrganizationApiSuite.UnauthorizedBody)): api =>
       for
-        raised <- api.members(Org, PageParams.First).failed
-        typed  <- api.attempt.members(Org, PageParams.First)
+        raised <- api.members.members(Org, PageParams.First).failed
+        typed  <- api.members.attempt.members(Org, PageParams.First)
       yield assertRailsAgree(raised, typed)
 
   test("a 400 is an Api failure too — Forgejo uses it for validation alongside 422"):

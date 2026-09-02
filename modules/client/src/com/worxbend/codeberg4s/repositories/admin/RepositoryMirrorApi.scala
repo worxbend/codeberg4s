@@ -12,14 +12,14 @@ import scala.concurrent.Future
 
 /** Keeping a repository in step with a copy of it elsewhere: pull mirrors, push mirrors, and fork sync.
   *
-  * Reached as `client.repos.admin.mirrors`. It is a group of its own rather than more methods on [[RepositoryAdminApi]] because that
-  * class had grown past what a reader can hold in their head; the endpoints, the models and the retry decisions are
-  * unchanged by the move.
+  * Reached as `client.repos.admin.mirrors`. It is a group of its own rather than more methods on [[RepositoryAdminApi]]
+  * because that class had grown past what a reader can hold in their head; the endpoints, the models and the retry
+  * decisions are unchanged by the move.
   *
   * Both error rails are here (ADR-0005): the methods on this class fail the `Future` with
-  * [[com.worxbend.codeberg4s.CodebergException]], and the same operations on [[RepositoryMirrorApi.attempt]] never fail and return an
-  * `Either` instead. The typed rail is derived from this one by [[com.worxbend.codeberg4s.core.Exec.attempt]], so the
-  * two cannot disagree about what an operation does.
+  * [[com.worxbend.codeberg4s.CodebergException]], and the same operations on [[RepositoryMirrorApi.attempt]] never fail
+  * and return an `Either` instead. The typed rail is derived from this one by
+  * [[com.worxbend.codeberg4s.core.Exec.attempt]], so the two cannot disagree about what an operation does.
   *
   * ==Three mechanisms, not one==
   *
@@ -237,10 +237,12 @@ object RepositoryMirrorApi:
   /** The stable operation id of [[RepositoryMirrorApi.syncForkBranch]]. */
   val SyncForkBranchOperation: String = "repos.admin.syncFork.branch"
 
-  /** The typed rail of [[RepositoryMirrorApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a value.
+  /** The typed rail of [[RepositoryMirrorApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a
+    * value.
     *
-    * Obtained as `client.repos.admin.mirrors.attempt`. Each method is the convenience-rail method with its failure channel materialised
-    * and nothing else, so an operation exists on exactly one of the rails only if it is missing from both.
+    * Obtained as `client.repos.admin.mirrors.attempt`. Each method is the convenience-rail method with its failure
+    * channel materialised and nothing else, so an operation exists on exactly one of the rails only if it is missing
+    * from both.
     */
   final class Attempt private[codeberg4s] (rail: RepositoryMirrorApi)(using exec: Exec[Future]):
 

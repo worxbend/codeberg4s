@@ -1,7 +1,7 @@
 # API groups
 
 For anyone looking for where an endpoint lives. Nine accessors hang off
-`CodebergClient`; five of them nest further groups, for **43 API classes** in
+`CodebergClient`; five of them nest further groups, for **44 API classes** in
 total.
 
 Every class listed here has the same two-rail shape: the methods on the class
@@ -24,7 +24,7 @@ guessable from the HTTP method, so read it before assuming.
 | `client.users` | `com.worxbend.codeberg4s.users.UserApi` | 8 | 8 |
 | `client.issues` | `com.worxbend.codeberg4s.issues.IssueApi` | 23 | 7 |
 | `client.pulls` | `com.worxbend.codeberg4s.pulls.PullRequestApi` | 13 | 1 |
-| `client.organizations` | `com.worxbend.codeberg4s.organizations.OrganizationApi` | 29 | 5 |
+| `client.organizations` | `com.worxbend.codeberg4s.organizations.OrganizationApi` | 16 | 6 |
 | `client.notifications` | `com.worxbend.codeberg4s.notifications.NotificationApi` | 7 | — |
 | `client.misc` | `com.worxbend.codeberg4s.miscellaneous.MiscellaneousApi` | 17 | — |
 
@@ -185,13 +185,10 @@ because Forgejo answers `200` with no body.
 
 ## `client.organizations` — organisations and teams
 
-**29 operations:** `get`, `list`, `create`, `edit`, `delete`, `rename`,
+**16 operations:** `get`, `list`, `create`, `edit`, `delete`, `rename`,
 `updateAvatar`, `deleteAvatar`, `repositories`, `createRepository`,
-`createRepositoryDeprecated`, `members`, `publicMembers`, `isMember`,
-`isPublicMember`, `removeMember`, `publicizeMember`, `concealMember`,
-`blockedUsers`, `blockUser`, `unblockUser`, `teams`, `getTeam`, `teamMembers`,
-`teamRepositories`, `activities`, `userOrganizations`,
-`currentUserOrganizations`, `userPermissions`
+`createRepositoryDeprecated`, `teams`, `getTeam`, `teamMembers`,
+`teamRepositories`, `activities`
 
 Teams are rooted at `/teams/{id}` rather than under the organisation, which is
 why `getTeam` takes only an id.
@@ -202,6 +199,7 @@ why `getTeam` takes only an id.
 | --- | --- | ---: | --- |
 | `client.organizations.hooks` | `organizations.OrganizationHookApi` | 5 | the organisation's webhooks |
 | `client.organizations.labels` | `organizations.OrganizationLabelApi` | 5 | the shared label set its repositories may draw from |
+| `client.organizations.members` | `organizations.OrganizationMemberApi` | 13 | who belongs, who says so publicly, who is blocked, and which organisations a given account is in |
 | `client.organizations.teamAdmin` | `organizations.OrganizationTeamApi` | 11 | creating and changing teams, and deciding who and what they reach |
 | `client.organizations.quota` | `organizations.OrganizationQuotaApi` | 5 | the organisation's storage limits, usage, and what is using it |
 | `client.organizations.actions` | `organizations.actions.OrganizationActionApi` | 14 | the runners the organisation owns, and the secrets and variables its repositories inherit |

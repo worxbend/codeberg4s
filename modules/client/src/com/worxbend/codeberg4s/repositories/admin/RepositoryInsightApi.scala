@@ -17,14 +17,14 @@ import java.time.LocalDate
 
 /** What a repository can tell you about itself: its activity, its languages, its pins, its topics and its tracked time.
   *
-  * Reached as `client.repos.admin.insights`. It is a group of its own rather than more methods on [[RepositoryAdminApi]] because that
-  * class had grown past what a reader can hold in their head; the endpoints, the models and the retry decisions are
-  * unchanged by the move.
+  * Reached as `client.repos.admin.insights`. It is a group of its own rather than more methods on
+  * [[RepositoryAdminApi]] because that class had grown past what a reader can hold in their head; the endpoints, the
+  * models and the retry decisions are unchanged by the move.
   *
   * Both error rails are here (ADR-0005): the methods on this class fail the `Future` with
-  * [[com.worxbend.codeberg4s.CodebergException]], and the same operations on [[RepositoryInsightApi.attempt]] never fail and return an
-  * `Either` instead. The typed rail is derived from this one by [[com.worxbend.codeberg4s.core.Exec.attempt]], so the
-  * two cannot disagree about what an operation does.
+  * [[com.worxbend.codeberg4s.CodebergException]], and the same operations on [[RepositoryInsightApi.attempt]] never
+  * fail and return an `Either` instead. The typed rail is derived from this one by
+  * [[com.worxbend.codeberg4s.core.Exec.attempt]], so the two cannot disagree about what an operation does.
   *
   * ==Reads only==
   *
@@ -215,10 +215,12 @@ object RepositoryInsightApi:
   /** The stable operation id of [[RepositoryInsightApi.searchTopics]]. */
   val SearchTopicsOperation: String = "repos.admin.topics.search"
 
-  /** The typed rail of [[RepositoryInsightApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a value.
+  /** The typed rail of [[RepositoryInsightApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a
+    * value.
     *
-    * Obtained as `client.repos.admin.insights.attempt`. Each method is the convenience-rail method with its failure channel materialised
-    * and nothing else, so an operation exists on exactly one of the rails only if it is missing from both.
+    * Obtained as `client.repos.admin.insights.attempt`. Each method is the convenience-rail method with its failure
+    * channel materialised and nothing else, so an operation exists on exactly one of the rails only if it is missing
+    * from both.
     */
   final class Attempt private[codeberg4s] (rail: RepositoryInsightApi)(using exec: Exec[Future]):
 

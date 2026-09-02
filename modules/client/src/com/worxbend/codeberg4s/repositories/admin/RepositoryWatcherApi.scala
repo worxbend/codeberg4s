@@ -11,20 +11,20 @@ import scala.concurrent.Future
 
 /** The people around a repository: who is watching it, who has starred it, and who may be assigned work on it.
   *
-  * Reached as `client.repos.admin.watchers`. It is a group of its own rather than more methods on [[RepositoryAdminApi]] because that
-  * class had grown past what a reader can hold in their head; the endpoints, the models and the retry decisions are
-  * unchanged by the move.
+  * Reached as `client.repos.admin.watchers`. It is a group of its own rather than more methods on
+  * [[RepositoryAdminApi]] because that class had grown past what a reader can hold in their head; the endpoints, the
+  * models and the retry decisions are unchanged by the move.
   *
   * Both error rails are here (ADR-0005): the methods on this class fail the `Future` with
-  * [[com.worxbend.codeberg4s.CodebergException]], and the same operations on [[RepositoryWatcherApi.attempt]] never fail and return an
-  * `Either` instead. The typed rail is derived from this one by [[com.worxbend.codeberg4s.core.Exec.attempt]], so the
-  * two cannot disagree about what an operation does.
+  * [[com.worxbend.codeberg4s.CodebergException]], and the same operations on [[RepositoryWatcherApi.attempt]] never
+  * fail and return an `Either` instead. The typed rail is derived from this one by
+  * [[com.worxbend.codeberg4s.core.Exec.attempt]], so the two cannot disagree about what an operation does.
   *
   * ==Two kinds of question==
   *
   * [[subscription]], [[watch]] and [[unwatch]] are about the '''authenticated account''' — what it has chosen to be
-  * notified about. [[assignees]], [[reviewers]], [[stargazers]] and [[subscribers]] are about '''everybody else''',
-  * and each returns [[com.worxbend.codeberg4s.users.User]] values. The two sit together because they read the same
+  * notified about. [[assignees]], [[reviewers]], [[stargazers]] and [[subscribers]] are about '''everybody else''', and
+  * each returns [[com.worxbend.codeberg4s.users.User]] values. The two sit together because they read the same
   * relationships from opposite ends.
   *
   * ==Failures==
@@ -175,10 +175,12 @@ object RepositoryWatcherApi:
   /** The stable operation id of [[RepositoryWatcherApi.subscribers]]. */
   val ListSubscribersOperation: String = "repos.admin.subscribers.list"
 
-  /** The typed rail of [[RepositoryWatcherApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a value.
+  /** The typed rail of [[RepositoryWatcherApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a
+    * value.
     *
-    * Obtained as `client.repos.admin.watchers.attempt`. Each method is the convenience-rail method with its failure channel materialised
-    * and nothing else, so an operation exists on exactly one of the rails only if it is missing from both.
+    * Obtained as `client.repos.admin.watchers.attempt`. Each method is the convenience-rail method with its failure
+    * channel materialised and nothing else, so an operation exists on exactly one of the rails only if it is missing
+    * from both.
     */
   final class Attempt private[codeberg4s] (rail: RepositoryWatcherApi)(using exec: Exec[Future]):
 

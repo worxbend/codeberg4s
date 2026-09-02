@@ -112,6 +112,7 @@ object AttemptParitySuite:
     Pair(classOf[organizations.OrganizationApi], classOf[organizations.OrganizationApi.Attempt]),
     Pair(classOf[organizations.OrganizationHookApi], classOf[organizations.OrganizationHookApi.Attempt]),
     Pair(classOf[organizations.OrganizationLabelApi], classOf[organizations.OrganizationLabelApi.Attempt]),
+    Pair(classOf[organizations.OrganizationMemberApi], classOf[organizations.OrganizationMemberApi.Attempt]),
     Pair(classOf[organizations.OrganizationQuotaApi], classOf[organizations.OrganizationQuotaApi.Attempt]),
     Pair(classOf[organizations.OrganizationTeamApi], classOf[organizations.OrganizationTeamApi.Attempt]),
     Pair(

@@ -25,6 +25,18 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **`client.organizations` membership moved to `client.organizations.members`.**
+  Thirteen operations — `members`, `publicMembers`, `isMember`,
+  `isPublicMember`, `removeMember`, `publicizeMember`, `concealMember`,
+  `blockedUsers`, `blockUser`, `unblockUser`, `userOrganizations`,
+  `currentUserOrganizations`, `userPermissions` — are now on
+  `OrganizationMemberApi`, reached as `client.organizations.members`, with their
+  names, arguments, endpoints, operation ids and retry decisions unchanged.
+  `client.organizations` keeps the organisation resource itself, its
+  repositories, its teams and its activity feed. The new group answers one
+  question from both ends: who is in this organisation, and which organisations
+  is this account in.
+
 - **`client.repos.admin` split into five groups.** It held 44 operations, more
   than any other group in the library, covering everything from creating a
   repository to reading its languages. Thirty of them moved to four nested
