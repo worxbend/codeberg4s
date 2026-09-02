@@ -25,6 +25,25 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **The round-trippable enums share one wire vocabulary.** Seven enums are both
+  decoded from a JSON field and written back into a request — `TeamPermission`,
+  `UserVisibility`, `ContentKind`, `CommitFileStatus`, `CollaboratorPermission`,
+  `GitObjectKind` and `CommitStatusState`. Each of them used to spell its wire
+  words out twice: once in a `parse` matching words to cases, once in a renderer
+  matching cases back to words. Nothing made the compiler check that the two
+  lists agreed, so an added case could render a word `parse` did not accept.
+  They now extend a new `com.worxbend.codeberg4s.WireVocabulary`, which carries
+  the word on the case itself (`case Directory extends ContentKind("dir")`) and
+  supplies the shared `WireVocabulary.parse` lookup. Behaviour is unchanged:
+  parsing still trims, still folds case with `Locale.ROOT`, and still answers
+  `None` for a word this library does not know.
+
+  **Breaking:** `CommitStatusState.wireValue` is now `CommitStatusState.wireName`,
+  which is what the other six already called it. Rename the call; nothing else
+  about the value changes. The enums this library only ever decodes are
+  deliberately left alone — they have no second spelling to drift from, and a
+  renderer for them would mean inventing words the API never asks for.
+
 - **Every sub-resource listing is now named after its plural noun.** A previous
   release applied this rule to `RepositoryApi` only, which left the library
   saying the same thing two ways — `client.repositories.commits(...)` next to
