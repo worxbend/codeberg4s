@@ -26,9 +26,9 @@ import com.worxbend.codeberg4s.{SearchKeyword, ValidationError}
   * ==The four ids are raw `Long`s==
   *
   * [[ownerId]], [[priorityOwnerId]], [[teamId]] and [[starredById]] are instance-wide numeric ids of an account or a
-  * team, and this library owns no type for them: [[com.worxbend.codeberg4s.users.Username]] is a handle, not an id.
-  * A wrong id is not an error — the endpoint answers an empty page — so there is nothing a smart constructor could
-  * check beyond the type.
+  * team, and this library owns no type for them: [[com.worxbend.codeberg4s.users.Username]] is a handle, not an id. A
+  * wrong id is not an error — the endpoint answers an empty page — so there is nothing a smart constructor could check
+  * beyond the type.
   *
   * @param text
   *   the `q` keyword, matched against repository names and, with [[includeDescription]], descriptions too

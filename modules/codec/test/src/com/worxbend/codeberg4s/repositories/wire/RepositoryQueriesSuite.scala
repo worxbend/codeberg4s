@@ -41,7 +41,8 @@ final class RepositoryQueriesSuite extends FunSuite:
           .withPrivate(false)
           .restrictedToPrivate(false)
           .restrictedToTemplates(true)
-          .restrictedToArchived(false)),
+          .restrictedToArchived(false)
+      ),
       List("private" -> "false", "is_private" -> "false", "template" -> "true", "archived" -> "false"),
     )
 
@@ -57,7 +58,8 @@ final class RepositoryQueriesSuite extends FunSuite:
         RepositorySearchQuery.Empty
           .onlyOf(RepositorySearchMode.Collaborative)
           .sortedBy(RepositorySearchSort.GitSize)
-          .inOrder(SortDirection.Descending)),
+          .inOrder(SortDirection.Descending)
+      ),
       List("mode" -> "collaborative", "sort" -> "git_size", "order" -> "desc"),
     )
 

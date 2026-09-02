@@ -6,8 +6,8 @@ import munit.FunSuite
 
 /** [[RepositorySearchQuery]]'s smart constructor and its wither methods.
   *
-  * The wire spellings are not asserted here — they live in `modules/codec` and are pinned by
-  * `RepositoryQueriesSuite`. What this suite pins is what a caller can and cannot build.
+  * The wire spellings are not asserted here — they live in `modules/codec` and are pinned by `RepositoryQueriesSuite`.
+  * What this suite pins is what a caller can and cannot build.
   */
 final class RepositorySearchQuerySuite extends FunSuite:
 
@@ -40,8 +40,10 @@ final class RepositorySearchQuerySuite extends FunSuite:
   test("the ids land on the fields the endpoint means them for"):
     val query = RepositorySearchQuery.Empty.ownedBy(1L).prioritisingOwner(2L).inTeam(3L).starredBy(4L)
 
-    assertEquals((query.ownerId, query.priorityOwnerId, query.teamId, query.starredById),
-                 (Some(1L), Some(2L), Some(3L), Some(4L)))
+    assertEquals(
+      (query.ownerId, query.priorityOwnerId, query.teamId, query.starredById),
+      (Some(1L), Some(2L), Some(3L), Some(4L))
+    )
 
   test("ordering is two decisions, an attribute and a direction"):
     val query = RepositorySearchQuery.Empty.sortedBy(RepositorySearchSort.Stars).inOrder(SortDirection.Descending)

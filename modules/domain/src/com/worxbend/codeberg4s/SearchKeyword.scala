@@ -3,8 +3,8 @@ package com.worxbend.codeberg4s
 /** How the free-text `q` parameter of a search endpoint is checked, once, for every search this library offers.
   *
   * Forgejo's search endpoints all take the keyword under the same name and give it the same non-treatment: it is
-  * matched against whatever that endpoint considers searchable and never validated. Two things are still worth
-  * catching before a request is built.
+  * matched against whatever that endpoint considers searchable and never validated. Two things are still worth catching
+  * before a request is built.
   *
   * '''Surrounding whitespace is dropped.''' A keyword is routinely pasted out of a browser or read off a command line,
   * and `" forgejo "` is not a search anybody meant to run — Forgejo would match the spaces.

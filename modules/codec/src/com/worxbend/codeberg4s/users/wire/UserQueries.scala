@@ -19,8 +19,7 @@ private[codeberg4s] object UserQueries:
   /** The parameters of `GET /users/search`, in the order the spec declares them, then the paging window.
     *
     * A blank keyword never reaches here as an empty `q`: it is dropped when the query is built, because omitting the
-    * parameter and sending it empty ask the same question — see
-    * [[com.worxbend.codeberg4s.users.UserSearchQuery.of]].
+    * parameter and sending it empty ask the same question — see [[com.worxbend.codeberg4s.users.UserSearchQuery.of]].
     */
   def search(query: UserSearchQuery, params: PageParams): List[(String, String)] =
     List(

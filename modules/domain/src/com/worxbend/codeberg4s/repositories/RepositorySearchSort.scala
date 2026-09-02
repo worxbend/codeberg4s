@@ -7,8 +7,8 @@ package com.worxbend.codeberg4s.repositories
   *
   * '''There is no case for the default.''' The parameter is optional and its documented default is `alpha`, but
   * omitting it and sending `alpha` are still two different requests to make: a caller who names an ordering pins it
-  * against a future change of the instance's default, and a caller who omits it says the order does not matter. That
-  * is why [[RepositorySearchQuery.sort]] is an `Option` rather than this enum carrying a `Default` case.
+  * against a future change of the instance's default, and a caller who omits it says the order does not matter. That is
+  * why [[RepositorySearchQuery.sort]] is an `Option` rather than this enum carrying a `Default` case.
   *
   * The wire spellings are lowercase and mostly unpunctuated, with two exceptions — `git_size` and `lfs_size` — which is
   * reason enough for a caller never to write them by hand.

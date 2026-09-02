@@ -15,8 +15,8 @@ import com.worxbend.codeberg4s.wire.SearchEnvelopeDto
   * from a body to a value, and allocating a new one per request would be waste with no upside.
   *
   * Two envelope shapes appear in this one group, which is why they are collected here rather than inlined: most
-  * listings are a bare JSON array, but `GET /users/search` wraps its results in `{"ok", "data"}` and so reports
-  * element failures at `$.data[n]`. `docs/HAZARDS.md` §3 records that exception.
+  * listings are a bare JSON array, but `GET /users/search` wraps its results in `{"ok", "data"}` and so reports element
+  * failures at `$.data[n]`. `docs/HAZARDS.md` §3 records that exception.
   */
 private[users] object UserDecoders:
 

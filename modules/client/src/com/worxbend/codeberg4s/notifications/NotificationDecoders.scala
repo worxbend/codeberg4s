@@ -10,8 +10,8 @@ import com.worxbend.codeberg4s.notifications.wire.{NotificationCountDto, Notific
   * The instances are stateless and immutable, so they are built as `val`s rather than per call: a decoder is a function
   * from a body to a value, and allocating a new one per request would be waste with no upside.
   *
-  * These three shapes are the spec's word rather than a capture's: see [[NotificationApi]] for why this one group
-  * could not be built against a real response body.
+  * These three shapes are the spec's word rather than a capture's: see [[NotificationApi]] for why this one group could
+  * not be built against a real response body.
   */
 private[notifications] object NotificationDecoders:
 

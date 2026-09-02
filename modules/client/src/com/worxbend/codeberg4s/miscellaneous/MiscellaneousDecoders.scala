@@ -75,8 +75,9 @@ private[miscellaneous] object MiscellaneousDecoders:
   /** A bare array of license summaries — the catalogue, without the license texts. */
   val licenseTemplates: Decode[Vector[LicenseTemplateSummary]] =
     WireDecode.vector(Json.decoder[Vector[LicenseTemplateSummaryDto]])
+
   /** One license template, with its full text. */
-  val licenseTemplate: Decode[LicenseTemplate]                 =
+  val licenseTemplate: Decode[LicenseTemplate] =
     WireDecode.single(Json.decoder[LicenseTemplateDto])(_.toDomain)
 
   /** The NodeInfo document the instance publishes to the fediverse. */
