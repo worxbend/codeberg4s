@@ -112,8 +112,18 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
 
     onApi(backend): api =>
       api.downloadArtifact(Handle, Name, Artifact).map: response =>
+        assertEquals(methodOf(backend), "GET")
         assertEquals(pathOf(backend), s"$Endpoint/artifacts/881/zip")
         assertEquals(response.body.bytes.toList, archive.toList)
+
+  test("an artifact download hands the response headers back, so content-disposition is readable"):
+    // The forge names the file, not this library: without the headers on the
+    // response there is no way for a caller to learn that name.
+    val disposition = Header("Content-Disposition", "attachment; filename=build-logs.zip")
+
+    onApi(responding(200, "PK", List(disposition))): api =>
+      api.downloadArtifact(Handle, Name, Artifact).map: response =>
+        assertEquals(response.header("content-disposition"), Some("attachment; filename=build-logs.zip"))
 
   // --- runs -----------------------------------------------------------------
 
@@ -201,6 +211,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
 
     onApi(backend): api =>
       api.downloadRunLogs(Handle, Name, Run).map: response =>
+        assertEquals(methodOf(backend), "GET")
         assertEquals(pathOf(backend), s"$Endpoint/runs/4711/logs")
         assertEquals(response.body.text, "PK")
 
@@ -512,6 +523,24 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
       api.attempt.run(Handle, Name, Run).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$.id")
         case other                                             => fail(s"expected a decoding failure, got $other")
+
+  test("both download rails agree on a 404, and the artifact download names its own operation"):
+    onApi(responding(404, RepositoryActionApiSuite.NotFoundBody)): api =>
+      for
+        raised <- api.downloadArtifact(Handle, Name, Artifact).failed
+        typed  <- api.attempt.downloadArtifact(Handle, Name, Artifact)
+      yield
+        assertRailsAgree(raised, typed)
+        assertEquals(operationOf(typed), RepositoryActionApi.DownloadArtifactOperation)
+
+  test("both download rails agree on a 404, and the run-log download names its own operation"):
+    onApi(responding(404, RepositoryActionApiSuite.NotFoundBody)): api =>
+      for
+        raised <- api.downloadRunLogs(Handle, Name, Run).failed
+        typed  <- api.attempt.downloadRunLogs(Handle, Name, Run)
+      yield
+        assertRailsAgree(raised, typed)
+        assertEquals(operationOf(typed), RepositoryActionApi.DownloadRunLogsOperation)
 
   test("a failure carries the operation id of the endpoint it came from, so an alert can name it"):
     onApi(responding(403, RepositoryActionApiSuite.ForbiddenBody)): api =>
