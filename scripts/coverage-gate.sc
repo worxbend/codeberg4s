@@ -38,8 +38,11 @@ import java.nio.file.{Files, Path, Paths}
 /** Coverage floor for one module, in percent. */
 final case class Floor(statement: Double, branch: Double)
 
-/** PLAN.md §6.1: >= 90% statement / >= 85% branch on domain + core + codec; transport is measured but gated at 80%
-  * because only stub-reachable paths are exercised without a live server.
+/** PLAN.md §6.1: >= 90% statement / >= 85% branch on domain + core + codec.
+  *
+  * transport and client are measured too — verify.sh passes all five modules — but are gated at 80% because neither can
+  * reach every path without a live server: transport's real socket failures and client's download rail are only ever
+  * exercised against stubs. A module with no entry in [[FloorByModule]] falls back to this floor.
   */
 val DefaultFloor: Floor = Floor(statement = 90.0, branch = 85.0)
 

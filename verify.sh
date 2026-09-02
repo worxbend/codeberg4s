@@ -42,9 +42,28 @@ readonly UNIT_MODULES=(
   modules.client.test
 )
 
-# Coverage-measured modules. transport has a lower floor because only
-# stub-reachable paths are exercised without a live server (PLAN.md §6.1).
-readonly COVERED_MODULES=(modules.domain modules.core modules.codec)
+# Coverage-measured modules. modules.it is absent on purpose: it needs Docker
+# or the live network, so it is never part of any verify.sh mode.
+#
+# All five library modules are measured. domain, core and codec are gated at
+# the PLAN.md §6.1 floor of 90% statement / 85% branch; transport and client
+# are gated at 80/80 because neither can reach every path without a live
+# server — transport's real socket errors and client's download rail are only
+# exercised against stubs. The floors themselves live in
+# scripts/coverage-gate.sc.
+#
+# MEASURED, NOT RECALLED: `./verify.sh --with-slow` on 2026-09-02 read
+# transport at 153/174 statements (87.93% statement, 93.94% branch) and client
+# at 4196/4766 (88.04% statement, 100.00% branch). Both clear 80/80 as they
+# stand, so no floor had to be lowered to admit them, and the worst CRAP over
+# the two new modules was 11.0 against a limit of 30.
+readonly COVERED_MODULES=(
+  modules.domain
+  modules.core
+  modules.codec
+  modules.transport
+  modules.client
+)
 
 # Recorded duplication, not a tolerated threshold.
 #
