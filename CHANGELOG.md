@@ -25,6 +25,27 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **`client.repos.admin` split into five groups.** It held 44 operations, more
+  than any other group in the library, covering everything from creating a
+  repository to reading its languages. Thirty of them moved to four nested
+  groups, reached from the same place and with their names, arguments, endpoints
+  and retry decisions unchanged:
+
+  | Now on | Operations |
+  | --- | --- |
+  | `client.repos.admin.mirrors` | `syncMirror`, `pushMirrors`, `pushMirror`, `addPushMirror`, `deletePushMirror`, `syncPushMirrors`, `forkSyncInfo`, `branchForkSyncInfo`, `syncFork`, `syncForkBranch` |
+  | `client.repos.admin.contents` | `contents`, `createFile`, `updateFile`, `deleteFile`, `changeFiles` |
+  | `client.repos.admin.watchers` | `subscription`, `watch`, `unwatch`, `assignees`, `reviewers`, `stargazers`, `subscribers` |
+  | `client.repos.admin.insights` | `activityFeed`, `languages`, `newPinAllowed`, `pinnedIssues`, `signingKey`, `trackedTimes`, `trackedTimesFor`, `searchTopics` |
+
+  `client.repos.admin` keeps the repository's own lifecycle: `create`, `byId`,
+  `edit`, `delete`, `migrate`, the three transfer calls, `convert`, the three
+  branch calls and the two avatar calls. The `.attempt` rail moved with each
+  group — `client.repos.admin.attempt.updateFile` is now
+  `client.repos.admin.contents.attempt.updateFile` — and every operation id is
+  unchanged, so alerts keyed on `repos.admin.contents.update` and the rest keep
+  firing on exactly what they fired on before.
+
 - **The pull-request reviews moved to a group of their own.** The thirteen
   review operations that used to sit on `client.pulls` are now on
   `client.pulls.reviews`, a `PullRequestReviewApi` reached from the same place

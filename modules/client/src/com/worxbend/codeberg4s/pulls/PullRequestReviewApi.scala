@@ -28,21 +28,21 @@ import scala.concurrent.Future
   *
   * ==Failures==
   *
-  * Every operation here can produce the same four remote failures, so they are stated once rather than repeated on
-  * each method; the per-method Scaladoc adds only what is specific to that endpoint.
+  * Every operation here can produce the same four remote failures, so they are stated once rather than repeated on each
+  * method; the per-method Scaladoc adds only what is specific to that endpoint.
   *
   *   - [[com.worxbend.codeberg4s.CodebergError.Api]] with status `404` when the repository, the pull request or the
-  *     review does not exist '''or''' is private to credentials the client does not have — Forgejo does not
-  *     distinguish the two, on purpose — `401` when a token was required and none was sent, and `403` when the token
-  *     lacks the scope. `422` '''and''' `400` both mean the request was rejected as invalid.
+  *     review does not exist '''or''' is private to credentials the client does not have — Forgejo does not distinguish
+  *     the two, on purpose — `401` when a token was required and none was sent, and `403` when the token lacks the
+  *     scope. `422` '''and''' `400` both mean the request was rejected as invalid.
   *   - [[com.worxbend.codeberg4s.CodebergError.Transport]] when nothing reached the instance.
   *   - [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] when a `2xx` payload did not match the model; `path`
   *     names the offending field.
   *   - [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] when a retryable failure outlived the policy.
   *
-  * [[com.worxbend.codeberg4s.CodebergError.Validation]] is '''not''' produced by any operation here: every
-  * argument is an already-validated type, so a value that would forge a path is rejected by its own smart constructor
-  * before a client is ever involved.
+  * [[com.worxbend.codeberg4s.CodebergError.Validation]] is '''not''' produced by any operation here: every argument is
+  * an already-validated type, so a value that would forge a path is rejected by its own smart constructor before a
+  * client is ever involved.
   *
   * ==Retries==
   *
@@ -59,9 +59,9 @@ import scala.concurrent.Future
   * ==Evidence==
   *
   * Only the review listing is checked against a golden capture. `golden/MANIFEST.md` holds no review-comment payload —
-  * every review the anonymous harvest could reach carried `comments_count: 0` — and none of the writes can be
-  * exercised without credentials, so those models are derived from `spec/swagger.v1.json` and say so on their own
-  * types. Should a capture ever contradict one, the capture wins.
+  * every review the anonymous harvest could reach carried `comments_count: 0` — and none of the writes can be exercised
+  * without credentials, so those models are derived from `spec/swagger.v1.json` and say so on their own types. Should a
+  * capture ever contradict one, the capture wins.
   */
 
 final class PullRequestReviewApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using exec: Exec[Future]):
@@ -75,9 +75,9 @@ final class PullRequestReviewApi private[codeberg4s] (pipeline: ApiPipeline[Futu
     * [[ReviewState.RequestReview]] and no commit — two of the three rows of `golden/pull/reviews-list.json` are of that
     * kind — so a caller counting approvals filters on [[Review.state]] rather than counting rows.
     *
-    * '''Paging is weaker here than on [[PullRequestApi.list]], and a caller has to know it.''' `golden/MANIFEST.md` records that this
-    * endpoint sends `X-Total-Count` but '''no''' `Link` header. `page` and `limit` are still sent, because the spec
-    * declares them and they cost nothing, but two things follow:
+    * '''Paging is weaker here than on [[PullRequestApi.list]], and a caller has to know it.''' `golden/MANIFEST.md`
+    * records that this endpoint sends `X-Total-Count` but '''no''' `Link` header. `page` and `limit` are still sent,
+    * because the spec declares them and they cost nothing, but two things follow:
     *
     *   - the returned page always reports itself as the last one, since `nextPage` is read from `rel="next"` and there
     *     is no `Link` header to read it from;
@@ -122,8 +122,10 @@ final class PullRequestReviewApi private[codeberg4s] (pipeline: ApiPipeline[Futu
       number: PullRequestNumber,
       request: ReviewRequest,
   ): Future[Vector[Review]] =
-    pipeline.call(PullRequestReviewApi.requestReviewsRequest(owner, name, number, request), RetryEligibility.Never)(using
-      PullRequestDecoders.reviews)
+    pipeline.call(
+      PullRequestReviewApi.requestReviewsRequest(owner, name, number, request),
+      RetryEligibility.Never
+    )(using PullRequestDecoders.reviews)
 
   /** Withdraws review requests — `DELETE /repos/{owner}/{repo}/pulls/{index}/requested_reviewers`.
     *
@@ -132,8 +134,7 @@ final class PullRequestReviewApi private[codeberg4s] (pipeline: ApiPipeline[Futu
     * [[ReviewRequest.Empty]] withdraws nothing and is answered `422`, not "all of them".
     *
     * '''This does not delete reviews.''' A request that has already been answered is a submitted [[Review]], and
-    * removing the request leaves that review in place. Getting rid of a review is [[dismiss]] or
-    * [[delete]].
+    * removing the request leaves that review in place. Getting rid of a review is [[dismiss]] or [[delete]].
     *
     * '''Retried''' under [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]]. The body names exactly who is
     * to be removed, so the end state is the same after one attempt or five, and nothing is created. The residual risk
@@ -189,8 +190,8 @@ final class PullRequestReviewApi private[codeberg4s] (pipeline: ApiPipeline[Futu
 
   /** Reads one review — `GET /repos/{owner}/{repo}/pulls/{index}/reviews/{id}`.
     *
-    * The same [[Review]] model [[list]] returns, addressed by its instance-wide [[ReviewId]] rather than by a
-    * position on the listing. Worth using after [[create]] or [[submit]] to read back what was recorded.
+    * The same [[Review]] model [[list]] returns, addressed by its instance-wide [[ReviewId]] rather than by a position
+    * on the listing. Worth using after [[create]] or [[submit]] to read back what was recorded.
     *
     * '''Failures.''' The group contract above. `404` covers "no such review", "that review belongs to a different pull
     * request", and "no such pull request"; Forgejo does not distinguish them.
@@ -201,14 +202,15 @@ final class PullRequestReviewApi private[codeberg4s] (pipeline: ApiPipeline[Futu
       number: PullRequestNumber,
       review: ReviewId,
   ): Future[Review] =
-    pipeline.call(PullRequestReviewApi.getReviewRequest(owner, name, number, review), RetryEligibility.IdempotentOnly)(using
-      PullRequestDecoders.review)
+    pipeline.call(
+      PullRequestReviewApi.getReviewRequest(owner, name, number, review),
+      RetryEligibility.IdempotentOnly
+    )(using PullRequestDecoders.review)
 
   /** Submits a pending review — `POST /repos/{owner}/{repo}/pulls/{index}/reviews/{id}`.
     *
-    * Finishes the draft a reviewer built up with [[create]] and [[createComment]], turning it into a
-    * verdict everyone can see. [[SubmitReview]] makes the event mandatory, because a submission that says nothing is a
-    * `422`.
+    * Finishes the draft a reviewer built up with [[create]] and [[createComment]], turning it into a verdict everyone
+    * can see. [[SubmitReview]] makes the event mandatory, because a submission that says nothing is a `422`.
     *
     * '''Never retried, and this is a create in everything but name.''' A pending review is consumed by being submitted,
     * so a repeat after a lost response finds nothing to submit and answers `422` — which a caller would read as the
@@ -236,8 +238,8 @@ final class PullRequestReviewApi private[codeberg4s] (pipeline: ApiPipeline[Futu
   /** Deletes a review — `DELETE /repos/{owner}/{repo}/pulls/{index}/reviews/{id}`.
     *
     * '''Irreversible, and different from dismissing.''' [[dismiss]] leaves the review on the pull request with
-    * [[Review.isDismissed]] set, so the reasoning stays readable and [[undismiss]] can put it back; this removes
-    * the row and its inline comments outright, and nothing undoes it.
+    * [[Review.isDismissed]] set, so the reasoning stays readable and [[undismiss]] can put it back; this removes the
+    * row and its inline comments outright, and nothing undoes it.
     *
     * '''Retried''' under [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]], which is safe here for a reason
     * that does not hold for [[merge]]: the request names one review by an instance-wide id, and Forgejo never reuses an
@@ -256,14 +258,17 @@ final class PullRequestReviewApi private[codeberg4s] (pipeline: ApiPipeline[Futu
       number: PullRequestNumber,
       review: ReviewId,
   ): Future[Unit] =
-    pipeline.callUnit(PullRequestReviewApi.deleteReviewRequest(owner, name, number, review), RetryEligibility.AlwaysRetry)
+    pipeline.callUnit(
+      PullRequestReviewApi.deleteReviewRequest(owner, name, number, review),
+      RetryEligibility.AlwaysRetry
+    )
 
   /** Dismisses a review — `POST /repos/{owner}/{repo}/pulls/{index}/reviews/{id}/dismissals`.
     *
     * Takes a review out of the base branch's required-approval count without deleting it: the row stays on [[list]]
-    * with [[Review.isDismissed]] set, and [[undismiss]] reverses it. [[DismissReview.withMessage]] is worth
-    * setting — the message is the only explanation the reviewer ever sees — and [[DismissReview.includingPriors]]
-    * extends the dismissal to that reviewer's earlier reviews of the same pull request.
+    * with [[Review.isDismissed]] set, and [[undismiss]] reverses it. [[DismissReview.withMessage]] is worth setting —
+    * the message is the only explanation the reviewer ever sees — and [[DismissReview.includingPriors]] extends the
+    * dismissal to that reviewer's earlier reviews of the same pull request.
     *
     * '''Retried''' under [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]], despite being a `POST`. It
     * creates nothing: it sets a flag on one review named by an instance-wide id, and setting it twice leaves exactly
@@ -293,9 +298,8 @@ final class PullRequestReviewApi private[codeberg4s] (pipeline: ApiPipeline[Futu
     * Puts a dismissed review back into the approval count. It carries no body: the review id is the whole request, and
     * there is nothing to say about restoring one.
     *
-    * '''Retried''' under [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]], for the reason
-    * [[dismiss]] gives — it clears a flag on one review named by an instance-wide id, and clearing it twice
-    * leaves the same state.
+    * '''Retried''' under [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]], for the reason [[dismiss]]
+    * gives — it clears a flag on one review named by an instance-wide id, and clearing it twice leaves the same state.
     *
     * '''Answers `200`''' with the restored review as the body.
     *
@@ -338,13 +342,13 @@ final class PullRequestReviewApi private[codeberg4s] (pipeline: ApiPipeline[Futu
 
   /** Adds one inline comment to a review — `POST /repos/{owner}/{repo}/pulls/{index}/reviews/{id}/comments`.
     *
-    * Used to build up a '''pending''' review one remark at a time, then finish it with [[submit]]. Posting every
-    * remark with the review in a single call is [[create]] with [[CreateReview.commenting]] instead, and it is
-    * the cheaper of the two when the remarks are known up front.
+    * Used to build up a '''pending''' review one remark at a time, then finish it with [[submit]]. Posting every remark
+    * with the review in a single call is [[create]] with [[CreateReview.commenting]] instead, and it is the cheaper of
+    * the two when the remarks are known up front.
     *
     * '''Never retried.''' It creates a comment, and a repeat after a lost response leaves the same remark on the diff
-    * twice — Forgejo does not deduplicate. Confirming with [[comments]] is the reliable way to find out whether
-    * the first attempt landed.
+    * twice — Forgejo does not deduplicate. Confirming with [[comments]] is the reliable way to find out whether the
+    * first attempt landed.
     *
     * '''Answers `200`''' with the created comment as the body.
     *
@@ -456,8 +460,8 @@ object PullRequestReviewApi:
   /** The stable operation id of [[PullRequestReviewApi.deleteComment]]. */
   val DeleteReviewCommentOperation: String = "pulls.reviews.comments.delete"
 
-  /** The typed rail of [[PullRequestReviewApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as
-    * a value.
+  /** The typed rail of [[PullRequestReviewApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a
+    * value.
     *
     * Obtained as `client.pulls.reviews.attempt`. Each method is the convenience-rail method with its failure channel
     * materialised, so an operation exists on exactly one of the rails only if it is missing from both.
@@ -763,4 +767,3 @@ object PullRequestReviewApi:
       comment: ReviewCommentId,
   ): List[String] =
     reviewCommentsPath(owner, name, number, review) :+ comment.value.toString
-

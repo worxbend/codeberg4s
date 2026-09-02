@@ -141,7 +141,8 @@ partial update against whatever the resource has become:
   on between the two attempts.
 - `pulls.merge` — a repeat merges whatever the head is now, which is exactly
   what `expecting` exists to prevent.
-- `repos.admin.createFile`, `updateFile`, `deleteFile`, `changeFiles` — all four.
+- `repos.admin.contents.createFile`, `updateFile`, `deleteFile`, `changeFiles` —
+  all four.
   See [the next section](#optimistic-concurrency-on-file-writes) for why the
   `sha` guard makes a repeat *safe* and still not *right*.
 - `repos.admin.create`, `edit`, `delete`, `migrate`, `transfer`, `createBranch`,
@@ -256,7 +257,9 @@ def rewriteFile(client: CodebergClient, owner: Owner, name: RepoName, path: Cont
             .of(FileBytes.ofText(transform(text)), meta.sha)
             .committing(CommitOptions.Default.describedAs("Rewrite by automation"))
 
-          client.repos.admin.updateFile(owner, name, path, command).map(Some.apply)
+          client.repos.admin.contents
+            .updateFile(owner, name, path, command)
+            .map(Some.apply)
 
     case RepositoryContent.File(_)      => Future.successful(None)
     case RepositoryContent.Directory(_) => Future.successful(None)
@@ -336,7 +339,7 @@ def scaffold(client: CodebergClient, owner: Owner, name: RepoName): Either[Valid
           .onNewBranch(branch)
       )
 
-    client.repos.admin.changeFiles(owner, name, batch)
+    client.repos.admin.contents.changeFiles(owner, name, batch)
 ```
 
 `FileOperation` is an enum rather than one case class with three `Option`s: a

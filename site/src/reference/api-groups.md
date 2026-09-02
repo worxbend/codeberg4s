@@ -1,7 +1,7 @@
 # API groups
 
 For anyone looking for where an endpoint lives. Nine accessors hang off
-`CodebergClient`; five of them nest further groups, for **39 API classes** in
+`CodebergClient`; five of them nest further groups, for **43 API classes** in
 total.
 
 Every class listed here has the same two-rail shape: the methods on the class
@@ -66,7 +66,11 @@ record full of nullable fields.
 | `client.repos.flags` | `repositories.hooks.RepositoryFlagApi` | 6 | a repository's administrative flags |
 | `client.repos.issueConfig` | `repositories.hooks.RepositoryIssueConfigApi` | 3 | what a repository tells a contributor about to open an issue: its issue config and templates |
 | `client.repos.access` | `repositories.access.RepositoryAccessApi` | 23 | who may push and merge: branch and tag protections, collaborators, deploy keys, team access |
-| `client.repos.admin` | `repositories.admin.RepositoryAdminApi` | 44 | administering a repository: creating, editing, transferring, mirroring, watching, branches, **writing files**, avatars, activity, languages, tracked time |
+| `client.repos.admin` | `repositories.admin.RepositoryAdminApi` | 14 | administering a repository: creating, editing, transferring, converting, branches, avatars |
+| `client.repos.admin.mirrors` | `repositories.admin.RepositoryMirrorApi` | 10 | pull mirrors, push mirrors and fork sync |
+| `client.repos.admin.contents` | `repositories.admin.RepositoryContentApi` | 5 | reading a repository's files and **writing files** into it |
+| `client.repos.admin.watchers` | `repositories.admin.RepositoryWatcherApi` | 7 | watching, starring, and who may be assigned or asked to review |
+| `client.repos.admin.insights` | `repositories.admin.RepositoryInsightApi` | 8 | activity, languages, pins, topics, tracked time |
 
 `client.repos.actions` holds the only two operations in the library whose
 success body is not text: `downloadArtifact` and `downloadRunLogs` answer a ZIP,
@@ -76,9 +80,10 @@ stream** — and both read under `CodebergConfig.maxDownloadBodyBytes` rather th
 the smaller bound every other call uses. For a large artifact that is a fact to
 plan around rather than a setting to change.
 
-`client.repos.admin` is the largest single group in the library and the one that
-holds the file-write operations — `createFile`, `updateFile`, `deleteFile`,
-`changeFiles`. See [Writing data](../guides/08-writing-data.md).
+`client.repos.admin` was the largest single group in the library until its four
+nested groups were split out of it; the file-write operations — `createFile`,
+`updateFile`, `deleteFile`, `changeFiles` — are now on
+`client.repos.admin.contents`. See [Writing data](../guides/08-writing-data.md).
 
 Note that `repositories.hooks` is the package for four different groups (hooks,
 wiki, flags, issue config); the package name is a historical grouping and not a

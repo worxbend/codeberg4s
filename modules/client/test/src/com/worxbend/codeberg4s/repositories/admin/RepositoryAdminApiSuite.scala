@@ -165,20 +165,20 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, ""))
 
     onApi(backend): api =>
-      api.syncMirror(Handle, Name).map: _ =>
+      api.mirrors.syncMirror(Handle, Name).map: _ =>
         assertEquals(pathOf(backend), s"$Endpoint/mirror-sync")
 
   test("repos.admin.pushMirrors.list pages the mirrors"):
     val backend = RecordingBackend(responding(200, "[]"))
 
     onApi(backend): api =>
-      api.pushMirrors(Handle, Name, window(2, 25)).map: _ =>
+      api.mirrors.pushMirrors(Handle, Name, window(2, 25)).map: _ =>
         assertEquals(pathOf(backend), s"$Endpoint/push_mirrors")
         assertEquals(queryOf(backend), List("page" -> "2", "limit" -> "25"))
 
   test("a mirror listing ends where rel=next says it ends, not where a short page suggests"):
     onApi(responding(200, RepositoryAdminApiSuite.PushMirrorListBody, RepositoryAdminApiSuite.PagedHeaders)): api =>
-      api.pushMirrors(Handle, Name, window(1, 30)).map: page =>
+      api.mirrors.pushMirrors(Handle, Name, window(1, 30)).map: page =>
         assertEquals(page.size, 1)
         assertEquals(page.totalCount, Some(97))
         assertEquals(page.nextPage.map(_.value), Some(2))
@@ -186,7 +186,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a page past the end is an empty page, not a failure"):
     onApi(responding(200, "[]")): api =>
-      api.pushMirrors(Handle, Name, PageParams.First).map: page =>
+      api.mirrors.pushMirrors(Handle, Name, PageParams.First).map: page =>
         assertEquals(page.items, Vector.empty[PushMirror])
         assertEquals(page.isLast, true)
 
@@ -194,7 +194,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAdminApiSuite.PushMirrorBody))
 
     onApi(backend): api =>
-      api.pushMirror(Handle, Name, Mirror).map: mirror =>
+      api.mirrors.pushMirror(Handle, Name, Mirror).map: mirror =>
         assertEquals(pathOf(backend), s"$Endpoint/push_mirrors/remote_a1b2c3")
         assertEquals(mirror.remoteName.value, "remote_a1b2c3")
 
@@ -202,7 +202,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAdminApiSuite.PushMirrorBody))
 
     onApi(backend): api =>
-      api.addPushMirror(Handle, Name, CreatePushMirror.to("https://example.test/a.git").overSsh).map: _ =>
+      api.mirrors.addPushMirror(Handle, Name, CreatePushMirror.to("https://example.test/a.git").overSsh).map: _ =>
         assertEquals(pathOf(backend), s"$Endpoint/push_mirrors")
         assert(bodyOf(backend).contains(""""use_ssh":true"""), bodyOf(backend))
 
@@ -210,13 +210,13 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = retryProbe(204, "")
 
     onApi(backend): api =>
-      api.deletePushMirror(Handle, Name, Mirror).map(_ => assertEquals(backend.allInteractions.size, 2))
+      api.mirrors.deletePushMirror(Handle, Name, Mirror).map(_ => assertEquals(backend.allInteractions.size, 2))
 
   test("repos.admin.pushMirrors.sync posts to the hyphenated sync path"):
     val backend = RecordingBackend(responding(200, ""))
 
     onApi(backend): api =>
-      api.syncPushMirrors(Handle, Name).map(_ => assertEquals(pathOf(backend), s"$Endpoint/push_mirrors-sync"))
+      api.mirrors.syncPushMirrors(Handle, Name).map(_ => assertEquals(pathOf(backend), s"$Endpoint/push_mirrors-sync"))
 
   // --- fork syncing ---------------------------------------------------------
 
@@ -226,10 +226,10 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
 
     for
       _ <- onApi(plain)(api =>
-             api.forkSyncInfo(Handle, Name).map(_ => assertEquals(pathOf(plain), s"$Endpoint/sync_fork"))
+             api.mirrors.forkSyncInfo(Handle, Name).map(_ => assertEquals(pathOf(plain), s"$Endpoint/sync_fork"))
            )
       _ <- onApi(branched)(api =>
-             api
+             api.mirrors
                .branchForkSyncInfo(Handle, Name, Branch)
                .map(_ => assertEquals(pathOf(branched), s"$Endpoint/sync_fork/release/v1"))
            )
@@ -239,13 +239,13 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(204, ""))
 
     onApi(backend): api =>
-      api.syncForkBranch(Handle, Name, Branch).map: _ =>
+      api.mirrors.syncForkBranch(Handle, Name, Branch).map: _ =>
         assertEquals(methodOf(backend), "POST")
         assertEquals(pathOf(backend), s"$Endpoint/sync_fork/release/v1")
 
   test("a fork-sync read reports how far behind the fork is"):
     onApi(responding(200, RepositoryAdminApiSuite.SyncForkBody)): api =>
-      api.forkSyncInfo(Handle, Name).map: info =>
+      api.mirrors.forkSyncInfo(Handle, Name).map: info =>
         assertEquals(info.commitsBehind, 12L)
         assertEquals(info.isBehind, true)
 
@@ -255,7 +255,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAdminApiSuite.WatchBody))
 
     onApi(backend): api =>
-      api.subscription(Handle, Name).map: status =>
+      api.watchers.subscription(Handle, Name).map: status =>
         assertEquals(pathOf(backend), s"$Endpoint/subscription")
         assertEquals(status.isNotifying, true)
 
@@ -263,7 +263,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAdminApiSuite.WatchBody))
 
     onApi(backend): api =>
-      api.watch(Handle, Name).map: _ =>
+      api.watchers.watch(Handle, Name).map: _ =>
         assertEquals(methodOf(backend), "PUT")
         assertEquals(bodyOf(backend), NoBody)
 
@@ -271,13 +271,13 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = retryProbe(200, RepositoryAdminApiSuite.WatchBody)
 
     onApi(backend): api =>
-      api.watch(Handle, Name).map(_ => assertEquals(backend.allInteractions.size, 2))
+      api.watchers.watch(Handle, Name).map(_ => assertEquals(backend.allInteractions.size, 2))
 
   test("unwatching is retried for the same reason, and answers 204"):
     val backend = retryProbe(204, "")
 
     onApi(backend): api =>
-      api.unwatch(Handle, Name).map: _ =>
+      api.watchers.unwatch(Handle, Name).map: _ =>
         assertEquals(backend.allInteractions.size, 2)
         assertEquals(methodOf(backend), "DELETE")
 
@@ -289,12 +289,12 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
 
     for
       _ <- onApi(assigning): api =>
-             api.assignees(Handle, Name).map: people =>
+             api.watchers.assignees(Handle, Name).map: people =>
                assertEquals(pathOf(assigning), s"$Endpoint/assignees")
                assertEquals(queryOf(assigning), Nil)
                assertEquals(people.map(_.login.value), Vector("octocat"))
       _ <- onApi(reviewing)(api =>
-             api.reviewers(Handle, Name).map(_ => assertEquals(pathOf(reviewing), s"$Endpoint/reviewers"))
+             api.watchers.reviewers(Handle, Name).map(_ => assertEquals(pathOf(reviewing), s"$Endpoint/reviewers"))
            )
     yield ()
 
@@ -304,12 +304,12 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
 
     for
       _ <- onApi(starring): api =>
-             api.stargazers(Handle, Name, window(3, 10)).map: _ =>
+             api.watchers.stargazers(Handle, Name, window(3, 10)).map: _ =>
                assertEquals(pathOf(starring), s"$Endpoint/stargazers")
                assertEquals(queryOf(starring), List("page" -> "3", "limit" -> "10"))
       _ <-
         onApi(watching)(api =>
-          api.subscribers(Handle, Name, PageParams.First).map(_ =>
+          api.watchers.subscribers(Handle, Name, PageParams.First).map(_ =>
             assertEquals(pathOf(watching), s"$Endpoint/subscribers")
           )
         )
@@ -351,11 +351,11 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
 
     for
       _ <- onApi(defaulted): api =>
-             api.contents(Handle, Name, None).map: _ =>
+             api.contents.contents(Handle, Name, None).map: _ =>
                assertEquals(pathOf(defaulted), s"$Endpoint/contents")
                assertEquals(queryOf(defaulted), Nil)
       _ <- onApi(pinned)(api =>
-             api
+             api.contents
                .contents(Handle, Name, Some(orFail(RefName.from("main"))))
                .map(_ => assertEquals(queryOf(pinned), List("ref" -> "main")))
            )
@@ -365,7 +365,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(201, RepositoryAdminApiSuite.FileResponseBody))
 
     onApi(backend): api =>
-      api.createFile(Handle, Name, Path, CreateFile.of(FileBytes.ofText("hello"))).map: change =>
+      api.contents.createFile(Handle, Name, Path, CreateFile.of(FileBytes.ofText("hello"))).map: change =>
         assertEquals(methodOf(backend), "POST")
         assertEquals(pathOf(backend), s"$Endpoint/contents/docs/README.md")
         assert(bodyOf(backend).contains(""""content":"aGVsbG8=""""), bodyOf(backend))
@@ -375,7 +375,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAdminApiSuite.FileResponseBody))
 
     onApi(backend): api =>
-      api.updateFile(Handle, Name, Path, UpdateFile.of(FileBytes.ofText("hi"), Sha)).map: _ =>
+      api.contents.updateFile(Handle, Name, Path, UpdateFile.of(FileBytes.ofText("hi"), Sha)).map: _ =>
         assertEquals(methodOf(backend), "PUT")
         assert(bodyOf(backend).contains(""""sha":"abcd1234""""), bodyOf(backend))
 
@@ -383,7 +383,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = retryProbe(200, RepositoryAdminApiSuite.FileResponseBody)
 
     onApi(backend): api =>
-      api.attempt
+      api.contents.attempt
         .updateFile(Handle, Name, Path, UpdateFile.of(FileBytes.ofText("hi"), Sha))
         .map(_ => assertEquals(backend.allInteractions.size, 1, "the guarded PUT was retried"))
 
@@ -391,7 +391,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAdminApiSuite.FileDeleteBody))
 
     onApi(backend): api =>
-      api.deleteFile(Handle, Name, Path, DeleteFile.of(Sha)).map: change =>
+      api.contents.deleteFile(Handle, Name, Path, DeleteFile.of(Sha)).map: change =>
         assertEquals(methodOf(backend), "DELETE")
         assertEquals(pathOf(backend), s"$Endpoint/contents/docs/README.md")
         assert(bodyOf(backend).contains(""""sha":"abcd1234""""), bodyOf(backend))
@@ -401,7 +401,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = retryProbe(200, RepositoryAdminApiSuite.FileDeleteBody)
 
     onApi(backend): api =>
-      api.attempt
+      api.contents.attempt
         .deleteFile(Handle, Name, Path, DeleteFile.of(Sha))
         .map(_ => assertEquals(backend.allInteractions.size, 1, "the file DELETE was retried"))
 
@@ -412,7 +412,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
       .and(FileOperation.Delete(orFail(ContentPath.from("b.txt")), Sha))
 
     onApi(backend): api =>
-      api.changeFiles(Handle, Name, batch).map: changed =>
+      api.contents.changeFiles(Handle, Name, batch).map: changed =>
         assertEquals(pathOf(backend), s"$Endpoint/contents")
         assert(bodyOf(backend).contains(""""operation":"create""""), bodyOf(backend))
         assertEquals(changed.files.map(_.meta.name), Vector("a.txt"))
@@ -440,7 +440,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, "[]"))
 
     onApi(backend): api =>
-      api.activityFeed(Handle, Name, Some(LocalDate.of(2026, 8, 1)), window(1, 20)).map: _ =>
+      api.insights.activityFeed(Handle, Name, Some(LocalDate.of(2026, 8, 1)), window(1, 20)).map: _ =>
         assertEquals(pathOf(backend), s"$Endpoint/activities/feeds")
         assertEquals(queryOf(backend), List("date" -> "2026-08-01", "page" -> "1", "limit" -> "20"))
 
@@ -448,14 +448,14 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, "[]"))
 
     onApi(backend): api =>
-      api.activityFeed(Handle, Name, None, PageParams.First).map: _ =>
+      api.insights.activityFeed(Handle, Name, None, PageParams.First).map: _ =>
         assertEquals(queryOf(backend).map((key, _) => key), List("page", "limit"))
 
   test("the language statistics decode a bare object into a breakdown"):
     val backend = RecordingBackend(responding(200, """{"Go": 100, "Scala": 20}"""))
 
     onApi(backend): api =>
-      api.languages(Handle, Name).map: breakdown =>
+      api.insights.languages(Handle, Name).map: breakdown =>
         assertEquals(pathOf(backend), s"$Endpoint/languages")
         assertEquals(breakdown.dominant, Some("Go"))
         assertEquals(breakdown.total, 120L)
@@ -464,7 +464,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, """{"issues": true, "pull_requests": false}"""))
 
     onApi(backend): api =>
-      api.newPinAllowed(Handle, Name).map: allowed =>
+      api.insights.newPinAllowed(Handle, Name).map: allowed =>
         assertEquals(pathOf(backend), s"$Endpoint/new_pin_allowed")
         assertEquals(allowed, IssuePinsAllowed(issues = true, pullRequests = false))
 
@@ -472,7 +472,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAdminApiSuite.IssueListBody))
 
     onApi(backend): api =>
-      api.pinnedIssues(Handle, Name).map: pinned =>
+      api.insights.pinnedIssues(Handle, Name).map: pinned =>
         assertEquals(pathOf(backend), s"$Endpoint/issues/pinned")
         assertEquals(queryOf(backend), Nil)
         assertEquals(pinned.map(_.number.value), Vector(42L))
@@ -481,20 +481,20 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAdminApiSuite.ArmoredKey))
 
     onApi(backend): api =>
-      api.signingKey(Handle, Name).map: key =>
+      api.insights.signingKey(Handle, Name).map: key =>
         assertEquals(pathOf(backend), s"$Endpoint/signing-key.gpg")
         assertEquals(key.map(_.armored), Some(RepositoryAdminApiSuite.ArmoredKey))
 
   test("a repository that signs nothing answers an empty body, which is a success and not a failure"):
     onApi(responding(200, "")): api =>
-      api.signingKey(Handle, Name).map(key => assertEquals(key, None))
+      api.insights.signingKey(Handle, Name).map(key => assertEquals(key, None))
 
   test("the tracked-time listing sends the shared filters before the paging parameters"):
     val backend = RecordingBackend(responding(200, "[]"))
     val query   = TrackedTimeQuery.Empty.forUser("octocat")
 
     onApi(backend): api =>
-      api.trackedTimes(Handle, Name, query, window(1, 50)).map: _ =>
+      api.insights.trackedTimes(Handle, Name, query, window(1, 50)).map: _ =>
         assertEquals(pathOf(backend), s"$Endpoint/times")
         assertEquals(queryOf(backend), List("user" -> "octocat", "page" -> "1", "limit" -> "50"))
 
@@ -502,7 +502,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAdminApiSuite.TrackedTimeListBody))
 
     onApi(backend): api =>
-      api.trackedTimesFor(Handle, Name, orFail(Username.from("octocat"))).map: entries =>
+      api.insights.trackedTimesFor(Handle, Name, orFail(Username.from("octocat"))).map: entries =>
         assertEquals(pathOf(backend), s"$Endpoint/times/octocat")
         assertEquals(queryOf(backend), Nil)
         assertEquals(entries.map(_.id.value), Vector(5L))
@@ -511,7 +511,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAdminApiSuite.TopicSearchBody))
 
     onApi(backend): api =>
-      api.searchTopics("scala", window(1, 10)).map: page =>
+      api.insights.searchTopics("scala", window(1, 10)).map: page =>
         assertEquals(pathOf(backend), "https://forge.example/api/v1/topics/search")
         assertEquals(queryOf(backend), List("q" -> "scala", "page" -> "1", "limit" -> "10"))
         assertEquals(page.items.map(_.name), Vector("scala"))
@@ -535,8 +535,8 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
   test("both rails agree on a paged listing failure as well, so the choice of rail is only a choice of style"):
     onApi(responding(403, RepositoryAdminApiSuite.ForbiddenBody)): api =>
       for
-        raised <- api.pushMirrors(Handle, Name, PageParams.First).failed
-        typed  <- api.attempt.pushMirrors(Handle, Name, PageParams.First)
+        raised <- api.mirrors.pushMirrors(Handle, Name, PageParams.First).failed
+        typed  <- api.mirrors.attempt.pushMirrors(Handle, Name, PageParams.First)
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on a unit-returning write as well"):
@@ -548,19 +548,19 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a 423 is an Api failure — it is what every write against an archived repository answers"):
     onApi(responding(423, RepositoryAdminApiSuite.ArchivedBody)): api =>
-      api.attempt.createFile(Handle, Name, Path, CreateFile.of(FileBytes.ofText("x"))).map:
+      api.contents.attempt.createFile(Handle, Name, Path, CreateFile.of(FileBytes.ofText("x"))).map:
         case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 423)
         case other                                    => fail(s"expected an Api failure, got $other")
 
   test("a 409 from a guarded update is an Api failure, which is how a concurrent edit surfaces"):
     onApi(responding(409, RepositoryAdminApiSuite.ConflictBody)): api =>
-      api.attempt.updateFile(Handle, Name, Path, UpdateFile.of(FileBytes.ofText("x"), Sha)).map:
+      api.contents.attempt.updateFile(Handle, Name, Path, UpdateFile.of(FileBytes.ofText("x"), Sha)).map:
         case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 409)
         case other                                    => fail(s"expected an Api failure, got $other")
 
   test("a 200 whose payload does not fit the model becomes DecodingFailed, never an escaping codec exception"):
     onApi(responding(200, """{"remote_address":"https://example.test"}""")): api =>
-      api.attempt.pushMirror(Handle, Name, Mirror).map:
+      api.mirrors.attempt.pushMirror(Handle, Name, Mirror).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$.remote_name")
         case other                                             => fail(s"expected a decoding failure, got $other")
 
