@@ -320,6 +320,7 @@ scratch/
 .tasks/
 .sessions/
 .transcripts/
+.quality-plan/
 
 # ---------------------------------------------------------------------------
 # Scratch
