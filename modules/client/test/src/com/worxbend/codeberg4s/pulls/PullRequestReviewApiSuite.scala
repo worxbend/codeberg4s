@@ -163,7 +163,7 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(201, PullRequestReviewApiSuite.ReviewListBody))
 
     onApi(backend): api =>
-      api.requestReviews(Handle, Name, Number, ReviewRequest.of(Reviewer)).map: reviews =>
+      api.reviews.request(Handle, Name, Number, ReviewRequest.of(Reviewer)).map: reviews =>
         assertEquals(methodOf(backend), "POST")
         assertEquals(pathOf(backend), s"$Endpoint/13726/requested_reviewers")
         assertEquals(bodyOf(backend), """{"reviewers":["mfenniak"]}""")
@@ -173,8 +173,8 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(cycling(503, 201, PullRequestReviewApiSuite.ReviewListBody))
 
     onApi(backend): api =>
-      api.attempt
-        .requestReviews(Handle, Name, Number, ReviewRequest.of(Reviewer))
+      api.reviews.attempt
+        .request(Handle, Name, Number, ReviewRequest.of(Reviewer))
         .map: outcome =>
           assert(outcome.isLeft, s"a 503 on a review request must not be retried into a success, got $outcome")
           assertEquals(backend.allInteractions.size, 1, "the request was sent twice")
@@ -183,7 +183,7 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(204, ""))
 
     onApi(backend): api =>
-      api.removeReviewRequests(Handle, Name, Number, ReviewRequest.of(Reviewer)).map: _ =>
+      api.reviews.removeRequests(Handle, Name, Number, ReviewRequest.of(Reviewer)).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
         assertEquals(pathOf(backend), s"$Endpoint/13726/requested_reviewers")
         assertEquals(bodyOf(backend), """{"reviewers":["mfenniak"]}""")
@@ -192,8 +192,8 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(cycling(503, 204, ""))
 
     onApi(backend): api =>
-      api
-        .removeReviewRequests(Handle, Name, Number, ReviewRequest.of(Reviewer))
+      api.reviews
+        .removeRequests(Handle, Name, Number, ReviewRequest.of(Reviewer))
         .map(_ => assertEquals(backend.allInteractions.size, 2, "an idempotent withdrawal was not retried"))
 
   // --- reviews --------------------------------------------------------------
@@ -207,7 +207,7 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
       .commenting(orFail(NewReviewComment.onNewLine("modules/git/hook.go", 42L, "here")))
 
     onApi(backend): api =>
-      api.createReview(Handle, Name, Number, command).map: review =>
+      api.reviews.create(Handle, Name, Number, command).map: review =>
         assertEquals(methodOf(backend), "POST")
         assertEquals(pathOf(backend), s"$Endpoint/13726/reviews")
         assertEquals(
@@ -221,8 +221,8 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(cycling(503, 200, PullRequestReviewApiSuite.ReviewBody))
 
     onApi(backend): api =>
-      api.attempt
-        .createReview(Handle, Name, Number, CreateReview.Empty)
+      api.reviews.attempt
+        .create(Handle, Name, Number, CreateReview.Empty)
         .map: outcome =>
           assert(outcome.isLeft, s"a 503 on a review must not be retried into a success, got $outcome")
           assertEquals(backend.allInteractions.size, 1, "the review was posted twice")
@@ -231,7 +231,7 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, PullRequestReviewApiSuite.ReviewBody))
 
     onApi(backend): api =>
-      api.getReview(Handle, Name, Number, Reviewed).map: review =>
+      api.reviews.get(Handle, Name, Number, Reviewed).map: review =>
         assertEquals(pathOf(backend), s"$Endpoint/13726/reviews/1654076")
         assertEquals(review.state, Some(ReviewState.Approved))
 
@@ -239,8 +239,8 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, PullRequestReviewApiSuite.ReviewBody))
 
     onApi(backend): api =>
-      api
-        .submitReview(Handle, Name, Number, Reviewed, SubmitReview.saying(ReviewState.Approved).withBody("ship it"))
+      api.reviews
+        .submit(Handle, Name, Number, Reviewed, SubmitReview.saying(ReviewState.Approved).withBody("ship it"))
         .map: _ =>
           assertEquals(methodOf(backend), "POST")
           assertEquals(pathOf(backend), s"$Endpoint/13726/reviews/1654076")
@@ -250,15 +250,15 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(cycling(503, 200, PullRequestReviewApiSuite.ReviewBody))
 
     onApi(backend): api =>
-      api.attempt
-        .submitReview(Handle, Name, Number, Reviewed, SubmitReview.saying(ReviewState.Approved))
+      api.reviews.attempt
+        .submit(Handle, Name, Number, Reviewed, SubmitReview.saying(ReviewState.Approved))
         .map(_ => assertEquals(backend.allInteractions.size, 1, "the submission was sent twice"))
 
   test("pulls.reviews.delete removes the review and may be repeated, because ids are never reused"):
     val backend = RecordingBackend(cycling(503, 204, ""))
 
     onApi(backend): api =>
-      api.deleteReview(Handle, Name, Number, Reviewed).map: _ =>
+      api.reviews.delete(Handle, Name, Number, Reviewed).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
         assertEquals(pathOf(backend), s"$Endpoint/13726/reviews/1654076")
         assertEquals(backend.allInteractions.size, 2, "an idempotent delete was not retried")
@@ -267,8 +267,8 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(cycling(503, 200, PullRequestReviewApiSuite.ReviewBody))
 
     onApi(backend): api =>
-      api
-        .dismissReview(Handle, Name, Number, Reviewed, DismissReview.Empty.withMessage("superseded"))
+      api.reviews
+        .dismiss(Handle, Name, Number, Reviewed, DismissReview.Empty.withMessage("superseded"))
         .map: _ =>
           assertEquals(methodOf(backend), "POST")
           assertEquals(pathOf(backend), s"$Endpoint/13726/reviews/1654076/dismissals")
@@ -279,7 +279,7 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, PullRequestReviewApiSuite.ReviewBody))
 
     onApi(backend): api =>
-      api.undismissReview(Handle, Name, Number, Reviewed).map: _ =>
+      api.reviews.undismiss(Handle, Name, Number, Reviewed).map: _ =>
         assertEquals(methodOf(backend), "POST")
         assertEquals(pathOf(backend), s"$Endpoint/13726/reviews/1654076/undismissals")
         assertEquals(bodyOf(backend), "")
@@ -290,7 +290,7 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, PullRequestReviewApiSuite.CommentListBody))
 
     onApi(backend): api =>
-      api.reviewComments(Handle, Name, Number, Reviewed).map: comments =>
+      api.reviews.comments(Handle, Name, Number, Reviewed).map: comments =>
         assertEquals(pathOf(backend), s"$Endpoint/13726/reviews/1654076/comments")
         assertEquals(queryOf(backend), Nil)
         assertEquals(comments.map(_.id.value), Vector(918273L))
@@ -301,8 +301,8 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val remark  = orFail(NewReviewComment.onNewLine("modules/git/hook_generate.go", 42L, "still wrong"))
 
     onApi(backend): api =>
-      api.attempt
-        .createReviewComment(Handle, Name, Number, Reviewed, remark)
+      api.reviews.attempt
+        .createComment(Handle, Name, Number, Reviewed, remark)
         .map: outcome =>
           assert(outcome.isLeft, s"a 503 on a remark must not be retried into a success, got $outcome")
           assertEquals(backend.allInteractions.size, 1, "the remark was posted twice")
@@ -312,7 +312,7 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val remark  = orFail(NewReviewComment.onOldLine("modules/git/hook_generate.go", 40L, "was fine"))
 
     onApi(backend): api =>
-      api.createReviewComment(Handle, Name, Number, Reviewed, remark).map: comment =>
+      api.reviews.createComment(Handle, Name, Number, Reviewed, remark).map: comment =>
         assertEquals(methodOf(backend), "POST")
         assertEquals(pathOf(backend), s"$Endpoint/13726/reviews/1654076/comments")
         assertEquals(
@@ -325,15 +325,15 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, PullRequestReviewApiSuite.CommentBody))
 
     onApi(backend): api =>
-      api
-        .getReviewComment(Handle, Name, Number, Reviewed, CommentId)
+      api.reviews
+        .getComment(Handle, Name, Number, Reviewed, CommentId)
         .map(_ => assertEquals(pathOf(backend), s"$Endpoint/13726/reviews/1654076/comments/918273"))
 
   test("pulls.reviews.comments.delete removes one remark and may be repeated"):
     val backend = RecordingBackend(cycling(503, 204, ""))
 
     onApi(backend): api =>
-      api.deleteReviewComment(Handle, Name, Number, Reviewed, CommentId).map: _ =>
+      api.reviews.deleteComment(Handle, Name, Number, Reviewed, CommentId).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
         assertEquals(pathOf(backend), s"$Endpoint/13726/reviews/1654076/comments/918273")
         assertEquals(backend.allInteractions.size, 2, "an idempotent delete was not retried")
@@ -343,10 +343,10 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
   test("both rails report a review read's 404 identically, so the choice of rail is only a choice of style"):
     onApi(responding(404, PullRequestReviewApiSuite.NotFoundBody)): api =>
       for
-        raised <- api.getReview(Handle, Name, Number, Reviewed).failed
-        typed  <- api.attempt.getReview(Handle, Name, Number, Reviewed)
+        raised <- api.reviews.get(Handle, Name, Number, Reviewed).failed
+        typed  <- api.reviews.attempt.get(Handle, Name, Number, Reviewed)
       yield
-        assertEquals(operationOf(typed), PullRequestApi.GetReviewOperation)
+        assertEquals(operationOf(typed), PullRequestReviewApi.GetReviewOperation)
         assertRailsAgree(raised, typed)
 
   test("both rails report a remark's 422 identically as well"):
@@ -354,19 +354,19 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
 
     onApi(responding(422, PullRequestReviewApiSuite.ValidationBody)): api =>
       for
-        raised <- api.createReviewComment(Handle, Name, Number, Reviewed, remark).failed
-        typed  <- api.attempt.createReviewComment(Handle, Name, Number, Reviewed, remark)
+        raised <- api.reviews.createComment(Handle, Name, Number, Reviewed, remark).failed
+        typed  <- api.reviews.attempt.createComment(Handle, Name, Number, Reviewed, remark)
       yield assertRailsAgree(raised, typed)
 
   test("a review payload that does not fit the model becomes DecodingFailed, never an escaping exception"):
     onApi(responding(200, """{"state":"APPROVED"}""")): api =>
-      api.attempt.getReview(Handle, Name, Number, Reviewed).map:
+      api.reviews.attempt.get(Handle, Name, Number, Reviewed).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$.id")
         case other                                             => fail(s"expected a decoding failure, got $other")
 
   test("a bad element of a comment listing reports its position, all the way through the pipeline"):
     onApi(responding(200, """[{"id":1},{"id":0}]""")): api =>
-      api.attempt.reviewComments(Handle, Name, Number, Reviewed).map:
+      api.reviews.attempt.comments(Handle, Name, Number, Reviewed).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$[1].id")
         case other                                             => fail(s"expected a decoding failure, got $other")
 

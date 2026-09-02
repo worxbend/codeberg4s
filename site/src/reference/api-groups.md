@@ -1,7 +1,7 @@
 # API groups
 
 For anyone looking for where an endpoint lives. Nine accessors hang off
-`CodebergClient`; four of them nest further groups, for **38 API classes** in
+`CodebergClient`; five of them nest further groups, for **39 API classes** in
 total.
 
 Every class listed here has the same two-rail shape: the methods on the class
@@ -23,7 +23,7 @@ guessable from the HTTP method, so read it before assuming.
 | `client.repos` | `com.worxbend.codeberg4s.repositories.RepositoryApi` | 11 | 9 |
 | `client.users` | `com.worxbend.codeberg4s.users.UserApi` | 8 | 8 |
 | `client.issues` | `com.worxbend.codeberg4s.issues.IssueApi` | 23 | 7 |
-| `client.pulls` | `com.worxbend.codeberg4s.pulls.PullRequestApi` | 26 | — |
+| `client.pulls` | `com.worxbend.codeberg4s.pulls.PullRequestApi` | 13 | 1 |
 | `client.organizations` | `com.worxbend.codeberg4s.organizations.OrganizationApi` | 29 | 5 |
 | `client.notifications` | `com.worxbend.codeberg4s.notifications.NotificationApi` | 7 | — |
 | `client.misc` | `com.worxbend.codeberg4s.miscellaneous.MiscellaneousApi` | 17 | — |
@@ -150,14 +150,26 @@ rather than a tidier scheme.
 
 ## `client.pulls` — pull requests
 
-**26 operations:** `list`, `get`, `create`, `edit`, `merge`, `reviews`,
-`commits`, `files`, `pinned`, `getByBaseHead`, `download`,
-`isMerged`, `cancelScheduledMerge`, `updateBranch`, `requestReviews`,
-`removeReviewRequests`, `createReview`, `getReview`, `submitReview`,
-`deleteReview`, `dismissReview`, `undismissReview`, `reviewComments`,
-`createReviewComment`, `getReviewComment`, `deleteReviewComment`
+**13 operations:** `list`, `get`, `create`, `edit`, `merge`, `commits`,
+`files`, `pinned`, `getByBaseHead`, `download`, `isMerged`,
+`cancelScheduledMerge`, `updateBranch`
 
-No nested groups: reviews, commits and changed files all live here.
+Commits and changed files live here because they describe the proposed change
+itself. The verdicts on it are a nested group of their own.
+
+### Nested groups
+
+| Accessor | Class | Operations | Covers |
+| --- | --- | ---: | --- |
+| `client.pulls.reviews` | `pulls.PullRequestReviewApi` | 13 | reviews, their inline comments, and who has been asked to review |
+
+`client.pulls.reviews.list` lists the reviews of one pull request;
+`create`, `submit`, `dismiss` and `undismiss` move one through its lifecycle;
+`comments`, `createComment`, `getComment` and `deleteComment` are the remarks
+anchored to diff lines, which are *not* the pull request's conversation —
+ordinary comments live on the issue endpoints, because Forgejo stores them
+there. `request` and `removeRequests` ask people to review and take the
+request back.
 
 `PullRequestState` is `Open | Closed | Merged`, folded from Forgejo's `state`
 string *and* its separate `merged` boolean — reading a merged pull request as

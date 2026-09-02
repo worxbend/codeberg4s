@@ -25,6 +25,35 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **The pull-request reviews moved to a group of their own.** The thirteen
+  review operations that used to sit on `client.pulls` are now on
+  `client.pulls.reviews`, a `PullRequestReviewApi` reached from the same place
+  every other nested group is reached from, and they lost the `Review` prefix
+  their names carried only to keep them apart from the rest of the class:
+
+  | Before | Now |
+  | --- | --- |
+  | `client.pulls.reviews(owner, name, number, params)` | `client.pulls.reviews.list(owner, name, number, params)` |
+  | `client.pulls.requestReviews(...)` | `client.pulls.reviews.request(...)` |
+  | `client.pulls.removeReviewRequests(...)` | `client.pulls.reviews.removeRequests(...)` |
+  | `client.pulls.createReview(...)` | `client.pulls.reviews.create(...)` |
+  | `client.pulls.getReview(...)` | `client.pulls.reviews.get(...)` |
+  | `client.pulls.submitReview(...)` | `client.pulls.reviews.submit(...)` |
+  | `client.pulls.deleteReview(...)` | `client.pulls.reviews.delete(...)` |
+  | `client.pulls.dismissReview(...)` | `client.pulls.reviews.dismiss(...)` |
+  | `client.pulls.undismissReview(...)` | `client.pulls.reviews.undismiss(...)` |
+  | `client.pulls.reviewComments(...)` | `client.pulls.reviews.comments(...)` |
+  | `client.pulls.createReviewComment(...)` | `client.pulls.reviews.createComment(...)` |
+  | `client.pulls.getReviewComment(...)` | `client.pulls.reviews.getComment(...)` |
+  | `client.pulls.deleteReviewComment(...)` | `client.pulls.reviews.deleteComment(...)` |
+
+  The `.attempt` rail moved with them — `client.pulls.attempt.getReview` is now
+  `client.pulls.reviews.attempt.get` — and the operation ids in every failure's
+  `CallContext` are unchanged, so alerts keyed on `pulls.reviews.get` and the
+  rest keep firing on exactly what they fired on before. The endpoints called,
+  the retry eligibility of each, and the models returned are all unchanged: this
+  is where the operations live, not what they do.
+
 - **Organisation label listing takes a typed query.**
   `client.organizations.labels.list` used to take its ordering as a bare
   `Option[OrganizationLabelSort]` sitting between the organisation handle and

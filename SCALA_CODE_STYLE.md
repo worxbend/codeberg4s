@@ -263,13 +263,13 @@ hanging off it, and each of those can be listed. The names follow one rule:
 | The listing returns                           | Name it            | Example                                     |
 | --------------------------------------------- | ------------------ | ------------------------------------------- |
 | The group's own resource                       | `list`             | `client.pulls.list(owner, name, …)`         |
-| A sub-resource of that resource                | the plural noun    | `client.pulls.reviews(owner, name, number)` |
+| A sub-resource of that resource                | the plural noun    | `client.pulls.commits(owner, name, number)` |
 | The same sub-resource under two parent scopes  | `list<Scope>`      | `client.issues.attachments.listForIssue`    |
 
 Read that middle row as: `list` is reserved for the group's own resource, so a
-sub-resource listing does not repeat the word. `client.pulls.reviews(...)` is
+sub-resource listing does not repeat the word. `client.pulls.commits(...)` is
 already unambiguous — the receiver says which group, the plural noun says which
-sub-resource — while `listReviews` adds a word that carries no information.
+sub-resource — while `listCommits` adds a word that carries no information.
 
 The third row is the one exception, and it exists because the noun alone would
 not say enough. `IssueAttachmentApi` can list the attachments of an issue or the

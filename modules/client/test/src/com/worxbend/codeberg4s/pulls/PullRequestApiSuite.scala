@@ -114,7 +114,7 @@ final class PullRequestApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, PullRequestApiSuite.ReviewListBody, PullRequestApiSuite.TotalOnly))
 
     onApi(backend): api =>
-      api.reviews(Handle, Name, Number, PageParams.First).map: page =>
+      api.reviews.list(Handle, Name, Number, PageParams.First).map: page =>
         assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/forgejo/forgejo/pulls/13726/reviews")
         assertEquals(queryOf(backend), List("page" -> "1", "limit" -> "30"))
         assertEquals(page.items.map(_.state), Vector(Some(ReviewState.Approved)))
@@ -256,8 +256,8 @@ final class PullRequestApiSuite extends FunSuite with ClientSuiteHarness:
   test("both rails agree on a review listing failure as well, so the choice of rail is only a choice of style"):
     onApi(responding(404, PullRequestApiSuite.NotFoundBody)): api =>
       for
-        raised <- api.reviews(Handle, Name, Number, PageParams.First).failed
-        typed  <- api.attempt.reviews(Handle, Name, Number, PageParams.First)
+        raised <- api.reviews.list(Handle, Name, Number, PageParams.First).failed
+        typed  <- api.reviews.attempt.list(Handle, Name, Number, PageParams.First)
       yield assertRailsAgree(raised, typed)
 
   test("a 400 is an Api failure too — Forgejo uses it for validation alongside 422"):

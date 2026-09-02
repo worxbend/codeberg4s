@@ -106,6 +106,7 @@ object AttemptParitySuite:
     Pair(classOf[issues.IssueTimeApi], classOf[issues.IssueTimeApi.Attempt]),
     Pair(classOf[issues.IssueSubscriptionApi], classOf[issues.IssueSubscriptionApi.Attempt]),
     Pair(classOf[pulls.PullRequestApi], classOf[pulls.PullRequestApi.Attempt]),
+    Pair(classOf[pulls.PullRequestReviewApi], classOf[pulls.PullRequestReviewApi.Attempt]),
     Pair(classOf[miscellaneous.MiscellaneousApi], classOf[miscellaneous.MiscellaneousApi.Attempt]),
     Pair(classOf[notifications.NotificationApi], classOf[notifications.NotificationApi.Attempt]),
     Pair(classOf[organizations.OrganizationApi], classOf[organizations.OrganizationApi.Attempt]),
