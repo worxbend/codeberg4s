@@ -156,7 +156,10 @@ final class RepositoryActionConfigApi private[codeberg4s] (pipeline: ApiPipeline
     * '''Failures.''' The group contract above.
     */
   def searchRunnerJobs(owner: Owner, name: RepoName, labels: Vector[RunnerLabel]): Future[Vector[ActionRunJob]] =
-    pipeline.call(RepositoryActionConfigApi.searchRunnerJobsRequest(owner, name, labels), RetryEligibility.IdempotentOnly)(
+    pipeline.call(
+      RepositoryActionConfigApi.searchRunnerJobsRequest(owner, name, labels),
+      RetryEligibility.IdempotentOnly
+    )(
       using RepositoryActionDecoders.jobs
     )
 
@@ -190,7 +193,10 @@ final class RepositoryActionConfigApi private[codeberg4s] (pipeline: ApiPipeline
     * digit and one using a reserved `GITHUB_` or `GITEA_` prefix.
     */
   def setSecret(owner: Owner, name: RepoName, secret: SecretName, value: SecretValue): Future[Unit] =
-    pipeline.callUnit(RepositoryActionConfigApi.setSecretRequest(owner, name, secret, value), RetryEligibility.AlwaysRetry)
+    pipeline.callUnit(
+      RepositoryActionConfigApi.setSecretRequest(owner, name, secret, value),
+      RetryEligibility.AlwaysRetry
+    )
 
   /** Deletes a secret — `DELETE /repos/{owner}/{repo}/actions/secrets/{secretname}`.
     *
@@ -218,8 +224,10 @@ final class RepositoryActionConfigApi private[codeberg4s] (pipeline: ApiPipeline
     * '''Failures.''' The group contract above.
     */
   def variable(owner: Owner, name: RepoName, variableName: VariableName): Future[ActionVariable] =
-    pipeline.call(RepositoryActionConfigApi.variableRequest(owner, name, variableName), RetryEligibility.IdempotentOnly)(using
-      RepositoryActionDecoders.variable)
+    pipeline.call(
+      RepositoryActionConfigApi.variableRequest(owner, name, variableName),
+      RetryEligibility.IdempotentOnly
+    )(using RepositoryActionDecoders.variable)
 
   /** Creates a variable — `POST /repos/{owner}/{repo}/actions/variables/{variablename}`.
     *
@@ -328,8 +336,8 @@ object RepositoryActionConfigApi:
   /** The stable operation id of [[RepositoryActionConfigApi.deleteVariable]]. */
   val DeleteVariableOperation: String = "repos.actions.variables.delete"
 
-  /** The typed rail of [[RepositoryActionConfigApi]]: every operation, with
-    * [[com.worxbend.codeberg4s.CodebergError]] as a value.
+  /** The typed rail of [[RepositoryActionConfigApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]]
+    * as a value.
     *
     * Obtained as `client.repos.actions.config.attempt`. Each method is the convenience-rail method with its failure
     * channel materialised and nothing else, so an operation exists on exactly one of the rails only if it is missing

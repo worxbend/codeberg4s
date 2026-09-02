@@ -123,6 +123,10 @@ object OperationIdSuite:
     "com.worxbend.codeberg4s.organizations.actions.OrganizationActionApi"     -> Set("orgs.actions"),
     "com.worxbend.codeberg4s.repositories.RepositoryApi"                      -> Set("repos"),
     "com.worxbend.codeberg4s.repositories.access.RepositoryAccessApi"         -> Set("repos"),
+    "com.worxbend.codeberg4s.repositories.access.RepositoryProtectionApi"     -> Set(
+      "repos.branchProtections",
+      "repos.tagProtections",
+    ),
     "com.worxbend.codeberg4s.repositories.actions.RepositoryActionApi"        -> Set("repos.actions"),
     "com.worxbend.codeberg4s.repositories.actions.RepositoryActionConfigApi"  -> Set("repos.actions"),
     "com.worxbend.codeberg4s.repositories.admin.RepositoryAdminApi"           -> Set("repos.admin"),

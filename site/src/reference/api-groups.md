@@ -1,7 +1,7 @@
 # API groups
 
 For anyone looking for where an endpoint lives. Nine accessors hang off
-`CodebergClient`; five of them nest further groups, for **45 API classes** in
+`CodebergClient`; five of them nest further groups, for **46 API classes** in
 total.
 
 Every class listed here has the same two-rail shape: the methods on the class
@@ -66,7 +66,8 @@ record full of nullable fields.
 | `client.repos.wiki` | `repositories.hooks.RepositoryWikiApi` | 6 | wiki pages, their content and their history |
 | `client.repos.flags` | `repositories.hooks.RepositoryFlagApi` | 6 | a repository's administrative flags |
 | `client.repos.issueConfig` | `repositories.hooks.RepositoryIssueConfigApi` | 3 | what a repository tells a contributor about to open an issue: its issue config and templates |
-| `client.repos.access` | `repositories.access.RepositoryAccessApi` | 23 | who may push and merge: branch and tag protections, collaborators, deploy keys, team access |
+| `client.repos.access` | `repositories.access.RepositoryAccessApi` | 13 | who may reach a repository: collaborators, deploy keys, team access |
+| `client.repos.access.protections` | `repositories.access.RepositoryProtectionApi` | 10 | what they may do to a ref: branch and tag protections |
 | `client.repos.admin` | `repositories.admin.RepositoryAdminApi` | 14 | administering a repository: creating, editing, transferring, converting, branches, avatars |
 | `client.repos.admin.mirrors` | `repositories.admin.RepositoryMirrorApi` | 10 | pull mirrors, push mirrors and fork sync |
 | `client.repos.admin.contents` | `repositories.admin.RepositoryContentApi` | 5 | reading a repository's files and **writing files** into it |

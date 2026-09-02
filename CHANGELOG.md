@@ -25,6 +25,17 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **The branch and tag protections moved to
+  `client.repos.access.protections`.** `client.repos.access` answered two
+  questions at once: who may reach a repository, and what they may do to a ref
+  once they are in. The ten protection operations (`branchProtections`,
+  `branchProtection`, `createBranchProtection`, `editBranchProtection`,
+  `deleteBranchProtection`, and the five tag equivalents) are now on
+  `RepositoryProtectionApi`, reached as `client.repos.access.protections`, with
+  their names, arguments, endpoints, operation ids and retry decisions
+  unchanged. `client.repos.access` keeps collaborators, deploy keys and team
+  access.
+
 - **The Actions runners, secrets and variables moved to
   `client.repos.actions.config`.** `client.repos.actions` held 28 operations
   covering two different things: the record of what Actions has done — runs,

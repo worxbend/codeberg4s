@@ -59,7 +59,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAccessApiSuite.BranchListBody))
 
     onApi(backend): api =>
-      api.branchProtections(Handle, Name).map: rules =>
+      api.protections.branchProtections(Handle, Name).map: rules =>
         assertEquals(pathOf(backend), s"$Endpoint/branch_protections")
         assertEquals(queryOf(backend), Nil)
         assertEquals(rules.map(_.ruleName), Vector("main"))
@@ -69,7 +69,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAccessApiSuite.BranchBody))
 
     onApi(backend): api =>
-      api.branchProtection(Handle, Name, Rule).map: rule =>
+      api.protections.branchProtection(Handle, Name, Rule).map: rule =>
         assertEquals(pathOf(backend), s"$Endpoint/branch_protections/main")
         assertEquals(rule.ruleName, "main")
 
@@ -80,7 +80,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
       .withSettings(BranchProtectionSettings.Unchanged.requiringSignedCommits(true).applyingToAdmins(true))
 
     onApi(backend): api =>
-      api.createBranchProtection(Handle, Name, command).map: _ =>
+      api.protections.createBranchProtection(Handle, Name, command).map: _ =>
         assertEquals(methodOf(backend), "POST")
         assertEquals(pathOf(backend), s"$Endpoint/branch_protections")
         assertEquals(bodyOf(backend), """{"rule_name":"main","require_signed_commits":true,"apply_to_admins":true}""")
@@ -94,7 +94,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
     )
 
     onApi(backend): api =>
-      api.attempt
+      api.protections.attempt
         .createBranchProtection(Handle, Name, CreateBranchProtection.on(Rule))
         .map: outcome =>
           assert(outcome.isLeft, s"a 503 on create must not be retried into a success, got $outcome")
@@ -105,7 +105,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
     val command = EditBranchProtection.of(BranchProtectionSettings.Unchanged.applyingToAdmins(true))
 
     onApi(backend): api =>
-      api.editBranchProtection(Handle, Name, Rule, command).map: _ =>
+      api.protections.editBranchProtection(Handle, Name, Rule, command).map: _ =>
         assertEquals(methodOf(backend), "PATCH")
         assertEquals(pathOf(backend), s"$Endpoint/branch_protections/main")
         assertEquals(bodyOf(backend), """{"apply_to_admins":true}""")
@@ -114,7 +114,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAccessApiSuite.BranchBody))
 
     onApi(backend): api =>
-      api
+      api.protections
         .editBranchProtection(Handle, Name, Rule, EditBranchProtection.Nothing)
         .map(_ => assertEquals(bodyOf(backend), "{}"))
 
@@ -127,7 +127,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
     )
 
     onApi(backend): api =>
-      api.attempt
+      api.protections.attempt
         .editBranchProtection(Handle, Name, Rule, EditBranchProtection.Nothing)
         .map(_ => assertEquals(backend.allInteractions.size, 1, "the PATCH was retried"))
 
@@ -135,7 +135,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(204, ""))
 
     onApi(backend): api =>
-      api.deleteBranchProtection(Handle, Name, Rule).map: _ =>
+      api.protections.deleteBranchProtection(Handle, Name, Rule).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
         assertEquals(pathOf(backend), s"$Endpoint/branch_protections/main")
 
@@ -144,7 +144,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
       RecordingBackend(cycling(ResponseStub.adjust("", StatusCode(503)), ResponseStub.adjust("", StatusCode(204))))
 
     onApi(backend): api =>
-      api.attempt
+      api.protections.attempt
         .deleteBranchProtection(Handle, Name, Rule)
         .map: outcome =>
           assert(outcome.isLeft, s"a 503 on this delete must not be retried into a success, got $outcome")
@@ -156,7 +156,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAccessApiSuite.TagListBody))
 
     onApi(backend): api =>
-      api.tagProtections(Handle, Name).map: rules =>
+      api.protections.tagProtections(Handle, Name).map: rules =>
         assertEquals(pathOf(backend), s"$Endpoint/tag_protections")
         assertEquals(queryOf(backend), Nil)
         assertEquals(rules.map(_.namePattern), Vector("v*"))
@@ -165,7 +165,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryAccessApiSuite.TagBody))
 
     onApi(backend): api =>
-      api.tagProtection(Handle, Name, TagRule).map: rule =>
+      api.protections.tagProtection(Handle, Name, TagRule).map: rule =>
         assertEquals(pathOf(backend), s"$Endpoint/tag_protections/17")
         assertEquals(rule.id.value, 17L)
 
@@ -174,7 +174,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
     val command = CreateTagProtection.matching(orFail(TagNamePattern.from("v*")))
 
     onApi(backend): api =>
-      api.createTagProtection(Handle, Name, command).map: _ =>
+      api.protections.createTagProtection(Handle, Name, command).map: _ =>
         assertEquals(methodOf(backend), "POST")
         assertEquals(pathOf(backend), s"$Endpoint/tag_protections")
         assertEquals(bodyOf(backend), """{"name_pattern":"v*","whitelist_usernames":[],"whitelist_teams":[]}""")
@@ -184,7 +184,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
     val command = EditTagProtection.Nothing.exemptingTeams(Vector("release"))
 
     onApi(backend): api =>
-      api.editTagProtection(Handle, Name, TagRule, command).map: _ =>
+      api.protections.editTagProtection(Handle, Name, TagRule, command).map: _ =>
         assertEquals(methodOf(backend), "PATCH")
         assertEquals(pathOf(backend), s"$Endpoint/tag_protections/17")
         assertEquals(bodyOf(backend), """{"whitelist_teams":["release"]}""")
@@ -194,7 +194,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
       RecordingBackend(cycling(ResponseStub.adjust("", StatusCode(503)), ResponseStub.adjust("", StatusCode(204))))
 
     onApi(backend): api =>
-      api.deleteTagProtection(Handle, Name, TagRule).map: _ =>
+      api.protections.deleteTagProtection(Handle, Name, TagRule).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
         assertEquals(pathOf(backend), s"$Endpoint/tag_protections/17")
         assertEquals(backend.allInteractions.size, 2, "a delete by id was not retried")
@@ -387,19 +387,19 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a 404 fails the convenience rail with a CodebergException carrying the Api failure"):
     onApi(responding(404, RepositoryAccessApiSuite.NotFoundBody)): api =>
-      api.branchProtection(Handle, Name, Rule).failed.map:
+      api.protections.branchProtection(Handle, Name, Rule).failed.map:
         case CodebergException(error) =>
           assertEquals(
             summary(error),
-            (RepositoryAccessApi.GetBranchProtectionOperation, 404, Some("GetBranchProtection")),
+            (RepositoryProtectionApi.GetBranchProtectionOperation, 404, Some("GetBranchProtection")),
           )
         case other                    => fail(s"expected a CodebergException, got $other")
 
   test("a 404 reaches the typed rail as a Left reporting the very same failure"):
     onApi(responding(404, RepositoryAccessApiSuite.NotFoundBody)): api =>
       for
-        raised <- api.branchProtection(Handle, Name, Rule).failed
-        typed  <- api.attempt.branchProtection(Handle, Name, Rule)
+        raised <- api.protections.branchProtection(Handle, Name, Rule).failed
+        typed  <- api.protections.attempt.branchProtection(Handle, Name, Rule)
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on a paged listing failure as well, so the choice of rail is only a choice of style"):
@@ -418,7 +418,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a 423 on a protection write is an Api failure like any other status"):
     onApi(responding(423, RepositoryAccessApiSuite.ArchivedBody)): api =>
-      api.attempt.createBranchProtection(Handle, Name, CreateBranchProtection.on(Rule)).map:
+      api.protections.attempt.createBranchProtection(Handle, Name, CreateBranchProtection.on(Rule)).map:
         case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 423)
         case other                                    => fail(s"expected an Api failure, got $other")
 
@@ -430,13 +430,13 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a 200 whose payload does not fit the model becomes DecodingFailed, never an escaping codec exception"):
     onApi(responding(200, """{"enable_push":true}""")): api =>
-      api.attempt.branchProtection(Handle, Name, Rule).map:
+      api.protections.attempt.branchProtection(Handle, Name, Rule).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$.rule_name")
         case other                                             => fail(s"expected a decoding failure, got $other")
 
   test("a bad element of a listing reports its position"):
     onApi(responding(200, """[{"rule_name":"main"},{"enable_push":true}]""")): api =>
-      api.attempt.branchProtections(Handle, Name).map:
+      api.protections.attempt.branchProtections(Handle, Name).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$[1].rule_name")
         case other                                             => fail(s"expected a decoding failure, got $other")
 

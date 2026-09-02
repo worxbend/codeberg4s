@@ -9,8 +9,8 @@ import com.worxbend.codeberg4s.{Owner, RepoName, RepositoryRequests}
   * prefix here rather than once per companion means a change to how that collection is addressed cannot be applied to
   * one half and forgotten on the other.
   *
-  * The request shapes this path is handed to live in the companion of
-  * [[com.worxbend.codeberg4s.core.CodebergRequest]], shared with the whole library.
+  * The request shapes this path is handed to live in the companion of [[com.worxbend.codeberg4s.core.CodebergRequest]],
+  * shared with the whole library.
   */
 private[actions] object ActionRequests:
 
