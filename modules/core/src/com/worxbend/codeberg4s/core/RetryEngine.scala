@@ -35,29 +35,12 @@ import scala.concurrent.duration.{DurationLong, FiniteDuration}
   */
 final class RetryEngine[F[_]](policy: RetryPolicy, timer: Timer[F])(using exec: Exec[F])(using jitter: JitterSource):
 
-  /** Runs `attempt` under the policy, treating the call as a safe read.
-    *
-    * Equivalent to [[runWith]] with `GET` and [[RetryEligibility.IdempotentOnly]]. The attempt reports its failure as a
-    * `Left` inside a successful effect, which is the shape the request pipeline already produces; there is nowhere for
-    * the server's `Retry-After` hint to travel, so the schedule is always the policy's own backoff. Anything that
-    * mutates state, and anything that wants the server's backoff respected, goes through [[runWith]].
-    *
-    * @param operation
-    *   the stable operation id, used when a failure carries no call context of its own
-    * @param attempt
-    *   makes the call; receives the one-based attempt number
+  /** Equivalent to [[runWith]] with `GET` and [[RetryEligibility.IdempotentOnly]]; the retry tests' convenience entry
+    * point, where the failure travels as a `Left` and no server backoff hint exists.
     */
-  def run[A](operation: String)(attempt: Int => F[Either[CodebergError, A]]): F[A] =
+  private[core] def run[A](operation: String)(attempt: Int => F[Either[CodebergError, A]]): F[A] =
     runWith(operation, HttpMethod.Get, RetryEligibility.IdempotentOnly): number =>
       exec.map(attempt(number))(result => AttemptOutcome(result, None))
-
-  /** Runs `attempt` under the policy, reading the failure from `F`'s own error channel.
-    *
-    * The same contract as [[run]] for a caller whose attempt fails the effect itself — a failed `Future` — rather than
-    * returning a `Left`. Non-[[com.worxbend.codeberg4s.CodebergError]] defects are not caught; see [[Exec.attempt]].
-    */
-  def runEffect[A](operation: String)(attempt: Int => F[A]): F[A] =
-    run(operation)(number => exec.attempt(attempt(number)))
 
   /** Runs `attempt` under the policy.
     *
