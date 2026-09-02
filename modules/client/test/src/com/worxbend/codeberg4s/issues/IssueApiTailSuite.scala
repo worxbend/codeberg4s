@@ -123,7 +123,7 @@ final class IssueApiTailSuite extends FunSuite with IssueLaneHarness:
     val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
-      api.attempt
+      api.pins.attempt
         .pin(Handle, Name, Number)
         .map: _ =>
           assertEquals(methodOf(backend), "POST")
@@ -134,7 +134,7 @@ final class IssueApiTailSuite extends FunSuite with IssueLaneHarness:
     val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
-      api.unpin(Handle, Name, Number).map: _ =>
+      api.pins.unpin(Handle, Name, Number).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
         assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/Codeberg/Community/issues/2966/pin")
         assertEquals(backend.allInteractions.size, 2, "the 503 on an unpin was not retried")
@@ -143,7 +143,7 @@ final class IssueApiTailSuite extends FunSuite with IssueLaneHarness:
     val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
-      api.movePin(Handle, Name, Number, PinPosition.First).map: _ =>
+      api.pins.movePin(Handle, Name, Number, PinPosition.First).map: _ =>
         assertEquals(methodOf(backend), "PATCH")
         assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/Codeberg/Community/issues/2966/pin/1")
         assertEquals(bodyOf(backend), "empty")
@@ -155,7 +155,7 @@ final class IssueApiTailSuite extends FunSuite with IssueLaneHarness:
     val backend = RecordingBackend(responding(200, s"[$IssueBody]"))
 
     onApi(backend): api =>
-      api.blocks(Handle, Name, Number, window(1, 30)).map: page =>
+      api.dependencies.blocks(Handle, Name, Number, window(1, 30)).map: page =>
         assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/Codeberg/Community/issues/2966/blocks")
         assertEquals(queryOf(backend), List("page" -> "1", "limit" -> "30"))
         assertEquals(page.size, 1)
@@ -164,7 +164,7 @@ final class IssueApiTailSuite extends FunSuite with IssueLaneHarness:
     val backend = RecordingBackend(responding(201, IssueBody))
 
     onApi(backend): api =>
-      api.addBlock(Handle, Name, Number, Other).map: _ =>
+      api.dependencies.addBlock(Handle, Name, Number, Other).map: _ =>
         assertEquals(methodOf(backend), "POST")
         assertEquals(bodyOf(backend), """{"owner":"Codeberg","repo":"Community","index":4242}""")
 
@@ -172,7 +172,7 @@ final class IssueApiTailSuite extends FunSuite with IssueLaneHarness:
     val backend = RecordingBackend(flakyThen(200, IssueBody))
 
     onApi(backend): api =>
-      api.removeBlock(Handle, Name, Number, Other).map: _ =>
+      api.dependencies.removeBlock(Handle, Name, Number, Other).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
         assertEquals(bodyOf(backend), """{"owner":"Codeberg","repo":"Community","index":4242}""")
         assertEquals(backend.allInteractions.size, 2, "the 503 on a block removal was not retried")
@@ -182,8 +182,8 @@ final class IssueApiTailSuite extends FunSuite with IssueLaneHarness:
     val added  = RecordingBackend(responding(201, IssueBody))
 
     for
-      _ <- onApi(listed)(_.dependencies(Handle, Name, Number, window(1, 30)))
-      _ <- onApi(added)(_.addDependency(Handle, Name, Number, Other))
+      _ <- onApi(listed)(_.dependencies.dependencies(Handle, Name, Number, window(1, 30)))
+      _ <- onApi(added)(_.dependencies.addDependency(Handle, Name, Number, Other))
     yield
       assertEquals(
         pathOf(listed),
@@ -196,7 +196,7 @@ final class IssueApiTailSuite extends FunSuite with IssueLaneHarness:
     val backend = RecordingBackend(flakyThen(201, IssueBody))
 
     onApi(backend): api =>
-      api.attempt
+      api.dependencies.attempt
         .addDependency(Handle, Name, Number, Other)
         .map: outcome =>
           assert(outcome.isLeft, s"a 503 on a POST must not be retried into a success, got $outcome")
@@ -206,7 +206,7 @@ final class IssueApiTailSuite extends FunSuite with IssueLaneHarness:
     val backend = RecordingBackend(flakyThen(200, IssueBody))
 
     onApi(backend): api =>
-      api.removeDependency(Handle, Name, Number, Other).map: _ =>
+      api.dependencies.removeDependency(Handle, Name, Number, Other).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
         assertEquals(backend.allInteractions.size, 2, "the 503 on a dependency removal was not retried")
 
@@ -249,11 +249,11 @@ final class IssueApiTailSuite extends FunSuite with IssueLaneHarness:
   test("each new operation carries its own stable id, so an alert can name the endpoint"):
     onApi(responding(404, IssueLaneHarness.NotFoundBody)): api =>
       for
-        pinned  <- api.attempt.pin(Handle, Name, Number)
-        blocked <- api.attempt.addBlock(Handle, Name, Number, Other)
+        pinned  <- api.pins.attempt.pin(Handle, Name, Number)
+        blocked <- api.dependencies.attempt.addBlock(Handle, Name, Number, Other)
       yield
-        assertEquals(operation(pinned), IssueApi.PinOperation)
-        assertEquals(operation(blocked), IssueApi.AddBlockOperation)
+        assertEquals(operation(pinned), IssuePinApi.PinOperation)
+        assertEquals(operation(blocked), IssueDependencyApi.AddBlockOperation)
 
   private def operation[A](result: Either[CodebergError, A]): String =
     result match

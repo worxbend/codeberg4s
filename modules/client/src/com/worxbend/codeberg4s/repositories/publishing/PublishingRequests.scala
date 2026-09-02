@@ -7,8 +7,7 @@ import com.worxbend.codeberg4s.{Owner, RepoName, RepositoryRequests}
   *
   * [[RepositoryPublishingApi]] addresses the release record and [[ReleaseAssetApi]] addresses the files hanging off it,
   * and both start at the same `/repos/{owner}/{repo}/releases` collection. Holding the prefixes here rather than once
-  * per companion means a change to how a release is addressed cannot be applied to one half and forgotten on the
-  * other.
+  * per companion means a change to how a release is addressed cannot be applied to one half and forgotten on the other.
   *
   * The request shapes these paths are handed to live in the companion of
   * [[com.worxbend.codeberg4s.core.CodebergRequest]], shared with the whole library.

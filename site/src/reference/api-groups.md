@@ -1,7 +1,7 @@
 # API groups
 
 For anyone looking for where an endpoint lives. Nine accessors hang off
-`CodebergClient`; five of them nest further groups, for **47 API classes** in
+`CodebergClient`; five of them nest further groups, for **49 API classes** in
 total.
 
 Every class listed here has the same two-rail shape: the methods on the class
@@ -22,7 +22,7 @@ guessable from the HTTP method, so read it before assuming.
 | `client.version` | `com.worxbend.codeberg4s.VersionApi` | 1 | — |
 | `client.repos` | `com.worxbend.codeberg4s.repositories.RepositoryApi` | 11 | 9 |
 | `client.users` | `com.worxbend.codeberg4s.users.UserApi` | 8 | 8 |
-| `client.issues` | `com.worxbend.codeberg4s.issues.IssueApi` | 23 | 7 |
+| `client.issues` | `com.worxbend.codeberg4s.issues.IssueApi` | 14 | 9 |
 | `client.pulls` | `com.worxbend.codeberg4s.pulls.PullRequestApi` | 13 | 1 |
 | `client.organizations` | `com.worxbend.codeberg4s.organizations.OrganizationApi` | 16 | 6 |
 | `client.notifications` | `com.worxbend.codeberg4s.notifications.NotificationApi` | 7 | — |
@@ -128,11 +128,9 @@ renders as `***` everywhere. See
 
 ## `client.issues` — issues
 
-**23 operations:** `list`, `get`, `create`, `edit`, `listComments`,
+**14 operations:** `list`, `get`, `create`, `edit`, `listComments`,
 `createComment`, `listLabels`, `createLabel`, `listMilestones`, `getMilestone`,
-`search`, `delete`, `setDeadline`, `pin`, `unpin`, `movePin`, `blocks`,
-`addBlock`, `removeBlock`, `dependencies`, `addDependency`,
-`removeDependency`, `timeline`
+`search`, `delete`, `setDeadline`, `timeline`
 
 Filters are one `IssueQuery` value rather than eight optional parameters, and an
 issue's `state` is a `LifecycleState` ADT whose `Closed` case carries the closing
@@ -143,6 +141,8 @@ timestamp — so "closed" and "when" cannot get out of step.
 | Accessor | Class | Operations | Covers |
 | --- | --- | ---: | --- |
 | `client.issues.comments` | `issues.IssueCommentApi` | 6 | reading, editing and deleting a comment once it exists; listing every comment in a repository |
+| `client.issues.dependencies` | `issues.IssueDependencyApi` | 6 | what an issue depends on and what it blocks — one edge, read from both ends |
+| `client.issues.pins` | `issues.IssuePinApi` | 3 | the repository's pinned-issue shortlist and its order |
 | `client.issues.attachments` | `issues.IssueAttachmentApi` | 10 | files attached to an issue and files attached to a comment |
 | `client.issues.reactions` | `issues.IssueReactionApi` | 6 | emoji reactions on an issue and on a comment |
 | `client.issues.labels` | `issues.IssueLabelApi` | 8 | a repository's labels once they exist, and which of them are on an issue |

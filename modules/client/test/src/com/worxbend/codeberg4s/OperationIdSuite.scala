@@ -96,6 +96,8 @@ object OperationIdSuite:
   private val Roots: Map[String, Set[String]] = Map(
     "com.worxbend.codeberg4s.VersionApi"                          -> Set("version"),
     "com.worxbend.codeberg4s.issues.IssueApi"                     -> Set("issues"),
+    "com.worxbend.codeberg4s.issues.IssueDependencyApi"           -> Set("issues.blocks", "issues.dependencies"),
+    "com.worxbend.codeberg4s.issues.IssuePinApi"                  -> Set("issues.pin", "issues.unpin"),
     "com.worxbend.codeberg4s.issues.IssueAttachmentApi"           -> Set("issues"),
     "com.worxbend.codeberg4s.issues.IssueCommentApi"              -> Set("issues.comments"),
     "com.worxbend.codeberg4s.issues.IssueLabelApi"                -> Set("issues.labels"),

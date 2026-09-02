@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues
 
 import com.worxbend.codeberg4s.codec.PagingQuery
-import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read, remove, removeWithBody, write}
+import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.issues.wire.{
   CreateIssueCommentOptionDto,
@@ -9,7 +9,6 @@ import com.worxbend.codeberg4s.issues.wire.{
   CreateLabelOptionDto,
   EditDeadlineOptionDto,
   EditIssueOptionDto,
-  IssueMetaDto,
   IssueQueries
 }
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
@@ -20,6 +19,9 @@ import scala.concurrent.Future
 import java.time.Instant
 
 /** Issue endpoints, together with the comments, labels and milestones that hang off them.
+  *
+  * The edges between issues are on [[dependencies]] and the repository's pinned shortlist is on [[pins]], each a group
+  * of its own.
   *
   * Reached as `client.issues`. Both error rails are here (ADR-0005): the methods on this class fail the `Future` with
   * [[com.worxbend.codeberg4s.CodebergException]], and the same operations on [[IssueApi.attempt]] never fail and return
@@ -73,6 +75,12 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
 
   /** Reading, editing and deleting a comment, and listing every comment in the repository. */
   val comments: IssueCommentApi = IssueCommentApi(pipeline)
+
+  /** What an issue depends on, and what it blocks. */
+  val dependencies: IssueDependencyApi = IssueDependencyApi(pipeline)
+
+  /** The repository's pinned-issue shortlist. */
+  val pins: IssuePinApi = IssuePinApi(pipeline)
 
   /** The files attached to an issue and to a comment. */
   val attachments: IssueAttachmentApi = IssueAttachmentApi(pipeline)
@@ -328,171 +336,6 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     pipeline.call(IssueApi.setDeadlineRequest(owner, name, number, dueDate), RetryEligibility.Never)(using
       IssueDecoders.deadline)
 
-  /** Pins an issue to the top of the repository's issue list — `POST /repos/{owner}/{repo}/issues/{index}/pin`.
-    *
-    * '''Never retried''', because it is a `POST` and this library never repeats one. Repeating would be harmless — an
-    * issue is either pinned or not — but the rule is the method; [[movePin]] is the call in this area that is retried,
-    * and it says why.
-    *
-    * '''Answers `204`''', so there is nothing to return. Where the pinned issues can be '''read''' is
-    * `GET /repos/{owner}/{repo}/issues/pinned`, which the repository group owns.
-    *
-    * '''Failures.''' The group contract above. A `403` is what exceeding the instance's limit on pinned issues looks
-    * like, as well as an under-privileged token.
-    */
-  def pin(owner: Owner, name: RepoName, number: IssueNumber): Future[Unit] =
-    pipeline.callUnit(IssueApi.pinRequest(owner, name, number), RetryEligibility.Never)
-
-  /** Unpins an issue — `DELETE /repos/{owner}/{repo}/issues/{index}/pin`.
-    *
-    * '''Retried''', because the request names exactly one issue and asks for an absolute end state — that issue is not
-    * pinned. Doing it twice leaves the repository exactly where doing it once would, nothing is created, and unlike
-    * most deletes in this library a lost success does not turn into a `404`: the issue is still there, it simply has no
-    * pin left to remove.
-    *
-    * '''Answers `204`''', so there is nothing to return.
-    *
-    * '''Failures.''' The group contract above.
-    */
-  def unpin(owner: Owner, name: RepoName, number: IssueNumber): Future[Unit] =
-    pipeline.callUnit(IssueApi.unpinRequest(owner, name, number), RetryEligibility.AlwaysRetry)
-
-  /** Moves a pinned issue to a given slot — `PATCH /repos/{owner}/{repo}/issues/{index}/pin/{position}`.
-    *
-    * '''The one `PATCH` in this class that is retried''', and the exception is deliberate. Every other `PATCH` here
-    * carries a body that is applied to whatever the resource has become, so a repeat can overwrite somebody else's
-    * change. This one carries '''no body at all''': the whole request is a URL naming one issue and one absolute
-    * position, so the state after N attempts is the state after one, and nothing is created. That is the bar the class
-    * note states, and this call meets it where [[edit]] does not.
-    *
-    * '''One-based''', because Forgejo's own `pin_order` is `0` for an unpinned issue; see [[PinPosition]].
-    *
-    * '''Answers `204`''', so there is nothing to return.
-    *
-    * '''Failures.''' The group contract above. A `404` covers an issue that is not pinned at all as well as one that
-    * does not exist.
-    */
-  def movePin(owner: Owner, name: RepoName, number: IssueNumber, position: PinPosition): Future[Unit] =
-    pipeline.callUnit(IssueApi.movePinRequest(owner, name, number, position), RetryEligibility.AlwaysRetry)
-
-  /** Lists the issues this issue is blocking — `GET /repos/{owner}/{repo}/issues/{index}/blocks`.
-    *
-    * '''Read the direction carefully.''' These are the issues that cannot proceed until this one is done. The opposite
-    * relation — what this issue is waiting on — is [[dependencies]]. Forgejo stores one relation and serves both ends
-    * of it, so adding a block here is the same edge as adding a dependency there, seen from the other side.
-    *
-    * '''Paging.''' As [[list]]: the `Link` header decides, not the number of items.
-    *
-    * '''Failures.''' The group contract above.
-    */
-  def blocks(
-      owner: Owner,
-      name: RepoName,
-      number: IssueNumber,
-      params: PageParams,
-  ): Future[Page[Issue]] =
-    pipeline.callPage(IssueApi.blocksRequest(owner, name, number, params), params)(using IssueDecoders.issues)
-
-  /** Declares that this issue blocks another — `POST /repos/{owner}/{repo}/issues/{index}/blocks`.
-    *
-    * '''The blocked issue is in the body, the blocking one in the path.''' The spec's own words are "block the issue
-    * given in the body by the issue in path". The body may name an issue in a '''different''' repository, which is why
-    * it is an [[IssueRef]] carrying an owner and a repository of its own and not a bare [[IssueNumber]].
-    *
-    * '''Never retried''', because it is a `POST` and this library never repeats one. Forgejo stores at most one edge
-    * between two issues, so a repeat would most likely be rejected rather than duplicate the link — but that is the
-    * instance's behaviour to change, not a promise this library makes on its behalf.
-    *
-    * '''Answers `201`''' with the issue that is now blocked, that is the one named in the body.
-    *
-    * '''Failures.''' The group contract above; a `404` here can mean either issue is missing.
-    */
-  def addBlock(
-      owner: Owner,
-      name: RepoName,
-      number: IssueNumber,
-      blocked: IssueRef,
-  ): Future[Issue] =
-    pipeline.call(IssueApi.addBlockRequest(owner, name, number, blocked), RetryEligibility.Never)(using
-      IssueDecoders.issue)
-
-  /** Withdraws a block — `DELETE /repos/{owner}/{repo}/issues/{index}/blocks`.
-    *
-    * '''The blocked issue travels in the body''', not the URL, because which edge to sever is not otherwise expressible
-    * — the same shape [[com.worxbend.codeberg4s.issues.wire.EditReactionOptionDto]] describes.
-    *
-    * '''Retried''', because the request names exactly one edge — this issue, that issue — and asks for an absolute end
-    * state: the edge is gone. Doing it twice leaves the instance where doing it once would and nothing is created. The
-    * usual cost applies: if the first attempt succeeded and its response was lost, the retry addresses an edge that no
-    * longer exists and answers `404`.
-    *
-    * '''Answers `200`''' with the issue that is no longer blocked.
-    *
-    * '''Failures.''' The group contract above.
-    */
-  def removeBlock(
-      owner: Owner,
-      name: RepoName,
-      number: IssueNumber,
-      blocked: IssueRef,
-  ): Future[Issue] =
-    pipeline.call(IssueApi.removeBlockRequest(owner, name, number, blocked), RetryEligibility.AlwaysRetry)(using
-      IssueDecoders.issue)
-
-  /** Lists the issues this issue is waiting on — `GET /repos/{owner}/{repo}/issues/{index}/dependencies`.
-    *
-    * The other end of the relation [[blocks]] reports; see that method for the direction.
-    *
-    * '''Paging.''' As [[list]]: the `Link` header decides, not the number of items.
-    *
-    * '''Failures.''' The group contract above.
-    */
-  def dependencies(
-      owner: Owner,
-      name: RepoName,
-      number: IssueNumber,
-      params: PageParams,
-  ): Future[Page[Issue]] =
-    pipeline.callPage(IssueApi.dependenciesRequest(owner, name, number, params), params)(using IssueDecoders.issues)
-
-  /** Declares that this issue depends on another — `POST /repos/{owner}/{repo}/issues/{index}/dependencies`.
-    *
-    * '''The issue in the URL depends on the issue in the body''' — the spec's own words. As with [[addBlock]], the body
-    * may name an issue in another repository, which is why it is an [[IssueRef]].
-    *
-    * '''Never retried''', for the reason [[addBlock]] gives.
-    *
-    * '''Answers `201`''' with the issue the dependency was added to.
-    *
-    * '''Failures.''' The group contract above, plus `423` when the issue is locked.
-    */
-  def addDependency(
-      owner: Owner,
-      name: RepoName,
-      number: IssueNumber,
-      blocker: IssueRef,
-  ): Future[Issue] =
-    pipeline.call(IssueApi.addDependencyRequest(owner, name, number, blocker), RetryEligibility.Never)(using
-      IssueDecoders.issue)
-
-  /** Withdraws a dependency — `DELETE /repos/{owner}/{repo}/issues/{index}/dependencies`.
-    *
-    * '''The blocking issue travels in the body''', not the URL; see [[removeBlock]] for the shape and for the retry
-    * reasoning, which is identical.
-    *
-    * '''Answers `200`''' with the issue the dependency was removed from.
-    *
-    * '''Failures.''' The group contract above, plus `423` when the issue is locked.
-    */
-  def removeDependency(
-      owner: Owner,
-      name: RepoName,
-      number: IssueNumber,
-      blocker: IssueRef,
-  ): Future[Issue] =
-    pipeline.call(IssueApi.removeDependencyRequest(owner, name, number, blocker), RetryEligibility.AlwaysRetry)(using
-      IssueDecoders.issue)
-
   /** Lists everything that has happened to an issue — `GET /repos/{owner}/{repo}/issues/{index}/timeline`.
     *
     * '''Comments '''and''' events''', which is what makes this different from [[listComments]]: a label added, a
@@ -560,33 +403,6 @@ object IssueApi:
 
   /** The stable operation id of [[IssueApi.setDeadline]]. */
   val SetDeadlineOperation: String = "issues.deadline.set"
-
-  /** The stable operation id of [[IssueApi.pin]]. */
-  val PinOperation: String = "issues.pin"
-
-  /** The stable operation id of [[IssueApi.unpin]]. */
-  val UnpinOperation: String = "issues.unpin"
-
-  /** The stable operation id of [[IssueApi.movePin]]. */
-  val MovePinOperation: String = "issues.pin.move"
-
-  /** The stable operation id of [[IssueApi.blocks]]. */
-  val ListBlocksOperation: String = "issues.blocks.list"
-
-  /** The stable operation id of [[IssueApi.addBlock]]. */
-  val AddBlockOperation: String = "issues.blocks.add"
-
-  /** The stable operation id of [[IssueApi.removeBlock]]. */
-  val RemoveBlockOperation: String = "issues.blocks.remove"
-
-  /** The stable operation id of [[IssueApi.dependencies]]. */
-  val ListDependenciesOperation: String = "issues.dependencies.list"
-
-  /** The stable operation id of [[IssueApi.addDependency]]. */
-  val AddDependencyOperation: String = "issues.dependencies.add"
-
-  /** The stable operation id of [[IssueApi.removeDependency]]. */
-  val RemoveDependencyOperation: String = "issues.dependencies.remove"
 
   /** The stable operation id of [[IssueApi.timeline]]. */
   val TimelineOperation: String = "issues.timeline.list"
@@ -680,77 +496,6 @@ object IssueApi:
     ): Future[Either[CodebergError, IssueDeadline]] =
       exec.attempt(rail.setDeadline(owner, name, number, dueDate))
 
-    /** [[IssueApi.pin]] with its failure as a value. */
-    def pin(owner: Owner, name: RepoName, number: IssueNumber): Future[Either[CodebergError, Unit]] =
-      exec.attempt(rail.pin(owner, name, number))
-
-    /** [[IssueApi.unpin]] with its failure as a value. */
-    def unpin(owner: Owner, name: RepoName, number: IssueNumber): Future[Either[CodebergError, Unit]] =
-      exec.attempt(rail.unpin(owner, name, number))
-
-    /** [[IssueApi.movePin]] with its failure as a value. */
-    def movePin(
-        owner: Owner,
-        name: RepoName,
-        number: IssueNumber,
-        position: PinPosition,
-    ): Future[Either[CodebergError, Unit]] =
-      exec.attempt(rail.movePin(owner, name, number, position))
-
-    /** [[IssueApi.blocks]] with its failure as a value. */
-    def blocks(
-        owner: Owner,
-        name: RepoName,
-        number: IssueNumber,
-        params: PageParams,
-    ): Future[Either[CodebergError, Page[Issue]]] =
-      exec.attempt(rail.blocks(owner, name, number, params))
-
-    /** [[IssueApi.addBlock]] with its failure as a value. */
-    def addBlock(
-        owner: Owner,
-        name: RepoName,
-        number: IssueNumber,
-        blocked: IssueRef,
-    ): Future[Either[CodebergError, Issue]] =
-      exec.attempt(rail.addBlock(owner, name, number, blocked))
-
-    /** [[IssueApi.removeBlock]] with its failure as a value. */
-    def removeBlock(
-        owner: Owner,
-        name: RepoName,
-        number: IssueNumber,
-        blocked: IssueRef,
-    ): Future[Either[CodebergError, Issue]] =
-      exec.attempt(rail.removeBlock(owner, name, number, blocked))
-
-    /** [[IssueApi.dependencies]] with its failure as a value. */
-    def dependencies(
-        owner: Owner,
-        name: RepoName,
-        number: IssueNumber,
-        params: PageParams,
-    ): Future[Either[CodebergError, Page[Issue]]] =
-      exec.attempt(rail.dependencies(owner, name, number, params))
-
-    /** [[IssueApi.addDependency]] with its failure as a value. */
-    def addDependency(
-        owner: Owner,
-        name: RepoName,
-        number: IssueNumber,
-        blocker: IssueRef,
-    ): Future[Either[CodebergError, Issue]] =
-      exec.attempt(rail.addDependency(owner, name, number, blocker))
-
-    /** [[IssueApi.removeDependency]] with its failure as a value. */
-    def removeDependency(
-        owner: Owner,
-        name: RepoName,
-        number: IssueNumber,
-        blocker: IssueRef,
-    ): Future[Either[CodebergError, Issue]] =
-      exec.attempt(rail.removeDependency(owner, name, number, blocker))
-
     /** [[IssueApi.timeline]] with its failure as a value. */
     def timeline(
         owner: Owner,
@@ -784,86 +529,6 @@ object IssueApi:
       EditDeadlineOptionDto.render(dueDate),
     )
 
-  private def pinRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
-    bodiless(PinOperation, HttpMethod.Post, pinPath(owner, name, number))
-
-  private def unpinRequest(owner: Owner, name: RepoName, number: IssueNumber): CodebergRequest =
-    remove(UnpinOperation, pinPath(owner, name, number))
-
-  private def movePinRequest(
-      owner: Owner,
-      name: RepoName,
-      number: IssueNumber,
-      position: PinPosition,
-  ): CodebergRequest =
-    bodiless(MovePinOperation, HttpMethod.Patch, pinPath(owner, name, number) :+ position.value.toString)
-
-  private def blocksRequest(
-      owner: Owner,
-      name: RepoName,
-      number: IssueNumber,
-      params: PageParams,
-  ): CodebergRequest =
-    read(ListBlocksOperation, blocksPath(owner, name, number), PagingQuery.window(params))
-
-  private def addBlockRequest(
-      owner: Owner,
-      name: RepoName,
-      number: IssueNumber,
-      blocked: IssueRef,
-  ): CodebergRequest =
-    write(
-      AddBlockOperation,
-      HttpMethod.Post,
-      blocksPath(owner, name, number),
-      IssueMetaDto.render(blocked),
-    )
-
-  private def removeBlockRequest(
-      owner: Owner,
-      name: RepoName,
-      number: IssueNumber,
-      blocked: IssueRef,
-  ): CodebergRequest =
-    removeWithBody(
-      RemoveBlockOperation,
-      blocksPath(owner, name, number),
-      IssueMetaDto.render(blocked),
-    )
-
-  private def dependenciesRequest(
-      owner: Owner,
-      name: RepoName,
-      number: IssueNumber,
-      params: PageParams,
-  ): CodebergRequest =
-    read(ListDependenciesOperation, dependenciesPath(owner, name, number), PagingQuery.window(params))
-
-  private def addDependencyRequest(
-      owner: Owner,
-      name: RepoName,
-      number: IssueNumber,
-      blocker: IssueRef,
-  ): CodebergRequest =
-    write(
-      AddDependencyOperation,
-      HttpMethod.Post,
-      dependenciesPath(owner, name, number),
-      IssueMetaDto.render(blocker),
-    )
-
-  private def removeDependencyRequest(
-      owner: Owner,
-      name: RepoName,
-      number: IssueNumber,
-      blocker: IssueRef,
-  ): CodebergRequest =
-    removeWithBody(
-      RemoveDependencyOperation,
-      dependenciesPath(owner, name, number),
-      IssueMetaDto.render(blocker),
-    )
-
   private def timelineRequest(
       owner: Owner,
       name: RepoName,
@@ -876,15 +541,6 @@ object IssueApi:
       IssueRequests.issuePath(owner, name, number) :+ "timeline",
       IssueQueries.comments(query) ++ PagingQuery.window(params),
     )
-
-  private def pinPath(owner: Owner, name: RepoName, number: IssueNumber): List[String] =
-    IssueRequests.issuePath(owner, name, number) :+ "pin"
-
-  private def blocksPath(owner: Owner, name: RepoName, number: IssueNumber): List[String] =
-    IssueRequests.issuePath(owner, name, number) :+ "blocks"
-
-  private def dependenciesPath(owner: Owner, name: RepoName, number: IssueNumber): List[String] =
-    IssueRequests.issuePath(owner, name, number) :+ "dependencies"
 
   private def listRequest(owner: Owner, name: RepoName, query: IssueQuery, params: PageParams): CodebergRequest =
     read(ListOperation, IssueRequests.issuesPath(owner, name), IssueQueries.issues(query) ++ PagingQuery.window(params))

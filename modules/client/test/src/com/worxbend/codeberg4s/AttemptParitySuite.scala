@@ -98,6 +98,8 @@ object AttemptParitySuite:
   private val Pairs: Seq[Pair] = Seq(
     Pair(classOf[VersionApi], classOf[VersionApi.Attempt]),
     Pair(classOf[issues.IssueApi], classOf[issues.IssueApi.Attempt]),
+    Pair(classOf[issues.IssueDependencyApi], classOf[issues.IssueDependencyApi.Attempt]),
+    Pair(classOf[issues.IssuePinApi], classOf[issues.IssuePinApi.Attempt]),
     Pair(classOf[issues.IssueCommentApi], classOf[issues.IssueCommentApi.Attempt]),
     Pair(classOf[issues.IssueAttachmentApi], classOf[issues.IssueAttachmentApi.Attempt]),
     Pair(classOf[issues.IssueReactionApi], classOf[issues.IssueReactionApi.Attempt]),

@@ -25,6 +25,15 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **The issue dependencies and pins moved to nested groups.** `client.issues`
+  held 23 operations. The six that describe an edge between two issues
+  (`blocks`, `addBlock`, `removeBlock`, `dependencies`, `addDependency`,
+  `removeDependency`) are now on `IssueDependencyApi`, reached as
+  `client.issues.dependencies`; the three that curate the repository's pinned
+  shortlist (`pin`, `unpin`, `movePin`) are now on `IssuePinApi`, reached as
+  `client.issues.pins`. Names, arguments, endpoints, operation ids and retry
+  decisions are unchanged.
+
 - **The release assets moved to `client.repos.publishing.assets`.** Five
   operations — `assets`, `uploadAsset`, `getAsset`, `editAsset`, `deleteAsset` —
   are now on `ReleaseAssetApi`, reached as `client.repos.publishing.assets`,

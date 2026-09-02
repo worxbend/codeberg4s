@@ -20,15 +20,16 @@ import scala.concurrent.Future
   * move.
   *
   * Both error rails are here (ADR-0005): the methods on this class fail the `Future` with
-  * [[com.worxbend.codeberg4s.CodebergException]], and the same operations on [[ReleaseAssetApi.attempt]] never fail
-  * and return an `Either` instead. The typed rail is derived from this one by
+  * [[com.worxbend.codeberg4s.CodebergException]], and the same operations on [[ReleaseAssetApi.attempt]] never fail and
+  * return an `Either` instead. The typed rail is derived from this one by
   * [[com.worxbend.codeberg4s.core.Exec.attempt]], so the two cannot disagree about what an operation does.
   *
   * ==An asset hangs off a release, and the release must exist first==
   *
-  * Every path here is `/repos/{owner}/{repo}/releases/{id}/assets…`, so a [[com.worxbend.codeberg4s.repositories.ReleaseId]]
-  * is needed before anything can be uploaded. [[RepositoryPublishingApi.createRelease]] is where that id comes from,
-  * and a draft release is a legitimate place to put assets before announcing them.
+  * Every path here is `/repos/{owner}/{repo}/releases/{id}/assets…`, so a
+  * [[com.worxbend.codeberg4s.repositories.ReleaseId]] is needed before anything can be uploaded.
+  * [[RepositoryPublishingApi.createRelease]] is where that id comes from, and a draft release is a legitimate place to
+  * put assets before announcing them.
   *
   * ==Failures==
   *
@@ -77,8 +78,7 @@ final class ReleaseAssetApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
     * '''Failures.''' The group contract above.
     */
   def assets(owner: Owner, name: RepoName, id: ReleaseId, params: PageParams): Future[Page[ReleaseAsset]] =
-    pipeline.callPage(ReleaseAssetApi.assetsRequest(owner, name, id, params), params)(using
-      PublishingDecoders.assets)
+    pipeline.callPage(ReleaseAssetApi.assetsRequest(owner, name, id, params), params)(using PublishingDecoders.assets)
 
   /** Uploads a file and attaches it to a release — `POST /repos/{owner}/{repo}/releases/{id}/assets`.
     *
@@ -169,8 +169,7 @@ object ReleaseAssetApi:
   /** The form field name Forgejo expects an uploaded release asset in, per `spec/swagger.v1.json`. */
   val AssetFieldName: String = "attachment"
 
-  /** The typed rail of [[ReleaseAssetApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a
-    * value.
+  /** The typed rail of [[ReleaseAssetApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a value.
     *
     * Obtained as `client.repos.publishing.assets.attempt`. Each method is the convenience-rail method with its failure
     * channel materialised and nothing else, so an operation exists on exactly one of the rails only if it is missing
