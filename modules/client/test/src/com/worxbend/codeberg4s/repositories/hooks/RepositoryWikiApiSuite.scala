@@ -5,6 +5,8 @@ import com.worxbend.codeberg4s.CodebergError
 import sttp.client4.Backend
 import sttp.client4.testing.RecordingBackend
 
+import munit.FunSuite
+
 import scala.concurrent.Future
 
 /** [[RepositoryWikiApi]] over a `BackendStub`.
@@ -13,7 +15,7 @@ import scala.concurrent.Future
   * the wire as several segments, and '''no''' wiki write is retried — the group's Scaladoc argues that from the fact
   * that every wiki write makes a Git commit, and these tests are what keeps the argument honest.
   */
-final class RepositoryWikiApiSuite extends HookApiSuite:
+final class RepositoryWikiApiSuite extends FunSuite with HookStubs:
 
   private val Home: WikiPageName = orFail(WikiPageName.from("Home"))
 
@@ -83,7 +85,7 @@ final class RepositoryWikiApiSuite extends HookApiSuite:
           assertEquals(bodyOf(backend), """{"title":"Home","content_base64":"IyBIb21lCg==","message":"start"}""")
 
   test("wiki.createPage is never retried, because a repeat would write a second commit"):
-    val backend = RecordingBackend(flakyThenOk(201, RepositoryWikiApiSuite.PageBody))
+    val backend = RecordingBackend(flakyThen(201, RepositoryWikiApiSuite.PageBody))
 
     onApi(backend): api =>
       api.attempt
@@ -112,7 +114,7 @@ final class RepositoryWikiApiSuite extends HookApiSuite:
         .map(_ => assert(bodyOf(backend).contains(""""title":"Deployment/Kubernetes""""), bodyOf(backend)))
 
   test("wiki.editPage is never retried, because it commits and may rename"):
-    val backend = RecordingBackend(flakyThenOk(200, RepositoryWikiApiSuite.PageBody))
+    val backend = RecordingBackend(flakyThen(200, RepositoryWikiApiSuite.PageBody))
 
     onApi(backend): api =>
       api.attempt
@@ -122,7 +124,7 @@ final class RepositoryWikiApiSuite extends HookApiSuite:
           assertEquals(backend.allInteractions.size, 1, "the PATCH was retried")
 
   test("wiki.deletePage addresses the page and is never retried, because removing it commits too"):
-    val backend = RecordingBackend(flakyThenOk(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api.attempt
@@ -136,20 +138,20 @@ final class RepositoryWikiApiSuite extends HookApiSuite:
   // --- failures -------------------------------------------------------------
 
   test("a 404 reaches both rails as the very same failure"):
-    onApi(responding(404, HookApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, HookStubs.NotFoundBody)): api =>
       for
         raised <- api.page(Handle, Name, Home).failed
         typed  <- api.attempt.page(Handle, Name, Home)
       yield assertRailsAgree(raised, typed)
 
   test("a 423 on a write is an ordinary Api failure, which is how an archived repository refuses"):
-    onApi(responding(423, HookApiSuite.NotFoundBody)): api =>
+    onApi(responding(423, HookStubs.NotFoundBody)): api =>
       api.attempt.deletePage(Handle, Name, Home).map:
         case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 423)
         case other                                    => fail(s"expected an Api failure, got $other")
 
   test("a 413 on a create is an ordinary Api failure, which is how a quota refuses"):
-    onApi(responding(413, HookApiSuite.NotFoundBody)): api =>
+    onApi(responding(413, HookStubs.NotFoundBody)): api =>
       api.attempt.createPage(Handle, Name, CreateWikiPage.ofText(Home, "x")).map:
         case Left(CodebergError.Api(_, status, _, _)) => assertEquals(status, 413)
         case other                                    => fail(s"expected an Api failure, got $other")
@@ -167,7 +169,7 @@ final class RepositoryWikiApiSuite extends HookApiSuite:
         case other                                             => fail(s"expected a decoding failure, got $other")
 
   private def onApi[A](backend: Backend[Future])(use: RepositoryWikiApi => Future[A]): Future[A] =
-    onPipeline(backend, (pipeline, exec) => RepositoryWikiApi(pipeline)(using exec))(use)
+    onPipeline(backend)(pipeline => use(RepositoryWikiApi(pipeline)))
 
 /** The response bodies this suite stubs, kept out of the test bodies so each test reads as one behaviour. */
 object RepositoryWikiApiSuite:

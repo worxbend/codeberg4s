@@ -35,8 +35,8 @@ import scala.concurrent.duration.DurationInt
   * Each API class is exercised the same way: answer it from a [[sttp.client4.testing.BackendStub]], record what it
   * dialled, and ask the same handful of questions of the recording — which method, which path, which query parameters,
   * which body, how many attempts, and whether the two rails (the convenience one that raises and the `attempt` one that
-  * returns an `Either`) describe a failure identically. Before this trait existed each suite carried its own copy of
-  * that sixty-line preamble, which is how one copy quietly stops asserting the query string while the others still do.
+  * returns an `Either`) describe a failure identically. Written once here rather than once per suite, because a copy of
+  * that sixty-line preamble is how one suite quietly stops asserting the query string while the others still do.
   *
   * '''Nothing here opens a socket.''' The subject of every suite mixing this in is the wiring, never the network.
   *

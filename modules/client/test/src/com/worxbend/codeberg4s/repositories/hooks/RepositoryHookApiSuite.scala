@@ -5,6 +5,8 @@ import com.worxbend.codeberg4s.CodebergError
 import sttp.client4.Backend
 import sttp.client4.testing.RecordingBackend
 
+import munit.FunSuite
+
 import scala.concurrent.Future
 
 /** [[RepositoryHookApi]] over a `BackendStub`: which URI is dialled, which body is sent, and which writes are repeated.
@@ -12,7 +14,7 @@ import scala.concurrent.Future
   * The retry assertions are the point of this suite. Three of the write endpoints here are retried and two are not, and
   * the difference is a promise the Scaladoc makes on each of them — a promise a comment cannot keep.
   */
-final class RepositoryHookApiSuite extends HookApiSuite:
+final class RepositoryHookApiSuite extends FunSuite with HookStubs:
 
   private val Identifier: HookId = orFail(HookId.from(4242L))
 
@@ -80,7 +82,7 @@ final class RepositoryHookApiSuite extends HookApiSuite:
         assertEquals(hook.id.value, 4242L)
 
   test("hooks.create is never retried, because a repeat would create a second hook"):
-    val backend = RecordingBackend(flakyThenOk(201, RepositoryHookApiSuite.HookBody))
+    val backend = RecordingBackend(flakyThen(201, RepositoryHookApiSuite.HookBody))
     val command = CreateHook.to(HookType.Forgejo, "https://ci.example/forgejo", HookContentType.Json)
 
     onApi(backend): api =>
@@ -100,7 +102,7 @@ final class RepositoryHookApiSuite extends HookApiSuite:
           assertEquals(bodyOf(backend), """{"active":false}""")
 
   test("hooks.edit is retried, because it names one hook and states the value it should have"):
-    val backend = RecordingBackend(flakyThenOk(200, RepositoryHookApiSuite.HookBody))
+    val backend = RecordingBackend(flakyThen(200, RepositoryHookApiSuite.HookBody))
 
     onApi(backend): api =>
       api.edit(Handle, Name, Identifier, EditHook.Empty.deactivated).map: hook =>
@@ -108,7 +110,7 @@ final class RepositoryHookApiSuite extends HookApiSuite:
         assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
 
   test("hooks.delete addresses the hook by id and is retried"):
-    val backend = RecordingBackend(flakyThenOk(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api.delete(Handle, Name, Identifier).map: _ =>
@@ -134,7 +136,7 @@ final class RepositoryHookApiSuite extends HookApiSuite:
       api.test(Handle, Name, Identifier, None).map(_ => assertEquals(queryOf(backend), Nil))
 
   test("hooks.test is never retried, because a repeat delivers a second payload to a third party"):
-    val backend = RecordingBackend(flakyThenOk(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api.attempt
@@ -163,7 +165,7 @@ final class RepositoryHookApiSuite extends HookApiSuite:
         assertEquals(hook.content, Some("#!/bin/sh\nexit 0\n"))
 
   test("a Git hook edit PATCHes the script and is retried, because it assigns a stated slot"):
-    val backend = RecordingBackend(flakyThenOk(200, RepositoryHookApiSuite.GitHookBody))
+    val backend = RecordingBackend(flakyThen(200, RepositoryHookApiSuite.GitHookBody))
 
     onApi(backend): api =>
       api
@@ -175,7 +177,7 @@ final class RepositoryHookApiSuite extends HookApiSuite:
           assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
 
   test("a Git hook delete clears the slot and is retried"):
-    val backend = RecordingBackend(flakyThenOk(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api.deleteGitHook(Handle, Name, PreReceive).map: _ =>
@@ -186,7 +188,7 @@ final class RepositoryHookApiSuite extends HookApiSuite:
   // --- failures -------------------------------------------------------------
 
   test("a 404 reaches both rails as the very same failure"):
-    onApi(responding(404, HookApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, HookStubs.NotFoundBody)): api =>
       for
         raised <- api.get(Handle, Name, Identifier).failed
         typed  <- api.attempt.get(Handle, Name, Identifier)
@@ -195,7 +197,7 @@ final class RepositoryHookApiSuite extends HookApiSuite:
         assertEquals(summary(materialise(typed))._1, RepositoryHookApi.GetOperation)
 
   test("a 403 on the Git hook listing reaches both rails identically, as an administrative refusal does"):
-    onApi(responding(403, HookApiSuite.NotFoundBody)): api =>
+    onApi(responding(403, HookStubs.NotFoundBody)): api =>
       for
         raised <- api.gitHooks(Handle, Name).failed
         typed  <- api.attempt.gitHooks(Handle, Name)
@@ -219,7 +221,7 @@ final class RepositoryHookApiSuite extends HookApiSuite:
       case Right(_)    => fail("expected a failure")
 
   private def onApi[A](backend: Backend[Future])(use: RepositoryHookApi => Future[A]): Future[A] =
-    onPipeline(backend, (pipeline, exec) => RepositoryHookApi(pipeline)(using exec))(use)
+    onPipeline(backend)(pipeline => use(RepositoryHookApi(pipeline)))
 
 /** The response bodies this suite stubs, kept out of the test bodies so each test reads as one behaviour. */
 object RepositoryHookApiSuite:

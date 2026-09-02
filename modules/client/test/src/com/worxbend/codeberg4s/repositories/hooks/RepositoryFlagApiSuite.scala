@@ -5,6 +5,8 @@ import com.worxbend.codeberg4s.CodebergError
 import sttp.client4.Backend
 import sttp.client4.testing.RecordingBackend
 
+import munit.FunSuite
+
 import scala.concurrent.Future
 
 /** [[RepositoryFlagApi]] over a `BackendStub`.
@@ -12,7 +14,7 @@ import scala.concurrent.Future
   * The interesting endpoint here is [[RepositoryFlagApi.check]], which answers a question with a status rather than
   * with a body — so the assertion that matters is which rail the answer arrives on.
   */
-final class RepositoryFlagApiSuite extends HookApiSuite:
+final class RepositoryFlagApiSuite extends FunSuite with HookStubs:
 
   private val Featured: RepositoryFlag = orFail(RepositoryFlag.from("featured"))
 
@@ -38,7 +40,7 @@ final class RepositoryFlagApiSuite extends HookApiSuite:
       api.attempt.check(Handle, Name, Featured).map(outcome => assertEquals(outcome, Right(())))
 
   test("an absent flag is a 404 on both rails, which is how the question is answered"):
-    onApi(responding(404, HookApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, HookStubs.NotFoundBody)): api =>
       for
         raised <- api.check(Handle, Name, Featured).failed
         typed  <- api.attempt.check(Handle, Name, Featured)
@@ -53,7 +55,7 @@ final class RepositoryFlagApiSuite extends HookApiSuite:
         assertEquals(pathOf(backend), s"$Repository/flags/archived-2024")
 
   test("flags.replaceAll PUTs the whole set and is retried, because it is an assignment"):
-    val backend = RecordingBackend(flakyThenOk(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api
@@ -71,7 +73,7 @@ final class RepositoryFlagApiSuite extends HookApiSuite:
       api.replaceAll(Handle, Name, Vector.empty).map(_ => assertEquals(bodyOf(backend), """{"flags":[]}"""))
 
   test("flags.deleteAll addresses the repository's flags and is retried"):
-    val backend = RecordingBackend(flakyThenOk(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api.deleteAll(Handle, Name).map: _ =>
@@ -80,7 +82,7 @@ final class RepositoryFlagApiSuite extends HookApiSuite:
         assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
 
   test("flags.add PUTs an empty body to the named flag and is retried"):
-    val backend = RecordingBackend(flakyThenOk(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api.add(Handle, Name, Featured).map: _ =>
@@ -90,7 +92,7 @@ final class RepositoryFlagApiSuite extends HookApiSuite:
         assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
 
   test("flags.delete addresses the named flag and is retried"):
-    val backend = RecordingBackend(flakyThenOk(204, ""))
+    val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
       api.delete(Handle, Name, Featured).map: _ =>
@@ -99,7 +101,7 @@ final class RepositoryFlagApiSuite extends HookApiSuite:
         assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
 
   test("a 403 on a write reaches both rails identically, as an administrative refusal does"):
-    onApi(responding(403, HookApiSuite.NotFoundBody)): api =>
+    onApi(responding(403, HookStubs.NotFoundBody)): api =>
       for
         raised <- api.add(Handle, Name, Featured).failed
         typed  <- api.attempt.add(Handle, Name, Featured)
@@ -113,4 +115,4 @@ final class RepositoryFlagApiSuite extends HookApiSuite:
       case Right(_)    => fail("expected a failure")
 
   private def onApi[A](backend: Backend[Future])(use: RepositoryFlagApi => Future[A]): Future[A] =
-    onPipeline(backend, (pipeline, exec) => RepositoryFlagApi(pipeline)(using exec))(use)
+    onPipeline(backend)(pipeline => use(RepositoryFlagApi(pipeline)))

@@ -5,6 +5,8 @@ import com.worxbend.codeberg4s.CodebergError
 import sttp.client4.Backend
 import sttp.client4.testing.RecordingBackend
 
+import munit.FunSuite
+
 import scala.concurrent.Future
 
 /** [[RepositoryIssueConfigApi]] over a `BackendStub`.
@@ -13,7 +15,7 @@ import scala.concurrent.Future
   * not a failure. A caller who treats a completed `Future` as a pass has misread the endpoint, and the second test is
   * what keeps that distinction visible.
   */
-final class RepositoryIssueConfigApiSuite extends HookApiSuite:
+final class RepositoryIssueConfigApiSuite extends FunSuite with HookStubs:
 
   test("the issue config read targets issue_config and decodes the contact links"):
     val backend = RecordingBackend(responding(200, RepositoryIssueConfigApiSuite.ConfigBody))
@@ -57,7 +59,7 @@ final class RepositoryIssueConfigApiSuite extends HookApiSuite:
         assertEquals(config.contactLinks, Vector.empty[IssueContactLink])
 
   test("a 404 reaches both rails as the very same failure"):
-    onApi(responding(404, HookApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, HookStubs.NotFoundBody)): api =>
       for
         raised <- api.get(Handle, Name).failed
         typed  <- api.attempt.get(Handle, Name)
@@ -66,7 +68,7 @@ final class RepositoryIssueConfigApiSuite extends HookApiSuite:
         assertEquals(summary(materialise(typed))._1, RepositoryIssueConfigApi.GetOperation)
 
   test("a 404 on the template listing reaches both rails identically too"):
-    onApi(responding(404, HookApiSuite.NotFoundBody)): api =>
+    onApi(responding(404, HookStubs.NotFoundBody)): api =>
       for
         raised <- api.templates(Handle, Name).failed
         typed  <- api.attempt.templates(Handle, Name)
@@ -84,7 +86,7 @@ final class RepositoryIssueConfigApiSuite extends HookApiSuite:
       case Right(_)    => fail("expected a failure")
 
   private def onApi[A](backend: Backend[Future])(use: RepositoryIssueConfigApi => Future[A]): Future[A] =
-    onPipeline(backend, (pipeline, exec) => RepositoryIssueConfigApi(pipeline)(using exec))(use)
+    onPipeline(backend)(pipeline => use(RepositoryIssueConfigApi(pipeline)))
 
 /** The response bodies this suite stubs, kept out of the test bodies so each test reads as one behaviour. */
 object RepositoryIssueConfigApiSuite:
