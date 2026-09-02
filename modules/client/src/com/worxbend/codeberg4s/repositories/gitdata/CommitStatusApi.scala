@@ -18,8 +18,8 @@ import scala.concurrent.Future
   * decisions are unchanged by the move.
   *
   * Both error rails are here (ADR-0005): the methods on this class fail the `Future` with
-  * [[com.worxbend.codeberg4s.CodebergException]], and the same operations on [[CommitStatusApi.attempt]] never fail
-  * and return an `Either` instead. The typed rail is derived from this one by
+  * [[com.worxbend.codeberg4s.CodebergException]], and the same operations on [[CommitStatusApi.attempt]] never fail and
+  * return an `Either` instead. The typed rail is derived from this one by
   * [[com.worxbend.codeberg4s.core.Exec.attempt]], so the two cannot disagree about what an operation does.
   *
   * ==A combined status is not the list of statuses==
@@ -48,8 +48,8 @@ import scala.concurrent.Future
   *
   * ==Retries==
   *
-  * Every operation here is a read and uses [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]]: a
-  * repeated read costs nothing but the round trip.
+  * Every operation here is a read and uses [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]]: a repeated
+  * read costs nothing but the round trip.
   */
 
 final class CommitStatusApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using exec: Exec[Future]):
@@ -155,8 +155,7 @@ object CommitStatusApi:
   /** The stable operation id of [[CommitStatusApi.getCommitPullRequest]]. */
   val GetCommitPullRequestOperation: String = "repos.commits.pull.get"
 
-  /** The typed rail of [[CommitStatusApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a
-    * value.
+  /** The typed rail of [[CommitStatusApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a value.
     *
     * Obtained as `client.repos.git.statuses.attempt`. Each method is the convenience-rail method with its failure
     * channel materialised and nothing else, so an operation exists on exactly one of the rails only if it is missing

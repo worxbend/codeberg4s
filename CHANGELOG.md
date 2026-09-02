@@ -25,6 +25,13 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **The review comments moved to `client.pulls.reviews.comments`.** `comments`,
+  `createComment`, `getComment` and `deleteComment` are now on
+  `ReviewCommentApi`, one level below the reviews they belong to, since every
+  path they build carries both a review id and — for three of the four — a
+  comment id. Names, arguments, endpoints, operation ids and retry decisions are
+  unchanged.
+
 - **The commit statuses and the byte reads moved out of `client.repos.git`.**
   `getCombinedStatus`, `statuses` and `getCommitPullRequest` are now on
   `CommitStatusApi`, reached as `client.repos.git.statuses`; `getRawFile`,

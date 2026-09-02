@@ -1,7 +1,7 @@
 # API groups
 
 For anyone looking for where an endpoint lives. Nine accessors hang off
-`CodebergClient`; five of them nest further groups, for **51 API classes** in
+`CodebergClient`; five of them nest further groups, for **52 API classes** in
 total.
 
 Every class listed here has the same two-rail shape: the methods on the class
@@ -171,15 +171,16 @@ itself. The verdicts on it are a nested group of their own.
 
 | Accessor | Class | Operations | Covers |
 | --- | --- | ---: | --- |
-| `client.pulls.reviews` | `pulls.PullRequestReviewApi` | 13 | reviews, their inline comments, and who has been asked to review |
+| `client.pulls.reviews` | `pulls.PullRequestReviewApi` | 9 | the verdicts on a pull request, and who has been asked to write one |
+| `client.pulls.reviews.comments` | `pulls.ReviewCommentApi` | 4 | the remarks anchored to diff lines inside one review |
 
 `client.pulls.reviews.list` lists the reviews of one pull request;
 `create`, `submit`, `dismiss` and `undismiss` move one through its lifecycle;
-`comments`, `createComment`, `getComment` and `deleteComment` are the remarks
-anchored to diff lines, which are *not* the pull request's conversation —
-ordinary comments live on the issue endpoints, because Forgejo stores them
-there. `request` and `removeRequests` ask people to review and take the
-request back.
+`request` and `removeRequests` ask people to review and take the request back.
+The inline remarks are one level deeper still, on
+`client.pulls.reviews.comments`, and they are *not* the pull request's
+conversation — ordinary comments live on the issue endpoints, because Forgejo
+stores them there.
 
 `PullRequestState` is `Open | Closed | Merged`, folded from Forgejo's `state`
 string *and* its separate `merged` boolean — reading a merged pull request as

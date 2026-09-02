@@ -290,7 +290,7 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, PullRequestReviewApiSuite.CommentListBody))
 
     onApi(backend): api =>
-      api.reviews.comments(Handle, Name, Number, Reviewed).map: comments =>
+      api.reviews.comments.comments(Handle, Name, Number, Reviewed).map: comments =>
         assertEquals(pathOf(backend), s"$Endpoint/13726/reviews/1654076/comments")
         assertEquals(queryOf(backend), Nil)
         assertEquals(comments.map(_.id.value), Vector(918273L))
@@ -301,7 +301,7 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val remark  = orFail(NewReviewComment.onNewLine("modules/git/hook_generate.go", 42L, "still wrong"))
 
     onApi(backend): api =>
-      api.reviews.attempt
+      api.reviews.comments.attempt
         .createComment(Handle, Name, Number, Reviewed, remark)
         .map: outcome =>
           assert(outcome.isLeft, s"a 503 on a remark must not be retried into a success, got $outcome")
@@ -312,7 +312,7 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val remark  = orFail(NewReviewComment.onOldLine("modules/git/hook_generate.go", 40L, "was fine"))
 
     onApi(backend): api =>
-      api.reviews.createComment(Handle, Name, Number, Reviewed, remark).map: comment =>
+      api.reviews.comments.createComment(Handle, Name, Number, Reviewed, remark).map: comment =>
         assertEquals(methodOf(backend), "POST")
         assertEquals(pathOf(backend), s"$Endpoint/13726/reviews/1654076/comments")
         assertEquals(
@@ -325,7 +325,7 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, PullRequestReviewApiSuite.CommentBody))
 
     onApi(backend): api =>
-      api.reviews
+      api.reviews.comments
         .getComment(Handle, Name, Number, Reviewed, CommentId)
         .map(_ => assertEquals(pathOf(backend), s"$Endpoint/13726/reviews/1654076/comments/918273"))
 
@@ -333,7 +333,7 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(cycling(503, 204, ""))
 
     onApi(backend): api =>
-      api.reviews.deleteComment(Handle, Name, Number, Reviewed, CommentId).map: _ =>
+      api.reviews.comments.deleteComment(Handle, Name, Number, Reviewed, CommentId).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
         assertEquals(pathOf(backend), s"$Endpoint/13726/reviews/1654076/comments/918273")
         assertEquals(backend.allInteractions.size, 2, "an idempotent delete was not retried")
@@ -354,8 +354,8 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
 
     onApi(responding(422, PullRequestReviewApiSuite.ValidationBody)): api =>
       for
-        raised <- api.reviews.createComment(Handle, Name, Number, Reviewed, remark).failed
-        typed  <- api.reviews.attempt.createComment(Handle, Name, Number, Reviewed, remark)
+        raised <- api.reviews.comments.createComment(Handle, Name, Number, Reviewed, remark).failed
+        typed  <- api.reviews.comments.attempt.createComment(Handle, Name, Number, Reviewed, remark)
       yield assertRailsAgree(raised, typed)
 
   test("a review payload that does not fit the model becomes DecodingFailed, never an escaping exception"):
@@ -366,7 +366,7 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a bad element of a comment listing reports its position, all the way through the pipeline"):
     onApi(responding(200, """[{"id":1},{"id":0}]""")): api =>
-      api.reviews.attempt.comments(Handle, Name, Number, Reviewed).map:
+      api.reviews.comments.attempt.comments(Handle, Name, Number, Reviewed).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$[1].id")
         case other                                             => fail(s"expected a decoding failure, got $other")
 

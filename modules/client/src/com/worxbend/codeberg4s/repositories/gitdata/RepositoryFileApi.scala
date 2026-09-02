@@ -13,8 +13,8 @@ import scala.concurrent.Future
   *
   * Reached as `client.repos.git.files`. It is a group of its own rather than more methods on [[RepositoryGitApi]]
   * because that class had grown past what a reader can hold in their head, and because these four are the ones that
-  * answer with a '''document''' rather than with a modelled record. The endpoints and the retry decisions are
-  * unchanged by the move.
+  * answer with a '''document''' rather than with a modelled record. The endpoints and the retry decisions are unchanged
+  * by the move.
   *
   * Both error rails are here (ADR-0005): the methods on this class fail the `Future` with
   * [[com.worxbend.codeberg4s.CodebergException]], and the same operations on [[RepositoryFileApi.attempt]] never fail
@@ -53,8 +53,8 @@ import scala.concurrent.Future
   *
   * ==Retries==
   *
-  * Every operation here is a read and uses [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]]: a
-  * repeated read costs nothing but the round trip.
+  * Every operation here is a read and uses [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]]: a repeated
+  * read costs nothing but the round trip.
   */
 
 final class RepositoryFileApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using exec: Exec[Future]):
@@ -190,8 +190,7 @@ object RepositoryFileApi:
     * value.
     *
     * Obtained as `client.repos.git.files.attempt`. Each method is the convenience-rail method with its failure channel
-    * materialised and nothing else, so an operation exists on exactly one of the rails only if it is missing from
-    * both.
+    * materialised and nothing else, so an operation exists on exactly one of the rails only if it is missing from both.
     */
   final class Attempt private[codeberg4s] (rail: RepositoryFileApi)(using exec: Exec[Future]):
 

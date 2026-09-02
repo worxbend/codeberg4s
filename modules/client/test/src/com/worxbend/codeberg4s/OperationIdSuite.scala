@@ -107,6 +107,7 @@ object OperationIdSuite:
     "com.worxbend.codeberg4s.issues.IssueTimeApi"                 -> Set("issues"),
     "com.worxbend.codeberg4s.pulls.PullRequestApi"                -> Set("pulls"),
     "com.worxbend.codeberg4s.pulls.PullRequestReviewApi"          -> Set("pulls.reviews", "pulls.reviewRequests"),
+    "com.worxbend.codeberg4s.pulls.ReviewCommentApi"              -> Set("pulls.reviews.comments"),
     "com.worxbend.codeberg4s.miscellaneous.MiscellaneousApi"      -> Set("misc", "settings"),
     "com.worxbend.codeberg4s.notifications.NotificationApi"       -> Set("notifications"),
     "com.worxbend.codeberg4s.organizations.OrganizationApi"       -> Set("orgs"),
