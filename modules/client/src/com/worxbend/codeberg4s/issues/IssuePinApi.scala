@@ -20,8 +20,8 @@ import scala.concurrent.Future
   * ==Pinning is a property of the repository, not of the issue==
   *
   * The shortlist is a curated ordering a maintainer keeps, which is why [[movePin]] exists at all: an issue's position
-  * is a number in that list rather than anything the issue itself records. Reading the list back is
-  * [[IssueApi.list]] with [[IssueQuery]], since Forgejo has no listing endpoint of its own for it.
+  * is a number in that list rather than anything the issue itself records. Reading the list back is [[IssueApi.list]]
+  * with [[IssueQuery]], since Forgejo has no listing endpoint of its own for it.
   *
   * ==Failures==
   *
@@ -114,8 +114,7 @@ object IssuePinApi:
   /** The typed rail of [[IssuePinApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a value.
     *
     * Obtained as `client.issues.pins.attempt`. Each method is the convenience-rail method with its failure channel
-    * materialised and nothing else, so an operation exists on exactly one of the rails only if it is missing from
-    * both.
+    * materialised and nothing else, so an operation exists on exactly one of the rails only if it is missing from both.
     */
   final class Attempt private[codeberg4s] (rail: IssuePinApi)(using exec: Exec[Future]):
 

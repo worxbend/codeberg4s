@@ -223,7 +223,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryGitApiSuite.CombinedStatusBody))
 
     onApi(backend): api =>
-      api
+      api.statuses
         .getCombinedStatus(Handle, Name, ref("main"), window(1, 30))
         .map: combined =>
           assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/worxbend/codeberg4s/commits/main/status")
@@ -236,7 +236,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
     val query   = CommitStatusQuery.Empty.sortedBy(CommitStatusSort.Oldest).inState(CommitStatusState.Failure)
 
     onApi(backend): api =>
-      api
+      api.statuses
         .statuses(Handle, Name, ref("v1.0"), query, window(1, 30))
         .map: _ =>
           assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/worxbend/codeberg4s/commits/v1.0/statuses")
@@ -247,7 +247,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("a status page past the end is an empty page, not a failure"):
     onApi(responding(200, "[]")): api =>
-      api
+      api.statuses
         .statuses(Handle, Name, ref("main"), CommitStatusQuery.Empty, PageParams.First)
         .map: page =>
           assertEquals(page.items, Vector.empty[CommitStatus])
@@ -257,7 +257,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryGitApiSuite.PullRequestBody))
 
     onApi(backend): api =>
-      api.getCommitPullRequest(Handle, Name, Sha).map: pull =>
+      api.statuses.getCommitPullRequest(Handle, Name, Sha).map: pull =>
         assertEquals(
           pathOf(backend),
           s"https://forge.example/api/v1/repos/worxbend/codeberg4s/commits/${Sha.value}/pull",
@@ -310,7 +310,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, """{"indent_style":"space","indent_size":4}"""))
 
     onApi(backend): api =>
-      api
+      api.files
         .getEditorConfig(Handle, Name, path("modules/core/Foo.scala"), Some(ref("refs/heads/main")))
         .map: definitions =>
           assertEquals(
@@ -324,7 +324,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, "# codeberg4s\n"))
 
     onApi(backend): api =>
-      api.getRawFile(Handle, Name, path("README.md"), None).map: body =>
+      api.files.getRawFile(Handle, Name, path("README.md"), None).map: body =>
         assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/worxbend/codeberg4s/raw/README.md")
         assertEquals(queryOf(backend), Nil)
         assertEquals(body, "# codeberg4s\n")
@@ -333,7 +333,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, "pointer"))
 
     onApi(backend): api =>
-      api
+      api.files
         .getMediaFile(Handle, Name, path("assets/logo.png"), Some(ref("main")))
         .map: _ =>
           assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/worxbend/codeberg4s/media/assets/logo.png")
@@ -343,7 +343,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, "PK"))
 
     onApi(backend): api =>
-      api
+      api.files
         .getArchive(Handle, Name, ref("release/2026"), ArchiveFormat.TarGz)
         .map: _ =>
           assertEquals(
@@ -355,7 +355,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, "PK"))
 
     onApi(backend): api =>
-      api
+      api.files
         .getArchive(Handle, Name, ref("main"), ArchiveFormat.Zip)
         .map(_ =>
           assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/worxbend/codeberg4s/archive/main.zip")
@@ -387,8 +387,8 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
   test("both rails agree on the archive read as well, which has no decoder to disagree about"):
     onApi(responding(404, RepositoryGitApiSuite.NotFoundBody)): api =>
       for
-        raised <- api.getArchive(Handle, Name, ref("main"), ArchiveFormat.Zip).failed
-        typed  <- api.attempt.getArchive(Handle, Name, ref("main"), ArchiveFormat.Zip)
+        raised <- api.files.getArchive(Handle, Name, ref("main"), ArchiveFormat.Zip).failed
+        typed  <- api.files.attempt.getArchive(Handle, Name, ref("main"), ArchiveFormat.Zip)
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on a note deletion failure, where the success carries no value at all"):

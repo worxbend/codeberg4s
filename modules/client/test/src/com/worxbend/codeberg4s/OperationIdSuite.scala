@@ -137,6 +137,13 @@ object OperationIdSuite:
     "com.worxbend.codeberg4s.repositories.admin.RepositoryMirrorApi"          -> Set("repos.admin"),
     "com.worxbend.codeberg4s.repositories.admin.RepositoryWatcherApi"         -> Set("repos.admin"),
     "com.worxbend.codeberg4s.repositories.gitdata.RepositoryGitApi"           -> Set("repos"),
+    "com.worxbend.codeberg4s.repositories.gitdata.CommitStatusApi"            -> Set("repos.commits"),
+    "com.worxbend.codeberg4s.repositories.gitdata.RepositoryFileApi"          -> Set(
+      "repos.raw",
+      "repos.media",
+      "repos.archive",
+      "repos.editorconfig",
+    ),
     "com.worxbend.codeberg4s.repositories.hooks.RepositoryFlagApi"            -> Set("repos.flags"),
     "com.worxbend.codeberg4s.repositories.hooks.RepositoryHookApi"            -> Set("repos.hooks"),
     "com.worxbend.codeberg4s.repositories.hooks.RepositoryIssueConfigApi"     -> Set("repos"),

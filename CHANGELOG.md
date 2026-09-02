@@ -25,6 +25,14 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **The commit statuses and the byte reads moved out of `client.repos.git`.**
+  `getCombinedStatus`, `statuses` and `getCommitPullRequest` are now on
+  `CommitStatusApi`, reached as `client.repos.git.statuses`; `getRawFile`,
+  `getMediaFile`, `getArchive` and `getEditorConfig` — the four reads that
+  answer with a document rather than a modelled record — are now on
+  `RepositoryFileApi`, reached as `client.repos.git.files`. Names, arguments,
+  endpoints, operation ids and retry decisions are unchanged.
+
 - **The issue dependencies and pins moved to nested groups.** `client.issues`
   held 23 operations. The six that describe an edge between two issues
   (`blocks`, `addBlock`, `removeBlock`, `dependencies`, `addDependency`,

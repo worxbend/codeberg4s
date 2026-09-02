@@ -141,6 +141,8 @@ object AttemptParitySuite:
     Pair(classOf[repositories.admin.RepositoryMirrorApi], classOf[repositories.admin.RepositoryMirrorApi.Attempt]),
     Pair(classOf[repositories.admin.RepositoryWatcherApi], classOf[repositories.admin.RepositoryWatcherApi.Attempt]),
     Pair(classOf[repositories.gitdata.RepositoryGitApi], classOf[repositories.gitdata.RepositoryGitApi.Attempt]),
+    Pair(classOf[repositories.gitdata.CommitStatusApi], classOf[repositories.gitdata.CommitStatusApi.Attempt]),
+    Pair(classOf[repositories.gitdata.RepositoryFileApi], classOf[repositories.gitdata.RepositoryFileApi.Attempt]),
     Pair(classOf[repositories.hooks.RepositoryFlagApi], classOf[repositories.hooks.RepositoryFlagApi.Attempt]),
     Pair(classOf[repositories.hooks.RepositoryHookApi], classOf[repositories.hooks.RepositoryHookApi.Attempt]),
     Pair(

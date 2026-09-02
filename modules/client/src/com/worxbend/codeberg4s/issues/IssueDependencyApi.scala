@@ -117,8 +117,10 @@ final class IssueDependencyApi private[codeberg4s] (pipeline: ApiPipeline[Future
       number: IssueNumber,
       blocked: IssueRef,
   ): Future[Issue] =
-    pipeline.call(IssueDependencyApi.removeBlockRequest(owner, name, number, blocked), RetryEligibility.AlwaysRetry)(using
-      IssueDecoders.issue)
+    pipeline.call(
+      IssueDependencyApi.removeBlockRequest(owner, name, number, blocked),
+      RetryEligibility.AlwaysRetry
+    )(using IssueDecoders.issue)
 
   /** Lists the issues this issue is waiting on — `GET /repos/{owner}/{repo}/issues/{index}/dependencies`.
     *
@@ -134,7 +136,8 @@ final class IssueDependencyApi private[codeberg4s] (pipeline: ApiPipeline[Future
       number: IssueNumber,
       params: PageParams,
   ): Future[Page[Issue]] =
-    pipeline.callPage(IssueDependencyApi.dependenciesRequest(owner, name, number, params), params)(using IssueDecoders.issues)
+    pipeline.callPage(IssueDependencyApi.dependenciesRequest(owner, name, number, params), params)(using
+      IssueDecoders.issues)
 
   /** Declares that this issue depends on another — `POST /repos/{owner}/{repo}/issues/{index}/dependencies`.
     *
@@ -171,8 +174,10 @@ final class IssueDependencyApi private[codeberg4s] (pipeline: ApiPipeline[Future
       number: IssueNumber,
       blocker: IssueRef,
   ): Future[Issue] =
-    pipeline.call(IssueDependencyApi.removeDependencyRequest(owner, name, number, blocker), RetryEligibility.AlwaysRetry)(using
-      IssueDecoders.issue)
+    pipeline.call(
+      IssueDependencyApi.removeDependencyRequest(owner, name, number, blocker),
+      RetryEligibility.AlwaysRetry
+    )(using IssueDecoders.issue)
 
 /** The requests this group issues, its operation ids, and its typed rail. */
 object IssueDependencyApi:

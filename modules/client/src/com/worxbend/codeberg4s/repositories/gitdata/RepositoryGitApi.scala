@@ -1,17 +1,18 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
-import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
-import com.worxbend.codeberg4s.pulls.PullRequest
 import com.worxbend.codeberg4s.repositories.gitdata.wire.{DiffPatchOptionsDto, GitDataQueries, NoteOptionsDto}
-import com.worxbend.codeberg4s.repositories.{Commit, CommitSha, ContentPath}
+import com.worxbend.codeberg4s.repositories.{Commit, CommitSha}
 import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
 
 /** Raw Git data and commit-level reads for one repository.
+  *
+  * What CI said about a commit is on [[statuses]] and the reads that answer with bytes rather than with a modelled
+  * record are on [[files]], each a group of its own.
   *
   * Reached as `client.repos.git`. Both error rails are here (ADR-0005): the methods on this class fail the `Future`
   * with [[com.worxbend.codeberg4s.CodebergException]], and the same operations on [[RepositoryGitApi.attempt]] never
@@ -57,6 +58,12 @@ final class RepositoryGitApi private[codeberg4s] (pipeline: ApiPipeline[Future])
 
   /** The same operations, with failures as values instead of as a failed `Future`. */
   val attempt: RepositoryGitApi.Attempt = RepositoryGitApi.Attempt(this)
+
+  /** What CI has said about a commit, and which pull request brought it. */
+  val statuses: CommitStatusApi = CommitStatusApi(pipeline)
+
+  /** A repository's files as bytes: the raw file, the media file, the archive, the editor config. */
+  val files: RepositoryFileApi = RepositoryFileApi(pipeline)
 
   /** Reads one blob by its object id — `GET /repos/{owner}/{repo}/git/blobs/{sha}`.
     *
@@ -327,92 +334,6 @@ final class RepositoryGitApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     pipeline.call(RepositoryGitApi.annotatedTagRequest(owner, name, sha), RetryEligibility.IdempotentOnly)(using
       GitDataDecoders.annotatedTag)
 
-  /** Reads a commit's combined CI status — `GET /repos/{owner}/{repo}/commits/{ref}/status`.
-    *
-    * '''Returns the whole envelope, not a page.''' The endpoint declares `page` and `limit` and they window the nested
-    * `statuses` array, but the array is wrapped in an object that also carries the reduced verdict, the resolved sha
-    * and the repository. Turning that into a [[com.worxbend.codeberg4s.paging.Page]] would throw away the verdict,
-    * which is the reason the endpoint exists — so the window is an argument and [[CombinedCommitStatus.totalCount]] is
-    * what says whether another window is worth asking for.
-    *
-    * '''Failures.''' The group contract above, plus a `400` when the ref cannot be resolved, and
-    * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] at `$.sha`.
-    *
-    * @param owner
-    *   the user or organisation that owns the repository
-    * @param name
-    *   the repository name, without the owner
-    * @param ref
-    *   a branch, a tag or a commit id
-    * @param params
-    *   the window over the nested statuses
-    */
-  def getCombinedStatus(
-      owner: Owner,
-      name: RepoName,
-      ref: RefName,
-      params: PageParams,
-  ): Future[CombinedCommitStatus] =
-    pipeline.call(RepositoryGitApi.combinedStatusRequest(owner, name, ref, params), RetryEligibility.IdempotentOnly)(
-      using GitDataDecoders.combinedStatus
-    )
-
-  /** Lists a commit's individual CI statuses — `GET /repos/{owner}/{repo}/commits/{ref}/statuses`.
-    *
-    * Every check that reported on the commit, unreduced. Use [[getCombinedStatus]] for the instance's single verdict
-    * over them.
-    *
-    * '''Paging.''' The `Link` header decides, per `docs/HAZARDS.md` §5, and the number of items returned decides
-    * nothing.
-    *
-    * '''Failures.''' The group contract above, plus a `400` when the ref cannot be resolved or the instance rejects a
-    * filter — note that [[CommitStatusState.Skipped]] is not among the values the `state` filter declares, which
-    * [[CommitStatusQuery.inState]] explains — and [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] at
-    * `$[n].id`.
-    *
-    * @param owner
-    *   the user or organisation that owns the repository
-    * @param name
-    *   the repository name, without the owner
-    * @param ref
-    *   a branch, a tag or a commit id
-    * @param query
-    *   the ordering and state filter; [[CommitStatusQuery.Empty]] asks for neither
-    * @param params
-    *   the page to fetch and how many statuses it may hold
-    */
-  def statuses(
-      owner: Owner,
-      name: RepoName,
-      ref: RefName,
-      query: CommitStatusQuery,
-      params: PageParams,
-  ): Future[Page[CommitStatus]] =
-    pipeline.callPage(RepositoryGitApi.statusesRequest(owner, name, ref, query, params), params)(using
-      GitDataDecoders.commitStatuses)
-
-  /** Reads the pull request a commit belongs to — `GET /repos/{owner}/{repo}/commits/{sha}/pull`.
-    *
-    * The inverse of asking a pull request for its commits, and the only way to get from a commit id back to the review
-    * it went through. A commit that was pushed straight to a branch has no pull request and answers `404`.
-    *
-    * The result is the pull-request wave's [[com.worxbend.codeberg4s.pulls.PullRequest]] — the same model, not a
-    * reduced copy, because Forgejo returns the same object here as it does from the pull-request endpoints.
-    *
-    * '''Failures.''' The group contract above, plus [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] at
-    * `$.number` or another field the pull-request model requires.
-    *
-    * @param owner
-    *   the user or organisation that owns the repository
-    * @param name
-    *   the repository name, without the owner
-    * @param sha
-    *   the commit's object id
-    */
-  def getCommitPullRequest(owner: Owner, name: RepoName, sha: CommitSha): Future[PullRequest] =
-    pipeline.call(RepositoryGitApi.commitPullRequest(owner, name, sha), RetryEligibility.IdempotentOnly)(using
-      GitDataDecoders.pullRequest)
-
   /** Compares two refs — `GET /repos/{owner}/{repo}/compare/{basehead}`.
     *
     * Git's symmetric-difference form: the commits reachable from the head and not from the base. Both halves of the
@@ -460,115 +381,6 @@ final class RepositoryGitApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     pipeline.call(RepositoryGitApi.diffPatchRequest(owner, name, command), RetryEligibility.Never)(using
       GitDataDecoders.fileChange)
 
-  /** Reads the EditorConfig properties in force for a path — `GET /repos/{owner}/{repo}/editorconfig/{filepath}`.
-    *
-    * The instance resolves the repository's `.editorconfig` files itself and answers with the merged result, so nothing
-    * here parses an EditorConfig file. The property names are not fixed, which is why the result is a map —
-    * [[EditorConfigDefinitions]] says what that costs and what it buys.
-    *
-    * '''Failures.''' The group contract above; `404` also covers a path the repository does not have at the given ref.
-    * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] is reachable only for a body that is not a JSON object at
-    * all — the values inside one are rendered rather than required to be strings.
-    *
-    * @param owner
-    *   the user or organisation that owns the repository
-    * @param name
-    *   the repository name, without the owner
-    * @param path
-    *   the repository-relative path of the file to resolve properties for; sent as several path segments
-    * @param ref
-    *   the branch, tag or commit to read at, absent for the repository's default branch
-    */
-  def getEditorConfig(
-      owner: Owner,
-      name: RepoName,
-      path: ContentPath,
-      ref: Option[RefName],
-  ): Future[EditorConfigDefinitions] =
-    pipeline.call(RepositoryGitApi.editorConfigRequest(owner, name, path, ref), RetryEligibility.IdempotentOnly)(using
-      GitDataDecoders.editorConfig)
-
-  /** Reads a file's raw bytes — `GET /repos/{owner}/{repo}/raw/{filepath}`.
-    *
-    * '''The result is the response body decoded as text, and that is a real limitation.''' The endpoint produces
-    * `application/octet-stream`, and this method decodes it with the charset the response declared. For a text file
-    * that is exactly what a caller wants. '''For a binary file it is lossy''' — bytes that are not valid in that
-    * charset become replacement characters, and re-encoding the result does not give the file back. Use
-    * [[com.worxbend.codeberg4s.repositories.RepositoryApi.getContents]] for a binary blob under the instance's inline
-    * size limit, whose base64 payload does survive. The bytes now reach the decoder intact, so a lossless variant of
-    * this method has become possible; see the group note above for why it is not part of this signature yet.
-    *
-    * Unlike the contents endpoint this returns the file itself with no envelope, and is therefore the cheap way to read
-    * a large text file.
-    *
-    * '''Failures.''' The group contract above; `404` also covers a path that is a directory rather than a file.
-    * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] is not reachable: nothing is parsed.
-    *
-    * @param owner
-    *   the user or organisation that owns the repository
-    * @param name
-    *   the repository name, without the owner
-    * @param path
-    *   the repository-relative path of the file; sent as several path segments
-    * @param ref
-    *   the branch, tag or commit to read at, absent for the repository's default branch
-    */
-  def getRawFile(owner: Owner, name: RepoName, path: ContentPath, ref: Option[RefName]): Future[String] =
-    pipeline.call(RepositoryGitApi.rawFileRequest(owner, name, path, ref), RetryEligibility.IdempotentOnly)(using
-      GitDataDecoders.text)
-
-  /** Reads a file, resolving Git-LFS pointers — `GET /repos/{owner}/{repo}/media/{filepath}`.
-    *
-    * The difference from [[getRawFile]] is one thing only: a path stored as an LFS pointer answers with the pointer
-    * file there and with the '''object it points at''' here. For a path that is not LFS the two are the same response.
-    *
-    * '''The same text limitation as [[getRawFile]] applies, and applies harder''' — an LFS object is a large binary far
-    * more often than not, which is the whole reason it was stored in LFS.
-    *
-    * '''Failures.''' As [[getRawFile]].
-    *
-    * @param owner
-    *   the user or organisation that owns the repository
-    * @param name
-    *   the repository name, without the owner
-    * @param path
-    *   the repository-relative path of the file; sent as several path segments
-    * @param ref
-    *   the branch, tag or commit to read at, absent for the repository's default branch
-    */
-  def getMediaFile(owner: Owner, name: RepoName, path: ContentPath, ref: Option[RefName]): Future[String] =
-    pipeline.call(RepositoryGitApi.mediaFileRequest(owner, name, path, ref), RetryEligibility.IdempotentOnly)(using
-      GitDataDecoders.text)
-
-  /** Downloads a source archive of a ref — `GET /repos/{owner}/{repo}/archive/{archive}`.
-    *
-    * The ref and the format are '''one''' path parameter, `main.zip`, which is why [[ArchiveFormat]] exists and why a
-    * misspelt suffix is a `404` rather than a content-type mismatch. A slashed ref is decomposed into segments and the
-    * suffix goes on the last of them, so `release/2026` as a zip is `…/archive/release/2026.zip`.
-    *
-    * '''An archive is always binary, so the text limitation on [[getRawFile]] is not a caveat here but the whole
-    * story.''' A zip or a gzipped tar decoded as text is not recoverable. This method builds and issues the request
-    * correctly and returns what its own signature can express; it is not a way to obtain a usable archive file. Making
-    * it one is now a change to this method's return type alone — the transport and core carry the bytes intact, and
-    * `com.worxbend.codeberg4s.repositories.actions.RepositoryActionApi.downloadArtifact` shows the shape such an
-    * operation takes.
-    *
-    * '''Failures.''' The group contract above. [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] is not
-    * reachable: nothing is parsed.
-    *
-    * @param owner
-    *   the user or organisation that owns the repository
-    * @param name
-    *   the repository name, without the owner
-    * @param ref
-    *   the branch, tag or commit to archive
-    * @param format
-    *   which archive to generate
-    */
-  def getArchive(owner: Owner, name: RepoName, ref: RefName, format: ArchiveFormat): Future[String] =
-    pipeline.call(RepositoryGitApi.archiveRequest(owner, name, ref, format), RetryEligibility.IdempotentOnly)(using
-      GitDataDecoders.text)
-
 /** The requests this group issues, its operation ids, and its typed rail. */
 object RepositoryGitApi:
 
@@ -607,32 +419,11 @@ object RepositoryGitApi:
   /** The stable operation id of [[RepositoryGitApi.getAnnotatedTag]]. */
   val GetAnnotatedTagOperation: String = "repos.git.tags.get"
 
-  /** The stable operation id of [[RepositoryGitApi.getCombinedStatus]]. */
-  val GetCombinedStatusOperation: String = "repos.commits.status.get"
-
-  /** The stable operation id of [[RepositoryGitApi.statuses]]. */
-  val ListStatusesOperation: String = "repos.commits.statuses.list"
-
-  /** The stable operation id of [[RepositoryGitApi.getCommitPullRequest]]. */
-  val GetCommitPullRequestOperation: String = "repos.commits.pull.get"
-
   /** The stable operation id of [[RepositoryGitApi.compare]]. */
   val CompareOperation: String = "repos.compare.get"
 
   /** The stable operation id of [[RepositoryGitApi.applyDiffPatch]]. */
   val ApplyDiffPatchOperation: String = "repos.diffpatch.apply"
-
-  /** The stable operation id of [[RepositoryGitApi.getEditorConfig]]. */
-  val GetEditorConfigOperation: String = "repos.editorconfig.get"
-
-  /** The stable operation id of [[RepositoryGitApi.getRawFile]]. */
-  val GetRawFileOperation: String = "repos.raw.get"
-
-  /** The stable operation id of [[RepositoryGitApi.getMediaFile]]. */
-  val GetMediaFileOperation: String = "repos.media.get"
-
-  /** The stable operation id of [[RepositoryGitApi.getArchive]]. */
-  val GetArchiveOperation: String = "repos.archive.get"
 
   /** The separator Forgejo's multi-blob read expects between object ids in its `shas` parameter. */
   private val ShaSeparator: String = ","
@@ -725,33 +516,6 @@ object RepositoryGitApi:
     def getAnnotatedTag(owner: Owner, name: RepoName, sha: CommitSha): Future[Either[CodebergError, AnnotatedTag]] =
       exec.attempt(rail.getAnnotatedTag(owner, name, sha))
 
-    /** [[RepositoryGitApi.getCombinedStatus]] with its failure as a value. */
-    def getCombinedStatus(
-        owner: Owner,
-        name: RepoName,
-        ref: RefName,
-        params: PageParams,
-    ): Future[Either[CodebergError, CombinedCommitStatus]] =
-      exec.attempt(rail.getCombinedStatus(owner, name, ref, params))
-
-    /** [[RepositoryGitApi.statuses]] with its failure as a value. */
-    def statuses(
-        owner: Owner,
-        name: RepoName,
-        ref: RefName,
-        query: CommitStatusQuery,
-        params: PageParams,
-    ): Future[Either[CodebergError, Page[CommitStatus]]] =
-      exec.attempt(rail.statuses(owner, name, ref, query, params))
-
-    /** [[RepositoryGitApi.getCommitPullRequest]] with its failure as a value. */
-    def getCommitPullRequest(
-        owner: Owner,
-        name: RepoName,
-        sha: CommitSha,
-    ): Future[Either[CodebergError, PullRequest]] =
-      exec.attempt(rail.getCommitPullRequest(owner, name, sha))
-
     /** [[RepositoryGitApi.compare]] with its failure as a value. */
     def compare(owner: Owner, name: RepoName, range: CompareRange): Future[Either[CodebergError, CommitComparison]] =
       exec.attempt(rail.compare(owner, name, range))
@@ -763,42 +527,6 @@ object RepositoryGitApi:
         command: ApplyDiffPatch,
     ): Future[Either[CodebergError, FileChange]] =
       exec.attempt(rail.applyDiffPatch(owner, name, command))
-
-    /** [[RepositoryGitApi.getEditorConfig]] with its failure as a value. */
-    def getEditorConfig(
-        owner: Owner,
-        name: RepoName,
-        path: ContentPath,
-        ref: Option[RefName],
-    ): Future[Either[CodebergError, EditorConfigDefinitions]] =
-      exec.attempt(rail.getEditorConfig(owner, name, path, ref))
-
-    /** [[RepositoryGitApi.getRawFile]] with its failure as a value. */
-    def getRawFile(
-        owner: Owner,
-        name: RepoName,
-        path: ContentPath,
-        ref: Option[RefName],
-    ): Future[Either[CodebergError, String]] =
-      exec.attempt(rail.getRawFile(owner, name, path, ref))
-
-    /** [[RepositoryGitApi.getMediaFile]] with its failure as a value. */
-    def getMediaFile(
-        owner: Owner,
-        name: RepoName,
-        path: ContentPath,
-        ref: Option[RefName],
-    ): Future[Either[CodebergError, String]] =
-      exec.attempt(rail.getMediaFile(owner, name, path, ref))
-
-    /** [[RepositoryGitApi.getArchive]] with its failure as a value. */
-    def getArchive(
-        owner: Owner,
-        name: RepoName,
-        ref: RefName,
-        format: ArchiveFormat,
-    ): Future[Either[CodebergError, String]] =
-      exec.attempt(rail.getArchive(owner, name, ref, format))
 
   private def blobRequest(owner: Owner, name: RepoName, sha: CommitSha): CodebergRequest =
     read(GetBlobOperation, gitPath(owner, name, "blobs") :+ sha.value, Nil)
@@ -849,34 +577,6 @@ object RepositoryGitApi:
   private def annotatedTagRequest(owner: Owner, name: RepoName, sha: CommitSha): CodebergRequest =
     read(GetAnnotatedTagOperation, gitPath(owner, name, "tags") :+ sha.value, Nil)
 
-  private def combinedStatusRequest(
-      owner: Owner,
-      name: RepoName,
-      ref: RefName,
-      params: PageParams,
-  ): CodebergRequest =
-    read(
-      GetCombinedStatusOperation,
-      commitsPath(owner, name) ++ ref.segments :+ "status",
-      PagingQuery.window(params),
-    )
-
-  private def statusesRequest(
-      owner: Owner,
-      name: RepoName,
-      ref: RefName,
-      query: CommitStatusQuery,
-      params: PageParams,
-  ): CodebergRequest =
-    read(
-      ListStatusesOperation,
-      commitsPath(owner, name) ++ ref.segments :+ "statuses",
-      GitDataQueries.commitStatuses(query) ++ PagingQuery.window(params),
-    )
-
-  private def commitPullRequest(owner: Owner, name: RepoName, sha: CommitSha): CodebergRequest =
-    read(GetCommitPullRequestOperation, commitsPath(owner, name) :+ sha.value :+ "pull", Nil)
-
   private def compareRequest(owner: Owner, name: RepoName, range: CompareRange): CodebergRequest =
     read(CompareOperation, RepositoryRequests.repositoryPath(owner, name) :+ "compare" :++ range.segments, Nil)
 
@@ -888,69 +588,8 @@ object RepositoryGitApi:
       DiffPatchOptionsDto.render(command),
     )
 
-  private def editorConfigRequest(
-      owner: Owner,
-      name: RepoName,
-      path: ContentPath,
-      ref: Option[RefName],
-  ): CodebergRequest =
-    read(
-      GetEditorConfigOperation,
-      RepositoryRequests.repositoryPath(owner, name) :+ "editorconfig" :++ path.segments,
-      GitDataQueries.atRef(ref),
-    )
-
-  private def rawFileRequest(
-      owner: Owner,
-      name: RepoName,
-      path: ContentPath,
-      ref: Option[RefName],
-  ): CodebergRequest =
-    read(
-      GetRawFileOperation,
-      RepositoryRequests.repositoryPath(owner, name) :+ "raw" :++ path.segments,
-      GitDataQueries.atRef(ref)
-    )
-
-  private def mediaFileRequest(
-      owner: Owner,
-      name: RepoName,
-      path: ContentPath,
-      ref: Option[RefName],
-  ): CodebergRequest =
-    read(
-      GetMediaFileOperation,
-      RepositoryRequests.repositoryPath(owner, name) :+ "media" :++ path.segments,
-      GitDataQueries.atRef(ref)
-    )
-
-  private def archiveRequest(
-      owner: Owner,
-      name: RepoName,
-      ref: RefName,
-      format: ArchiveFormat,
-  ): CodebergRequest =
-    read(
-      GetArchiveOperation,
-      RepositoryRequests.repositoryPath(owner, name) :+ "archive" :++ archiveSegments(ref, format),
-      Nil
-    )
-
-  /** The ref's segments with the format's suffix glued onto the last one, which is how Forgejo spells an archive name.
-    *
-    * Written with `lastOption` rather than `last` because a total function is cheaper to read than an argument about
-    * why the list cannot be empty — even though [[RefName]] guarantees it is not.
-    */
-  private def archiveSegments(ref: RefName, format: ArchiveFormat): List[String] =
-    val segments = ref.segments
-
-    segments.dropRight(1) ++ segments.lastOption.map(last => s"$last.${format.suffix}")
-
   private def gitPath(owner: Owner, name: RepoName, resource: String): List[String] =
     RepositoryRequests.repositoryPath(owner, name) :+ "git" :+ resource
-
-  private def commitsPath(owner: Owner, name: RepoName): List[String] =
-    RepositoryRequests.repositoryPath(owner, name) :+ "commits"
 
   private def notePath(owner: Owner, name: RepoName, sha: CommitSha): List[String] =
     gitPath(owner, name, "notes") :+ sha.value
