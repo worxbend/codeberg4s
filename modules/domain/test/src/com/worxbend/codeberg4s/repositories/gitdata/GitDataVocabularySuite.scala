@@ -34,7 +34,7 @@ final class GitDataVocabularySuite extends FunSuite:
     assertEquals(GitObjectKind.parse("dir"), None)
 
   test("every status state parses from the word Forgejo sends"):
-    val parsed = CommitStatusState.values.toList.map(state => CommitStatusState.parse(state.wireValue))
+    val parsed = CommitStatusState.values.toList.map(state => CommitStatusState.parse(state.wireName))
 
     assertEquals(parsed, CommitStatusState.values.toList.map(Some.apply))
 

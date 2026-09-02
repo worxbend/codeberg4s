@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.organizations
 
-import java.util.Locale
+import com.worxbend.codeberg4s.WireVocabulary
 
 /** What a team may do — with the organisation's repositories, or with one unit of them.
   *
@@ -12,26 +12,26 @@ import java.util.Locale
   * a caller can ask "is this at least write?" without writing a five-armed match. The order is a fact about Forgejo's
   * `AccessMode`, not an interpretation.
   */
-enum TeamPermission:
+enum TeamPermission(val wireName: String) extends WireVocabulary:
 
   /** No access at all. Forgejo spells this `none` on the wire.
     *
     * It is '''not''' called `None` here: inside this enum's scope that name would shadow `scala.None`, and the very
     * first thing the companion below does is return an `Option`.
     */
-  case NoAccess
+  case NoAccess extends TeamPermission("none")
 
   /** May read — clone, browse, and see the unit's contents. */
-  case Read
+  case Read extends TeamPermission("read")
 
   /** May read and write — push, and open or edit the unit's contents. */
-  case Write
+  case Write extends TeamPermission("write")
 
   /** May administer the repositories the team reaches, short of owning the organisation. */
-  case Admin
+  case Admin extends TeamPermission("admin")
 
   /** Owns the organisation: every permission, including managing teams and deleting the organisation. */
-  case Owner
+  case Owner extends TeamPermission("owner")
 
 object TeamPermission:
 
@@ -43,24 +43,9 @@ object TeamPermission:
     * declares the spelling and no capture proves it.
     */
   def parse(value: String): Option[TeamPermission] =
-    value.trim.toLowerCase(Locale.ROOT) match
-      case "none"  => Some(NoAccess)
-      case "read"  => Some(Read)
-      case "write" => Some(Write)
-      case "admin" => Some(Admin)
-      case "owner" => Some(Owner)
-      case _       => None
+    WireVocabulary.parse(values, value)
 
   extension (permission: TeamPermission)
-
-    /** The lowercase spelling Forgejo uses on the wire. */
-    def wireName: String =
-      permission match
-        case NoAccess => "none"
-        case Read     => "read"
-        case Write    => "write"
-        case Admin    => "admin"
-        case Owner    => "owner"
 
     /** Where this level sits in Forgejo's ordering, `0` for [[NoAccess]] and `4` for [[Owner]].
       *

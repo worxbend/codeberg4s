@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
-import java.util.Locale
+import com.worxbend.codeberg4s.WireVocabulary
 
 /** What kind of object a Git id points at: the four object types Git itself defines.
   *
@@ -13,19 +13,19 @@ import java.util.Locale
   * other fields of the payload mean anything, while an object's kind is purely descriptive and never changes how the
   * rest of the object is read.
   */
-enum GitObjectKind:
+enum GitObjectKind(val wireName: String) extends WireVocabulary:
 
   /** A file's contents. */
-  case Blob
+  case Blob extends GitObjectKind("blob")
 
   /** A directory. */
-  case Tree
+  case Tree extends GitObjectKind("tree")
 
   /** A commit. Also what a tree entry reports for a submodule, since a gitlink stores a commit id. */
-  case Commit
+  case Commit extends GitObjectKind("commit")
 
   /** An annotated tag object, as opposed to a lightweight tag, which is a ref pointing straight at a commit. */
-  case Tag
+  case Tag extends GitObjectKind("tag")
 
 object GitObjectKind:
 
@@ -35,19 +35,4 @@ object GitObjectKind:
     * the caller one descriptive field; failing would cost them the whole tree page it arrived in.
     */
   def parse(value: String): Option[GitObjectKind] =
-    value.trim.toLowerCase(Locale.ROOT) match
-      case "blob"   => Some(Blob)
-      case "tree"   => Some(Tree)
-      case "commit" => Some(Commit)
-      case "tag"    => Some(Tag)
-      case _        => None
-
-  extension (kind: GitObjectKind)
-
-    /** The spelling Forgejo uses on the wire. */
-    def wireName: String =
-      kind match
-        case Blob   => "blob"
-        case Tree   => "tree"
-        case Commit => "commit"
-        case Tag    => "tag"
+    WireVocabulary.parse(values, value)

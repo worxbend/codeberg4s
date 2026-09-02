@@ -59,7 +59,7 @@ private[codeberg4s] object GitDataQueries:
   def commitStatuses(query: CommitStatusQuery): List[(String, String)] =
     List(
       query.sort.map(ordering => "sort" -> ordering.wireValue),
-      query.state.map(wanted  => "state" -> wanted.wireValue),
+      query.state.map(wanted  => "state" -> wanted.wireName),
     ).flatten
 
   /** The optional `ref` parameter of `/raw`, `/media` and `/editorconfig`.

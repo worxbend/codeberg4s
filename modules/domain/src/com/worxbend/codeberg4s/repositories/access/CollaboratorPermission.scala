@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.repositories.access
 
-import java.util.Locale
+import com.worxbend.codeberg4s.WireVocabulary
 
 /** The access level a collaborator is granted — the `permission` of `AddCollaboratorOption`.
   *
@@ -26,16 +26,16 @@ import java.util.Locale
   * because that type lives under `organizations` and describes a vocabulary that is not team-specific; renaming it to
   * something like `AccessLevel` in a shared package is the right fix and is not this group's to make.
   */
-enum CollaboratorPermission:
+enum CollaboratorPermission(val wireName: String) extends WireVocabulary:
 
   /** May clone and browse the repository, and open issues and pull requests against it. */
-  case Read
+  case Read extends CollaboratorPermission("read")
 
   /** May read, and push to branches that no protection rule forbids. */
-  case Write
+  case Write extends CollaboratorPermission("write")
 
   /** May read, write, and change the repository's settings — including everything in this group. */
-  case Admin
+  case Admin extends CollaboratorPermission("admin")
 
 object CollaboratorPermission:
 
@@ -48,17 +48,4 @@ object CollaboratorPermission:
     * because no response model carries this narrow enum — see the type's own note on the read side.
     */
   def parse(value: String): Option[CollaboratorPermission] =
-    value.trim.toLowerCase(Locale.ROOT) match
-      case "read"  => Some(Read)
-      case "write" => Some(Write)
-      case "admin" => Some(Admin)
-      case _       => None
-
-  extension (permission: CollaboratorPermission)
-
-    /** The lowercase spelling Forgejo declares, and the exact string sent as `AddCollaboratorOption.permission`. */
-    def wireName: String =
-      permission match
-        case Read  => "read"
-        case Write => "write"
-        case Admin => "admin"
+    WireVocabulary.parse(values, value)

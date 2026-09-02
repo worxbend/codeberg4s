@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.repositories.gitdata
 
-import java.util.Locale
+import com.worxbend.codeberg4s.WireVocabulary
 
 /** The verdict one CI check reported for a commit.
   *
@@ -11,25 +11,25 @@ import java.util.Locale
   * The distinction between [[Error]] and [[Failure]] is the one that matters when acting on a status: a failure is the
   * check saying no, an error is the check itself breaking.
   */
-enum CommitStatusState:
+enum CommitStatusState(val wireName: String) extends WireVocabulary:
 
   /** The check has not finished. */
-  case Pending
+  case Pending extends CommitStatusState("pending")
 
   /** The check passed. */
-  case Success
+  case Success extends CommitStatusState("success")
 
   /** The check could not run to a conclusion. */
-  case Error
+  case Error extends CommitStatusState("error")
 
   /** The check ran and reported a negative result. */
-  case Failure
+  case Failure extends CommitStatusState("failure")
 
   /** The check passed with reservations. */
-  case Warning
+  case Warning extends CommitStatusState("warning")
 
   /** The check did not apply and was not run. */
-  case Skipped
+  case Skipped extends CommitStatusState("skipped")
 
 object CommitStatusState:
 
@@ -40,23 +40,4 @@ object CommitStatusState:
     * status word must not cost the caller the rest of the listing.
     */
   def parse(value: String): Option[CommitStatusState] =
-    value.trim.toLowerCase(Locale.ROOT) match
-      case "pending" => Some(Pending)
-      case "success" => Some(Success)
-      case "error"   => Some(Error)
-      case "failure" => Some(Failure)
-      case "warning" => Some(Warning)
-      case "skipped" => Some(Skipped)
-      case _         => None
-
-  extension (state: CommitStatusState)
-
-    /** The spelling Forgejo uses on the wire, and the one the `state` filter of the status listing accepts. */
-    def wireValue: String =
-      state match
-        case Pending => "pending"
-        case Success => "success"
-        case Error   => "error"
-        case Failure => "failure"
-        case Warning => "warning"
-        case Skipped => "skipped"
+    WireVocabulary.parse(values, value)

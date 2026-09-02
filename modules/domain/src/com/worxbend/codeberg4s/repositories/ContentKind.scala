@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.repositories
 
-import java.util.Locale
+import com.worxbend.codeberg4s.WireVocabulary
 
 /** What a repository entry is, from the `type` field Forgejo puts on every content object.
   *
@@ -10,19 +10,19 @@ import java.util.Locale
   * `content` and `encoding` for a file, `target` for a symlink, `submodule_git_url` for a submodule. `docs/HAZARDS.md`
   * §3 measured both, and [[ContentEntry]] is the enum that keeps the second one honest.
   */
-enum ContentKind:
+enum ContentKind(val wireName: String) extends WireVocabulary:
 
   /** A blob. Its bytes are reported when the entry was fetched by its own path, and not when it was listed. */
-  case File
+  case File extends ContentKind("file")
 
   /** A tree — the entry has children, which are reached by requesting its own path. */
-  case Directory
+  case Directory extends ContentKind("dir")
 
   /** A symbolic link. What it points at is its `target`, which is a path and not necessarily a valid one. */
-  case Symlink
+  case Symlink extends ContentKind("symlink")
 
   /** A gitlink: another repository mounted at this path. */
-  case Submodule
+  case Submodule extends ContentKind("submodule")
 
 object ContentKind:
 
@@ -33,19 +33,4 @@ object ContentKind:
     * other fields mean anything, so guessing it would produce a plausible and wrong entry.
     */
   def parse(value: String): Option[ContentKind] =
-    value.trim.toLowerCase(Locale.ROOT) match
-      case "file"      => Some(File)
-      case "dir"       => Some(Directory)
-      case "symlink"   => Some(Symlink)
-      case "submodule" => Some(Submodule)
-      case _           => None
-
-  extension (kind: ContentKind)
-
-    /** The spelling Forgejo uses on the wire. */
-    def wireName: String =
-      kind match
-        case File      => "file"
-        case Directory => "dir"
-        case Symlink   => "symlink"
-        case Submodule => "submodule"
+    WireVocabulary.parse(values, value)

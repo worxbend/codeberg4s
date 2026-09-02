@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.repositories
 
-import java.util.Locale
+import com.worxbend.codeberg4s.WireVocabulary
 
 /** What a commit did to one file.
   *
@@ -8,28 +8,28 @@ import java.util.Locale
   * shows `modified`, so the remaining cases are read from Forgejo's source rather than measured — which is precisely
   * why [[CommitFileStatus.parse]] answers `None` instead of failing on a value it does not know.
   */
-enum CommitFileStatus:
+enum CommitFileStatus(val wireName: String) extends WireVocabulary:
 
   /** The file did not exist before this commit. */
-  case Added
+  case Added extends CommitFileStatus("added")
 
   /** The file existed and its contents changed. */
-  case Modified
+  case Modified extends CommitFileStatus("modified")
 
   /** The file existed and no longer does. */
-  case Removed
+  case Removed extends CommitFileStatus("removed")
 
   /** The file moved, with its contents substantially intact. */
-  case Renamed
+  case Renamed extends CommitFileStatus("renamed")
 
   /** The file was created from another file that still exists. */
-  case Copied
+  case Copied extends CommitFileStatus("copied")
 
   /** The file's mode or type changed rather than its contents. */
-  case Changed
+  case Changed extends CommitFileStatus("changed")
 
   /** The file is listed but untouched — Git reports this for some merge and rename detections. */
-  case Unchanged
+  case Unchanged extends CommitFileStatus("unchanged")
 
 object CommitFileStatus:
 
@@ -40,25 +40,4 @@ object CommitFileStatus:
     * caller the whole commit. Matching is case-insensitive because nothing guarantees the casing but observation.
     */
   def parse(value: String): Option[CommitFileStatus] =
-    value.trim.toLowerCase(Locale.ROOT) match
-      case "added"     => Some(Added)
-      case "modified"  => Some(Modified)
-      case "removed"   => Some(Removed)
-      case "renamed"   => Some(Renamed)
-      case "copied"    => Some(Copied)
-      case "changed"   => Some(Changed)
-      case "unchanged" => Some(Unchanged)
-      case _           => None
-
-  extension (status: CommitFileStatus)
-
-    /** The lowercase spelling Forgejo uses on the wire. */
-    def wireName: String =
-      status match
-        case Added     => "added"
-        case Modified  => "modified"
-        case Removed   => "removed"
-        case Renamed   => "renamed"
-        case Copied    => "copied"
-        case Changed   => "changed"
-        case Unchanged => "unchanged"
+    WireVocabulary.parse(values, value)
