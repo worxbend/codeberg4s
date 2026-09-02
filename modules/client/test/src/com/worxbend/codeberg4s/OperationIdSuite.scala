@@ -124,6 +124,7 @@ object OperationIdSuite:
     "com.worxbend.codeberg4s.repositories.RepositoryApi"                      -> Set("repos"),
     "com.worxbend.codeberg4s.repositories.access.RepositoryAccessApi"         -> Set("repos"),
     "com.worxbend.codeberg4s.repositories.actions.RepositoryActionApi"        -> Set("repos.actions"),
+    "com.worxbend.codeberg4s.repositories.actions.RepositoryActionConfigApi"  -> Set("repos.actions"),
     "com.worxbend.codeberg4s.repositories.admin.RepositoryAdminApi"           -> Set("repos.admin"),
     "com.worxbend.codeberg4s.repositories.admin.RepositoryContentApi"         -> Set("repos.admin.contents"),
     "com.worxbend.codeberg4s.repositories.admin.RepositoryInsightApi"         -> Set("repos.admin"),

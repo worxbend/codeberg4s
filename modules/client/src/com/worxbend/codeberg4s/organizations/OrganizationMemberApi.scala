@@ -25,9 +25,9 @@ import scala.concurrent.Future
   *
   * [[members]], [[publicMembers]] and the membership checks start from the organisation and ask who is in it.
   * [[userOrganizations]], [[currentUserOrganizations]] and [[userPermissions]] start from a person and ask which
-  * organisations they are in. Forgejo serves the second set under `/users/{username}/orgs` and `/user/orgs` rather
-  * than under `/orgs`, which is why the paths in this group do not all share a prefix; the question they answer is the
-  * same one from the other side.
+  * organisations they are in. Forgejo serves the second set under `/users/{username}/orgs` and `/user/orgs` rather than
+  * under `/orgs`, which is why the paths in this group do not all share a prefix; the question they answer is the same
+  * one from the other side.
   *
   * ==Public and private membership are different questions==
   *
@@ -38,13 +38,13 @@ import scala.concurrent.Future
   *
   * ==Failures==
   *
-  * Every operation here can produce the same four remote failures, so they are stated once rather than repeated on
-  * each method; the per-method Scaladoc adds only what is specific to that endpoint.
+  * Every operation here can produce the same four remote failures, so they are stated once rather than repeated on each
+  * method; the per-method Scaladoc adds only what is specific to that endpoint.
   *
   *   - [[com.worxbend.codeberg4s.CodebergError.Api]] with status `404` when the organisation or the account does not
-  *     exist '''or''' is invisible to the credentials in use — Forgejo does not distinguish the two, on purpose —
-  *     `401` when a token was required and none was sent, and `403` when the token lacks the scope or the account
-  *     lacks the permission.
+  *     exist '''or''' is invisible to the credentials in use — Forgejo does not distinguish the two, on purpose — `401`
+  *     when a token was required and none was sent, and `403` when the token lacks the scope or the account lacks the
+  *     permission.
   *   - [[com.worxbend.codeberg4s.CodebergError.Transport]] when nothing reached the instance.
   *   - [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] when a `2xx` payload did not match the model; `path`
   *     names the offending field.
@@ -234,7 +234,8 @@ final class OrganizationMemberApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     *   the page to fetch and how many entries it may hold
     */
   def blockedUsers(org: OrgName, params: PageParams): Future[Page[BlockedUser]] =
-    pipeline.callPage(OrganizationMemberApi.blockedUsersRequest(org, params), params)(using OrganizationDecoders.blockedUsers)
+    pipeline.callPage(OrganizationMemberApi.blockedUsersRequest(org, params), params)(using
+      OrganizationDecoders.blockedUsers)
 
   /** Blocks an account — `PUT /orgs/{org}/block/{username}`.
     *
@@ -385,8 +386,8 @@ object OrganizationMemberApi:
   /** The stable operation id of [[OrganizationMemberApi.userPermissions]]. */
   val UserPermissionsOperation: String = "orgs.userPermissions.get"
 
-  /** The typed rail of [[OrganizationMemberApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as
-    * a value.
+  /** The typed rail of [[OrganizationMemberApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a
+    * value.
     *
     * Obtained as `client.organizations.members.attempt`. Each method is the convenience-rail method with its failure
     * channel materialised and nothing else, so an operation exists on exactly one of the rails only if it is missing
@@ -464,9 +465,9 @@ object OrganizationMemberApi:
 
   /** Runs a status-only membership probe: `204` is `true`, `404` is `false`, everything else fails.
     *
-    * Written once because [[OrganizationMemberApi.isMember]] and [[OrganizationMemberApi.isPublicMember]] are the
-    * same shape, and a second copy that quietly widened the accepted status would be indistinguishable from one that
-    * did not.
+    * Written once because [[OrganizationMemberApi.isMember]] and [[OrganizationMemberApi.isPublicMember]] are the same
+    * shape, and a second copy that quietly widened the accepted status would be indistinguishable from one that did
+    * not.
     */
   private def probe(pipeline: ApiPipeline[Future], request: CodebergRequest)(using
       exec: Exec[Future]): Future[Boolean] =

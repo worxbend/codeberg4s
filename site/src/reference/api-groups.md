@@ -1,7 +1,7 @@
 # API groups
 
 For anyone looking for where an endpoint lives. Nine accessors hang off
-`CodebergClient`; five of them nest further groups, for **44 API classes** in
+`CodebergClient`; five of them nest further groups, for **45 API classes** in
 total.
 
 Every class listed here has the same two-rail shape: the methods on the class
@@ -58,7 +58,8 @@ record full of nullable fields.
 
 | Accessor | Class | Operations | Covers |
 | --- | --- | ---: | --- |
-| `client.repos.actions` | `repositories.actions.RepositoryActionApi` | 28 | a repository's Actions surface: runs, jobs, tasks, artifacts, runners, secrets, variables, workflow dispatch, and the two ZIP downloads |
+| `client.repos.actions` | `repositories.actions.RepositoryActionApi` | 14 | a repository's Actions record: runs, jobs, tasks, artifacts, workflow dispatch, and the two ZIP downloads |
+| `client.repos.actions.config` | `repositories.actions.RepositoryActionConfigApi` | 14 | what those runs run on and with: runners, secrets, variables |
 | `client.repos.git` | `repositories.gitdata.RepositoryGitApi` | 20 | raw Git data and commit-level reads: blobs, trees, refs, notes, annotated tags, commit statuses, comparison, diffpatch, raw and media files, archives |
 | `client.repos.publishing` | `repositories.publishing.RepositoryPublishingApi` | 19 | releases and their assets, tags, topics, forking, generating from a template |
 | `client.repos.hooks` | `repositories.hooks.RepositoryHookApi` | 10 | webhooks Forgejo delivers elsewhere, and the Git hooks it runs on its own machine |

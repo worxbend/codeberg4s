@@ -125,6 +125,10 @@ object AttemptParitySuite:
       classOf[repositories.actions.RepositoryActionApi],
       classOf[repositories.actions.RepositoryActionApi.Attempt],
     ),
+    Pair(
+      classOf[repositories.actions.RepositoryActionConfigApi],
+      classOf[repositories.actions.RepositoryActionConfigApi.Attempt],
+    ),
     Pair(classOf[repositories.admin.RepositoryAdminApi], classOf[repositories.admin.RepositoryAdminApi.Attempt]),
     Pair(classOf[repositories.admin.RepositoryContentApi], classOf[repositories.admin.RepositoryContentApi.Attempt]),
     Pair(classOf[repositories.admin.RepositoryInsightApi], classOf[repositories.admin.RepositoryInsightApi.Attempt]),

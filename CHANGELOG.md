@@ -25,6 +25,18 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **The Actions runners, secrets and variables moved to
+  `client.repos.actions.config`.** `client.repos.actions` held 28 operations
+  covering two different things: the record of what Actions has done — runs,
+  jobs, tasks, artifacts — and the capacity and configuration it runs on. The
+  fourteen operations of the second kind (`runners`, `runner`, `registerRunner`,
+  `deleteRunner`, `runnerRegistrationToken`, `searchRunnerJobs`, `secrets`,
+  `setSecret`, `deleteSecret`, `variables`, `variable`, `createVariable`,
+  `updateVariable`, `deleteVariable`) are now on `RepositoryActionConfigApi`,
+  reached as `client.repos.actions.config`, with their names, arguments,
+  endpoints, operation ids and retry decisions unchanged. They are the same
+  fourteen operations `client.organizations.actions` serves one scope higher.
+
 - **`client.organizations` membership moved to `client.organizations.members`.**
   Thirteen operations — `members`, `publicMembers`, `isMember`,
   `isPublicMember`, `removeMember`, `publicizeMember`, `concealMember`,

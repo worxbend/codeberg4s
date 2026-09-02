@@ -244,7 +244,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, "[]"))
 
     onApi(backend): api =>
-      api
+      api.config
         .runners(Handle, Name, RunnerVisibility.AllVisible, PageParams.First)
         .map: _ =>
           assertEquals(pathOf(backend), s"$Endpoint/runners")
@@ -254,7 +254,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.RunnerBody))
 
     onApi(backend): api =>
-      api.runner(Handle, Name, Runner).map: runner =>
+      api.config.runner(Handle, Name, Runner).map: runner =>
         assertEquals(pathOf(backend), s"$Endpoint/runners/37")
         assertEquals(runner.status, Some(RunnerStatus.Idle))
 
@@ -262,7 +262,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(201, RepositoryActionApiSuite.RegisteredBody))
 
     onApi(backend): api =>
-      api
+      api.config
         .registerRunner(Handle, Name, orFail(RegisterRunner.named("build-box-3")).ephemeral)
         .map: registered =>
           assertEquals(methodOf(backend), "POST")
@@ -280,7 +280,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     )
 
     onApi(backend): api =>
-      api.attempt
+      api.config.attempt
         .registerRunner(Handle, Name, orFail(RegisterRunner.named("build-box-3")))
         .map(_ => assertEquals(backend.allInteractions.size, 1, "the POST was retried"))
 
@@ -288,7 +288,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val truncated = RepositoryActionApiSuite.RegisteredBody.dropRight(1)
 
     onApi(RecordingBackend(responding(201, truncated))): api =>
-      api.attempt.registerRunner(Handle, Name, orFail(RegisterRunner.named("build-box-3"))).map:
+      api.config.attempt.registerRunner(Handle, Name, orFail(RegisterRunner.named("build-box-3"))).map:
         case Left(error @ CodebergError.DecodingFailed(_, snippet, _, _)) =>
           assertEquals(snippet, ApiPipeline.redactedSnippet(truncated.length))
           assert(!error.describe.contains("QWERTY123"), s"the body excerpt carried the token: ${error.describe}")
@@ -299,7 +299,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(204, ""))
 
     onApi(backend): api =>
-      api.deleteRunner(Handle, Name, Runner).map: _ =>
+      api.config.deleteRunner(Handle, Name, Runner).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
         assertEquals(pathOf(backend), s"$Endpoint/runners/37")
 
@@ -307,7 +307,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, """{"token":"QWERTY123"}"""))
 
     onApi(backend): api =>
-      api.runnerRegistrationToken(Handle, Name).map: token =>
+      api.config.runnerRegistrationToken(Handle, Name).map: token =>
         assertEquals(pathOf(backend), s"$Endpoint/runners/registration-token")
         assertEquals(token.reveal, "QWERTY123")
         assertEquals(s"$token", RunnerRegistrationToken.Redacted)
@@ -317,7 +317,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val labels  = Vector(orFail(RunnerLabel.from("ubuntu-latest")), orFail(RunnerLabel.from("docker")))
 
     onApi(backend): api =>
-      api.searchRunnerJobs(Handle, Name, labels).map: _ =>
+      api.config.searchRunnerJobs(Handle, Name, labels).map: _ =>
         assertEquals(pathOf(backend), s"$Endpoint/runners/jobs")
         assertEquals(queryOf(backend), List("labels" -> "ubuntu-latest,docker"))
 
@@ -340,7 +340,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.SecretListBody))
 
     onApi(backend): api =>
-      api.secrets(Handle, Name, PageParams.First).map: page =>
+      api.config.secrets(Handle, Name, PageParams.First).map: page =>
         assertEquals(pathOf(backend), s"$Endpoint/secrets")
         assertEquals(page.items.map(_.name.value), Vector("DEPLOY_KEY"))
 
@@ -348,7 +348,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(204, ""))
 
     onApi(backend): api =>
-      api
+      api.config
         .setSecret(Handle, Name, Secret, orFail(SecretValue.from("hunter2")))
         .map: _ =>
           assertEquals(methodOf(backend), "PUT")
@@ -360,13 +360,13 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
       RecordingBackend(cycling(ResponseStub.adjust("", StatusCode(503)), ResponseStub.adjust("", StatusCode(201))))
 
     onApi(backend): api =>
-      api
+      api.config
         .setSecret(Handle, Name, Secret, orFail(SecretValue.from("hunter2")))
         .map(_ => assertEquals(backend.allInteractions.size, 2, "the PUT was not retried"))
 
   test("a failed secret write never carries the material into the error a caller would log"):
     onApi(responding(403, RepositoryActionApiSuite.ForbiddenBody)): api =>
-      api.attempt
+      api.config.attempt
         .setSecret(Handle, Name, Secret, orFail(SecretValue.from("hunter2")))
         .map:
           case Left(error) =>
@@ -378,7 +378,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(204, ""))
 
     onApi(backend): api =>
-      api.deleteSecret(Handle, Name, Secret).map: _ =>
+      api.config.deleteSecret(Handle, Name, Secret).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
         assertEquals(pathOf(backend), s"$Endpoint/secrets/DEPLOY_KEY")
 
@@ -388,7 +388,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.VariableListBody))
 
     onApi(backend): api =>
-      api.variables(Handle, Name, PageParams.First).map: page =>
+      api.config.variables(Handle, Name, PageParams.First).map: page =>
         assertEquals(pathOf(backend), s"$Endpoint/variables")
         assertEquals(page.items.map(_.value), Vector("staging"))
 
@@ -396,7 +396,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(200, RepositoryActionApiSuite.VariableBody))
 
     onApi(backend): api =>
-      api.variable(Handle, Name, Variable).map: variable =>
+      api.config.variable(Handle, Name, Variable).map: variable =>
         assertEquals(pathOf(backend), s"$Endpoint/variables/ENVIRONMENT")
         assertEquals(variable.value, "staging")
 
@@ -404,7 +404,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(201, ""))
 
     onApi(backend): api =>
-      api
+      api.config
         .createVariable(Handle, Name, Variable, CreateVariable.of("staging"))
         .map: _ =>
           assertEquals(methodOf(backend), "POST")
@@ -416,7 +416,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
       RecordingBackend(cycling(ResponseStub.adjust("", StatusCode(503)), ResponseStub.adjust("", StatusCode(204))))
 
     onApi(backend): api =>
-      api
+      api.config
         .updateVariable(Handle, Name, Variable, UpdateVariable.of("production"))
         .map: _ =>
           assertEquals(methodOf(backend), "PUT")
@@ -429,7 +429,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val command = UpdateVariable.of("production").movedTo(orFail(VariableName.from("STAGE")))
 
     onApi(backend): api =>
-      api.attempt
+      api.config.attempt
         .updateVariable(Handle, Name, Variable, command)
         .map: outcome =>
           assert(outcome.isLeft, s"a renaming update must not be retried into a success, got $outcome")
@@ -437,8 +437,8 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
           assertEquals(bodyOf(backend), """{"value":"production","name":"STAGE"}""")
 
   test("the two eligibilities are chosen from the command, not from the endpoint"):
-    val plain   = RepositoryActionApi.updateVariableEligibility(UpdateVariable.of("x"))
-    val renamed = RepositoryActionApi.updateVariableEligibility(UpdateVariable.of("x").movedTo(Variable))
+    val plain   = RepositoryActionConfigApi.updateVariableEligibility(UpdateVariable.of("x"))
+    val renamed = RepositoryActionConfigApi.updateVariableEligibility(UpdateVariable.of("x").movedTo(Variable))
 
     assertEquals(plain.allows(HttpMethod.Put), true)
     assertEquals(renamed.allows(HttpMethod.Put), false)
@@ -447,7 +447,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
     val backend = RecordingBackend(responding(204, ""))
 
     onApi(backend): api =>
-      api.deleteVariable(Handle, Name, Variable).map: _ =>
+      api.config.deleteVariable(Handle, Name, Variable).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
         assertEquals(pathOf(backend), s"$Endpoint/variables/ENVIRONMENT")
 
@@ -501,15 +501,15 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
   test("both rails agree on a secret listing failure as well, so the choice of rail is only a choice of style"):
     onApi(responding(403, RepositoryActionApiSuite.ForbiddenBody)): api =>
       for
-        raised <- api.secrets(Handle, Name, PageParams.First).failed
-        typed  <- api.attempt.secrets(Handle, Name, PageParams.First)
+        raised <- api.config.secrets(Handle, Name, PageParams.First).failed
+        typed  <- api.config.attempt.secrets(Handle, Name, PageParams.First)
       yield assertRailsAgree(raised, typed)
 
   test("both rails agree on a unit-returning write as well"):
     onApi(responding(403, RepositoryActionApiSuite.ForbiddenBody)): api =>
       for
-        raised <- api.deleteVariable(Handle, Name, Variable).failed
-        typed  <- api.attempt.deleteVariable(Handle, Name, Variable)
+        raised <- api.config.deleteVariable(Handle, Name, Variable).failed
+        typed  <- api.config.attempt.deleteVariable(Handle, Name, Variable)
       yield assertRailsAgree(raised, typed)
 
   test("a 400 is an Api failure too — Forgejo uses it for validation alongside 422"):
