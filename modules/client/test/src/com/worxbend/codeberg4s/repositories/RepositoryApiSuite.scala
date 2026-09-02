@@ -42,10 +42,12 @@ final class RepositoryApiSuite extends FunSuite:
 
   private val FirstPage: PageParams = PageParams.First
 
+  private val Keyword: RepositorySearchQuery = orFail(RepositorySearchQuery.of("forgejo"))
+
   // --- request shapes -------------------------------------------------------
 
   test("search dials /repos/search carrying q, page and limit"):
-    dialling(RepositoryApiSuite.SearchBody)(_.repos.search("forgejo", FirstPage)): uri =>
+    dialling(RepositoryApiSuite.SearchBody)(_.repos.search(Keyword, FirstPage)): uri =>
       assertEquals(uri, "https://forge.example/api/v1/repos/search?q=forgejo&page=1&limit=30")
 
   test("branches dials the branches collection with the requested window"):
@@ -127,7 +129,7 @@ final class RepositoryApiSuite extends FunSuite:
 
   test("search unwraps the ok/data envelope into repositories"):
     onStub(responding(200, RepositoryApiSuite.SearchBody, Nil)): client =>
-      client.repos.search("forgejo", FirstPage).map: page =>
+      client.repos.search(Keyword, FirstPage).map: page =>
         assertEquals(page.items.map(_.slug.value), Vector("forgejo/forgejo"))
 
   test("topics unwraps the topics envelope into a page of names"):
@@ -179,8 +181,8 @@ final class RepositoryApiSuite extends FunSuite:
   test("a 422 on search reaches both rails as the very same Api failure"):
     onStub(responding(422, RepositoryApiSuite.InvalidQueryBody, Nil)): client =>
       for
-        raised <- client.repos.search("bad", FirstPage).failed
-        typed  <- client.repos.attempt.search("bad", FirstPage)
+        raised <- client.repos.search(Keyword, FirstPage).failed
+        typed  <- client.repos.attempt.search(Keyword, FirstPage)
       yield assertRailsAgree(raised, typed, RepositoryApi.SearchOperation)
 
   test("a failing listing carries its own operation id, so alerts can tell the endpoints apart"):

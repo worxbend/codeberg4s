@@ -49,6 +49,8 @@ final class UserApiSuite extends FunSuite:
 
   private val FirstPage: PageParams = PageParams(PageNumber.First, orFail(PageSize.from(3)))
 
+  private val Keyword: UserSearchQuery = orFail(UserSearchQuery.of("earl"))
+
   // --- reading one user -----------------------------------------------------
 
   test("current maps GET /user to a domain user"):
@@ -77,19 +79,19 @@ final class UserApiSuite extends FunSuite:
 
   test("search decodes the ok/data envelope rather than a bare array"):
     onApi(responding(200, UserApiSuite.SearchBody)): users =>
-      users.search("earl", FirstPage).map: page =>
+      users.search(Keyword, FirstPage).map: page =>
         assertEquals(page.size, 2)
         assertEquals(page.items.map(_.login.value), Vector("0x20fearless", "earl-warren"))
 
   test("search sends the keyword as q, alongside page and limit"):
     recording(200, UserApiSuite.SearchBody): (backend, users) =>
       users
-        .search("earl", FirstPage)
+        .search(Keyword, FirstPage)
         .map(_ => assertEquals(dialled(backend), "https://forge.example/api/v1/users/search?q=earl&page=1&limit=3"))
 
   test("a search body that really is a bare array does not decode, which is why the envelope exists"):
     onApi(responding(200, UserApiSuite.UserListBody)): users =>
-      users.attempt.search("earl", FirstPage).map:
+      users.attempt.search(Keyword, FirstPage).map:
         case Left(CodebergError.DecodingFailed(ctx, _, _, _)) => assertEquals(ctx.operation, UserApi.SearchOperation)
         case other                                            => fail(s"expected a decoding failure, got $other")
 
@@ -192,8 +194,8 @@ final class UserApiSuite extends FunSuite:
   test("a 422 on search reaches both rails identically"):
     onApi(responding(422, UserApiSuite.ValidationBody)): users =>
       for
-        raised <- users.search("earl", FirstPage).failed
-        typed  <- users.attempt.search("earl", FirstPage)
+        raised <- users.search(Keyword, FirstPage).failed
+        typed  <- users.attempt.search(Keyword, FirstPage)
       yield assertRailsAgree(raised, typed, UserApiSuite.ExpectedValidation)
 
   test("every operation id is the one the group publishes, so an alert can be written against it"):

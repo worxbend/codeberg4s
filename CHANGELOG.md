@@ -25,6 +25,40 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **Repository and account search take a typed query.** `client.repos.search`
+  and `client.users.search` used to take the keyword as a bare `String`, which
+  was the only thing about either search a caller could say. Between them the
+  two endpoints declare eighteen parameters; sixteen of them were unreachable.
+  Both operations now take a query object built the way every other request
+  model in this library is built — a case class with a validating companion —
+  and both render their query string in `modules/codec`, beside the other
+  `*Queries` objects, so each wire spelling is written exactly once.
+
+  `RepositorySearchQuery` carries the keyword plus the fifteen filters
+  `GET /repos/search` declares: the topic and description switches, the four
+  account and team ids, the three-valued `private` / `is_private` / `template` /
+  `archived` filters, the repository `mode`, `exclusive`, and the `sort`
+  attribute with its `order`. The last three are the new `RepositorySearchMode`,
+  `RepositorySearchSort` and `SortDirection` enums, so a misspelled sort word is
+  now a compile error instead of a `422`. `UserSearchQuery` carries the keyword,
+  the account `uid` and the new `UserSearchSort` ordering.
+
+  Both companions expose `Empty` — every filter unset — and `of(keyword)`, which
+  trims the keyword, rejects a control character as a
+  `ValidationError` on the `"text"` field, and treats an all-blank keyword as no
+  keyword at all, since omitting `q` and sending `q=` ask these endpoints the
+  same question.
+
+  BREAKING CHANGE: `RepositoryApi.search` and `UserApi.search`, on both rails,
+  take a query object instead of a `String`. Rewrite
+  `client.repos.search("forgejo", params)` as
+  `RepositorySearchQuery.of("forgejo").map(client.repos.search(_, params))`, or
+  build the query once and pass it in, and the same for
+  `client.users.search` with `UserSearchQuery.of`. A call that searched with an
+  empty or blank keyword now sends no `q` at all rather than an empty one, which
+  Forgejo answers identically. `UserApi.KeywordParameter` is gone: the `"q"`
+  spelling now lives once, in `UserQueries`.
+
 - **The round-trippable enums share one wire vocabulary.** Seven enums are both
   decoded from a JSON field and written back into a request — `TeamPermission`,
   `UserVisibility`, `ContentKind`, `CommitFileStatus`, `CollaboratorPermission`,

@@ -15,6 +15,7 @@ import com.worxbend.codeberg4s.repositories.hooks.{
   RepositoryWikiApi
 }
 import com.worxbend.codeberg4s.repositories.publishing.{RepositoryPublishingApi, Topic}
+import com.worxbend.codeberg4s.repositories.wire.RepositoryQueries
 import com.worxbend.codeberg4s.{CodebergError, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
@@ -101,14 +102,14 @@ final class RepositoryApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     * [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] as for [[get]]. Retried under
     * [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]].
     *
-    * @param term
-    *   the `q` parameter — a substring matched against repository names. An empty string is accepted by Forgejo and
-    *   returns everything visible, page by page. Percent-encoding happens at the transport boundary
+    * @param query
+    *   what to search for and how to narrow it; [[RepositorySearchQuery.Empty]] asks for everything visible, page by
+    *   page. Percent-encoding of the keyword happens at the transport boundary
     * @param params
     *   the page to fetch and how many results it may hold
     */
-  def search(term: String, params: PageParams): Future[Page[Repository]] =
-    pipeline.callPage(RepositoryApi.searchRequest(term, params), params)(using RepositoryDecoders.searchResults)
+  def search(query: RepositorySearchQuery, params: PageParams): Future[Page[Repository]] =
+    pipeline.callPage(RepositoryApi.searchRequest(query, params), params)(using RepositoryDecoders.searchResults)
 
   /** Lists a repository's branches — `GET /repos/{owner}/{repo}/branches`.
     *
@@ -337,8 +338,8 @@ object RepositoryApi:
       exec.attempt(rail.get(owner, name))
 
     /** [[RepositoryApi.search]] with its failure as a value. */
-    def search(term: String, params: PageParams): Future[Either[CodebergError, Page[Repository]]] =
-      exec.attempt(rail.search(term, params))
+    def search(query: RepositorySearchQuery, params: PageParams): Future[Either[CodebergError, Page[Repository]]] =
+      exec.attempt(rail.search(query, params))
 
     /** [[RepositoryApi.branches]] with its failure as a value. */
     def branches(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Branch]]] =
@@ -383,8 +384,8 @@ object RepositoryApi:
   private def getRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(GetOperation, RepositoryRequests.repositoryPath(owner, name), Nil)
 
-  private def searchRequest(term: String, params: PageParams): CodebergRequest =
-    read(SearchOperation, RepositoryRequests.reposPath :+ "search", ("q" -> term) :: PagingQuery.window(params))
+  private def searchRequest(query: RepositorySearchQuery, params: PageParams): CodebergRequest =
+    read(SearchOperation, RepositoryRequests.reposPath :+ "search", RepositoryQueries.search(query, params))
 
   private def branchesRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
     read(ListBranchesOperation, RepositoryRequests.repositoryPath(owner, name) :+ "branches", PagingQuery.window(params))

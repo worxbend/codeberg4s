@@ -14,6 +14,7 @@ import com.worxbend.codeberg4s.users.account.{
   UserQuotaApi
 }
 import com.worxbend.codeberg4s.users.social.{UserKeyApi, UserSocialApi, UserTokenApi}
+import com.worxbend.codeberg4s.users.wire.UserQueries
 
 import scala.concurrent.Future
 
@@ -129,13 +130,13 @@ final class UserApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using ex
     * are as for [[current]]. `GET` is safe, so the call is retried under
     * [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]].
     *
-    * @param keyword
-    *   the `q` parameter, passed to the instance unchanged
+    * @param query
+    *   what to search for and how to order it; [[UserSearchQuery.Empty]] lists every visible account
     * @param params
     *   the page to fetch and how large it may be
     */
-  def search(keyword: String, params: PageParams): Future[Page[User]] =
-    pipeline.callPage(UserApi.searchRequest(keyword, params), params)(using UserDecoders.searchResults)
+  def search(query: UserSearchQuery, params: PageParams): Future[Page[User]] =
+    pipeline.callPage(UserApi.searchRequest(query, params), params)(using UserDecoders.searchResults)
 
   /** Lists the repositories an account owns — `GET /users/{username}/repos`.
     *
@@ -232,9 +233,6 @@ object UserApi:
   /** The stable operation id [[UserApi.keys]] copies into every failure's [[com.worxbend.codeberg4s.CallContext]]. */
   val KeysOperation: String = "users.keys"
 
-  /** The query parameter Forgejo takes the search keyword from. */
-  val KeywordParameter: String = "q"
-
   /** The typed rail of [[UserApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a value.
     *
     * Obtained as `client.users.attempt`. Each method is the convenience-rail method with its failure channel
@@ -253,8 +251,8 @@ object UserApi:
       exec.attempt(rail.get(username))
 
     /** [[UserApi.search]] with its failure as a value. */
-    def search(keyword: String, params: PageParams): Future[Either[CodebergError, Page[User]]] =
-      exec.attempt(rail.search(keyword, params))
+    def search(query: UserSearchQuery, params: PageParams): Future[Either[CodebergError, Page[User]]] =
+      exec.attempt(rail.search(query, params))
 
     /** [[UserApi.repositories]] with its failure as a value. */
     def repositories(username: Username, params: PageParams): Future[Either[CodebergError, Page[Repository]]] =
@@ -282,8 +280,8 @@ object UserApi:
   private def getRequest(username: Username): CodebergRequest =
     read(GetOperation, List("users", username.value), Nil)
 
-  private def searchRequest(keyword: String, params: PageParams): CodebergRequest =
-    read(SearchOperation, List("users", "search"), (KeywordParameter, keyword) :: pageQuery(params))
+  private def searchRequest(query: UserSearchQuery, params: PageParams): CodebergRequest =
+    read(SearchOperation, List("users", "search"), UserQueries.search(query, params))
 
   private def repositoriesRequest(username: Username, params: PageParams): CodebergRequest =
     read(RepositoriesOperation, List("users", username.value, "repos"), pageQuery(params))
