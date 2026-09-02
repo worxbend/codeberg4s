@@ -94,11 +94,20 @@ object CodebergRequest:
     * said by the path. Sending `{}` on the chance the instance prefers it would be guesswork, and `docs/HAZARDS.md` §4
     * shows Forgejo answering `400` to bodies it did not expect.
     */
+  private[codeberg4s] def bodiless(operation: String, method: HttpMethod, path: List[String]): CodebergRequest =
+    bodiless(operation, method, path, Nil)
+
+  /** [[bodiless]] for the few routes that still carry a query string — `PUT .../pulls/{n}/update?style=rebase` and its
+    * kind, where the path names what to act on and the query names how.
+    *
+    * A separate overload rather than a default argument: `.scalafix.conf` bans default arguments, because a method with
+    * one cannot be passed around as a function without losing it.
+    */
   private[codeberg4s] def bodiless(
       operation: String,
       method: HttpMethod,
       path: List[String],
-      query: List[(String, String)] = Nil,
+      query: List[(String, String)],
   ): CodebergRequest =
     CodebergRequest(
       operation = operation,

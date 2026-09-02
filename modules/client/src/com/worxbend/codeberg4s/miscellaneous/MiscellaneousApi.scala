@@ -1,6 +1,5 @@
 package com.worxbend.codeberg4s.miscellaneous
 
-import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.CodebergRequest.{read, text, write}
@@ -21,7 +20,7 @@ import com.worxbend.codeberg4s.miscellaneous.wire.{
 }
 import com.worxbend.codeberg4s.repositories.actions.ActionRun
 import com.worxbend.codeberg4s.repositories.actions.wire.ActionRunDto
-import com.worxbend.codeberg4s.{CodebergError, HttpMethod}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod, JsonPath}
 
 import scala.concurrent.Future
 
