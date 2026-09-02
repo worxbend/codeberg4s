@@ -1,26 +1,10 @@
 package com.worxbend.codeberg4s.miscellaneous
 
-import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.Json
 import com.worxbend.codeberg4s.core.CodebergRequest.{read, text, write}
-import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RetryEligibility}
-import com.worxbend.codeberg4s.miscellaneous.wire.{
-  GitignoreTemplateDto,
-  LicenseTemplateDto,
-  LicenseTemplateSummaryDto,
-  MarkdownOptionDto,
-  MarkupOptionDto,
-  NodeInfoDto,
-  ServerApiSettingsDto,
-  ServerAttachmentSettingsDto,
-  ServerRepositorySettingsDto,
-  ServerUiSettingsDto,
-  TemplateLabelDto,
-  TemplateNamesDto
-}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
+import com.worxbend.codeberg4s.miscellaneous.wire.{MarkdownOptionDto, MarkupOptionDto}
 import com.worxbend.codeberg4s.repositories.actions.ActionRun
-import com.worxbend.codeberg4s.repositories.actions.wire.ActionRunDto
-import com.worxbend.codeberg4s.{CodebergError, HttpMethod, JsonPath}
+import com.worxbend.codeberg4s.{CodebergError, HttpMethod}
 
 import scala.concurrent.Future
 
@@ -78,7 +62,7 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     */
   def apiSettings(): Future[ServerApiSettings] =
     pipeline.call(MiscellaneousApi.ApiSettingsRequest, RetryEligibility.IdempotentOnly)(using
-      MiscellaneousApi.ApiSettingsDecoder)
+      MiscellaneousDecoders.apiSettings)
 
   /** Reads which repository features the instance has switched off — `GET /settings/repository`.
     *
@@ -92,7 +76,7 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     */
   def repositorySettings(): Future[ServerRepositorySettings] =
     pipeline.call(MiscellaneousApi.RepositorySettingsRequest, RetryEligibility.IdempotentOnly)(using
-      MiscellaneousApi.RepositorySettingsDecoder)
+      MiscellaneousDecoders.repositorySettings)
 
   /** Reads the instance's attachment limits — `GET /settings/attachment`.
     *
@@ -101,7 +85,7 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     */
   def attachmentSettings(): Future[ServerAttachmentSettings] =
     pipeline.call(MiscellaneousApi.AttachmentSettingsRequest, RetryEligibility.IdempotentOnly)(using
-      MiscellaneousApi.AttachmentSettingsDecoder)
+      MiscellaneousDecoders.attachmentSettings)
 
   /** Reads the instance's default signing key — `GET /signing-key.gpg`.
     *
@@ -120,7 +104,7 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     */
   def signingKey(): Future[Option[SigningKey]] =
     pipeline.call(MiscellaneousApi.SigningKeyRequest, RetryEligibility.IdempotentOnly)(using
-      MiscellaneousApi.SigningKeyDecoder)
+      MiscellaneousDecoders.signingKey)
 
   /** Renders a markdown document the way the instance would render it — `POST /markdown`.
     *
@@ -148,7 +132,7 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     */
   def renderMarkdown(request: MarkdownRenderRequest): Future[RenderedMarkdown] =
     pipeline.call(MiscellaneousApi.markdownRequest(request), RetryEligibility.AlwaysRetry)(using
-      MiscellaneousApi.MarkdownDecoder)
+      MiscellaneousDecoders.markdown)
 
   /** Renders a markdown document with no options at all — `POST /markdown/raw`.
     *
@@ -166,7 +150,7 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     */
   def renderMarkdownRaw(markdown: String): Future[RenderedMarkdown] =
     pipeline.call(MiscellaneousApi.markdownRawRequest(markdown), RetryEligibility.AlwaysRetry)(using
-      MiscellaneousApi.MarkdownDecoder)
+      MiscellaneousDecoders.markdown)
 
   /** Reads the instance's web-interface settings — `GET /settings/ui`.
     *
@@ -180,7 +164,7 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     */
   def uiSettings(): Future[ServerUiSettings] =
     pipeline.call(MiscellaneousApi.UiSettingsRequest, RetryEligibility.IdempotentOnly)(using
-      MiscellaneousApi.UiSettingsDecoder)
+      MiscellaneousDecoders.uiSettings)
 
   /** Reads the instance's default SSH signing key — `GET /signing-key.ssh`.
     *
@@ -201,7 +185,7 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     */
   def sshSigningKey(): Future[Option[SshSigningKey]] =
     pipeline.call(MiscellaneousApi.SshSigningKeyRequest, RetryEligibility.IdempotentOnly)(using
-      MiscellaneousApi.SshSigningKeyDecoder)
+      MiscellaneousDecoders.sshSigningKey)
 
   /** Lists the `.gitignore` templates the instance ships — `GET /gitignore/templates`.
     *
@@ -219,7 +203,7 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     */
   def gitignoreTemplates(): Future[Vector[TemplateName]] =
     pipeline.call(MiscellaneousApi.GitignoreTemplatesRequest, RetryEligibility.IdempotentOnly)(using
-      MiscellaneousApi.TemplateNamesDecoder)
+      MiscellaneousDecoders.templateNames)
 
   /** Reads one `.gitignore` template, contents and all — `GET /gitignore/templates/{name}`.
     *
@@ -233,7 +217,7 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     */
   def gitignoreTemplate(name: TemplateName): Future[GitignoreTemplate] =
     pipeline.call(MiscellaneousApi.gitignoreTemplateRequest(name), RetryEligibility.IdempotentOnly)(using
-      MiscellaneousApi.GitignoreTemplateDecoder)
+      MiscellaneousDecoders.gitignoreTemplate)
 
   /** Lists the label templates the instance ships — `GET /label/templates`.
     *
@@ -244,7 +228,7 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     */
   def labelTemplates(): Future[Vector[TemplateName]] =
     pipeline.call(MiscellaneousApi.LabelTemplatesRequest, RetryEligibility.IdempotentOnly)(using
-      MiscellaneousApi.TemplateNamesDecoder)
+      MiscellaneousDecoders.templateNames)
 
   /** Reads every label in one template — `GET /label/templates/{name}`.
     *
@@ -261,7 +245,7 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     */
   def labelTemplate(name: TemplateName): Future[Vector[TemplateLabel]] =
     pipeline.call(MiscellaneousApi.labelTemplateRequest(name), RetryEligibility.IdempotentOnly)(using
-      MiscellaneousApi.TemplateLabelsDecoder)
+      MiscellaneousDecoders.templateLabels)
 
   /** Lists the license templates the instance ships — `GET /licenses`.
     *
@@ -274,7 +258,7 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     */
   def licenseTemplates(): Future[Vector[LicenseTemplateSummary]] =
     pipeline.call(MiscellaneousApi.LicenseTemplatesRequest, RetryEligibility.IdempotentOnly)(using
-      MiscellaneousApi.LicenseTemplatesDecoder)
+      MiscellaneousDecoders.licenseTemplates)
 
   /** Reads one license template, text and all — `GET /licenses/{name}`.
     *
@@ -289,7 +273,7 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     */
   def licenseTemplate(name: TemplateName): Future[LicenseTemplate] =
     pipeline.call(MiscellaneousApi.licenseTemplateRequest(name), RetryEligibility.IdempotentOnly)(using
-      MiscellaneousApi.LicenseTemplateDecoder)
+      MiscellaneousDecoders.licenseTemplate)
 
   /** Renders a markup document of any supported language as HTML — `POST /markup`.
     *
@@ -318,7 +302,7 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     */
   def renderMarkup(request: MarkupRenderRequest): Future[RenderedMarkdown] =
     pipeline.call(MiscellaneousApi.markupRequest(request), RetryEligibility.AlwaysRetry)(using
-      MiscellaneousApi.MarkdownDecoder)
+      MiscellaneousDecoders.markdown)
 
   /** Reads the instance's NodeInfo 2.1 document — `GET /nodeinfo`.
     *
@@ -337,7 +321,7 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     */
   def nodeInfo(): Future[NodeInfo] =
     pipeline.call(MiscellaneousApi.NodeInfoRequest, RetryEligibility.IdempotentOnly)(using
-      MiscellaneousApi.NodeInfoDecoder)
+      MiscellaneousDecoders.nodeInfo)
 
   /** Reads the workflow run the calling token belongs to — `GET /actions/run`.
     *
@@ -365,7 +349,7 @@ final class MiscellaneousApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     */
   def actionsRun(): Future[ActionRun] =
     pipeline.call(MiscellaneousApi.ActionsRunRequest, RetryEligibility.IdempotentOnly)(using
-      MiscellaneousApi.ActionsRunDecoder)
+      MiscellaneousDecoders.actionsRun)
 
 /** The requests this group issues, its operation ids, and its typed rail. */
 object MiscellaneousApi:
@@ -551,53 +535,6 @@ object MiscellaneousApi:
 
   private val ActionsRunRequest: CodebergRequest =
     read(ActionsRunOperation, List("actions", "run"), Nil)
-
-  private val ApiSettingsDecoder: Decode[ServerApiSettings] =
-    WireDecode.single(Json.decoder[ServerApiSettingsDto])(_.toDomain)
-
-  private val RepositorySettingsDecoder: Decode[ServerRepositorySettings] =
-    WireDecode.single(Json.decoder[ServerRepositorySettingsDto])(_.toDomain)
-
-  private val AttachmentSettingsDecoder: Decode[ServerAttachmentSettings] =
-    WireDecode.single(Json.decoder[ServerAttachmentSettingsDto])(_.toDomain)
-
-  private val SigningKeyDecoder: Decode[Option[SigningKey]] =
-    PlainText.decodedAs(SigningKey.from)
-
-  private val MarkdownDecoder: Decode[RenderedMarkdown] =
-    PlainText.decodedAs(RenderedMarkdown.apply)
-
-  private val UiSettingsDecoder: Decode[ServerUiSettings] =
-    WireDecode.single(Json.decoder[ServerUiSettingsDto])(_.toDomain)
-
-  private val SshSigningKeyDecoder: Decode[Option[SshSigningKey]] =
-    PlainText.decodedAs(SshSigningKey.from)
-
-  /** Shared by both catalogues whose body is a bare array of strings; see
-    * [[com.worxbend.codeberg4s.miscellaneous.wire.TemplateNamesDto]].
-    */
-  private val TemplateNamesDecoder: Decode[Vector[TemplateName]] =
-    WireDecode.single(Json.decoder[Vector[String]])(TemplateNamesDto.toDomainAll(JsonPath.Root, _))
-
-  private val GitignoreTemplateDecoder: Decode[GitignoreTemplate] =
-    WireDecode.single(Json.decoder[GitignoreTemplateDto])(_.toDomain)
-
-  private val TemplateLabelsDecoder: Decode[Vector[TemplateLabel]] =
-    WireDecode.vector(Json.decoder[Vector[TemplateLabelDto]])
-
-  private val LicenseTemplatesDecoder: Decode[Vector[LicenseTemplateSummary]] =
-    WireDecode.vector(Json.decoder[Vector[LicenseTemplateSummaryDto]])
-  private val LicenseTemplateDecoder: Decode[LicenseTemplate]                 =
-    WireDecode.single(Json.decoder[LicenseTemplateDto])(_.toDomain)
-
-  private val NodeInfoDecoder: Decode[NodeInfo] =
-    WireDecode.single(Json.decoder[NodeInfoDto])(_.toDomain)
-
-  /** The run model the repository Actions group owns, reused verbatim: `GET /actions/run` answers the same `ActionRun`
-    * object, so it is read by the same DTO rather than by a second copy of it.
-    */
-  private val ActionsRunDecoder: Decode[ActionRun] =
-    WireDecode.single(Json.decoder[ActionRunDto])(_.toDomain)
 
   private def settingsRequest(operation: String, area: String): CodebergRequest =
     read(operation, List("settings", area), Nil)

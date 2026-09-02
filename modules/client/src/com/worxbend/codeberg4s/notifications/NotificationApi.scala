@@ -1,10 +1,9 @@
 package com.worxbend.codeberg4s.notifications
 
-import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.{Json, PagingQuery}
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, read}
-import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RetryEligibility}
-import com.worxbend.codeberg4s.notifications.wire.{NotificationCountDto, NotificationQueries, NotificationThreadDto}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
+import com.worxbend.codeberg4s.notifications.wire.NotificationQueries
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
 
@@ -96,7 +95,7 @@ final class NotificationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
     *   which window to fetch, and how large
     */
   def list(query: NotificationQuery, params: PageParams): Future[Page[NotificationThread]] =
-    pipeline.callPage(NotificationApi.listRequest(query, params), params)(using NotificationApi.ThreadsDecoder)
+    pipeline.callPage(NotificationApi.listRequest(query, params), params)(using NotificationDecoders.threads)
 
   /** Marks the authenticated user's notification threads read — `PUT /notifications`.
     *
@@ -130,7 +129,7 @@ final class NotificationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
     */
   def unreadCount(): Future[UnreadCount] =
     pipeline.call(NotificationApi.unreadCountRequest, RetryEligibility.IdempotentOnly)(using
-      NotificationApi.CountDecoder)
+      NotificationDecoders.unreadCount)
 
   /** Reads one notification thread — `GET /notifications/threads/{id}`.
     *
@@ -142,7 +141,7 @@ final class NotificationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
     */
   def getThread(id: NotificationThreadId): Future[NotificationThread] =
     pipeline.call(NotificationApi.getThreadRequest(id), RetryEligibility.IdempotentOnly)(using
-      NotificationApi.ThreadDecoder)
+      NotificationDecoders.thread)
 
   /** Marks one notification thread read — `PATCH /notifications/threads/{id}`.
     *
@@ -177,7 +176,7 @@ final class NotificationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
       params: PageParams,
   ): Future[Page[NotificationThread]] =
     pipeline.callPage(NotificationApi.listRepositoryRequest(owner, name, query, params), params)(using
-      NotificationApi.ThreadsDecoder)
+      NotificationDecoders.threads)
 
   /** Marks the authenticated user's threads for one repository read — `PUT /repos/{owner}/{repo}/notifications`.
     *
@@ -302,12 +301,3 @@ object NotificationApi:
 
   private def repositoryNotificationsPath(owner: Owner, name: RepoName): List[String] =
     RepositoryRequests.repositoryPath(owner, name) :+ "notifications"
-
-  private val ThreadDecoder: Decode[NotificationThread] =
-    WireDecode.single(Json.decoder[NotificationThreadDto])(_.toDomain)
-
-  private val ThreadsDecoder: Decode[Vector[NotificationThread]] =
-    WireDecode.vector(Json.decoder[Vector[NotificationThreadDto]])
-
-  private val CountDecoder: Decode[UnreadCount] =
-    WireDecode.single(Json.decoder[NotificationCountDto])(_.toDomain)

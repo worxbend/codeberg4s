@@ -1,27 +1,21 @@
 package com.worxbend.codeberg4s.pulls
 
-import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.{Json, PagingQuery}
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{bodiless, empty, read, remove, write}
-import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RetryEligibility}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.miscellaneous.PlainText
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.pulls.wire.{
-  ChangedFileDto,
   CreatePullRequestOptionDto,
   CreatePullReviewOptionsDto,
   DismissPullReviewOptionsDto,
   EditPullRequestOptionDto,
   MergePullRequestOptionDto,
   NewReviewCommentDto,
-  PullRequestDto,
   PullRequestQueries,
   PullReviewRequestOptionsDto,
-  ReviewCommentDto,
-  ReviewDto,
   SubmitPullReviewOptionsDto
 }
-import com.worxbend.codeberg4s.repositories.wire.CommitDto
 import com.worxbend.codeberg4s.repositories.{BranchName, Commit}
 import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
 
@@ -117,7 +111,8 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     *   which window to fetch, and how large
     */
   def list(owner: Owner, name: RepoName, query: PullRequestQuery, params: PageParams): Future[Page[PullRequest]] =
-    pipeline.callPage(PullRequestApi.listRequest(owner, name, query, params), params)(using PullRequestApi.PullsDecoder)
+    pipeline.callPage(PullRequestApi.listRequest(owner, name, query, params), params)(using
+      PullRequestDecoders.pullRequests)
 
   /** Reads one pull request — `GET /repos/{owner}/{repo}/pulls/{index}`.
     *
@@ -134,7 +129,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     */
   def get(owner: Owner, name: RepoName, number: PullRequestNumber): Future[PullRequest] =
     pipeline.call(PullRequestApi.getRequest(owner, name, number), RetryEligibility.IdempotentOnly)(using
-      PullRequestApi.PullDecoder)
+      PullRequestDecoders.pullRequest)
 
   /** Opens a pull request — `POST /repos/{owner}/{repo}/pulls`.
     *
@@ -152,7 +147,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     */
   def create(owner: Owner, name: RepoName, command: CreatePullRequest): Future[PullRequest] =
     pipeline.call(PullRequestApi.createRequest(owner, name, command), RetryEligibility.Never)(using
-      PullRequestApi.PullDecoder)
+      PullRequestDecoders.pullRequest)
 
   /** Edits a pull request — `PATCH /repos/{owner}/{repo}/pulls/{index}`.
     *
@@ -178,7 +173,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
       command: EditPullRequest,
   ): Future[PullRequest] =
     pipeline.call(PullRequestApi.editRequest(owner, name, number, command), RetryEligibility.Never)(using
-      PullRequestApi.PullDecoder)
+      PullRequestDecoders.pullRequest)
 
   /** Merges a pull request — `POST /repos/{owner}/{repo}/pulls/{index}/merge`.
     *
@@ -251,7 +246,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
       params: PageParams,
   ): Future[Page[Review]] =
     pipeline.callPage(PullRequestApi.reviewsRequest(owner, name, number, params), params)(using
-      PullRequestApi.ReviewsDecoder)
+      PullRequestDecoders.reviews)
 
   /** Lists the commits a pull request would bring — `GET /repos/{owner}/{repo}/pulls/{index}/commits`.
     *
@@ -278,7 +273,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
       params: PageParams,
   ): Future[Page[Commit]] =
     pipeline.callPage(PullRequestApi.commitsRequest(owner, name, number, params), params)(using
-      PullRequestApi.CommitsDecoder)
+      PullRequestDecoders.commits)
 
   /** Lists the files a pull request changes — `GET /repos/{owner}/{repo}/pulls/{index}/files`.
     *
@@ -300,8 +295,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
       number: PullRequestNumber,
       params: PageParams,
   ): Future[Page[ChangedFile]] =
-    pipeline.callPage(PullRequestApi.filesRequest(owner, name, number, params), params)(using
-      PullRequestApi.FilesDecoder)
+    pipeline.callPage(PullRequestApi.filesRequest(owner, name, number, params), params)(using PullRequestDecoders.files)
 
   /** Lists the repository's pinned pull requests — `GET /repos/{owner}/{repo}/pulls/pinned`.
     *
@@ -317,7 +311,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     */
   def pinned(owner: Owner, name: RepoName): Future[Vector[PullRequest]] =
     pipeline.call(PullRequestApi.pinnedRequest(owner, name), RetryEligibility.IdempotentOnly)(using
-      PullRequestApi.PullsDecoder)
+      PullRequestDecoders.pullRequests)
 
   /** Finds the pull request between two branches — `GET /repos/{owner}/{repo}/pulls/{base}/{head}`.
     *
@@ -345,7 +339,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
       head: PullRequestHead,
   ): Future[PullRequest] =
     pipeline.call(PullRequestApi.baseHeadRequest(owner, name, base, head), RetryEligibility.IdempotentOnly)(using
-      PullRequestApi.PullDecoder)
+      PullRequestDecoders.pullRequest)
 
   /** Fetches a pull request's diff or patch — `GET /repos/{owner}/{repo}/pulls/{index}.{diffType}`.
     *
@@ -480,7 +474,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
       request: ReviewRequest,
   ): Future[Vector[Review]] =
     pipeline.call(PullRequestApi.requestReviewsRequest(owner, name, number, request), RetryEligibility.Never)(using
-      PullRequestApi.ReviewsDecoder)
+      PullRequestDecoders.reviews)
 
   /** Withdraws review requests — `DELETE /repos/{owner}/{repo}/pulls/{index}/requested_reviewers`.
     *
@@ -542,7 +536,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
       command: CreateReview,
   ): Future[Review] =
     pipeline.call(PullRequestApi.createReviewRequest(owner, name, number, command), RetryEligibility.Never)(using
-      PullRequestApi.ReviewDecoder)
+      PullRequestDecoders.review)
 
   /** Reads one review — `GET /repos/{owner}/{repo}/pulls/{index}/reviews/{id}`.
     *
@@ -559,7 +553,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
       review: ReviewId,
   ): Future[Review] =
     pipeline.call(PullRequestApi.getReviewRequest(owner, name, number, review), RetryEligibility.IdempotentOnly)(using
-      PullRequestApi.ReviewDecoder)
+      PullRequestDecoders.review)
 
   /** Submits a pending review — `POST /repos/{owner}/{repo}/pulls/{index}/reviews/{id}`.
     *
@@ -588,7 +582,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     pipeline.call(
       PullRequestApi.submitReviewRequest(owner, name, number, review, command),
       RetryEligibility.Never,
-    )(using PullRequestApi.ReviewDecoder)
+    )(using PullRequestDecoders.review)
 
   /** Deletes a review — `DELETE /repos/{owner}/{repo}/pulls/{index}/reviews/{id}`.
     *
@@ -643,7 +637,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     pipeline.call(
       PullRequestApi.dismissReviewRequest(owner, name, number, review, command),
       RetryEligibility.AlwaysRetry,
-    )(using PullRequestApi.ReviewDecoder)
+    )(using PullRequestDecoders.review)
 
   /** Reverses a dismissal — `POST /repos/{owner}/{repo}/pulls/{index}/reviews/{id}/undismissals`.
     *
@@ -668,7 +662,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     pipeline.call(
       PullRequestApi.undismissReviewRequest(owner, name, number, review),
       RetryEligibility.AlwaysRetry,
-    )(using PullRequestApi.ReviewDecoder)
+    )(using PullRequestDecoders.review)
 
   /** Lists a review's inline comments — `GET /repos/{owner}/{repo}/pulls/{index}/reviews/{id}/comments`.
     *
@@ -691,7 +685,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     pipeline.call(
       PullRequestApi.reviewCommentsRequest(owner, name, number, review),
       RetryEligibility.IdempotentOnly,
-    )(using PullRequestApi.ReviewCommentsDecoder)
+    )(using PullRequestDecoders.reviewComments)
 
   /** Adds one inline comment to a review — `POST /repos/{owner}/{repo}/pulls/{index}/reviews/{id}/comments`.
     *
@@ -723,7 +717,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     pipeline.call(
       PullRequestApi.createReviewCommentRequest(owner, name, number, review, comment),
       RetryEligibility.Never,
-    )(using PullRequestApi.ReviewCommentDecoder)
+    )(using PullRequestDecoders.reviewComment)
 
   /** Reads one inline comment — `GET /repos/{owner}/{repo}/pulls/{index}/reviews/{id}/comments/{comment}`.
     *
@@ -744,7 +738,7 @@ final class PullRequestApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
     pipeline.call(
       PullRequestApi.getReviewCommentRequest(owner, name, number, review, comment),
       RetryEligibility.IdempotentOnly,
-    )(using PullRequestApi.ReviewCommentDecoder)
+    )(using PullRequestDecoders.reviewComment)
 
   /** Deletes one inline comment — `DELETE /repos/{owner}/{repo}/pulls/{index}/reviews/{id}/comments/{comment}`.
     *
@@ -1378,27 +1372,3 @@ object PullRequestApi:
       comment: ReviewCommentId,
   ): List[String] =
     reviewCommentsPath(owner, name, number, review) :+ comment.value.toString
-
-  private val PullDecoder: Decode[PullRequest] =
-    WireDecode.single(Json.decoder[PullRequestDto])(_.toDomain)
-
-  private val PullsDecoder: Decode[Vector[PullRequest]] =
-    WireDecode.vector(Json.decoder[Vector[PullRequestDto]])
-
-  private val ReviewDecoder: Decode[Review] =
-    WireDecode.single(Json.decoder[ReviewDto])(_.toDomain)
-
-  private val ReviewsDecoder: Decode[Vector[Review]] =
-    WireDecode.vector(Json.decoder[Vector[ReviewDto]])
-
-  private val ReviewCommentDecoder: Decode[ReviewComment] =
-    WireDecode.single(Json.decoder[ReviewCommentDto])(_.toDomain)
-
-  private val ReviewCommentsDecoder: Decode[Vector[ReviewComment]] =
-    WireDecode.vector(Json.decoder[Vector[ReviewCommentDto]])
-
-  private val CommitsDecoder: Decode[Vector[Commit]] =
-    WireDecode.vector(Json.decoder[Vector[CommitDto]])
-
-  private val FilesDecoder: Decode[Vector[ChangedFile]] =
-    WireDecode.vector(Json.decoder[Vector[ChangedFileDto]])

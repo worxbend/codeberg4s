@@ -1,12 +1,11 @@
 package com.worxbend.codeberg4s.users
 
-import com.worxbend.codeberg4s.client.WireDecode
-import com.worxbend.codeberg4s.codec.{Json, PagingQuery, WireModel}
+import com.worxbend.codeberg4s.CodebergError
+import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.read
-import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Decode, Exec, RetryEligibility}
+import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.Repository
-import com.worxbend.codeberg4s.repositories.wire.RepositoryDto
 import com.worxbend.codeberg4s.users.account.{
   UserAccountApi,
   UserActionApi,
@@ -15,9 +14,6 @@ import com.worxbend.codeberg4s.users.account.{
   UserQuotaApi
 }
 import com.worxbend.codeberg4s.users.social.{UserKeyApi, UserSocialApi, UserTokenApi}
-import com.worxbend.codeberg4s.users.wire.{PublicKeyDto, UserDto}
-import com.worxbend.codeberg4s.wire.SearchEnvelopeDto
-import com.worxbend.codeberg4s.{CodebergError, JsonPath}
 
 import scala.concurrent.Future
 
@@ -89,7 +85,7 @@ final class UserApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using ex
     * safe, so the call is retried under [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]].
     */
   def current(): Future[User] =
-    pipeline.call(UserApi.currentRequest, RetryEligibility.IdempotentOnly)(using UserApi.UserDecoder)
+    pipeline.call(UserApi.currentRequest, RetryEligibility.IdempotentOnly)(using UserDecoders.user)
 
   /** Reads one account by name — `GET /users/{username}`.
     *
@@ -111,7 +107,7 @@ final class UserApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using ex
     *   the account handle as it appears in a Codeberg URL
     */
   def get(username: Username): Future[User] =
-    pipeline.call(UserApi.getRequest(username), RetryEligibility.IdempotentOnly)(using UserApi.UserDecoder)
+    pipeline.call(UserApi.getRequest(username), RetryEligibility.IdempotentOnly)(using UserDecoders.user)
 
   /** Searches accounts by keyword — `GET /users/search`.
     *
@@ -139,7 +135,7 @@ final class UserApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using ex
     *   the page to fetch and how large it may be
     */
   def search(keyword: String, params: PageParams): Future[Page[User]] =
-    pipeline.callPage(UserApi.searchRequest(keyword, params), params)(using UserApi.UserSearchDecoder)
+    pipeline.callPage(UserApi.searchRequest(keyword, params), params)(using UserDecoders.searchResults)
 
   /** Lists the repositories an account owns — `GET /users/{username}/repos`.
     *
@@ -156,7 +152,7 @@ final class UserApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using ex
     * [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]].
     */
   def repositories(username: Username, params: PageParams): Future[Page[Repository]] =
-    pipeline.callPage(UserApi.repositoriesRequest(username, params), params)(using UserApi.RepositoryListDecoder)
+    pipeline.callPage(UserApi.repositoriesRequest(username, params), params)(using UserDecoders.repositories)
 
   /** Lists the accounts following `username` — `GET /users/{username}/followers`.
     *
@@ -168,7 +164,7 @@ final class UserApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using ex
     * [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]].
     */
   def followers(username: Username, params: PageParams): Future[Page[User]] =
-    pipeline.callPage(UserApi.followersRequest(username, params), params)(using UserApi.UserListDecoder)
+    pipeline.callPage(UserApi.followersRequest(username, params), params)(using UserDecoders.users)
 
   /** Lists the accounts `username` follows — `GET /users/{username}/following`.
     *
@@ -176,7 +172,7 @@ final class UserApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using ex
     * is retried under [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]].
     */
   def following(username: Username, params: PageParams): Future[Page[User]] =
-    pipeline.callPage(UserApi.followingRequest(username, params), params)(using UserApi.UserListDecoder)
+    pipeline.callPage(UserApi.followingRequest(username, params), params)(using UserDecoders.users)
 
   /** Lists the public keys of the account the configured credentials belong to — `GET /user/keys`.
     *
@@ -192,7 +188,7 @@ final class UserApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using ex
     * retried under [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]].
     */
   def currentKeys(params: PageParams): Future[Page[PublicKey]] =
-    pipeline.callPage(UserApi.currentKeysRequest(params), params)(using UserApi.PublicKeyListDecoder)
+    pipeline.callPage(UserApi.currentKeysRequest(params), params)(using UserDecoders.publicKeys)
 
   /** Lists the public keys of one account — `GET /users/{username}/keys`.
     *
@@ -201,7 +197,7 @@ final class UserApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using ex
     * [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]].
     */
   def keys(username: Username, params: PageParams): Future[Page[PublicKey]] =
-    pipeline.callPage(UserApi.keysRequest(username, params), params)(using UserApi.PublicKeyListDecoder)
+    pipeline.callPage(UserApi.keysRequest(username, params), params)(using UserDecoders.publicKeys)
 
 /** The requests this group issues, its typed rail, and the decoders that read its payloads. */
 object UserApi:
@@ -310,19 +306,3 @@ object UserApi:
     */
   private def pageQuery(params: PageParams): List[(String, String)] =
     PagingQuery.window(params)
-
-  private val UserDecoder: Decode[User] =
-    WireDecode.single(Json.decoder[UserDto])(_.toDomain)
-
-  private val UserListDecoder: Decode[Vector[User]] =
-    WireDecode.vector(Json.decoder[Vector[UserDto]])
-
-  private val UserSearchDecoder: Decode[Vector[User]] =
-    WireDecode.single(Json.decoder[SearchEnvelopeDto[UserDto]]): envelope =>
-      WireModel.all(JsonPath.Root.field("data"), envelope.data)
-
-  private val RepositoryListDecoder: Decode[Vector[Repository]] =
-    WireDecode.vector(Json.decoder[Vector[RepositoryDto]])
-
-  private val PublicKeyListDecoder: Decode[Vector[PublicKey]] =
-    WireDecode.vector(Json.decoder[Vector[PublicKeyDto]])
