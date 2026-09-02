@@ -21,9 +21,9 @@ import java.lang.reflect.Modifier
   *
   * The root table is the load-bearing part, and it is written out by hand on purpose. Inferring the expected prefix
   * from the constants themselves would make a copy-pasted wrong scope agree with itself and pass — which is precisely
-  * how the Actions mistake stayed invisible. Writing the root down means a rail's scope changes only when someone
-  * edits this table and says why. A fourth test keeps the table honest by asserting its keys are exactly the rails
-  * reachable from [[CodebergClient]], so a newly added group cannot skip the check by simply not being listed.
+  * how the Actions mistake stayed invisible. Writing the root down means a rail's scope changes only when someone edits
+  * this table and says why. A fourth test keeps the table honest by asserting its keys are exactly the rails reachable
+  * from [[CodebergClient]], so a newly added group cannot skip the check by simply not being listed.
   */
 final class OperationIdSuite extends FunSuite:
 
@@ -47,7 +47,7 @@ final class OperationIdSuite extends FunSuite:
   test("every operation id is a dotted lowerCamel path"):
     val malformed =
       for
-        rail            <- reachableApis.toList
+        rail           <- reachableApis.toList
         (constant, id) <- operationIds(rail)
         if !IdShape.matches(id)
       yield s"${rail.getName}.$constant = \"$id\""
@@ -94,43 +94,43 @@ object OperationIdSuite:
     *     holds a set per rail rather than a single string.
     */
   private val Roots: Map[String, Set[String]] = Map(
-    "com.worxbend.codeberg4s.VersionApi"                                  -> Set("version"),
-    "com.worxbend.codeberg4s.issues.IssueApi"                             -> Set("issues"),
-    "com.worxbend.codeberg4s.issues.IssueAttachmentApi"                   -> Set("issues"),
-    "com.worxbend.codeberg4s.issues.IssueCommentApi"                      -> Set("issues.comments"),
-    "com.worxbend.codeberg4s.issues.IssueLabelApi"                        -> Set("issues.labels"),
-    "com.worxbend.codeberg4s.issues.IssueMilestoneApi"                    -> Set("issues.milestones"),
-    "com.worxbend.codeberg4s.issues.IssueReactionApi"                     -> Set("issues"),
-    "com.worxbend.codeberg4s.issues.IssueSubscriptionApi"                 -> Set("issues.subscriptions"),
-    "com.worxbend.codeberg4s.issues.IssueTimeApi"                         -> Set("issues"),
-    "com.worxbend.codeberg4s.pulls.PullRequestApi"                        -> Set("pulls"),
-    "com.worxbend.codeberg4s.miscellaneous.MiscellaneousApi"              -> Set("misc", "settings"),
-    "com.worxbend.codeberg4s.notifications.NotificationApi"               -> Set("notifications"),
-    "com.worxbend.codeberg4s.organizations.OrganizationApi"               -> Set("orgs"),
-    "com.worxbend.codeberg4s.organizations.OrganizationHookApi"           -> Set("orgs.hooks"),
-    "com.worxbend.codeberg4s.organizations.OrganizationLabelApi"          -> Set("orgs.labels"),
-    "com.worxbend.codeberg4s.organizations.OrganizationQuotaApi"          -> Set("orgs.quota"),
-    "com.worxbend.codeberg4s.organizations.OrganizationTeamApi"           -> Set("orgs.teams"),
-    "com.worxbend.codeberg4s.organizations.actions.OrganizationActionApi" -> Set("orgs.actions"),
-    "com.worxbend.codeberg4s.repositories.RepositoryApi"                  -> Set("repos"),
-    "com.worxbend.codeberg4s.repositories.access.RepositoryAccessApi"     -> Set("repos"),
-    "com.worxbend.codeberg4s.repositories.actions.RepositoryActionApi"    -> Set("repos.actions"),
-    "com.worxbend.codeberg4s.repositories.admin.RepositoryAdminApi"       -> Set("repos.admin"),
-    "com.worxbend.codeberg4s.repositories.gitdata.RepositoryGitApi"       -> Set("repos"),
-    "com.worxbend.codeberg4s.repositories.hooks.RepositoryFlagApi"        -> Set("repos.flags"),
-    "com.worxbend.codeberg4s.repositories.hooks.RepositoryHookApi"        -> Set("repos.hooks"),
-    "com.worxbend.codeberg4s.repositories.hooks.RepositoryIssueConfigApi" -> Set("repos"),
-    "com.worxbend.codeberg4s.repositories.hooks.RepositoryWikiApi"        -> Set("repos.wiki"),
+    "com.worxbend.codeberg4s.VersionApi"                                      -> Set("version"),
+    "com.worxbend.codeberg4s.issues.IssueApi"                                 -> Set("issues"),
+    "com.worxbend.codeberg4s.issues.IssueAttachmentApi"                       -> Set("issues"),
+    "com.worxbend.codeberg4s.issues.IssueCommentApi"                          -> Set("issues.comments"),
+    "com.worxbend.codeberg4s.issues.IssueLabelApi"                            -> Set("issues.labels"),
+    "com.worxbend.codeberg4s.issues.IssueMilestoneApi"                        -> Set("issues.milestones"),
+    "com.worxbend.codeberg4s.issues.IssueReactionApi"                         -> Set("issues"),
+    "com.worxbend.codeberg4s.issues.IssueSubscriptionApi"                     -> Set("issues.subscriptions"),
+    "com.worxbend.codeberg4s.issues.IssueTimeApi"                             -> Set("issues"),
+    "com.worxbend.codeberg4s.pulls.PullRequestApi"                            -> Set("pulls"),
+    "com.worxbend.codeberg4s.miscellaneous.MiscellaneousApi"                  -> Set("misc", "settings"),
+    "com.worxbend.codeberg4s.notifications.NotificationApi"                   -> Set("notifications"),
+    "com.worxbend.codeberg4s.organizations.OrganizationApi"                   -> Set("orgs"),
+    "com.worxbend.codeberg4s.organizations.OrganizationHookApi"               -> Set("orgs.hooks"),
+    "com.worxbend.codeberg4s.organizations.OrganizationLabelApi"              -> Set("orgs.labels"),
+    "com.worxbend.codeberg4s.organizations.OrganizationQuotaApi"              -> Set("orgs.quota"),
+    "com.worxbend.codeberg4s.organizations.OrganizationTeamApi"               -> Set("orgs.teams"),
+    "com.worxbend.codeberg4s.organizations.actions.OrganizationActionApi"     -> Set("orgs.actions"),
+    "com.worxbend.codeberg4s.repositories.RepositoryApi"                      -> Set("repos"),
+    "com.worxbend.codeberg4s.repositories.access.RepositoryAccessApi"         -> Set("repos"),
+    "com.worxbend.codeberg4s.repositories.actions.RepositoryActionApi"        -> Set("repos.actions"),
+    "com.worxbend.codeberg4s.repositories.admin.RepositoryAdminApi"           -> Set("repos.admin"),
+    "com.worxbend.codeberg4s.repositories.gitdata.RepositoryGitApi"           -> Set("repos"),
+    "com.worxbend.codeberg4s.repositories.hooks.RepositoryFlagApi"            -> Set("repos.flags"),
+    "com.worxbend.codeberg4s.repositories.hooks.RepositoryHookApi"            -> Set("repos.hooks"),
+    "com.worxbend.codeberg4s.repositories.hooks.RepositoryIssueConfigApi"     -> Set("repos"),
+    "com.worxbend.codeberg4s.repositories.hooks.RepositoryWikiApi"            -> Set("repos.wiki"),
     "com.worxbend.codeberg4s.repositories.publishing.RepositoryPublishingApi" -> Set("repos"),
-    "com.worxbend.codeberg4s.users.UserApi"                               -> Set("users"),
-    "com.worxbend.codeberg4s.users.account.UserAccountApi"                -> Set("users.account"),
-    "com.worxbend.codeberg4s.users.account.UserActionApi"                 -> Set("users.account.actions"),
-    "com.worxbend.codeberg4s.users.account.UserApplicationApi"            -> Set("users.account.applications"),
-    "com.worxbend.codeberg4s.users.account.UserHookApi"                   -> Set("users.account.hooks"),
-    "com.worxbend.codeberg4s.users.account.UserQuotaApi"                  -> Set("users.account.quota"),
-    "com.worxbend.codeberg4s.users.social.UserKeyApi"                     -> Set("users.keys"),
-    "com.worxbend.codeberg4s.users.social.UserSocialApi"                  -> Set("users.social"),
-    "com.worxbend.codeberg4s.users.social.UserTokenApi"                   -> Set("users.tokens"),
+    "com.worxbend.codeberg4s.users.UserApi"                                   -> Set("users"),
+    "com.worxbend.codeberg4s.users.account.UserAccountApi"                    -> Set("users.account"),
+    "com.worxbend.codeberg4s.users.account.UserActionApi"                     -> Set("users.account.actions"),
+    "com.worxbend.codeberg4s.users.account.UserApplicationApi"                -> Set("users.account.applications"),
+    "com.worxbend.codeberg4s.users.account.UserHookApi"                       -> Set("users.account.hooks"),
+    "com.worxbend.codeberg4s.users.account.UserQuotaApi"                      -> Set("users.account.quota"),
+    "com.worxbend.codeberg4s.users.social.UserKeyApi"                         -> Set("users.keys"),
+    "com.worxbend.codeberg4s.users.social.UserSocialApi"                      -> Set("users.social"),
+    "com.worxbend.codeberg4s.users.social.UserTokenApi"                       -> Set("users.tokens"),
   )
 
   /** The operation ids a rail's companion declares, as `constant name -> id` pairs.

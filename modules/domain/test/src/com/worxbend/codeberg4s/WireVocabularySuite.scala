@@ -1,14 +1,15 @@
 package com.worxbend.codeberg4s
 
-import java.util.Locale
-
 import com.worxbend.codeberg4s.organizations.TeamPermission
 import com.worxbend.codeberg4s.repositories.access.CollaboratorPermission
 import com.worxbend.codeberg4s.repositories.gitdata.CommitStatusState
 import com.worxbend.codeberg4s.repositories.gitdata.GitObjectKind
 import com.worxbend.codeberg4s.repositories.{CommitFileStatus, ContentKind}
 import com.worxbend.codeberg4s.users.UserVisibility
+
 import munit.FunSuite
+
+import java.util.Locale
 
 /** The lookup every round-trippable enum's `parse` now delegates to.
   *
@@ -19,13 +20,13 @@ final class WireVocabularySuite extends FunSuite:
 
   private val vocabularies: List[(String, Array[? <: WireVocabulary])] =
     List(
-      "TeamPermission"          -> TeamPermission.values,
-      "UserVisibility"          -> UserVisibility.values,
-      "ContentKind"             -> ContentKind.values,
-      "CommitFileStatus"        -> CommitFileStatus.values,
-      "CollaboratorPermission"  -> CollaboratorPermission.values,
-      "GitObjectKind"           -> GitObjectKind.values,
-      "CommitStatusState"       -> CommitStatusState.values,
+      "TeamPermission"         -> TeamPermission.values,
+      "UserVisibility"         -> UserVisibility.values,
+      "ContentKind"            -> ContentKind.values,
+      "CommitFileStatus"       -> CommitFileStatus.values,
+      "CollaboratorPermission" -> CollaboratorPermission.values,
+      "GitObjectKind"          -> GitObjectKind.values,
+      "CommitStatusState"      -> CommitStatusState.values,
     )
 
   test("a wire name maps back to the value that carries it"):
