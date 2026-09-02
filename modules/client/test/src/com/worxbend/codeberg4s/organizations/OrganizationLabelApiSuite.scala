@@ -29,7 +29,7 @@ final class OrganizationLabelApiSuite extends FunSuite with OrganizationStubs:
 
     onApi(backend): api =>
       api.labels
-        .list(Org, None, window(2, 5))
+        .list(Org, OrganizationLabelQuery.Empty, window(2, 5))
         .map: _ =>
           assertEquals(methodOf(backend), "GET")
           assertEquals(pathOf(backend), "https://forge.example/api/v1/orgs/forgejo/labels")
@@ -40,7 +40,7 @@ final class OrganizationLabelApiSuite extends FunSuite with OrganizationStubs:
 
     onApi(backend): api =>
       api.labels
-        .list(Org, Some(OrganizationLabelSort.MostIssues), PageParams.First)
+        .list(Org, OrganizationLabelQuery.of(OrganizationLabelSort.MostIssues), PageParams.First)
         .map(_ => assertEquals(queryOf(backend), List("sort" -> "mostissues", "page" -> "1", "limit" -> "30")))
 
   test("the `orgs.labels.get` route addresses the label by id, because a label name is not unique"):
@@ -123,7 +123,7 @@ final class OrganizationLabelApiSuite extends FunSuite with OrganizationStubs:
   test("a label listing yields the Label model the issue group owns, colour normalised"):
     onApi(responding(200, s"[${OrganizationLabelApiSuite.LabelBody}]")): api =>
       api.labels
-        .list(Org, None, PageParams.First)
+        .list(Org, OrganizationLabelQuery.Empty, PageParams.First)
         .map: page =>
           assertEquals(page.items.map(_.name), Vector("bug"))
           assertEquals(page.items.flatMap(_.color).map(_.value), Vector("eb6420"))
@@ -131,7 +131,7 @@ final class OrganizationLabelApiSuite extends FunSuite with OrganizationStubs:
   test("a colour the instance sends in a shape LabelColor rejects costs the colour, not the label"):
     onApi(responding(200, """[{"id":107,"name":"bug","color":"not-a-colour"}]""")): api =>
       api.labels
-        .list(Org, None, PageParams.First)
+        .list(Org, OrganizationLabelQuery.Empty, PageParams.First)
         .map: page =>
           assertEquals(page.items.map(_.name), Vector("bug"))
           assertEquals(page.items.map(_.color), Vector(None))
@@ -139,7 +139,7 @@ final class OrganizationLabelApiSuite extends FunSuite with OrganizationStubs:
   test("a page past the end is an empty page, not a failure"):
     onApi(responding(200, "[]")): api =>
       api.labels
-        .list(Org, None, PageParams.First)
+        .list(Org, OrganizationLabelQuery.Empty, PageParams.First)
         .map: page =>
           assertEquals(page.items.size, 0)
           assertEquals(page.isLast, true)
@@ -166,7 +166,7 @@ final class OrganizationLabelApiSuite extends FunSuite with OrganizationStubs:
 
   test("a bad element of a label listing reports its position all the way through the pipeline"):
     onApi(responding(200, """[{"id":1,"name":"a"},{"id":2}]""")): api =>
-      api.labels.attempt.list(Org, None, PageParams.First).map:
+      api.labels.attempt.list(Org, OrganizationLabelQuery.Empty, PageParams.First).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$[1].name")
         case other                                             => fail(s"expected a decoding failure, got $other")
 

@@ -169,6 +169,19 @@ final class OrganizationCommandsSuite extends FunSuite:
   test("label ordering parsing trims and ignores case"):
     assertEquals(OrganizationLabelSort.parse("  MostIssues "), Some(OrganizationLabelSort.MostIssues))
 
+  // --- OrganizationLabelQuery -----------------------------------------------
+
+  test("an empty label query names no ordering, so the listing asks for the instance's own"):
+    assertEquals(OrganizationLabelQuery.Empty.sort, None)
+
+  test("a label query names the ordering it was built with"):
+    assertEquals(OrganizationLabelQuery.of(OrganizationLabelSort.MostIssues).sort, Some(OrganizationLabelSort.MostIssues))
+
+  test("ordering a label query again replaces the ordering rather than adding one"):
+    val query = OrganizationLabelQuery.of(OrganizationLabelSort.MostIssues).sortedBy(OrganizationLabelSort.LeastIssues)
+
+    assertEquals(query.sort, Some(OrganizationLabelSort.LeastIssues))
+
   // --- helpers --------------------------------------------------------------
 
   private def orFail[A](result: Either[ValidationError, A]): A =

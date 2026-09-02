@@ -25,6 +25,29 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **Organisation label listing takes a typed query.**
+  `client.organizations.labels.list` used to take its ordering as a bare
+  `Option[OrganizationLabelSort]` sitting between the organisation handle and
+  the paging window. It now takes an `OrganizationLabelQuery`, the same shape of
+  argument repository and account search take, so every filtered listing in the
+  library is asked the same way and a parameter Forgejo adds to
+  `GET /orgs/{org}/labels` later can go into the query rather than into the
+  method signature.
+
+  `OrganizationLabelQuery.Empty` sets nothing — the organisation's labels in
+  whatever order the instance returns them — and `OrganizationLabelQuery.of`
+  builds one around an ordering; `sortedBy` replaces it. An unset ordering still
+  sends no `sort` parameter at all, because `sort=` is not a value the
+  endpoint's `enum` contains.
+
+  BREAKING CHANGE: `OrganizationLabelApi.list`, on both the exception rail and
+  the `.attempt` rail, takes an `OrganizationLabelQuery` instead of an
+  `Option[OrganizationLabelSort]`. Rewrite
+  `client.organizations.labels.list(org, None, params)` as
+  `client.organizations.labels.list(org, OrganizationLabelQuery.Empty, params)`,
+  and `list(org, Some(OrganizationLabelSort.MostIssues), params)` as
+  `list(org, OrganizationLabelQuery.of(OrganizationLabelSort.MostIssues), params)`.
+
 - **Repository and account search take a typed query.** `client.repos.search`
   and `client.users.search` used to take the keyword as a bare `String`, which
   was the only thing about either search a caller could say. Between them the

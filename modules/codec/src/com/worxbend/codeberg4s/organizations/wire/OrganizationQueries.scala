@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.organizations.wire
 
 import com.worxbend.codeberg4s.codec.PagingQuery
-import com.worxbend.codeberg4s.organizations.OrganizationLabelSort
+import com.worxbend.codeberg4s.organizations.OrganizationLabelQuery
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.quota.QuotaSubject
 
@@ -29,10 +29,11 @@ private[codeberg4s] object OrganizationQueries:
   /** The parameters of `GET /orgs/{org}/labels`: an optional ordering, then the window.
     *
     * `sort` is omitted entirely when the caller named no ordering; see
-    * [[com.worxbend.codeberg4s.organizations.OrganizationLabelSort]] for why there is no case meaning "the default".
+    * [[com.worxbend.codeberg4s.organizations.OrganizationLabelSort]] for why there is no case meaning "the default",
+    * and [[com.worxbend.codeberg4s.organizations.OrganizationLabelQuery]] for the value that carries it.
     */
-  def labels(sort: Option[OrganizationLabelSort], params: PageParams): List[(String, String)] =
-    sort.toList.map(order => "sort" -> order.wireValue) ++ PagingQuery.window(params)
+  def labels(query: OrganizationLabelQuery, params: PageParams): List[(String, String)] =
+    query.sort.toList.map(order => "sort" -> order.wireValue) ++ PagingQuery.window(params)
 
   /** The parameters of the two activity feeds: an optional day, then the window.
     *

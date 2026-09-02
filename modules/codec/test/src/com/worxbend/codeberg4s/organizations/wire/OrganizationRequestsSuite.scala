@@ -6,9 +6,9 @@ import com.worxbend.codeberg4s.organizations.CreateTeam
 import com.worxbend.codeberg4s.organizations.EditOrganization
 import com.worxbend.codeberg4s.organizations.EditTeam
 import com.worxbend.codeberg4s.organizations.OrgName
-import com.worxbend.codeberg4s.organizations.OrganizationLabelSort
 import com.worxbend.codeberg4s.organizations.TeamName
 import com.worxbend.codeberg4s.organizations.TeamPermission
+import com.worxbend.codeberg4s.organizations.{OrganizationLabelQuery, OrganizationLabelSort}
 import com.worxbend.codeberg4s.paging.PageNumber
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.paging.PageSize
@@ -171,11 +171,14 @@ final class OrganizationRequestsSuite extends FunSuite:
   // --- query strings --------------------------------------------------------
 
   test("a label listing without an ordering sends no sort parameter at all"):
-    assertEquals(OrganizationQueries.labels(None, window(1, 30)), List("page" -> "1", "limit" -> "30"))
+    assertEquals(
+      OrganizationQueries.labels(OrganizationLabelQuery.Empty, window(1, 30)),
+      List("page" -> "1", "limit" -> "30")
+    )
 
   test("a label listing sends the ordering ahead of the window, in the spec's own spelling"):
     assertEquals(
-      OrganizationQueries.labels(Some(OrganizationLabelSort.LeastIssues), window(1, 30)),
+      OrganizationQueries.labels(OrganizationLabelQuery.of(OrganizationLabelSort.LeastIssues), window(1, 30)),
       List("sort" -> "leastissues", "page" -> "1", "limit" -> "30"),
     )
 

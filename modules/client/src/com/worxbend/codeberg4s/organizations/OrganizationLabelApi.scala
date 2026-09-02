@@ -78,14 +78,14 @@ final class OrganizationLabelApi private[codeberg4s] (pipeline: ApiPipeline[Futu
     *
     * @param org
     *   the organisation handle
-    * @param sort
-    *   how to order the results, absent to leave Forgejo's own ordering — which the spec does not describe, so it is
-    *   not something this library can name. See [[OrganizationLabelSort]]
+    * @param query
+    *   what to ask of the listing — today an optional ordering, absent to leave Forgejo's own, which the spec does not
+    *   describe and so this library cannot name. `OrganizationLabelQuery.Empty` asks for everything
     * @param params
     *   the page to fetch and how many labels it may hold
     */
-  def list(org: OrgName, sort: Option[OrganizationLabelSort], params: PageParams): Future[Page[Label]] =
-    pipeline.callPage(OrganizationLabelApi.listRequest(org, sort, params), params)(using OrganizationDecoders.labels)
+  def list(org: OrgName, query: OrganizationLabelQuery, params: PageParams): Future[Page[Label]] =
+    pipeline.callPage(OrganizationLabelApi.listRequest(org, query, params), params)(using OrganizationDecoders.labels)
 
   /** Reads one label — `GET /orgs/{org}/labels/{id}`.
     *
@@ -203,10 +203,10 @@ object OrganizationLabelApi:
     /** [[OrganizationLabelApi.list]] with its failure as a value. */
     def list(
         org: OrgName,
-        sort: Option[OrganizationLabelSort],
+        query: OrganizationLabelQuery,
         params: PageParams,
     ): Future[Either[CodebergError, Page[Label]]] =
-      exec.attempt(rail.list(org, sort, params))
+      exec.attempt(rail.list(org, query, params))
 
     /** The single-label read on [[OrganizationLabelApi]], with its failure as a value. */
     def get(org: OrgName, id: LabelId): Future[Either[CodebergError, Label]] =
@@ -224,8 +224,8 @@ object OrganizationLabelApi:
     def delete(org: OrgName, id: LabelId): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.delete(org, id))
 
-  private def listRequest(org: OrgName, sort: Option[OrganizationLabelSort], params: PageParams): CodebergRequest =
-    read(ListOperation, labelsPath(org), OrganizationQueries.labels(sort, params))
+  private def listRequest(org: OrgName, query: OrganizationLabelQuery, params: PageParams): CodebergRequest =
+    read(ListOperation, labelsPath(org), OrganizationQueries.labels(query, params))
 
   private def getRequest(org: OrgName, id: LabelId): CodebergRequest =
     read(GetOperation, labelPath(org, id), Nil)
