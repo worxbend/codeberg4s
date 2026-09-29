@@ -38,6 +38,25 @@ final class LinkHeaderSuite extends FunSuite:
   test("a comma inside the target does not split the element"):
     assertEquals(LinkHeader.parse("<a?q=x,y&page=2>; rel=\"next\""), Map("next" -> "a?q=x,y&page=2"))
 
+  test("a comma or semicolon inside a quoted parameter value splits neither the element nor the parameter"):
+    // RFC 8288 lets a link carry a quoted title, and a proxy that decorates the
+    // header with one containing a comma used to split the element in two and
+    // lose the rel that followed it.
+    val header = "<a?page=2>; title=\"a, b; c\"; rel=\"next\",<a?page=795>; rel=\"last\""
+
+    assertEquals(LinkHeader.parse(header), Map("next" -> "a?page=2", "last" -> "a?page=795"))
+
+  test("a quoted rel value containing a semicolon is read as one value"):
+    assertEquals(LinkHeader.parse("<a?page=2>; rel=\"next;odd\""), Map("next;odd" -> "a?page=2"))
+
+  test("an escaped quote inside a quoted parameter value does not end the value"):
+    val header = "<a?page=2>; title=\"say \\\"hi, there\\\"; ok\"; rel=\"next\""
+
+    assertEquals(LinkHeader.parse(header), Map("next" -> "a?page=2"))
+
+  test("a quote inside the angle-bracketed target is part of the target, not the start of a quoted value"):
+    assertEquals(LinkHeader.parse("<a?q=\"x,y>; rel=\"next\""), Map("next" -> "a?q=\"x,y"))
+
   test("the first occurrence of a repeated relation type wins"):
     assertEquals(LinkHeader.parse("<a?page=2>; rel=\"next\",<b?page=3>; rel=\"next\""), Map("next" -> "a?page=2"))
 

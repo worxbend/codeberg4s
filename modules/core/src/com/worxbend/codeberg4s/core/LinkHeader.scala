@@ -50,7 +50,9 @@ object LinkHeader:
     *
     * Both quoted and unquoted `rel` values are accepted — the quotes are optional per the RFC and Forgejo happens to
     * send them — and elements may be separated by a comma with or without surrounding space. A comma inside the
-    * angle-bracketed target does not split an element.
+    * angle-bracketed target does not split an element, and neither a comma nor a semicolon inside a quoted parameter
+    * value does: `title="a, b; c"` is one parameter of one element, as RFC 8288 §3 requires, so a proxy that decorates
+    * the header with such a title cannot make this parser lose the `rel` that follows it.
     *
     * @param value
     *   the raw header value, possibly several headers already joined with commas
@@ -87,25 +89,48 @@ object LinkHeader:
     val separator = part.indexOf('=')
     if separator < 0 then None else Some((part.take(separator).trim, part.drop(separator + 1).trim))
 
-  /** Splits on the commas that separate elements, ignoring any comma inside an angle-bracketed target URI. */
+  /** Splits on the commas that separate elements, ignoring any comma inside an angle-bracketed target URI or inside a
+    * quoted parameter value.
+    */
   private def elementsOf(value: String): List[String] =
-    split(value, 0, 0, false, Nil).reverse.map(_.trim).filter(_.nonEmpty)
+    outsideQuotes(value, ',')
 
-  /** The elements of `value`, '''in reverse order''' — [[elementsOf]] puts them back.
+  /** `value` split at every `separator` that stands outside a `<…>` target and outside a `"…"` quoted string, trimmed,
+    * with empty pieces dropped.
+    *
+    * One splitter serves both the comma between elements and the semicolon between an element's parameters, so the
+    * quoting rule cannot be honoured by one and forgotten by the other. A backslash inside a quoted string escapes the
+    * character after it, as RFC 9110 §5.6.4's `quoted-pair` allows, so an escaped quote does not end the string.
+    */
+  private def outsideQuotes(value: String, separator: Char): List[String] =
+    split(value, separator, 0, 0, false, false, Nil).reverse.map(_.trim).filter(_.nonEmpty)
+
+  /** The pieces of `value`, '''in reverse order''' — [[outsideQuotes]] puts them back.
     *
     * Prepending onto a list costs the same however long the list is, whereas appending walks it to the end, so a loop
     * that appends `k` times does work proportional to `k²`. Collecting in reverse and turning the result around once at
     * the end keeps the whole split proportional to the length of the header.
     */
   @tailrec
-  private def split(value: String, from: Int, at: Int, inTarget: Boolean, reversed: List[String]): List[String] =
+  private def split(
+      value: String,
+      separator: Char,
+      from: Int,
+      at: Int,
+      inTarget: Boolean,
+      inQuotes: Boolean,
+      reversed: List[String],
+  ): List[String] =
     if at >= value.length then value.substring(from) :: reversed
     else
       value.charAt(at) match
-        case '<'              => split(value, from, at + 1, true, reversed)
-        case '>'              => split(value, from, at + 1, false, reversed)
-        case ',' if !inTarget => split(value, at + 1, at + 1, false, value.substring(from, at) :: reversed)
-        case _                => split(value, from, at + 1, inTarget, reversed)
+        case '\\' if inQuotes => split(value, separator, from, at + 2, inTarget, inQuotes, reversed)
+        case '"' if !inTarget => split(value, separator, from, at + 1, inTarget, !inQuotes, reversed)
+        case '<' if !inQuotes => split(value, separator, from, at + 1, true, inQuotes, reversed)
+        case '>' if !inQuotes => split(value, separator, from, at + 1, false, inQuotes, reversed)
+        case found if found.equals(separator) && !inTarget && !inQuotes =>
+          split(value, separator, at + 1, at + 1, false, false, value.substring(from, at) :: reversed)
+        case _ => split(value, separator, from, at + 1, inTarget, inQuotes, reversed)
 
   private def entriesOf(element: String): List[(String, String)] =
     val found =
@@ -128,10 +153,11 @@ object LinkHeader:
       .map(declared => Whitespace.split(declared).toList.map(_.toLowerCase(Locale.ROOT)).filter(_.nonEmpty))
       .filter(_.nonEmpty)
 
+  /** The `name=value` parameters after the target, split on the semicolons that stand outside quoted values. */
   private def parametersOf(element: String): List[(String, String)] =
     val end = element.indexOf('>')
     if end < 0 then Nil
-    else element.substring(end + 1).split(';').toList.flatMap(part => parameterOf(part).toList)
+    else outsideQuotes(element.substring(end + 1), ';').flatMap(part => parameterOf(part).toList)
 
   private def parameterOf(part: String): Option[(String, String)] =
     val separator = part.indexOf('=')
