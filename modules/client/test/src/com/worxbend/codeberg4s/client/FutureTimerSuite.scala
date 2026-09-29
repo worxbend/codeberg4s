@@ -9,6 +9,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.CollectionConverters.*
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -73,13 +74,19 @@ final class FutureTimerSuite extends FunSuite:
   test("the scheduler runs on a named daemon thread, so a forgotten client cannot hold the JVM open"):
     val timer = FutureTimer()
 
-    val completingThread = timer.sleep(1.milli).map(_ => Thread.currentThread())(using OnSchedulerThread)
+    // A `ScheduledThreadPoolExecutor` creates its core thread synchronously on the first `schedule` call
+    // (`delayedExecute` → `ensurePrestart`), so the thread exists the moment `sleep` returns and can be found among the
+    // live threads without racing the sleep itself. Mapping the sleep's completion onto `Thread.currentThread()` was
+    // racy: a short sleep that completed before the callback was attached ran that callback on the caller's thread.
+    timer.sleep(1.hour).discard
 
-    completingThread.map: thread =>
-      timer.close()
+    val schedulerThread = Thread.getAllStackTraces.keySet.asScala.find(_.getName == FutureTimer.ThreadName)
 
-      assertEquals(thread.getName, FutureTimer.ThreadName)
-      assert(thread.isDaemon, s"${thread.getName} is not a daemon thread")
+    timer.close()
+
+    schedulerThread match
+      case Some(thread) => assert(thread.isDaemon, s"${thread.getName} is not a daemon thread")
+      case None         => fail(s"no live thread named ${FutureTimer.ThreadName} after a sleep was scheduled")
 
   test("close is idempotent, and a closed timer stays closed"):
     val timer = FutureTimer()
@@ -115,7 +122,6 @@ final class FutureTimerSuite extends FunSuite:
         case outcome                           => fail(s"closing the timer left a waiting sleep at $outcome")
 
   /** Runs a continuation on whatever thread completed the promise — for a scheduled sleep, the scheduler's own. */
-  private val OnSchedulerThread: ExecutionContext = ExecutionContext.parasitic
 
 object FutureTimerSuite:
 
