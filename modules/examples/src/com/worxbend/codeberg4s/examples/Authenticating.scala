@@ -58,16 +58,17 @@ object Authenticating:
   /** HTTP basic credentials, for older self-hosted instances that still require them.
     *
     * `Password.from` deliberately does '''not''' trim: leading and trailing whitespace can be significant in a
-    * password. It rejects an empty value and any control character, which cannot survive header encoding.
+    * password. It rejects an empty value and any control character, which cannot survive header encoding. `Auth.basic`
+    * then validates the username — non-blank, no `:` (the header's own delimiter), no control character — so the `Auth`
+    * is built in two `Either` steps rather than by a constructor.
     */
   private def showBasic(): Unit =
     ExampleConsole.heading("Auth.Basic")
 
-    Password.from("not-a-real-password") match
+    Password.from("not-a-real-password").flatMap(secret => Auth.basic("example-user", secret)) match
       case Left(problem) =>
         ExampleConsole.line(s"  invalid ${problem.field}: ${problem.message}")
-      case Right(secret) =>
-        val auth = Auth.Basic("example-user", secret)
+      case Right(auth)   =>
         // Prints Basic(example-user,***) — the password masks itself, and so
         // does every case class or enum case that holds one.
         ExampleConsole.line(s"  $auth")

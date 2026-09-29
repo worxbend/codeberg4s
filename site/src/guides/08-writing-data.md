@@ -102,15 +102,21 @@ def squashMerge(client: CodebergClient, owner: Owner, name: RepoName)(
     headYouReviewed: String,
 ): Either[ValidationError, Future[Unit]] =
   for
-    pull <- PullRequestNumber.from(number)
-    head <- CommitSha.from(headYouReviewed)
+    pull    <- PullRequestNumber.from(number)
+    head    <- CommitSha.from(headYouReviewed)
+    command <- MergePullRequest.using(MergeStyle.Squash)
   yield client.pulls.merge(
     owner,
     name,
     pull,
-    MergePullRequest.using(MergeStyle.Squash).expecting(head).deletingSourceBranch,
+    command.expecting(head).deletingSourceBranch,
   )
 ```
+
+`MergePullRequest.using` is an `Either` too: `MergeStyle` also spells a repository's
+`default_merge_style`, and one of those spellings — `rebase-update-only` — is not
+a merge the endpoint performs, so `using` refuses it up front rather than letting
+Forgejo answer a `405`.
 
 `expecting(head)` sends Forgejo's `head_commit_id`, which it compares against the
 branch's actual head and refuses the merge if it has moved. Use it whenever the

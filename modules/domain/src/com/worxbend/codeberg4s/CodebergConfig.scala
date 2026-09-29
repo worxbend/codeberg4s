@@ -4,15 +4,29 @@ import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.paging.PageSize
 import com.worxbend.codeberg4s.retry.RetryPolicy
 
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
 
 /** Everything a client needs to talk to one Forgejo deployment.
   *
   * Built once near the client's construction and passed by constructor from there on. Every field naming a domain
   * concept — the base URI, the credentials, the page size, the user agent — is a validated type rather than a raw
-  * primitive, so a misconfigured client fails at construction instead of on the first call. The two timeouts and the
-  * two response-body bounds are quantities rather than domain concepts and are carried as they are; a negative or zero
-  * value is not rejected here, and would make every call fail.
+  * primitive, so a misconfigured client fails at construction instead of on the first call.
+  *
+  * ==Invariants==
+  *
+  * The two timeouts and the two response-body bounds are quantities rather than domain concepts and are carried as
+  * plain durations and numbers. A configuration is well-formed when all of the following hold:
+  *
+  *   - `connectTimeout > 0` and `readTimeout > 0` — a zero or negative timeout is a call that fails before it starts;
+  *   - `maxResponseBodyBytes >= 1` and `maxDownloadBodyBytes >= 1` — a bound of zero bytes rejects every response;
+  *   - `retry` satisfies [[retry.RetryPolicy.validate]].
+  *
+  * '''Neither the primary constructor, [[CodebergConfig.apply]] with one argument, nor `copy` checks them''':
+  * `CodebergConfig(auth).copy(readTimeout = -1.second)` compiles and constructs. That is deliberate — the constructor
+  * stays a plain case-class constructor so the one-argument form and a `copy` of it read the way every guide writes
+  * them — but it means such a value is trusted, not verified. [[CodebergConfig.of]] is the full constructor with the
+  * check in front, and [[validate]] runs the check on a configuration already in hand; either is the right call for
+  * values that came from a file or an environment.
   *
   * `toString` is safe to log: the credential types inside [[auth.Auth]] redact themselves.
   *
@@ -30,7 +44,9 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
   * @param connectTimeout
   *   how long to wait for the connection to be established
   * @param readTimeout
-  *   how long to wait for the response once the request has been sent
+  *   how long to wait for the response headers once the request has been sent. It bounds the wait for the status line
+  *   and headers, not the body: the body is bounded by size, through [[maxResponseBodyBytes]] and
+  *   [[maxDownloadBodyBytes]], rather than by time
   * @param maxResponseBodyBytes
   *   the most bytes a textual response may carry before the call fails with [[TransportCause.ResponseTooLarge]]; see
   *   [[DefaultMaxResponseBodyBytes]]
@@ -48,14 +64,35 @@ final case class CodebergConfig(
     readTimeout: FiniteDuration,
     maxResponseBodyBytes: Long,
     maxDownloadBodyBytes: Long,
-)
+):
+
+  /** Checks the invariants listed in the class note, which the constructor did not.
+    *
+    * The first violated invariant is reported, on the field that violates it — `"connectTimeout"`, `"readTimeout"`,
+    * `"maxResponseBodyBytes"`, `"maxDownloadBodyBytes"`, or one of the [[retry.RetryPolicy.validate]] fields — so a
+    * configuration read from a file fails where it was misread rather than on the first call.
+    *
+    * @return
+    *   this configuration unchanged, or a [[ValidationError]] on the offending field
+    */
+  def validate: Either[ValidationError, this.type] =
+    if connectTimeout <= Duration.Zero then Left(ValidationError("connectTimeout", "must be positive"))
+    else if readTimeout <= Duration.Zero then Left(ValidationError("readTimeout", "must be positive"))
+    else if maxResponseBodyBytes < CodebergConfig.MinBodyBytes then
+      Left(ValidationError("maxResponseBodyBytes", s"must be at least ${CodebergConfig.MinBodyBytes}"))
+    else if maxDownloadBodyBytes < CodebergConfig.MinBodyBytes then
+      Left(ValidationError("maxDownloadBodyBytes", s"must be at least ${CodebergConfig.MinBodyBytes}"))
+    else retry.validate.map(_ => this)
 
 object CodebergConfig:
+
+  /** The smallest body bound that lets any response through at all. */
+  private val MinBodyBytes: Long = 1L
 
   /** Time allowed to establish a connection when using the Codeberg defaults. */
   val DefaultConnectTimeout: FiniteDuration = 10.seconds
 
-  /** Time allowed for a response body once the request has been sent, when using the Codeberg defaults. */
+  /** Time allowed for the response headers to arrive once the request has been sent, when using the Codeberg defaults. */
   val DefaultReadTimeout: FiniteDuration = 30.seconds
 
   /** 16 MiB — the most a textual response may carry before the call is abandoned.
@@ -108,3 +145,36 @@ object CodebergConfig:
       maxResponseBodyBytes = DefaultMaxResponseBodyBytes,
       maxDownloadBodyBytes = DefaultMaxDownloadBodyBytes,
     )
+
+  /** Builds a configuration and checks the invariants listed in the class note, which the constructor does not.
+    *
+    * Same parameters as the constructor, in the same order, so a call site can switch between the two by changing the
+    * name; the difference is that this one returns a `Left` for a non-positive timeout, a body bound below one byte or
+    * a retry policy that fails its own [[retry.RetryPolicy.validate]], instead of a client whose every call fails. See
+    * [[CodebergConfig.validate]] for what is reported.
+    *
+    * @return
+    *   the configuration, or a [[ValidationError]] on the first offending field
+    */
+  def of(
+      baseUri: BaseUri,
+      auth: Auth,
+      retry: RetryPolicy,
+      userAgent: UserAgent,
+      defaultPageSize: PageSize,
+      connectTimeout: FiniteDuration,
+      readTimeout: FiniteDuration,
+      maxResponseBodyBytes: Long,
+      maxDownloadBodyBytes: Long,
+  ): Either[ValidationError, CodebergConfig] =
+    new CodebergConfig(
+      baseUri              = baseUri,
+      auth                 = auth,
+      retry                = retry,
+      userAgent            = userAgent,
+      defaultPageSize      = defaultPageSize,
+      connectTimeout       = connectTimeout,
+      readTimeout          = readTimeout,
+      maxResponseBodyBytes = maxResponseBodyBytes,
+      maxDownloadBodyBytes = maxDownloadBodyBytes,
+    ).validate

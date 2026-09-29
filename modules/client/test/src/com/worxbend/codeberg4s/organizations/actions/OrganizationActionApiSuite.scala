@@ -45,7 +45,7 @@ final class OrganizationActionApiSuite extends FunSuite with ClientSuiteHarness:
 
   private val Org: OrgName = orFail(OrgName.from("forgejo"))
 
-  private val Runner: RunnerId = RunnerId.of(37L)
+  private val Runner: RunnerId = RunnerId("37")
 
   private val Secret: SecretName = orFail(SecretName.from("DEPLOY_KEY"))
 

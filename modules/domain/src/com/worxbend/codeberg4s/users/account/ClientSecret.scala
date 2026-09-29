@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.users.account
 
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{SecretHash, ValidationError}
 
 /** The secret half of an OAuth2 application's credentials, readable exactly once.
   *
@@ -61,7 +61,8 @@ final class ClientSecret private (private val material: String):
       case that: ClientSecret => material.equals(that.material)
       case _                  => false
 
-  override def hashCode(): Int = material.hashCode
+  /** A hash of a digest of the material, never `String.hashCode` of it; see [[com.worxbend.codeberg4s.SecretHash]]. */
+  override def hashCode(): Int = SecretHash.of(material)
 
 object ClientSecret:
 

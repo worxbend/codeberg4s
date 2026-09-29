@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.repositories.admin
 
 import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.pulls.{MergeStyle, UpdateStyle}
 import com.worxbend.codeberg4s.repositories.BranchName
 
 import munit.FunSuite

@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.organizations
 
+import com.worxbend.codeberg4s.AvatarImage
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
 import com.worxbend.codeberg4s.RepoName
@@ -7,7 +8,6 @@ import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.repositories.admin.ActivityOperation
 import com.worxbend.codeberg4s.repositories.admin.CreateRepository
 import com.worxbend.codeberg4s.users.UserVisibility
-import com.worxbend.codeberg4s.users.account.AvatarImage
 
 import sttp.client4.testing.RecordingBackend
 

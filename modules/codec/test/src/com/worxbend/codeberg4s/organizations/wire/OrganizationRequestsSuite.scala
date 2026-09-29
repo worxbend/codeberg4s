@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.organizations.wire
 
+import com.worxbend.codeberg4s.AvatarImage
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.organizations.CreateOrganization
 import com.worxbend.codeberg4s.organizations.CreateTeam
@@ -14,7 +15,6 @@ import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.paging.PageSize
 import com.worxbend.codeberg4s.quota.QuotaSubject
 import com.worxbend.codeberg4s.users.UserVisibility
-import com.worxbend.codeberg4s.users.account.AvatarImage
 
 import munit.FunSuite
 

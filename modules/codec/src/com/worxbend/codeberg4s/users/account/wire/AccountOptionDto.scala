@@ -1,17 +1,15 @@
 package com.worxbend.codeberg4s.users.account.wire
 
-import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.codec.{Json, JsonValue}
 import com.worxbend.codeberg4s.repositories.BranchName
+import com.worxbend.codeberg4s.repositories.admin.{ObjectFormat, TrustModel}
 import com.worxbend.codeberg4s.users.account.{
-  AvatarImage,
   CreateRepository,
   EmailAddress,
   OAuth2ApplicationDefinition,
-  ObjectFormat,
-  TrustModel,
   UpdateUserSettings
 }
+import com.worxbend.codeberg4s.{AvatarImage, RepoName}
 
 /** Every request body the `/user` account endpoints send, rendered in one place.
   *
@@ -57,8 +55,8 @@ private[codeberg4s] object AccountOptionDto:
   /** Renders an avatar as the JSON body of `POST /user/avatar`.
     *
     * '''One string, not a multipart upload.''' The endpoint's body schema is `UpdateUserAvatarOption`, whose single
-    * `image` property is documented as base64; see [[com.worxbend.codeberg4s.users.account.AvatarImage]] for the
-    * argument and for what happens to a value that is not valid base64.
+    * `image` property is documented as base64; see [[com.worxbend.codeberg4s.AvatarImage]] for the argument and for
+    * what happens to a value that is not valid base64.
     */
   def renderAvatar(image: AvatarImage): String =
     Json.render(JsonValue.Obj(ImageKey -> JsonValue.Str(image.base64)))

@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.repositories.admin
 
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{SecretHash, ValidationError}
 
 /** A credential for a '''third-party''' Git host, on its way out in a request body and never back.
   *
@@ -50,7 +50,8 @@ final class RemoteCredential private (private val material: String):
       case that: RemoteCredential => material.equals(that.material)
       case _                      => false
 
-  override def hashCode(): Int = material.hashCode
+  /** A hash of a digest of the material, never `String.hashCode` of it; see [[com.worxbend.codeberg4s.SecretHash]]. */
+  override def hashCode(): Int = SecretHash.of(material)
 
 object RemoteCredential:
 

@@ -108,20 +108,26 @@ enum IssueFormFieldType:
   /** A list of independent tick boxes — `checkboxes`. */
   case Checkboxes
 
-  /** A field type this library does not recognise, kept exactly as the instance spelled it. */
+  /** A field type this library does not recognise, kept exactly as the instance spelled it — trimmed, in its own case. */
   case Other(name: String)
 
 object IssueFormFieldType:
 
-  /** Reads the wire spelling. Total, trimming and case-insensitive; see [[HookEvent.parse]] for the argument. */
+  /** Reads the wire spelling.
+    *
+    * Total, trimming and case-insensitive; see [[HookEvent.parse]] for the argument, and for why the value carried by
+    * [[IssueFormFieldType.Other]] is the trimmed original rather than the lower-cased copy the match was made on.
+    */
   def parse(value: String): IssueFormFieldType =
-    value.trim.toLowerCase(Locale.ROOT) match
+    val trimmed = value.trim
+
+    trimmed.toLowerCase(Locale.ROOT) match
       case "markdown"   => Markdown
       case "textarea"   => Textarea
       case "input"      => Input
       case "dropdown"   => Dropdown
       case "checkboxes" => Checkboxes
-      case unrecognised => Other(unrecognised)
+      case _            => Other(trimmed)
 
   extension (fieldType: IssueFormFieldType)
 

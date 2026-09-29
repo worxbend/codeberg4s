@@ -16,6 +16,13 @@ final class PageParamsSuite extends FunSuite:
     assertEquals(advanced.page.value, 2)
     assertEquals(advanced.size.value, PageParams.First.size.value)
 
+  test("next inherits the saturation of PageNumber.next, so the window never asks for a negative page"):
+    val last = PageNumber.from(Int.MaxValue) match
+      case Right(page) => page
+      case Left(error) => fail(s"invalid page number in test setup: ${error.message}")
+
+    assertEquals(PageParams.First.at(last).next.page.value, Int.MaxValue)
+
   test("at moves to an explicit page and keeps the size"):
     val moved = PageParams.First.at(PageNumber.First.next.next)
 

@@ -2,6 +2,7 @@ package com.worxbend.codeberg4s.users.account
 
 import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.repositories.BranchName
+import com.worxbend.codeberg4s.repositories.admin.{ObjectFormat, TrustModel}
 
 /** What `POST /user/repos` is told.
   *

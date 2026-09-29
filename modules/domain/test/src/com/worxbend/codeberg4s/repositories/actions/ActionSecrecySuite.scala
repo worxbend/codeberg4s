@@ -55,6 +55,9 @@ final class ActionSecrecySuite extends FunSuite:
     assertEquals(secret(Material), secret(Material))
     assertEquals(secret(Material).hashCode(), secret(Material).hashCode())
 
+  test("a secret value's hash is not String.hashCode of the material"):
+    assertNotEquals(secret(Material).hashCode(), Material.hashCode)
+
   test("secret values with different material are not equal"):
     assertNotEquals(secret(Material), secret("something else"))
 
@@ -77,13 +80,16 @@ final class ActionSecrecySuite extends FunSuite:
     assertEquals(token("QWERTY123").redacted, RunnerRegistrationToken.Redacted)
 
   test("a registered runner's generated toString cannot print the token it carries"):
-    val runner = RegisteredRunner(id = Some(RunnerId.of(9L)), uuid = Some("abc"), token = token("QWERTY123"))
+    val runner = RegisteredRunner(id = Some(RunnerId("9")), uuid = Some("abc"), token = token("QWERTY123"))
 
     assert(!runner.toString.contains("QWERTY123"), s"the generated toString leaked the token: $runner")
 
   test("registration tokens with the same material are equal"):
     assertEquals(token("QWERTY123"), token("QWERTY123"))
     assertEquals(token("QWERTY123").hashCode(), token("QWERTY123").hashCode())
+
+  test("a registration token's hash is not String.hashCode of the material"):
+    assertNotEquals(token("QWERTY123").hashCode(), "QWERTY123".hashCode)
 
   test("registration tokens with different material are not equal"):
     assertNotEquals(token("QWERTY123"), token("ASDFGH456"))

@@ -1,21 +1,24 @@
-package com.worxbend.codeberg4s.users.account
-
-import com.worxbend.codeberg4s.ValidationError
+package com.worxbend.codeberg4s
 
 import scala.util.Try
 
 import java.util.Base64
 
-/** The image `POST /user/avatar` stores, already in the encoding that endpoint wants.
+/** An avatar image, already in the encoding the three avatar endpoints want.
   *
-  * ==This endpoint is JSON, not multipart, and that is worth stating==
+  * One type serves `POST /user/avatar`, `POST /orgs/{org}/avatar` and `POST /repos/{owner}/{repo}/avatar`. The first
+  * two take `UpdateUserAvatarOption` and the third `UpdateRepoAvatarOption`, and `spec/swagger.v1.json` declares both
+  * as an object with a single `image` property whose description reads "image must be base64 encoded". Two spec models
+  * with one property each of the same meaning are one domain type, not two: this library used to carry a second
+  * `AvatarImage` beside the repository commands, with a looser constructor, and `docs/LEDGER.md` calls a forked copy of
+  * a shared model a review-blocking defect. It lives in the root package for the reason [[PathSegment]] does — so that
+  * `users`, `organizations` and `repositories` can all reach it without one of them owning it.
   *
-  * Release assets and repository avatars elsewhere in Forgejo are `multipart/form-data`, which is why
-  * [[com.worxbend.codeberg4s.core.RequestBody.Multipart]] exists at all. The user avatar is not: `spec/swagger.v1.json`
-  * declares the body of `userUpdateAvatar` as `UpdateUserAvatarOption`, an object with a single `image` property whose
-  * description reads "image must be base64 encoded". The request is therefore an ordinary
-  * [[com.worxbend.codeberg4s.core.RequestBody.Json]] carrying one string, and a caller who reaches for a multipart
-  * upload is looking at the wrong endpoint.
+  * ==These endpoints are JSON, not multipart, and that is worth stating==
+  *
+  * Release assets are `multipart/form-data`, which is why [[com.worxbend.codeberg4s.core.RequestBody.Multipart]] exists
+  * at all. The avatars are not: each is an ordinary [[com.worxbend.codeberg4s.core.RequestBody.Json]] carrying one
+  * string, and a caller who reaches for a multipart upload is looking at the wrong endpoint.
   *
   * ==Two ways in, because callers arrive from two directions==
   *

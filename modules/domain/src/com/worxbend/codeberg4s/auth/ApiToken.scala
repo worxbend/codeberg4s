@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.auth
 
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{SecretHash, ValidationError}
 
 /** A Codeberg / Forgejo personal access token.
   *
@@ -17,6 +17,10 @@ import com.worxbend.codeberg4s.ValidationError
   * Instances compare structurally on the underlying material, so configuration values remain comparable in tests. The
   * comparison is not constant-time; this type guards against accidental disclosure in logs, not against a timing
   * oracle, and a client library holds its own token rather than checking someone else's.
+  *
+  * `hashCode` is derived from a SHA-256 digest of the material rather than being `String.hashCode` of it — see
+  * [[com.worxbend.codeberg4s.SecretHash]] — so a `HashMap` keyed by a token, or a `##` in a debugger, does not hand out
+  * a cheaply invertible function of the secret. Equal tokens still hash alike, which is what a map key needs.
   */
 final class ApiToken private (private val material: String):
 
@@ -39,7 +43,8 @@ final class ApiToken private (private val material: String):
       case that: ApiToken => material.equals(that.material)
       case _              => false
 
-  override def hashCode(): Int = material.hashCode
+  /** A hash of a digest of the material, never `String.hashCode` of it; see [[com.worxbend.codeberg4s.SecretHash]]. */
+  override def hashCode(): Int = SecretHash.of(material)
 
 object ApiToken:
 

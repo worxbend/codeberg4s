@@ -29,7 +29,7 @@ import scala.concurrent.Future
   */
 final class UserActionApiSuite extends AccountApiSuite:
 
-  private val Runner: RunnerId = RunnerId.of(37L)
+  private val Runner: RunnerId = RunnerId("37")
 
   private val Secret: SecretName = orFail(SecretName.from("DEPLOY_KEY"))
 

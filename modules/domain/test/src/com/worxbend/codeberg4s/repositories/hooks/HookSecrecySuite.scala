@@ -49,6 +49,9 @@ final class HookSecrecySuite extends FunSuite:
     assertEquals(secret(Material), secret(Material))
     assertEquals(secret(Material).hashCode(), secret(Material).hashCode())
 
+  test("a hook secret's hash is not String.hashCode of the material"):
+    assertNotEquals(secret(Material).hashCode(), Material.hashCode)
+
   test("hook secrets with different material are not equal"):
     assertNotEquals(secret(Material), secret("something else"))
 

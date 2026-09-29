@@ -55,6 +55,9 @@ final class AccountSecrecySuite extends FunSuite:
     assertEquals(secret(Material), secret(Material))
     assertEquals(secret(Material).hashCode(), secret(Material).hashCode())
 
+  test("a client secret's hash is not String.hashCode of the material"):
+    assertNotEquals(secret(Material).hashCode(), Material.hashCode)
+
   test("client secrets with different material are not equal"):
     assertNotEquals(secret(Material), secret("something else"))
 

@@ -10,7 +10,7 @@ import com.worxbend.codeberg4s.repositories.admin.wire.{
   TransferRepoOptionDto
 }
 import com.worxbend.codeberg4s.repositories.{Branch, BranchName, Repository, RepositoryId}
-import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
+import com.worxbend.codeberg4s.{AvatarImage, CodebergError, HttpMethod, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
 

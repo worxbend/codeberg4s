@@ -7,7 +7,7 @@ import com.worxbend.codeberg4s.organizations.Team
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.users.account.wire.{AccountOptionDto, AccountQueries}
-import com.worxbend.codeberg4s.{CodebergError, HttpMethod}
+import com.worxbend.codeberg4s.{AvatarImage, CodebergError, HttpMethod}
 
 import scala.concurrent.Future
 

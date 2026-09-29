@@ -18,8 +18,9 @@ object MilestoneTitle:
 
   /** Parses a milestone title.
     *
-    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `,`, and a value containing a
-    * control character.
+    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `,`, a value containing a
+    * control character, and — because the rule is shared with [[LabelName]], which can become a path segment — the
+    * traversal segments `.` and `..`.
     *
     * @return
     *   the trimmed title, or a [[ValidationError]] on the `"milestoneTitle"` field

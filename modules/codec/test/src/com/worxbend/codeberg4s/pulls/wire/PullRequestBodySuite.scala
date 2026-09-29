@@ -110,16 +110,19 @@ final class PullRequestBodySuite extends FunSuite:
   // --- merge ----------------------------------------------------------------
 
   test("a minimal merge sends only the required style, under Forgejo's capitalised key"):
-    assertEquals(MergePullRequestOptionDto.render(MergePullRequest.using(MergeStyle.Squash)), """{"Do":"squash"}""")
+    assertEquals(
+      MergePullRequestOptionDto.render(orFail(MergePullRequest.using(MergeStyle.Squash))),
+      """{"Do":"squash"}"""
+    )
 
   test("every merge style has its own wire spelling, and none of them is guessed"):
     assertEquals(
       MergeStyle.values.toVector.map(_.wireValue),
-      Vector("merge", "rebase", "rebase-merge", "squash", "fast-forward-only", "manually-merged"),
+      Vector("merge", "rebase", "rebase-merge", "squash", "fast-forward-only", "manually-merged", "rebase-update-only"),
     )
 
   test("the title and message keys keep Forgejo's struct-field spelling rather than snake_case"):
-    val command = MergePullRequest.using(MergeStyle.Merge).withTitle("Merge 13726").withMessage("Reviewed-by: …")
+    val command = orFail(MergePullRequest.using(MergeStyle.Merge)).withTitle("Merge 13726").withMessage("Reviewed-by: …")
 
     assertEquals(
       MergePullRequestOptionDto.render(command),
@@ -128,12 +131,12 @@ final class PullRequestBodySuite extends FunSuite:
 
   test("the head guard is sent as head_commit_id, which is what makes a repeat safe"):
     assertEquals(
-      MergePullRequestOptionDto.render(MergePullRequest.using(MergeStyle.Merge).expecting(Head)),
+      MergePullRequestOptionDto.render(orFail(MergePullRequest.using(MergeStyle.Merge)).expecting(Head)),
       s"""{"Do":"merge","head_commit_id":"${Head.value}"}""",
     )
 
   test("a manually recorded merge names the commit under MergeCommitID"):
-    val command = MergePullRequest.using(MergeStyle.ManuallyMerged).recordingMerge(Head)
+    val command = orFail(MergePullRequest.using(MergeStyle.ManuallyMerged)).recordingMerge(Head)
 
     assertEquals(
       MergePullRequestOptionDto.render(command),
@@ -141,7 +144,7 @@ final class PullRequestBodySuite extends FunSuite:
     )
 
   test("the three flags are emitted only when the caller asked for them"):
-    val command = MergePullRequest.using(MergeStyle.Rebase).deletingSourceBranch.forcing.whenChecksSucceed
+    val command = orFail(MergePullRequest.using(MergeStyle.Rebase)).deletingSourceBranch.forcing.whenChecksSucceed
 
     assertEquals(
       MergePullRequestOptionDto.render(command),
@@ -150,7 +153,7 @@ final class PullRequestBodySuite extends FunSuite:
 
   test("not asking to delete the branch sends no key at all, rather than an explicit false"):
     assert(
-      !MergePullRequestOptionDto.render(MergePullRequest.using(MergeStyle.Merge)).contains("delete_branch_after_merge"),
+      !MergePullRequestOptionDto.render(orFail(MergePullRequest.using(MergeStyle.Merge))).contains("delete_branch_after_merge"),
       "an unset flag must not become a key",
     )
 

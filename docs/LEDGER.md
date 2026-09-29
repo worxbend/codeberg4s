@@ -76,7 +76,12 @@ prediction is what a later reader would otherwise repeat:
 
 Shared identifiers (`Owner`, `RepoName`, `RepoSlug`) and the shared value types
 (`ApiToken`, `Page`, `PageParams`, `CodebergError`, `CallContext`) are foundation
-types, owned by the domain module and predating every wave.
+types, owned by the domain module and predating every wave. `AvatarImage` joined
+them later, in the root package: the user, organisation and repository avatar
+endpoints all take one base64 `image` property, and the two per-package copies
+that used to exist — `users.account.AvatarImage` and
+`repositories.admin.AvatarImage`, with different validation — were exactly the
+forked shared model this ledger forbids.
 
 ## Wire DTOs
 
@@ -114,7 +119,7 @@ the same ownership rule.
 | `CreatePullRequest`  | `…pulls`  | command             | `of(title, head, base)` is the only constructor; the rest are `with…` copies.            |
 | `EditPullRequest`    | `…pulls`  | command             | Reuses `issues.IssueStateChange` for open/close rather than defining a pulls-only one.   |
 | `MergePullRequest`   | `…pulls`  | command             | `using(style)` plus `with…` copies. Carries `repositories.CommitSha` for the expected head. |
-| `MergeStyle`         | `…pulls`  | enum                | `merge`, `rebase`, `rebase-merge`, `squash`, `fast-forward-only`, `manually-merged`.     |
+| `MergeStyle`         | `…pulls`  | enum                | `merge`, `rebase`, `rebase-merge`, `squash`, `fast-forward-only`, `manually-merged`, plus `rebase-update-only`, which only `default_merge_style` accepts and `MergePullRequest.using` refuses. Also the `default_merge_style` of `repositories.admin.EditRepository`; the repositories copy is gone. |
 | `ReviewState`        | `…pulls`  | enum                | `APPROVED`, `REQUEST_CHANGES`, `COMMENT`, `REQUEST_REVIEW`, `PENDING` — upper-case on the wire, unlike every other enum here. |
 | `PullRequestSort`    | `…pulls`  | enum                | Forgejo's own spellings, `recentupdate` and friends, unhyphenated.                       |
 | `PullRequestState`   | `…pulls`  | ADT                 | Open / Closed / Merged. Not a flat enum: `merged` in Forgejo is a boolean beside `state`, and folding the two into one type is what stops a caller reading a merged PR as merely closed. |

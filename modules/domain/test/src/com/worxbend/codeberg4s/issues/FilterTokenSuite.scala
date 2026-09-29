@@ -31,6 +31,20 @@ final class FilterTokenSuite extends FunSuite:
   test("a slash is allowed in a label name, because Forgejo uses it for label scopes"):
     assertEquals(LabelName.from("bug/confirmed").map(_.value), Right("bug/confirmed"))
 
+  test("a label name of a single dot is rejected, because LabelRef.ByName would send it as a path segment"):
+    assertEquals(LabelName.from(".").left.map(_.message), Left("must not be '.' or '..'"))
+
+  test("a label name of two dots is rejected, even padded, because it would walk out of the route"):
+    assertEquals(LabelName.from(" .. ").left.map(_.message), Left("must not be '.' or '..'"))
+
+  test("a label name that merely contains dots is accepted, since only the two traversal segments are dot segments"):
+    assertEquals(LabelName.from(".hidden").map(_.value), Right(".hidden"))
+    assertEquals(LabelName.from("v1.2.3").map(_.value), Right("v1.2.3"))
+    assertEquals(LabelName.from("...").map(_.value), Right("..."))
+
+  test("a milestone title shares the traversal rule, because the token rule is written once"):
+    assertEquals(MilestoneTitle.from("..").left.map(_.field), Left("milestoneTitle"))
+
   test("a milestone title follows the same rule and reports its own field name"):
     assertEquals(MilestoneTitle.from("Forgejo v1.18.0-0").map(_.value), Right("Forgejo v1.18.0-0"))
     assertEquals(MilestoneTitle.from("v1, v2").left.map(_.field), Left("milestoneTitle"))
