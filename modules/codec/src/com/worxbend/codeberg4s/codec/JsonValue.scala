@@ -58,15 +58,18 @@ sealed trait JsonValue:
     case JsonValue.Decimal(value) => Some(value)
     case _                        => None
 
-  /** The number, when this is one, truncated toward zero.
+  /** The number, when this is one and its whole part fits an `int64`, truncated toward zero.
     *
     * Truncation is what a wire `int64` field wants and what the previous accessor did — `numOpt.map(_.toLong)` — so a
-    * fractional value still answers with its whole part rather than with `None`. Nothing is allocated for an
-    * [[JsonValue.Int64]] beyond the `Option` itself.
+    * fractional value still answers with its whole part rather than with `None`. What it does not do any more is wrap:
+    * `BigDecimal.toLong` keeps the low 64 bits, so `9223372036854775808` — one past `Long.MaxValue` — used to read as
+    * `Long.MinValue` and `1e30` as whatever its low bits happened to be, which is the quiet corruption of an identifier
+    * this model exists to rule out. A whole part outside the `Long` range answers `None`, like a value of the wrong
+    * kind. Nothing is allocated for an [[JsonValue.Int64]] beyond the `Option` itself.
     */
   def longOpt: Option[Long] = this match
     case JsonValue.Int64(value)   => Some(value)
-    case JsonValue.Decimal(value) => Some(value.toLong)
+    case JsonValue.Decimal(value) => JsonValue.wholePartAsLong(value)
     case _                        => None
 
   /** Whether this is a number, of either case. */
@@ -179,6 +182,13 @@ object JsonValue:
     * This is the only constructor that keeps [[Int64]] and [[Decimal]] apart correctly, and it is why they were split
     * without every call site in the library having to change: `JsonValue.Num(7)` still builds a number and
     * `case JsonValue.Num(value)` still matches one.
+    *
+    * '''There is deliberately no overload from a `Double`.''' `NaN` and the two infinities are `Double`s with no JSON
+    * spelling, so a constructor taking one could only refuse them by throwing — `BigDecimal(Double.NaN)` does exactly
+    * that — and every constructor on this type is total. Nothing in the library holds a `Double` to begin with: every
+    * number a request body carries is an identifier, a count or a duration, and all of them are already a `Long`. A
+    * caller who genuinely starts from one goes through `BigDecimal.exact(value)` and the overload below, having first
+    * decided what a non-finite value should become.
     */
   object Num:
 
@@ -187,21 +197,6 @@ object JsonValue:
 
     /** A whole number. */
     def apply(value: Int): JsonValue = Int64(value.toLong)
-
-    /** A number from a `Double`, rendered without a fractional part when it has none.
-      *
-      * `BigDecimal(102.0)` keeps a scale of one and renders `102.0`, which Forgejo's integer fields reject and which
-      * would silently change every request body carrying an identifier. A whole value therefore becomes an [[Int64]],
-      * which renders `102`.
-      *
-      * The bound is strict at the top and not at the bottom because `Long.MaxValue` has no exact `Double` — the nearest
-      * one is 2^63, one past the largest `Long` — whereas `Long.MinValue` is exactly -2^63 and does. Without the strict
-      * bound a `Double` of 2^63 would silently become `Long.MaxValue`, which is the class of quiet rounding this whole
-      * type exists to avoid.
-      */
-    def apply(value: Double): JsonValue =
-      if value.isWhole && value >= Long.MinValue.toDouble && value < Long.MaxValue.toDouble then Int64(value.toLong)
-      else Decimal(BigDecimal(value))
 
     /** A number from an exact decimal, put into whichever case renders the same text back.
       *
@@ -236,6 +231,30 @@ object JsonValue:
 
     /** An object written out field by field. */
     def apply(first: (String, JsonValue), rest: (String, JsonValue)*): Obj = Obj(first +: Vector.from(rest))
+
+  /** The whole part of `value` as a `Long`, or `None` when it does not fit one.
+    *
+    * Truncation first, then the range check, in that order: `9223372036854775807.5` has a whole part that fits and
+    * answers `Long.MaxValue`, while `9223372036854775808` does not and answers `None`. `isValidLong` on the truncated
+    * value is the whole of the check — it is what stops `toLong` keeping the low 64 bits of a number that has more.
+    * Shared by [[JsonValue.longOpt]] and [[JsonDecoder.long]], so the two readers of a wire `int64` cannot disagree
+    * about what fits.
+    */
+  private[codec] def wholePartAsLong(value: BigDecimal): Option[Long] =
+    val whole = value.setScale(0, BigDecimal.RoundingMode.DOWN)
+
+    Option.when(whole.isValidLong)(whole.toLong)
+
+  /** How many slots the hash index over an object of `fields` fields gets, for `fields` of at least one.
+    *
+    * A power of two, so that a probe wraps with a mask; and at least twice the field count, so that the table stays
+    * under half full and a linear probe stays short. `highestOneBit(fields) * 4` is the smallest power of two with that
+    * property at every width. The earlier `* 2` had it only at an exact power of two: fifteen fields got sixteen slots
+    * — a table 94% full, on which a probe walks nearly the whole array — and thirty-one got thirty-two. Shared with
+    * [[JsonFields]], whose lookup index has the same shape, so the two tables cannot drift apart.
+    */
+  private[codec] def indexSize(fields: Int): Int =
+    Integer.highestOneBit(fields) * 4
 
   /** How deep a document may nest before it is rejected.
     *
@@ -380,9 +399,10 @@ object JsonValue:
     * one would reject a document over a collision.
     */
   private def indexFields(in: JsonReader, entries: Vector[(String, JsonValue)], size: Int): Unit =
-    // A power of two, so a probe wraps with a mask; at least twice the field
-    // count, so that the table stays under half full and a probe stays short.
-    val slots = new Array[Int](Integer.highestOneBit(size) * 2)
+    // A power of two at least twice the field count — see indexSize for why
+    // that is what keeps a probe short, and for the width the old sizing got
+    // wrong.
+    val slots = new Array[Int](indexSize(size))
     val mask  = slots.length - 1
 
     @tailrec def probe(index: Int, slot: Int): Unit =

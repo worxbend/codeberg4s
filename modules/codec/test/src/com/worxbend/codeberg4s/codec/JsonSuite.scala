@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.codec
 
-import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.core.ResponseBody
+import com.worxbend.codeberg4s.{CodebergConfig, JsonPath}
 
 import munit.FunSuite
 
@@ -210,22 +210,31 @@ final class JsonSuite extends FunSuite:
 
   test("Num builds whichever case renders the text back unchanged"):
     // Forgejo's integer fields reject 102.0, so a whole value must never pick up
-    // a fractional part on its way to a request body — whichever of the four
-    // ways of writing it down the caller reached for.
+    // a fractional part on its way to a request body — whichever of the three
+    // ways of writing it down the caller reached for. There is no fourth: Num
+    // takes no Double, because NaN has no JSON spelling and every constructor
+    // on the model is total.
     assertEquals(Json.render(JsonValue.Num(102)), "102")
     assertEquals(Json.render(JsonValue.Num(102L)), "102")
-    assertEquals(Json.render(JsonValue.Num(102.0)), "102")
     assertEquals(Json.render(JsonValue.Num(BigDecimal(102))), "102")
-    assertEquals(Json.render(JsonValue.Num(102.5)), "102.5")
+    assertEquals(Json.render(JsonValue.Num(BigDecimal("102.5"))), "102.5")
     assertEquals(Json.render(JsonValue.Num(BigDecimal("102.0"))), "102.0")
 
   test("a number Num built parses back to the same value"):
     // The two cases are only telling apart if one constructor decides between
     // them: Decimal(BigDecimal(102)) would render 102 and then not equal the
     // Int64(102) that parsing 102 produces. Num is that constructor.
-    val built = Vector(JsonValue.Num(102), JsonValue.Num(102.0), JsonValue.Num(BigDecimal(102)))
+    val built = Vector(JsonValue.Num(102), JsonValue.Num(102L), JsonValue.Num(BigDecimal(102)))
 
     built.foreach(number => assertEquals(Json.parse(Json.render(number)), Right(number)))
+
+  test("a Double with a whole value goes through the exact-decimal constructor without growing a fractional part"):
+    // The route a caller who really does hold a Double takes, now that there is
+    // no Double overload: BigDecimal.exact(102.0) is 102 at scale zero, so it
+    // lands in the Long case and renders 102, not 102.0. (BigDecimal.decimal
+    // would not do: it goes through Double.toString and keeps the ".0".)
+    assertEquals(Json.render(JsonValue.Num(BigDecimal.exact(102.0))), "102")
+    assertEquals(Json.render(JsonValue.Num(BigDecimal.exact(102.5))), "102.5")
 
   test("Num matches either case and hands back an exact decimal"):
     // Kept so that a call site written when Num was one case class holding a
@@ -245,3 +254,84 @@ final class JsonSuite extends FunSuite:
     assertEquals(JsonValue.Int64(7L).longOpt, Some(7L))
     assertEquals(JsonValue.Decimal(BigDecimal("2.9")).longOpt, Some(2L))
     assertEquals(JsonValue.Bool(true).longOpt, None)
+
+  test("a whole number past the Long range is refused as a Long rather than wrapped"):
+    // BigDecimal.toLong keeps the low 64 bits, so without the check one past
+    // Long.MaxValue read as Long.MinValue and 1e30 as whatever its low bits
+    // were — a different identifier from the one the instance sent, with
+    // nothing to say so.
+    val onePastMax   = "9223372036854775808"
+    val onePastMin   = "-9223372036854775809"
+    val exponentForm = "1e30"
+
+    assertEquals(
+      Json.decode[Long](onePastMax).left.map(_.message),
+      Left("expected a number that fits an int64, but it does not")
+    )
+    assert(Json.decode[Long](onePastMin).isLeft)
+    assert(Json.decode[Long](exponentForm).isLeft)
+    assertEquals(Json.parse(onePastMax).map(_.longOpt), Right(None))
+    assertEquals(Json.parse(onePastMin).map(_.longOpt), Right(None))
+    assertEquals(Json.parse(exponentForm).map(_.longOpt), Right(None))
+
+  test("the Long boundary is inclusive, and a fractional part past it is truncated before the range check"):
+    // Both ends of the range fit, however they were written; a number whose
+    // whole part is Long.MaxValue fits too, because truncation comes first.
+    assertEquals(Json.decode[Long]("9223372036854775807"), Right(Long.MaxValue))
+    assertEquals(Json.decode[Long]("-9223372036854775808"), Right(Long.MinValue))
+    assertEquals(Json.decode[Long]("9223372036854775807.0"), Right(Long.MaxValue))
+    assertEquals(Json.decode[Long]("9223372036854775807.5"), Right(Long.MaxValue))
+    assertEquals(Json.decode[Long]("-9223372036854775808.5"), Right(Long.MinValue))
+    assertEquals(Json.decode[Long]("1e2"), Right(100L))
+    assertEquals(Json.decode[Long]("9.223372036854775807e18"), Right(Long.MaxValue))
+
+  test("the hash index is at least twice the field count at every width, and a power of two"):
+    // The earlier sizing, highestOneBit(size) * 2, held that only at an exact
+    // power of two: 15 fields got 16 slots and 31 got 32, tables over 90% full
+    // on which a probe walked nearly the whole array.
+    Vector(1, 15, 16, 31, 500).foreach: fields =>
+      val slots = JsonValue.indexSize(fields)
+
+      assert(slots >= 2 * fields, s"$fields fields got $slots slots")
+      assertEquals(Integer.bitCount(slots), 1, s"$slots slots is not a power of two")
+
+  test("a string of five million characters decodes, because the transport's body bound is what limits size"):
+    // jsoniter's own default caps one string at 4,194,304 characters, which a
+    // contents or blob response — one base64 string holding a whole file —
+    // reached at about three mebibytes of file, well inside the 16 MiB the
+    // transport allows. The failure it produced said nothing about size.
+    val text = "a" * 5_000_000
+
+    assertEquals(Json.decode[Leaf](s"""{"name":"$text"}""").map(_.name.map(_.length)), Right(Some(5_000_000)))
+
+  test("a body of about six mebibytes decodes through both entry points"):
+    // Twice what the previous configuration named as its byte bound, so this
+    // also shows that bound never applied to a body handed over as an array —
+    // jsoniter adopts the array as its buffer and only checks maxBufSize when
+    // it grows one while streaming.
+    val element = s"""{"name":"${"x" * 1_000}"}"""
+    val body    = Vector.fill(6_500)(element).mkString("[", ",", "]")
+
+    assert(body.length > 6 * 1024 * 1024, s"the fixture is only ${body.length} bytes")
+    assertEquals(Json.decode[Vector[Leaf]](body).map(_.size), Right(6_500))
+    assertEquals(Json.decode[Vector[Leaf]](body.getBytes(StandardCharsets.UTF_8)).map(_.size), Right(6_500))
+
+  test("the parser's size bound covers the transport's default body bound"):
+    // A string can never hold more characters than the body held bytes, so a
+    // character bound at least the byte bound covers every string the
+    // transport lets through. The two constants are coupled, and this is the
+    // direction the coupling has to hold in.
+    assert(Json.MaxParsedBytes >= CodebergConfig.DefaultMaxResponseBodyBytes, Json.MaxParsedBytes)
+
+  test("a parser exception with an empty or blank message is reported by its class, not by a second exception"):
+    // reasonOf runs inside the catch that exists to stop exceptions escaping.
+    // An earlier version took linesIterator.next() of the trimmed message,
+    // which on "" throws NoSuchElementException from inside that handler.
+    assertEquals(Json.reasonOf(new RuntimeException("")), "java.lang.RuntimeException")
+    assertEquals(Json.reasonOf(new RuntimeException("  \n\t ")), "java.lang.RuntimeException")
+    assertEquals(Json.reasonOf(new RuntimeException()), "java.lang.RuntimeException")
+
+  test("a parser exception's reason is its first line, bounded"):
+    assertEquals(Json.reasonOf(new RuntimeException("first line\nsecond line")), "first line")
+    assertEquals(Json.reasonOf(new RuntimeException("  padded  ")), "padded")
+    assertEquals(Json.reasonOf(new RuntimeException("y" * 500)), ("y" * Json.MaxReasonLength) + "...")

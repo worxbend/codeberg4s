@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.codec.{Json, JsonValue}
-import com.worxbend.codeberg4s.repositories.admin.{CreatePushMirror, MigrateRepository, TransferRepository}
+import com.worxbend.codeberg4s.repositories.admin.{CreatePushMirror, MigrateRepository, RemoteAuth, TransferRepository}
 
 /** Forgejo's `MigrateRepoOptions` request model — the body of `POST /repos/migrate`.
   *
@@ -16,8 +16,19 @@ import com.worxbend.codeberg4s.repositories.admin.{CreatePushMirror, MigrateRepo
   * of the JSON string. The rendered body becomes a [[com.worxbend.codeberg4s.core.RequestBody.Json]], which the
   * pipeline never copies into a [[com.worxbend.codeberg4s.CallContext]] or an error.
   *
-  * `auth_password` and `auth_token` are both emitted when both are set. Forgejo decides which one it wants for the
-  * `service` it was given, and a library that dropped one on the caller's behalf would be guessing.
+  * That last claim was checked rather than assumed, because `RequestBody.Json` and the `CodebergRequest` around it are
+  * case classes whose generated `toString` would print the body, credential and all, if anything ever interpolated one.
+  * Nothing does: the pipeline builds a `CallContext` from the operation, the method, the redacted URI, the response's
+  * request id and the elapsed time; telemetry receives that context and the error; the retry engine receives the
+  * operation and the method; and the transport's failure detail is the message of the exception sttp raised, which
+  * names the method and the URI and not the body. The rendered `String` itself has no `toString` to redact, so the
+  * guarantee rests on that absence of a path, and on [[com.worxbend.codeberg4s.repositories.admin.RemoteCredential]]'s
+  * mask for the command that produced it.
+  *
+  * `auth_username` and `auth_password` travel together, and `auth_token` alone: they are the two cases of
+  * [[com.worxbend.codeberg4s.repositories.admin.RemoteAuth]], so a body carries one form of authentication or none. The
+  * previous shape emitted both a password and a token when both were set and left Forgejo to choose, which is a request
+  * no caller means.
   *
   * ==What is not emitted==
   *
@@ -60,15 +71,21 @@ private[codeberg4s] object MigrateRepoOptionsDto:
       Some("pull_requests" -> JsonValue.Bool(command.includesPullRequests)),
       Some("releases"      -> JsonValue.Bool(command.includesReleases)),
       Some("wiki"          -> JsonValue.Bool(command.includesWiki)),
-      command.repoOwner.map(owner         => "repo_owner" -> JsonValue.Str(owner.value)),
-      command.description.map(text        => "description" -> JsonValue.Str(text)),
-      command.service.map(service         => "service" -> JsonValue.Str(service.wireValue)),
-      command.username.map(user           => "auth_username" -> JsonValue.Str(user)),
-      command.credential.map(secret       => AuthPasswordKey -> JsonValue.Str(secret.reveal)),
-      command.token.map(secret            => AuthTokenKey -> JsonValue.Str(secret.reveal)),
+      command.repoOwner.map(owner  => "repo_owner" -> JsonValue.Str(owner.value)),
+      command.description.map(text => "description" -> JsonValue.Str(text)),
+      command.service.map(service  => "service" -> JsonValue.Str(service.wireValue)),
+    ).flatten ++ command.auth.fold(List.empty)(authFields) ++ List(
       command.mirrorInterval.map(duration => "mirror_interval" -> JsonValue.Str(duration)),
       command.lfsEndpoint.map(endpoint    => "lfs_endpoint" -> JsonValue.Str(endpoint)),
     ).flatten
+
+  /** The keys one form of authentication becomes: a username and password together, or a token alone. */
+  private def authFields(auth: RemoteAuth): List[(String, JsonValue)] =
+    auth match
+      case RemoteAuth.Password(username, password) =>
+        List("auth_username" -> JsonValue.Str(username), AuthPasswordKey -> JsonValue.Str(password.reveal))
+      case RemoteAuth.Token(token)                 =>
+        List(AuthTokenKey -> JsonValue.Str(token.reveal))
 
 /** Forgejo's `TransferRepoOption` request model — the body of `POST /repos/{owner}/{repo}/transfer`.
   *

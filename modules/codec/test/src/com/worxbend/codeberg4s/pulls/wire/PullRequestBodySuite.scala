@@ -107,6 +107,31 @@ final class PullRequestBodySuite extends FunSuite:
       """{"milestone":137464}""",
     )
 
+  test("clearing a milestone sends 0, the value Forgejo reads as none, and the later call wins"):
+    val release = orFail(MilestoneId.from(137464L))
+
+    assertEquals(EditPullRequestOptionDto.render(EditPullRequest.Empty.withoutMilestone), """{"milestone":0}""")
+    assertEquals(
+      EditPullRequestOptionDto.render(EditPullRequest.Empty.inMilestone(release).withoutMilestone),
+      """{"milestone":0}""",
+    )
+    assertEquals(
+      EditPullRequestOptionDto.render(EditPullRequest.Empty.withoutMilestone.inMilestone(release)),
+      """{"milestone":137464}""",
+    )
+
+  test("setting and clearing a deadline are one field, so a body never carries both keys"):
+    val friday = Instant.parse("2026-08-07T17:00:00Z")
+
+    assertEquals(
+      EditPullRequestOptionDto.render(EditPullRequest.Empty.dueBy(friday).withoutDueDate),
+      """{"unset_due_date":true}""",
+    )
+    assertEquals(
+      EditPullRequestOptionDto.render(EditPullRequest.Empty.withoutDueDate.dueBy(friday)),
+      """{"due_date":"2026-08-07T17:00:00Z"}""",
+    )
+
   // --- merge ----------------------------------------------------------------
 
   test("a minimal merge sends only the required style, under Forgejo's capitalised key"):

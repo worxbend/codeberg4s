@@ -65,18 +65,25 @@ final class IssueCommandSuite extends FunSuite:
     assertEquals(edit.withTitle("replaced"), edit.copy(title = Some("replaced")))
     assertEquals(edit.withBody("replaced"), edit.copy(body = Some("replaced")))
     assertEquals(edit.assignedTo(Vector("crystal")), edit.copy(assignees = Some(Vector("crystal"))))
-    assertEquals(edit.inMilestone(Release), edit.copy(milestone = Some(Release)))
+    assertEquals(edit.inMilestone(Release), edit.copy(milestone = Some(MilestoneChange.Assign(Release))))
+    assertEquals(edit.withoutMilestone, edit.copy(milestone = Some(MilestoneChange.Clear)))
     assertEquals(edit.close, edit.copy(state = Some(IssueStateChange.Close)))
     assertEquals(edit.reopen, edit.copy(state = Some(IssueStateChange.Reopen)))
-    assertEquals(edit.dueBy(Friday), edit.copy(dueDate = Some(Friday)))
-    assertEquals(edit.withoutDueDate, edit.copy(unsetDueDate = true))
+    assertEquals(edit.dueBy(Friday), edit.copy(dueDate = Some(DueDateChange.DueBy(Friday))))
+    assertEquals(edit.withoutDueDate, edit.copy(dueDate = Some(DueDateChange.Clear)))
     assertEquals(edit.onRef("refs/heads/main"), edit.copy(ref = Some("refs/heads/main")))
 
-  test("setting a deadline on an edit does not raise the unset flag, which would clear it again"):
-    val deadlined = EditIssue.Empty.dueBy(Friday)
+  test("setting and clearing a deadline are one field, so the later call replaces the earlier"):
+    // The previous shape held an Option[Instant] beside a Boolean, so
+    // dueBy(friday).withoutDueDate carried both and left Forgejo to choose.
+    assertEquals(EditIssue.Empty.dueBy(Friday).dueDate, Some(DueDateChange.DueBy(Friday)))
+    assertEquals(EditIssue.Empty.dueBy(Friday).withoutDueDate.dueDate, Some(DueDateChange.Clear))
+    assertEquals(EditIssue.Empty.withoutDueDate.dueBy(Friday).dueDate, Some(DueDateChange.DueBy(Friday)))
 
-    assertEquals(deadlined.dueDate, Some(Friday))
-    assertEquals(deadlined.unsetDueDate, false)
+  test("moving into a milestone and leaving one are one field, so the later call replaces the earlier"):
+    assertEquals(EditIssue.Empty.inMilestone(Release).milestone, Some(MilestoneChange.Assign(Release)))
+    assertEquals(EditIssue.Empty.inMilestone(Release).withoutMilestone.milestone, Some(MilestoneChange.Clear))
+    assertEquals(EditIssue.Empty.withoutMilestone.inMilestone(Release).milestone, Some(MilestoneChange.Assign(Release)))
 
   test("an untouched assignee list stays absent, which is what leaves the assignees alone"):
     assertEquals(EditIssue.Empty.withTitle("t").assignees, None)
@@ -85,7 +92,8 @@ final class IssueCommandSuite extends FunSuite:
     assertEquals(EditIssue.Empty.title, None)
     assertEquals(EditIssue.Empty.assignees, None)
     assertEquals(EditIssue.Empty.state, None)
-    assertEquals(EditIssue.Empty.unsetDueDate, false)
+    assertEquals(EditIssue.Empty.milestone, None)
+    assertEquals(EditIssue.Empty.dueDate, None)
 
   test("assignedTo with an empty vector is present-and-empty, which is how a caller unassigns everyone"):
     assertEquals(EditIssue.Empty.assignedTo(Vector.empty).assignees, Some(Vector.empty[String]))
@@ -94,9 +102,12 @@ final class IssueCommandSuite extends FunSuite:
     assertEquals(EditIssue.Empty.close.state, Some(IssueStateChange.Close))
     assertEquals(EditIssue.Empty.close.reopen.state, Some(IssueStateChange.Reopen))
 
-  test("clearing a deadline is its own flag, not a deadline of some sentinel value"):
-    assertEquals(EditIssue.Empty.withoutDueDate.unsetDueDate, true)
-    assertEquals(EditIssue.Empty.withoutDueDate.dueDate, None)
+  test("clearing a deadline is its own case, not a deadline of some sentinel value"):
+    assertEquals(EditIssue.Empty.withoutDueDate.dueDate, Some(DueDateChange.Clear))
+
+  test("clearing a milestone is its own case, because no MilestoneId can spell Forgejo's zero"):
+    assertEquals(EditIssue.Empty.withoutMilestone.milestone, Some(MilestoneChange.Clear))
+    assert(MilestoneId.from(0L).isLeft, "a MilestoneId of 0 would make the clearing case redundant")
 
   test("a state change spells itself the way Forgejo's state field expects"):
     assertEquals(IssueStateChange.Reopen.wireValue, "open")
@@ -133,14 +144,13 @@ final class IssueCommandSuite extends FunSuite:
 
   private def populatedEdit: EditIssue =
     EditIssue(
-      title        = Some("original"),
-      body         = Some("original body"),
-      assignees    = Some(Vector("earl-warren")),
-      milestone    = Some(orFail(MilestoneId.from(3110L))),
-      state        = Some(IssueStateChange.Reopen),
-      dueDate      = Some(Instant.parse("2026-08-10T09:00:00Z")),
-      unsetDueDate = false,
-      ref          = Some("refs/heads/next"),
+      title     = Some("original"),
+      body      = Some("original body"),
+      assignees = Some(Vector("earl-warren")),
+      milestone = Some(MilestoneChange.Assign(orFail(MilestoneId.from(3110L)))),
+      state     = Some(IssueStateChange.Reopen),
+      dueDate   = Some(DueDateChange.DueBy(Instant.parse("2026-08-10T09:00:00Z"))),
+      ref       = Some("refs/heads/next"),
     )
 
   private def orFail[A](result: Either[ValidationError, A]): A =

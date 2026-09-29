@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.repositories.wire
 
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.publishing.Topic
 import com.worxbend.codeberg4s.repositories.{BranchName, RepoSlug, Repository, RepositoryId}
@@ -113,11 +113,21 @@ final case class RepositoryDto(
     *
     * `default_branch` and the elements of `topics` are put through their own smart constructors, so that a caller can
     * hand either straight to the endpoints that take a [[com.worxbend.codeberg4s.repositories.BranchName]] or a
-    * [[com.worxbend.codeberg4s.repositories.publishing.Topic]]. '''A topic the constructor rejects fails the whole
-    * repository rather than being dropped from the vector''': that is the same first-failure-wins rule every other
-    * array in this module follows, and a caller about to rewrite a repository's topic set cannot tell a silently
-    * shortened vector from a repository that genuinely has fewer topics. The failure names the element's position,
-    * `$.topics[2]`. An absent `default_branch` — which is what an empty repository sends — stays absent.
+    * [[com.worxbend.codeberg4s.repositories.publishing.Topic]]. A `default_branch` the constructor rejects fails the
+    * repository, because a repository whose default branch cannot be addressed is one the caller cannot work with; an
+    * absent one — which is what an empty repository sends — stays absent.
+    *
+    * '''A topic the constructor rejects is dropped from the vector, and does not fail the repository.''' This is the
+    * one array in the module that departs from the first-failure-wins rule, and the departure is a judgement about what
+    * the field is for. A repository's topics are descriptive metadata: they are shown, searched and counted, and no
+    * request in the library takes them from here — a caller rewriting a topic set does so through
+    * `RepositoryPublishingApi.replaceTopics`, from `Topic` values it built itself. The rule
+    * [[com.worxbend.codeberg4s.repositories.publishing.Topic.from]] enforces is only "one safe path segment", and
+    * Forgejo's own topic grammar cannot produce a value that breaks it, so an element rejected here was rewritten
+    * between the instance and this decoder — and failing a fifty-repository page over one such string costs the caller
+    * the other forty-nine repositories to protect a field they were not going to send back. The cost of dropping is
+    * that a `Repository` may show fewer topics than the instance holds, and that is the trade this documents. A blank
+    * element is dropped by the same rule, since the constructor rejects it.
     *
     * A failure inside `owner` or `parent` is reported at that nested path, not at the repository's.
     */
@@ -128,8 +138,6 @@ final case class RepositoryDto(
       ownerDto    <- Wire.required(at, "owner", owner)
       ownerModel  <- ownerDto.toDomainAt(at.field("owner"))
       branch      <- Wire.optional(at, "default_branch", defaultBranch)(BranchName.from)
-      topicNames  <- ArrayElements.convert(at.field("topics"), topics): (name, path) =>
-                       Topic.from(name).left.map(error => DecodeFailure(path, error.message))
       parentModel <- Wire.nested(at, "parent", parent)(_.toDomainAt(_))
     yield Repository(
       id                   = identifier,
@@ -145,7 +153,7 @@ final case class RepositoryDto(
       defaultBranch        = branch,
       language             = language,
       avatarUrl            = avatarUrl,
-      topics               = topicNames,
+      topics               = topics.flatMap(name => Topic.from(name).toOption),
       sizeKb               = size.getOrElse(0L),
       starsCount           = starsCount.getOrElse(0L),
       forksCount           = forksCount.getOrElse(0L),

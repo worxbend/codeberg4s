@@ -109,11 +109,13 @@ final case class JsonFields(entries: Vector[(String, JsonValue)]):
   def text(name: String): Option[String] =
     rawText(name).filter(_.trim.nonEmpty)
 
-  /** The number at `name`, truncated to a `Long`.
+  /** The number at `name`, truncated to a `Long`; absent when it does not fit one.
     *
     * An identifier beyond 2^53 keeps its precision on the way through: the document model reads a whole number straight
     * into a `Long` and anything else into a `BigDecimal`, neither of which rounds. The model before it parsed every
-    * number as a `Double` and would have lost the identifier silently.
+    * number as a `Double` and would have lost the identifier silently. A whole number past `Long.MaxValue` is treated
+    * like a value of the wrong kind rather than wrapped — see [[JsonValue.longOpt]] — so a field the domain needs then
+    * fails at its own name in `toDomain` instead of arriving as a different identifier.
     */
   def number(name: String): Option[Long] =
     value(name).flatMap(_.longOpt)
@@ -180,9 +182,9 @@ object JsonFields:
 
     if size <= MaxScannedFields then Array.emptyIntArray
     else
-      // A power of two, so a probe wraps with a mask; at least twice the field
-      // count, so the table stays under half full and a probe stays short.
-      val slots = new Array[Int](Integer.highestOneBit(size) * 2)
+      // A power of two at least twice the field count, sized by the same rule
+      // as the parser's repeated-key table — see JsonValue.indexSize.
+      val slots = new Array[Int](JsonValue.indexSize(size))
 
       @tailrec def place(position: Int, slot: Int): Unit =
         if slots(slot) < 1 then slots(slot) = position + 1

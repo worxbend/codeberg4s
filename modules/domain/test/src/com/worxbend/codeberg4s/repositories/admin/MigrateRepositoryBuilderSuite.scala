@@ -15,7 +15,9 @@ import munit.FunSuite
   * migration into a mysterious `401` from a host this library has never heard of.
   *
   * The two multi-field builders are asserted for what they set '''together''': `authenticatedAs` is a username and a
-  * credential, and `withLfsFrom` is an endpoint '''and''' the switch that makes the endpoint mean anything.
+  * credential, and `withLfsFrom` is an endpoint '''and''' the switch that makes the endpoint mean anything. The two
+  * authentication builders are also asserted for what they '''replace''': a password and a token are alternatives, and
+  * a command can hold one of them at a time.
   */
 final class MigrateRepositoryBuilderSuite extends FunSuite:
 
@@ -46,17 +48,27 @@ final class MigrateRepositoryBuilderSuite extends FunSuite:
     val secret    = credential("gitlab-token")
     val requested = command.authenticatedAs("octocat", secret)
 
-    assertEquals(requested, command.copy(username = Some("octocat"), credential = Some(secret)))
+    assertEquals(requested, command.copy(auth = Some(RemoteAuth.Password("octocat", secret))))
 
-  test("a password and a token are separate fields, so one does not overwrite the other"):
+  test("authenticating with a token sets the token and nothing else"):
+    val command = populated
+    val secret  = credential("ghp_token")
+
+    assertEquals(command.authenticatedWith(secret), command.copy(auth = Some(RemoteAuth.Token(secret))))
+
+  test("a password and a token are alternatives, so the later builder replaces the earlier"):
+    // The previous shape kept them in separate fields and sent both when both
+    // had been set, leaving Forgejo to choose. One RemoteAuth field is what
+    // makes a command that asks for both impossible to build.
     val password = credential("hunter2")
     val token    = credential("ghp_token")
-    val command  = MigrateRepository.from(Address, repo("forgejo")).authenticatedAs("octocat", password)
-      .authenticatedWith(token)
+    val start    = MigrateRepository.from(Address, repo("forgejo"))
 
-    assertEquals(command.credential, Some(password))
-    assertEquals(command.token, Some(token))
-    assertEquals(command.username, Some("octocat"))
+    assertEquals(start.authenticatedAs("octocat", password).authenticatedWith(token).auth, Some(RemoteAuth.Token(token)))
+    assertEquals(
+      start.authenticatedWith(token).authenticatedAs("octocat", password).auth,
+      Some(RemoteAuth.Password("octocat", password)),
+    )
 
   test("naming an LFS endpoint also turns LFS on, because the endpoint alone would be a silent no-op"):
     val command = MigrateRepository.from(Address, repo("forgejo")).withLfsFrom("https://lfs.example/forgejo")
@@ -82,8 +94,7 @@ final class MigrateRepositoryBuilderSuite extends FunSuite:
     val secret  = credential("ghp_token")
     val command = MigrateRepository.from(Address, repo("forgejo")).authenticatedAs("octocat", secret).withEverything
 
-    assertEquals(command.credential, Some(secret))
-    assertEquals(command.username, Some("octocat"))
+    assertEquals(command.auth, Some(RemoteAuth.Password("octocat", secret)))
     assertEquals(command.lfs, false)
     assertEquals(command.isPrivate, false)
 
@@ -118,9 +129,7 @@ final class MigrateRepositoryBuilderSuite extends FunSuite:
       repoOwner            = Some(owner("original")),
       description          = Some("original description"),
       service              = Some(MigrationService.GitHub),
-      username             = Some("original-user"),
-      credential           = Some(credential("original-password")),
-      token                = Some(credential("original-token")),
+      auth                 = Some(RemoteAuth.Password("original-user", credential("original-password"))),
       isPrivate            = false,
       isMirror             = false,
       mirrorInterval       = Some("8h0m0s"),

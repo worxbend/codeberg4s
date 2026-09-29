@@ -17,9 +17,24 @@ final class WireSuite extends FunSuite:
   private final case class FailingDto(field: String):
 
     def toDomainAt(at: JsonPath): Either[DecodeFailure, Nothing] =
-      Left(DecodeFailure(at.field(field), s"required field '$field' is missing"))
+      Wire.required(at, field, None)
 
   private val at: JsonPath = JsonPath.Root
+
+  test("required names every wire shape JsonFields folds into absence, not only a missing key"):
+    // From here the three are indistinguishable, and a message that said only
+    // "missing" sent a reader looking for a key that was in the payload the
+    // whole time, holding a value of the wrong kind.
+    val result = Wire.required(at, "id", Option.empty[Long])
+
+    assertEquals(result.left.map(_.path.render), Left("$.id"))
+    assertEquals(
+      result.left.map(_.message),
+      Left("required field 'id' is missing, null, or not of the expected JSON kind")
+    )
+
+  test("required hands a present value back untouched"):
+    assertEquals(Wire.required(at, "id", Some(7L)), Right(7L))
 
   test("requiredNested reports an absent field at that field's path"):
     val result = Wire.requiredNested(at, "owner", None)((dto: FailingDto, path) => dto.toDomainAt(path))
