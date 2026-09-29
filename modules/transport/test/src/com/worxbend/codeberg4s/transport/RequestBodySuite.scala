@@ -8,6 +8,7 @@ import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.core.CodebergRequest
 import com.worxbend.codeberg4s.core.CodebergResponse
 import com.worxbend.codeberg4s.core.RequestBody
+import com.worxbend.codeberg4s.core.Timer
 import com.worxbend.codeberg4s.core.TransportFailure
 
 import sttp.client4.GenericRequest
@@ -19,6 +20,9 @@ import sttp.model.HeaderNames
 import munit.FunSuite
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.Promise
+import scala.concurrent.duration.FiniteDuration
 import scala.util.Success
 
 import java.nio.charset.StandardCharsets
@@ -38,6 +42,12 @@ final class RequestBodySuite extends FunSuite:
 
   private val Payload: Array[Byte] = "hi".getBytes(StandardCharsets.UTF_8)
 
+  /** A timer whose deadlines never fire: the whole-exchange bound is `SttpHttpPortSuite`'s subject, not this one's. */
+  private val Idle: Timer[Future] = new Timer[Future]:
+    override def nowMillis: Future[Long] = Future.successful(0L)
+
+    override def sleep(duration: FiniteDuration): Future[Unit] = Promise[Unit]().future
+
   /** Sends `body` and reports both what the port answered and every request the backend actually saw.
     *
     * The backend list matters for the refusal case: a body the transport rejects must never reach a socket, and an
@@ -45,7 +55,7 @@ final class RequestBodySuite extends FunSuite:
     */
   private def attempt(body: RequestBody): (Either[TransportFailure, CodebergResponse], List[GenericRequest[?, ?]]) =
     val recording = RecordingBackend(BackendStub.asynchronousFuture.whenAnyRequest.thenRespondOk())
-    val port      = SttpHttpPort(recording, config)
+    val port      = SttpHttpPort(recording, config, Idle)
     val request   = CodebergRequest(
       operation = "probe",
       method    = HttpMethod.Post,

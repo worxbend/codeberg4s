@@ -13,6 +13,7 @@ import com.worxbend.codeberg4s.core.CodebergRequest
 import com.worxbend.codeberg4s.core.CodebergResponse
 import com.worxbend.codeberg4s.core.RequestBody
 import com.worxbend.codeberg4s.core.ResponseBody
+import com.worxbend.codeberg4s.core.Timer
 import com.worxbend.codeberg4s.core.TransportFailure
 
 import sttp.capabilities.StreamMaxLengthExceededException
@@ -30,14 +31,22 @@ import sttp.model.Uri
 
 import munit.FunSuite
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Promise
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.FiniteDuration
 
+import java.io.EOFException
 import java.net.ConnectException
 import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.net.http.HttpTimeoutException
+import java.nio.channels.ClosedChannelException
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.TimeoutException
 
 /** Request-shape and failure-classification tests for [[SttpHttpPort]].
   *
@@ -51,9 +60,40 @@ final class SttpHttpPortSuite extends FunSuite:
   /** Runs stub callbacks on the calling thread, so a recorded interaction is visible as soon as the future completes. */
   private given ExecutionContext = ExecutionContext.parasitic
 
+  /** A timer whose deadlines never fire, for every test that is not about the whole-exchange bound. */
+  private val Idle: Timer[Future] = ManualTimer()
+
+  /** A [[com.worxbend.codeberg4s.core.Timer]] whose sleeps complete only when the test says so, or fail on demand.
+    *
+    * The whole-exchange bound is a race between the send and a sleep on the timer, so the test has to hold both ends: a
+    * stub backend that never answers, and a deadline it can fire by hand. Nothing here waits a real millisecond.
+    */
+  private final class ManualTimer extends Timer[Future]:
+    private val armed = ListBuffer.empty[(FiniteDuration, Promise[Unit])]
+
+    override def nowMillis: Future[Long] = Future.successful(0L)
+
+    override def sleep(duration: FiniteDuration): Future[Unit] =
+      val pending = Promise[Unit]()
+      armed.append((duration, pending))
+      pending.future
+
+    /** Every duration a sleep was armed for, in order. */
+    def requested: List[FiniteDuration] = armed.toList.map((duration, _) => duration)
+
+    /** Elapses every armed deadline. */
+    def fire(): Unit = armed.foreach((_, pending) => pending.trySuccess(()))
+
+  /** A timer that has been closed: every sleep is refused, as `FutureTimer.sleep` refuses one after `close()`. */
+  private object ClosedTimer extends Timer[Future]:
+    override def nowMillis: Future[Long] = Future.successful(0L)
+
+    override def sleep(duration: FiniteDuration): Future[Unit] =
+      Future.failed(RejectedExecutionException("timer closed"))
+
   test("path segments are percent-encoded, including a slash a validated type would never allow"):
     val backend = recording(respondingOk)
-    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous), Idle)
 
     send(port, awkwardRequest).map: _ =>
       assertEquals(
@@ -63,35 +103,35 @@ final class SttpHttpPortSuite extends FunSuite:
 
   test("the method is taken from the domain request"):
     val backend = recording(respondingOk)
-    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous), Idle)
 
     send(port, awkwardRequest.copy(method = HttpMethod.Patch)).map: _ =>
       assertEquals(sent(backend).method, Method.PATCH)
 
   test("a token is sent as the AuthorizationHeaderToken scheme, not as Bearer"):
     val backend = recording(respondingOk)
-    val port    = SttpHttpPort(backend, configFor(Auth.Token(token(Secret))))
+    val port    = SttpHttpPort(backend, configFor(Auth.Token(token(Secret))), Idle)
 
     send(port, awkwardRequest).map: _ =>
       assertEquals(headerOf(backend, "authorization"), Some(s"token $Secret"))
 
   test("basic credentials are sent as standard basic auth"):
     val backend = recording(respondingOk)
-    val port    = SttpHttpPort(backend, configFor(Auth.Basic("dependabot", password("hunter2"))))
+    val port    = SttpHttpPort(backend, configFor(Auth.Basic("dependabot", password("hunter2"))), Idle)
 
     send(port, awkwardRequest).map: _ =>
       assertEquals(headerOf(backend, "authorization"), Some("Basic ZGVwZW5kYWJvdDpodW50ZXIy"))
 
   test("an anonymous client sends no Authorization header at all"):
     val backend = recording(respondingOk)
-    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous), Idle)
 
     send(port, awkwardRequest).map: _ =>
       assertEquals(headerOf(backend, "authorization"), None)
 
   test("a caller's Authorization header cannot override the configured credential"):
     val backend = recording(respondingOk)
-    val port    = SttpHttpPort(backend, configFor(Auth.Token(token(Secret))))
+    val port    = SttpHttpPort(backend, configFor(Auth.Token(token(Secret))), Idle)
     val request = awkwardRequest.copy(headers = List("Authorization" -> "token someone-elses-token"))
 
     send(port, request).map: _ =>
@@ -99,7 +139,7 @@ final class SttpHttpPortSuite extends FunSuite:
 
   test("a caller's Authorization header is dropped whatever case it spells the name in"):
     val backend = recording(respondingOk)
-    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous), Idle)
     val request = awkwardRequest.copy(headers = List("authorization" -> "token someone-elses-token"))
 
     send(port, request).map: _ =>
@@ -107,7 +147,7 @@ final class SttpHttpPortSuite extends FunSuite:
 
   test("a caller's Proxy-Authorization header never reaches the wire"):
     val backend = recording(respondingOk)
-    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous), Idle)
     val request = awkwardRequest.copy(headers = List("Proxy-Authorization" -> "Basic c29tZTpvbmU="))
 
     send(port, request).map: _ =>
@@ -115,7 +155,7 @@ final class SttpHttpPortSuite extends FunSuite:
 
   test("a caller's Content-Type still overrides the one the body implies"):
     val backend = recording(respondingOk)
-    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous), Idle)
     val request = awkwardRequest.copy(
       method  = HttpMethod.Post,
       headers = List("Content-Type" -> "text/plain; charset=utf-8"),
@@ -130,14 +170,14 @@ final class SttpHttpPortSuite extends FunSuite:
     val config = configFor(Auth.Anonymous).copy(userAgent = agent)
 
     val backend = recording(respondingOk)
-    val port    = SttpHttpPort(backend, config)
+    val port    = SttpHttpPort(backend, config, Idle)
 
     send(port, awkwardRequest).map: _ =>
       assertEquals(headerOf(backend, "user-agent"), Some("codeberg4s-test/1.0"))
 
   test("the configured user agent wins over one a caller supplied"):
     val backend = recording(respondingOk)
-    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous), Idle)
     val request = awkwardRequest.copy(headers = List("User-Agent" -> "someone-else"))
 
     send(port, request).map: _ =>
@@ -145,7 +185,7 @@ final class SttpHttpPortSuite extends FunSuite:
 
   test("a caller's own header is sent"):
     val backend = recording(respondingOk)
-    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous), Idle)
     val request = awkwardRequest.copy(headers = List("X-Forgejo-OTP" -> "123456"))
 
     send(port, request).map: _ =>
@@ -153,7 +193,7 @@ final class SttpHttpPortSuite extends FunSuite:
 
   test("a JSON body is sent with the JSON content type"):
     val backend = recording(respondingOk)
-    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous), Idle)
     val request = awkwardRequest.copy(method = HttpMethod.Post, body = Some(RequestBody.Json("""{"title":"x"}""")))
 
     send(port, request).map: _ =>
@@ -161,7 +201,7 @@ final class SttpHttpPortSuite extends FunSuite:
 
   test("a 500 is a response, not a transport failure"):
     val backend = recording(responding(500, Nil, "upstream exploded"))
-    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous), Idle)
 
     send(port, awkwardRequest).map: result =>
       assertEquals(result, Right(CodebergResponse(500, Map.empty, ResponseBody.utf8("upstream exploded"))))
@@ -169,7 +209,7 @@ final class SttpHttpPortSuite extends FunSuite:
   test("response header names are lowercased and repeated values are kept in order"):
     val headers = List(Header("X-Total-Count", "1590"), Header("Link", "<a>; rel=\"next\""), Header("Link", "<b>"))
     val backend = recording(responding(200, headers, "[]"))
-    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous), Idle)
 
     send(port, awkwardRequest).map: result =>
       assertEquals(headersOf(result).get("x-total-count"), Some(List("1590")))
@@ -203,9 +243,30 @@ final class SttpHttpPortSuite extends FunSuite:
     causeOf(new InterruptedException("interrupted")).map: cause =>
       assertEquals(cause, TransportCause.Interrupted("interrupted"))
 
+  test("a plain I/O failure with no case of its own is a connection failure, so it is retried"):
+    causeOf(new EOFException("unexpected end of stream")).map: cause =>
+      assertEquals(cause, TransportCause.ConnectionFailed("unexpected end of stream"))
+
+  test("a closed channel is an I/O failure, and so a connection failure"):
+    causeOf(new ClosedChannelException()).map: cause =>
+      assertEquals(cause, TransportCause.ConnectionFailed("java.nio.channels.ClosedChannelException"))
+
+  test("a java.util.concurrent timeout is a timeout"):
+    causeOf(new TimeoutException("waited too long")).map: cause =>
+      assertEquals(cause, TransportCause.Timeout("waited too long"))
+
+  test("a programming error from a backend is unknown, which the retry engine does not repeat"):
+    // An IllegalStateException is what the JDK client throws once it has been
+    // shut down, and an UnsupportedOperationException is what a user-supplied
+    // backend throws for something it does not implement. Neither is I/O, and
+    // neither heals by waiting.
+    causeOf(new UnsupportedOperationException("streaming is not supported")).map: cause =>
+      assertEquals(cause, TransportCause.Unknown("streaming is not supported"))
+
   test("a body that passed the configured bound is classified as too large, not as unknown"):
-    // Unknown is retryable and ResponseTooLarge is not, so misclassifying this one
-    // would re-download the oversized body on every remaining attempt.
+    // ResponseTooLarge is never retried, and neither is Unknown any more, but the
+    // two are still different answers: one says the bound worked and the other
+    // says something is wrong with the client.
     causeOf(StreamMaxLengthExceededException(1024L)).map: cause =>
       assertEquals(cause, TransportCause.ResponseTooLarge("Stream length limit of 1024 bytes exceeded"))
 
@@ -220,21 +281,21 @@ final class SttpHttpPortSuite extends FunSuite:
 
   test("a request carries the bound the caller asked for, not one the adapter chose"):
     val backend = recording(respondingOk)
-    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous), Idle)
 
     send(port, awkwardRequest).map: _ =>
       assertEquals(sent(backend).options.maxResponseBodyLength, Some(CodebergConfig.DefaultMaxResponseBodyBytes))
 
   test("a larger bound reaches sttp unchanged, which is how an archive download is served"):
     val backend = recording(respondingOk)
-    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous))
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous), Idle)
 
     send(port, awkwardRequest, CodebergConfig.DefaultMaxDownloadBodyBytes).map: _ =>
       assertEquals(sent(backend).options.maxResponseBodyLength, Some(CodebergConfig.DefaultMaxDownloadBodyBytes))
 
   test("the bound is whatever the caller passed, never a number the adapter kept"):
     val backend = recording(respondingOk)
-    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous).copy(maxResponseBodyBytes = 111L))
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous).copy(maxResponseBodyBytes = 111L), Idle)
 
     send(port, awkwardRequest, 222L).map: _ =>
       assertEquals(sent(backend).options.maxResponseBodyLength, Some(222L))
@@ -249,7 +310,7 @@ final class SttpHttpPortSuite extends FunSuite:
 
   test("the token reaches the Authorization header and nothing else this adapter produces"):
     val backend = recording(failingWith(new IllegalStateException("boom")))
-    val port    = SttpHttpPort(backend, configFor(Auth.Token(token(Secret))))
+    val port    = SttpHttpPort(backend, configFor(Auth.Token(token(Secret))), Idle)
 
     send(port, awkwardRequest).map: result =>
       val rendered = List(port.toString, result.toString, sent(backend).uri.toString).mkString(" | ")
@@ -257,10 +318,58 @@ final class SttpHttpPortSuite extends FunSuite:
       assertEquals(headerOf(backend, "authorization"), Some(s"token $Secret"))
       assert(!rendered.contains(Secret), rendered)
 
+  // --- the whole-exchange bound --------------------------------------------
+
+  test("a response whose body never completes fails as a timeout once the read timeout elapses"):
+    // sttp's readTimeout maps onto the JDK's HttpRequest timeout, which fires
+    // only until the headers arrive; a server that stalls mid-body would hang
+    // the Future forever without this race.
+    val timer  = ManualTimer()
+    val config = configFor(Auth.Anonymous).copy(readTimeout = 7.seconds)
+    val port   = SttpHttpPort(neverAnswering, config, timer)
+
+    val result = send(port, awkwardRequest)
+
+    assert(!result.isCompleted, "the send completed before either the body or the deadline")
+    assertEquals(timer.requested, List(7.seconds))
+
+    timer.fire()
+
+    assertEquals(result.value.map(_.toOption), Some(Some(Left(TransportFailure(SttpHttpPort.exchangeTimedOut(config))))))
+
+  test("the timeout detail names the bound that fired and nothing about the request"):
+    val config = configFor(Auth.Anonymous).copy(readTimeout = 7.seconds)
+
+    assertEquals(
+      SttpHttpPort.exchangeTimedOut(config),
+      TransportCause.Timeout("no complete response within the read timeout of 7 seconds"),
+    )
+
+  test("a response that arrives in time is unaffected by the deadline that later elapses"):
+    val timer = ManualTimer()
+    val port  = SttpHttpPort(respondingOk, configFor(Auth.Anonymous), timer)
+
+    send(port, awkwardRequest).map: result =>
+      timer.fire()
+
+      assertEquals(result.map(_.status), Right(200))
+
+  test("a deadline the timer refuses leaves the send to decide, so a closed client does not fail an answered call"):
+    val port = SttpHttpPort(respondingOk, configFor(Auth.Anonymous), ClosedTimer)
+
+    send(port, awkwardRequest).map(result => assertEquals(result.map(_.status), Right(200)))
+
+  test("the JDK's own header timeout is still armed on the request, alongside the whole-exchange bound"):
+    val backend = recording(respondingOk)
+    val config  = configFor(Auth.Anonymous).copy(readTimeout = 7.seconds)
+    val port    = SttpHttpPort(backend, config, Idle)
+
+    send(port, awkwardRequest).map(_ => assertEquals(sent(backend).options.readTimeout, 7.seconds))
+
   test("a base URI sttp cannot parse fails the call instead of throwing"):
     val backend = recording(respondingOk)
     val config  = configFor(Auth.Anonymous).copy(baseUri = orFail(BaseUri.from("https://forge.example:nope/api/v1")))
-    val port    = SttpHttpPort(backend, config)
+    val port    = SttpHttpPort(backend, config, Idle)
 
     send(port, awkwardRequest).map: result =>
       assertEquals(result, Left(TransportFailure(TransportCause.Unknown(SttpHttpPort.UnparseableBaseUri))))
@@ -288,7 +397,7 @@ final class SttpHttpPortSuite extends FunSuite:
     port.send(request, "https://forge.example/api/v1/repos/ow%20ner", maxBodyBytes)
 
   private def causeOf(error: Throwable): Future[TransportCause] =
-    val port = SttpHttpPort(failingWith(error), configFor(Auth.Anonymous))
+    val port = SttpHttpPort(failingWith(error), configFor(Auth.Anonymous), Idle)
 
     send(port, awkwardRequest).map:
       case Left(failure) => failure.cause
@@ -313,6 +422,10 @@ final class SttpHttpPortSuite extends FunSuite:
 
   private def failingWith(error: Throwable): BackendStub[Future] =
     BackendStub.asynchronousFuture.whenAnyRequest.thenThrow(error)
+
+  /** A backend whose response never completes — a server that sent its headers and then stalled mid-body. */
+  private def neverAnswering: BackendStub[Future] =
+    BackendStub.asynchronousFuture.whenAnyRequest.thenRespondF(Future.never)
 
   private def recording(delegate: BackendStub[Future]): Backend[Future] & RecordingBackend =
     RecordingBackend(delegate)

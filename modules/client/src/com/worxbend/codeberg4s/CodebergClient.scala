@@ -16,7 +16,8 @@ import com.worxbend.codeberg4s.users.UserApi
 
 import sttp.client4.Backend
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.util.Try
 
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -89,13 +90,15 @@ final class CodebergClient private (
   /** Instance-level endpoints: server settings, the signing key and markdown rendering. */
   val misc: MiscellaneousApi = MiscellaneousApi(pipeline)
 
-  private val closed: AtomicBoolean = AtomicBoolean(false)
+  private val closing: AtomicBoolean = AtomicBoolean(false)
+
+  private val release: Promise[Unit] = Promise[Unit]()
 
   /** Releases the resources this client owns.
     *
-    * Always releases the scheduler thread behind the retry backoff. Closes the HTTP backend '''only''' when this client
-    * created it, that is when it was built by [[CodebergClient.apply]]; a backend passed to
-    * [[CodebergClient.usingBackend]] belongs to the caller, who may well be sharing it with the rest of their
+    * Always releases the scheduler thread behind the retry backoff and the read-timeout deadlines. Closes the HTTP
+    * backend '''only''' when this client created it, that is when it was built by [[CodebergClient.apply]]; a backend
+    * passed to [[CodebergClient.usingBackend]] belongs to the caller, who may well be sharing it with the rest of their
     * application, and closing it here would break them.
     *
     * Closing an owned backend ends the JDK `java.net.http.HttpClient` under it: this library calls that client's
@@ -108,19 +111,59 @@ final class CodebergClient private (
     * method returns before the last in-flight response has been delivered; nothing in this library observes that, and
     * waiting for it would make an ordinary `finally` block block.
     *
-    * Using a client after closing it is a defect. A call started afterwards fails with a rejected-execution failure
-    * from the scheduler, and a call that was already sitting in retry backoff fails with a
-    * `java.util.concurrent.CancellationException` — see [[com.worxbend.codeberg4s.client.FutureTimer.close]]. Neither
-    * is reported as a [[CodebergError]], because a closed client is a programming mistake and not a remote failure to
-    * be retried.
+    * '''What this method does not report.''' sttp answers a backend's own `close()` with a `Future[Unit]`, and this
+    * method neither waits for it nor returns it — it returns before the pool has finished shutting down, and a
+    * `finally client.close()` stays a one-liner. That outcome is available as [[released]]; an application that wants
+    * to know whether its connection pool shut down cleanly, or to log a backend that failed to, observes that `Future`.
+    * Nothing else in this library looks at it, so a failed backend close that nobody observes is discarded silently.
     *
-    * Both are failures, which is the guarantee that matters at shutdown: no `Future` this client handed out is left
-    * without an outcome, so an application closing down never waits on one that cannot finish.
+    * '''Using a client after closing it is a defect, and not one this library detects up front.''' A call made
+    * afterwards fails only when it reaches something this method released, and succeeds otherwise:
+    *
+    *   - a call that needs the scheduler for a retry backoff fails with a
+    *     `java.util.concurrent.RejectedExecutionException` from it, and a call that was already sitting in a backoff
+    *     when `close()` arrived fails with a `java.util.concurrent.CancellationException` — see
+    *     [[com.worxbend.codeberg4s.client.FutureTimer.close]]. The read-timeout deadline every send arms on the same
+    *     scheduler does not count: a deadline the scheduler refuses is simply not armed, so the send goes on unbounded
+    *     rather than failing;
+    *   - a call that reaches a backend this client owns is refused by the shut-down JDK client with an `IOException` —
+    *     measured, on JDK 25: `java.io.IOException: closed` — which the transport classifies as
+    *     [[TransportCause.ConnectionFailed]]. Under a retry policy that repeats such a failure, the repeat's backoff
+    *     then meets the released scheduler, so what the caller sees is the `RejectedExecutionException` above; under
+    *     [[com.worxbend.codeberg4s.retry.RetryPolicy.Off]], or an eligibility that forbids repeating, it is a
+    *     [[CodebergError.Transport]] carrying that cause;
+    *   - a first attempt on a backend the caller supplied reaches neither, goes through, and succeeds.
+    *
+    * None of the failures is laundered into a [[CodebergError]] the caller would be told to retry, because a closed
+    * client is a programming mistake and not a remote failure. And every one of them '''is''' a failure, which is the
+    * guarantee that matters at shutdown: no `Future` this client handed out is left without an outcome, so an
+    * application closing down never waits on one that cannot finish.
     */
   def close(): Unit =
-    if closed.compareAndSet(false, true) then
+    if closing.compareAndSet(false, true) then
       timer.close()
-      ownedBackend.foreach(backend => backend.close().discard)
+      release.completeWith(closeOwnedBackend()).discard
+
+  /** The outcome of releasing the backend this client owns — where a failed backend close is surfaced.
+    *
+    * Completes once [[close]] has been called '''and''' the owned backend's own `close()` has completed; fails when
+    * that `close()` failed, with whatever it failed with, and also when it threw instead of returning a `Future`. For a
+    * client built by [[CodebergClient.usingBackend]] there is nothing to release, so it completes as soon as [[close]]
+    * is called. It never completes on a client that is never closed.
+    *
+    * This exists because [[close]] returns nothing about the backend: a `finally` block has no use for a `Future`, and
+    * most applications have no use for the outcome of a connection pool's shutdown. The ones that do — a service that
+    * logs every resource it failed to release, a test that asserts the pool really went away — observe this instead of
+    * being made to wait on it.
+    */
+  def released: Future[Unit] = release.future
+
+  /** `close()` on the owned backend as a `Future`, whether it completed, failed, threw or does not exist. A backend
+    * that throws from `close()` — a user-supplied one, say — becomes a failed `Future` rather than an exception out of
+    * [[close]], so a `finally` block that closes this client can never itself blow up.
+    */
+  private def closeOwnedBackend(): Future[Unit] =
+    ownedBackend.fold(Future.unit)(backend => Try(backend.close()).fold(Future.failed, identity))
 
 /** Ways to build a [[CodebergClient]], differing only in who owns the HTTP backend. */
 object CodebergClient:
@@ -166,8 +209,9 @@ object CodebergClient:
     * `sttp.client4.testing.BackendStub` in a test.
     *
     * Note that sttp models the connect timeout as a property of the backend rather than of a request, so
-    * [[CodebergConfig.connectTimeout]] is ignored here — configure it on `backend`. [[CodebergConfig.readTimeout]] is
-    * applied per request and is honoured either way.
+    * [[CodebergConfig.connectTimeout]] is ignored here — configure it on `backend`. [[CodebergConfig.readTimeout]]
+    * bounds the whole exchange of each request, headers and body, and is honoured either way; see
+    * [[com.worxbend.codeberg4s.transport.SttpHttpPort]].
     *
     * @param config
     *   the instance to talk to, the credentials, the retry policy and the read timeout
@@ -212,7 +256,10 @@ object CodebergClient:
     // unwrapped rather than paying for a guard on every unconfigured request.
     val observer = telemetry.fold(Telemetry.noOp[Future])(GuardedTelemetry(_))
 
-    val port = SttpHttpPort(backend, config)
+    // The port shares the retry scheduler: every send races the whole exchange
+    // against a readTimeout deadline on it, so the deadline costs no thread and
+    // is released with the client. See SttpHttpPort's "Timeouts" note.
+    val port = SttpHttpPort(backend, config, timer)
 
     val pipeline = ApiPipeline[Future](
       port,
