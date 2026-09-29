@@ -25,11 +25,15 @@ import scala.concurrent.Future
   * A repository whose wiki is disabled answers `404` to every route here, indistinguishably from one that does not
   * exist.
   *
-  * ==Page names are not one path segment==
+  * ==Page names are one path segment, slash included==
   *
-  * A [[WikiPageName]] may contain `/`, because a wiki has sub-pages, and it reaches the wire as several segments for
-  * the reason [[com.worxbend.codeberg4s.repositories.BranchName]] does — a slash percent-encoded into one segment
-  * addresses a page that does not exist. Spaces are ordinary here too. See [[WikiPageName]].
+  * A [[WikiPageName]] may contain `/`, because a wiki has sub-pages — and on the `/wiki/page/{pageName}` routes it
+  * reaches the wire as '''one''' segment with the slash percent-encoded as `%2F`. That is the opposite of what
+  * [[com.worxbend.codeberg4s.repositories.BranchName]] does, and the difference is Forgejo's router: `/branches/` is a
+  * wildcard route that matches across segments, while `/wiki/page/{pageName}` is a `{param}` route that matches exactly
+  * one segment and reads it through `PathParam`, which path-unescapes. Splitting `Deployment/Kubernetes` into two
+  * segments would therefore route to nothing and answer `404`; Gitea's own SDK escapes the name whole, and so does this
+  * library. Spaces are ordinary here too. See [[WikiPageName]].
   *
   * ==Evidence==
   *
@@ -80,6 +84,10 @@ final class RepositoryWikiApi private[codeberg4s] (pipeline: ApiPipeline[Future]
     * '''The content is base64''' and is handed back as a [[com.worxbend.codeberg4s.repositories.FileContent]], decoded
     * only when the caller asks. `sidebar` and `footer` are '''not''' decoded, because the spec does not say they are
     * encoded; see [[WikiPage]].
+    *
+    * '''The name is one path segment, slash included''' — see the class note: this route is a `{param}` route, not a
+    * wildcard, so `Deployment/Kubernetes` is sent as `Deployment%2FKubernetes`. The same holds for [[editPage]] and
+    * [[deletePage]], which share the path.
     *
     * '''Failures.''' The group contract above. A page name that does not exist is a `404`, as is a wiki that is
     * disabled.
@@ -293,5 +301,8 @@ object RepositoryWikiApi:
   private def wikiPath(owner: Owner, name: RepoName): List[String] =
     RepositoryRequests.repositoryPath(owner, name) :+ "wiki"
 
+  /** `…/wiki/page/{pageName}`, with the name kept whole: the route is a single `{param}` segment, so a `/` in the name
+    * is percent-encoded by the transport rather than split. See the class note.
+    */
   private def pagePath(owner: Owner, name: RepoName, pageName: WikiPageName): List[String] =
-    wikiPath(owner, name) ++ ("page" :: pageName.segments)
+    wikiPath(owner, name) ++ List("page", pageName.value)

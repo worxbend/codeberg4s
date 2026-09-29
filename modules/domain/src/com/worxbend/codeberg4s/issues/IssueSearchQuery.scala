@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.issues
 
-import com.worxbend.codeberg4s.Owner
+import com.worxbend.codeberg4s.{Owner, SearchKeyword, ValidationError}
 
 import java.time.Instant
 
@@ -86,8 +86,17 @@ final case class IssueSearchQuery(
   /** Restricts the search to issues in any of `titles`. */
   def withMilestones(titles: Vector[MilestoneTitle]): IssueSearchQuery = copy(milestones = titles)
 
-  /** Sets the free-text term. */
-  def matching(keywords: String): IssueSearchQuery = copy(text = Some(keywords))
+  /** Sets the free-text term.
+    *
+    * The keyword is trimmed, a blank one is treated as no keyword at all — it clears the filter rather than sending
+    * `q=` — and a control character is rejected; see [[com.worxbend.codeberg4s.SearchKeyword]] for each of those. This
+    * is the one builder on the type that can fail, which is why it alone returns an `Either`.
+    *
+    * @return
+    *   the query, or a [[ValidationError]] on the `"text"` field
+    */
+  def matching(keywords: String): Either[ValidationError, IssueSearchQuery] =
+    SearchKeyword.normalize("text", keywords).map(normalized => copy(text = normalized))
 
   /** Ranks matches from the repository `id` first. */
   def prioritising(id: Long): IssueSearchQuery = copy(priorityRepoId = Some(id))

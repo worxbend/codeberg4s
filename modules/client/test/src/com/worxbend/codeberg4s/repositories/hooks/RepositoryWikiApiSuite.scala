@@ -48,13 +48,19 @@ final class RepositoryWikiApiSuite extends FunSuite with HookStubs:
         assertEquals(pathOf(backend), s"$Repository/wiki/page/Home")
         assertEquals(page.content.flatMap(_.text), Some("# Home\n"))
 
-  test("a page name with a slash reaches the wire as several segments, not one encoded one"):
-    val backend = RecordingBackend(responding(200, RepositoryWikiApiSuite.PageBody))
+  test("a page name with a slash is one percent-encoded segment, because wiki/page/{pageName} is not a wildcard route"):
+    val read    = RecordingBackend(responding(200, RepositoryWikiApiSuite.PageBody))
+    val edited  = RecordingBackend(responding(200, RepositoryWikiApiSuite.PageBody))
+    val deleted = RecordingBackend(responding(204, ""))
 
-    onApi(backend): api =>
-      api
-        .page(Handle, Name, SubPage)
-        .map(_ => assertEquals(pathOf(backend), s"$Repository/wiki/page/Deployment/Kubernetes"))
+    for
+      _ <- onApi(read)(api => api.page(Handle, Name, SubPage))
+      _ <- onApi(edited)(api => api.editPage(Handle, Name, SubPage, EditWikiPage.ofText("# Kubernetes\n")))
+      _ <- onApi(deleted)(api => api.deletePage(Handle, Name, SubPage))
+    yield
+      assertEquals(pathOf(read), s"$Repository/wiki/page/Deployment%2FKubernetes")
+      assertEquals(pathOf(edited), s"$Repository/wiki/page/Deployment%2FKubernetes")
+      assertEquals(pathOf(deleted), s"$Repository/wiki/page/Deployment%2FKubernetes")
 
   test("the revision listing unwraps the commits envelope and sends page without limit"):
     val backend = RecordingBackend(responding(200, RepositoryWikiApiSuite.RevisionsBody))

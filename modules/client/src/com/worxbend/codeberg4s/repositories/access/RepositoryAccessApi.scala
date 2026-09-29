@@ -172,7 +172,10 @@ final class RepositoryAccessApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     * after `N` attempts the repository has no grant for it, which is what one attempt would have produced, and nothing
     * is created. That is a weaker guarantee than [[deleteTagProtection]]'s — an account can in principle be deleted and
     * its handle re-registered — but the operation is a revocation, and revoking twice cannot grant anything. The cost
-    * is stated in the class note.
+    * is the one the class note states for every name-keyed delete, and it is worth spelling out here: if the first
+    * attempt succeeded and its response was lost, the retry finds no grant to revoke and Forgejo answers `404`, so a
+    * removal that '''did''' happen surfaces as `Api(404)`. Read that `404` as "it is gone", not as "it was never
+    * there"; [[collaborators]] settles it.
     *
     * '''Answers `204`.'''
     *
@@ -295,7 +298,7 @@ final class RepositoryAccessApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     *
     * '''Failures.''' The group contract above, `405` included.
     */
-  def checkTeam(owner: Owner, name: RepoName, team: TeamName): Future[Team] =
+  def checkTeam(owner: Owner, name: RepoName, team: TeamSlug): Future[Team] =
     pipeline.call(RepositoryAccessApi.checkTeamRequest(owner, name, team), RetryEligibility.IdempotentOnly)(using
       RepositoryAccessDecoders.team)
 
@@ -318,7 +321,7 @@ final class RepositoryAccessApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     * '''Failures.''' The group contract above. `405` is what a repository owned by a user answers, and `422` what a
     * team name that does not resolve in the owning organisation answers.
     */
-  def addTeam(owner: Owner, name: RepoName, team: TeamName): Future[Unit] =
+  def addTeam(owner: Owner, name: RepoName, team: TeamSlug): Future[Unit] =
     pipeline.callUnit(RepositoryAccessApi.addTeamRequest(owner, name, team), RetryEligibility.Never)
 
   /** Withdraws a team's access to the repository — `DELETE /repos/{owner}/{repo}/teams/{team}`.
@@ -332,7 +335,7 @@ final class RepositoryAccessApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     *
     * '''Failures.''' The group contract above, `405` included.
     */
-  def deleteTeam(owner: Owner, name: RepoName, team: TeamName): Future[Unit] =
+  def deleteTeam(owner: Owner, name: RepoName, team: TeamSlug): Future[Unit] =
     pipeline.callUnit(RepositoryAccessApi.deleteTeamRequest(owner, name, team), RetryEligibility.Never)
 
 /** The requests this group issues, its operation ids, and its typed rail. */
@@ -464,15 +467,15 @@ object RepositoryAccessApi:
       exec.attempt(rail.teams(owner, name))
 
     /** [[RepositoryAccessApi.checkTeam]] with its failure as a value. */
-    def checkTeam(owner: Owner, name: RepoName, team: TeamName): Future[Either[CodebergError, Team]] =
+    def checkTeam(owner: Owner, name: RepoName, team: TeamSlug): Future[Either[CodebergError, Team]] =
       exec.attempt(rail.checkTeam(owner, name, team))
 
     /** [[RepositoryAccessApi.addTeam]] with its failure as a value. */
-    def addTeam(owner: Owner, name: RepoName, team: TeamName): Future[Either[CodebergError, Unit]] =
+    def addTeam(owner: Owner, name: RepoName, team: TeamSlug): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.addTeam(owner, name, team))
 
     /** [[RepositoryAccessApi.deleteTeam]] with its failure as a value. */
-    def deleteTeam(owner: Owner, name: RepoName, team: TeamName): Future[Either[CodebergError, Unit]] =
+    def deleteTeam(owner: Owner, name: RepoName, team: TeamSlug): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.deleteTeam(owner, name, team))
 
   private def collaboratorsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
@@ -529,14 +532,14 @@ object RepositoryAccessApi:
   private def teamsRequest(owner: Owner, name: RepoName): CodebergRequest =
     read(ListTeamsOperation, teamsPath(owner, name), Nil)
 
-  private def checkTeamRequest(owner: Owner, name: RepoName, team: TeamName): CodebergRequest =
+  private def checkTeamRequest(owner: Owner, name: RepoName, team: TeamSlug): CodebergRequest =
     read(CheckTeamOperation, teamPath(owner, name, team), Nil)
 
   /** The team grant, which carries no body at all; see [[RepositoryAccessApi.addTeam]]. */
-  private def addTeamRequest(owner: Owner, name: RepoName, team: TeamName): CodebergRequest =
+  private def addTeamRequest(owner: Owner, name: RepoName, team: TeamSlug): CodebergRequest =
     bodiless(AddTeamOperation, HttpMethod.Put, teamPath(owner, name, team))
 
-  private def deleteTeamRequest(owner: Owner, name: RepoName, team: TeamName): CodebergRequest =
+  private def deleteTeamRequest(owner: Owner, name: RepoName, team: TeamSlug): CodebergRequest =
     remove(DeleteTeamOperation, teamPath(owner, name, team))
 
   private def collaboratorsPath(owner: Owner, name: RepoName): List[String] =
@@ -554,5 +557,5 @@ object RepositoryAccessApi:
   private def teamsPath(owner: Owner, name: RepoName): List[String] =
     RepositoryRequests.repositoryPath(owner, name) :+ "teams"
 
-  private def teamPath(owner: Owner, name: RepoName, team: TeamName): List[String] =
+  private def teamPath(owner: Owner, name: RepoName, team: TeamSlug): List[String] =
     teamsPath(owner, name) :+ team.value

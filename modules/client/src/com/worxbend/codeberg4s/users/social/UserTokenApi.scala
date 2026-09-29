@@ -39,12 +39,22 @@ import scala.concurrent.Future
   *
   * `UserTokenApiSuite` asserts each of those rather than asserting the intention.
   *
-  * ==Authentication, and why the path takes a username==
+  * ==Authentication: basic credentials only, on all three operations==
   *
-  * Every path here names an account explicitly. `POST` and `DELETE` need a token of their own, or basic credentials —
-  * Forgejo permits minting a token with a password, which is how the first token is obtained. `docs/HAZARDS.md` §2
-  * measures that the spec carries no per-operation security information, so treat the `optional` marking on the listing
-  * as unverified and configure credentials.
+  * '''Every route here rejects a token.''' Forgejo's router wraps the whole `/users/{username}/tokens` group in
+  * `reqBasicOrRevProxyAuth()`, so [[list]], [[create]] and [[delete]] all answer `401` to an `Authorization: token …`
+  * header — including a valid one — and accept only HTTP basic credentials, that is
+  * [[com.worxbend.codeberg4s.auth.Auth.Basic]] with the account's username and password (or a reverse-proxy identity,
+  * which this library does not model). The reason is the one that makes [[create]] dangerous: a token that could mint
+  * or revoke tokens would be a token that can escalate itself, so Forgejo insists on the password for the operations
+  * that manage them. That is why the first token of an account is obtained with a password, and why a client whose
+  * [[com.worxbend.codeberg4s.CodebergConfig.auth]] is a token cannot rotate it through this group.
+  *
+  * `docs/HAZARDS.md` §2 measures that the spec carries no per-operation security information — the `optional` marking
+  * on the listing is the global default and says nothing — so the fact above comes from the router, not the spec. This
+  * class cannot check the configured credentials before dialling, because an API group is built on the shared pipeline
+  * and never sees [[com.worxbend.codeberg4s.CodebergConfig]]; a client configured with a token learns of the mismatch
+  * as an `Api(401)` on its first call here.
   *
   * A token can only be managed for the account the credentials belong to, unless they are an administrator's. Asking
   * about somebody else's tokens is `403`, not an empty listing.
@@ -79,6 +89,8 @@ final class UserTokenApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usi
 
   /** Lists an account's access tokens — `GET /users/{username}/tokens`.
     *
+    * '''Basic credentials only.''' This route answers `401` to a token, valid or not; see the class note.
+    *
     * '''No token material comes back.''' Forgejo sends the `sha1` field empty on every element, and
     * [[com.worxbend.codeberg4s.users.social.wire.AccessTokenDto.toDomainAt]] — the conversion this listing uses — has
     * nowhere to put one even if a release started sending it. What identifies a token to a human is
@@ -91,6 +103,9 @@ final class UserTokenApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usi
     pipeline.callPage(UserTokenApi.listRequest(username, params), params)(using SocialDecoders.accessTokens)
 
   /** Mints an access token — `POST /users/{username}/tokens`.
+    *
+    * '''Basic credentials only.''' This route answers `401` to a token, valid or not — a token cannot mint a token; see
+    * the class note.
     *
     * '''Read the class note before using this.''' The returned [[CreatedAccessToken.token]] is the only copy of the
     * credential that will ever exist outside the instance's database.
@@ -134,6 +149,8 @@ final class UserTokenApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usi
       SocialDecoders.createdAccessToken)
 
   /** Revokes an access token — `DELETE /users/{username}/tokens/{token}`.
+    *
+    * '''Basic credentials only.''' This route answers `401` to a token, valid or not; see the class note.
     *
     * '''Whether this is retried depends on how the token was addressed''', and the difference is a real hazard rather
     * than a nicety — see [[UserTokenApi.deleteEligibility]] for the decision and [[AccessTokenRef]] for the reasoning.

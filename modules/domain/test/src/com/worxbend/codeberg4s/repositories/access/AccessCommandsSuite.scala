@@ -99,15 +99,15 @@ final class AccessCommandsSuite extends FunSuite:
 
     assertEquals(command.namePattern.value, "v*")
     assertEquals(command.whitelistUsernames, Vector.empty[Username])
-    assertEquals(command.whitelistTeams, Vector.empty[String])
+    assertEquals(command.whitelistTeams, Vector.empty[TeamSlug])
 
   test("a tag protection create takes plain vectors, because absent and empty mean the same thing there"):
     val command = CreateTagProtection.matching(pattern("v*")).exempting(Vector(user("alice"))).exemptingTeams(
-      Vector("release")
+      Vector(TeamSlug("release"))
     )
 
     assertEquals(command.whitelistUsernames.map(_.value), Vector("alice"))
-    assertEquals(command.whitelistTeams, Vector("release"))
+    assertEquals(command.whitelistTeams, Vector(TeamSlug("release")))
 
   test("a tag protection edit takes options, because absent and empty do not mean the same thing there"):
     assertEquals(EditTagProtection.Nothing.namePattern, None)
@@ -119,13 +119,13 @@ final class AccessCommandsSuite extends FunSuite:
     assertEquals(cleared.whitelistUsernames, Some(Vector.empty[Username]))
 
   test("a tag protection edit states its two whitelists separately, and one does not clear the other"):
-    val command = EditTagProtection.Nothing.exempting(Vector(user("alice"))).exemptingTeams(Vector("release"))
+    val command = EditTagProtection.Nothing.exempting(Vector(user("alice"))).exemptingTeams(Vector(TeamSlug("release")))
 
     assertEquals(command.whitelistUsernames.map(_.map(_.value)), Some(Vector("alice")))
-    assertEquals(command.whitelistTeams, Some(Vector("release")))
+    assertEquals(command.whitelistTeams, Some(Vector(TeamSlug("release"))))
     assertEquals(command.namePattern, None)
-    assertEquals(EditTagProtection.Nothing.exemptingTeams(Vector.empty).whitelistTeams, Some(Vector.empty[String]))
-    assertEquals(EditTagProtection.Nothing.exemptingTeams(Vector("release")).whitelistUsernames, None)
+    assertEquals(EditTagProtection.Nothing.exemptingTeams(Vector.empty).whitelistTeams, Some(Vector.empty[TeamSlug]))
+    assertEquals(EditTagProtection.Nothing.exemptingTeams(Vector(TeamSlug("release"))).whitelistUsernames, None)
 
   test("editing only the pattern leaves both whitelists unstated"):
     val command = EditTagProtection.Nothing.matching(pattern("v1.*"))

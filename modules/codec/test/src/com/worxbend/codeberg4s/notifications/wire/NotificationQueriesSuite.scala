@@ -73,3 +73,21 @@ final class NotificationQueriesSuite extends FunSuite:
         "since"        -> "2026-07-01T00:00:00Z",
       ),
     )
+
+  test("a mark-read with nothing named sends nothing, so the instance's defaults apply"):
+    assertEquals(NotificationQueries.markRead(None, None), Nil)
+    assertEquals(NotificationQueries.toStatus(None), Nil)
+
+  test("a mark-read cursor is rendered in RFC 3339 under last_read_at, and the status under to-status"):
+    assertEquals(
+      NotificationQueries.markRead(Some(Since), Some(NotificationStatus.Pinned)),
+      List("last_read_at" -> "2026-07-01T00:00:00Z", "to-status" -> "pinned"),
+    )
+    assertEquals(NotificationQueries.markRead(Some(Since), None), List("last_read_at" -> "2026-07-01T00:00:00Z"))
+    assertEquals(NotificationQueries.toStatus(Some(NotificationStatus.Unread)), List("to-status" -> "unread"))
+
+  test("the mark-read renderer is one renderer, so the two PUT routes cannot drift apart"):
+    assertEquals(
+      NotificationQueries.markRead(None, Some(NotificationStatus.Read)),
+      NotificationQueries.toStatus(Some(NotificationStatus.Read)),
+    )

@@ -14,24 +14,25 @@ import com.worxbend.codeberg4s.{PathSegment, SegmentLiteral, ValidationError}
   * deprecated `branch_name` property, which is typed as a `BranchName` because there the value really is a branch; see
   * [[CreateBranchProtection.legacyBranchName]].
   *
-  * ==Exactly one path segment, which is a limitation of the route==
+  * ==A slash is allowed, and it travels percent-encoded inside one path segment==
   *
   * `spec/swagger.v1.json` declares `{name}` as one path parameter and Forgejo routes it as one path segment — unlike
   * `/repos/{owner}/{repo}/branches/{branch}`, whose route is a wildcard and whose values legitimately span several
-  * segments. A slash is therefore rejected here, which has a consequence worth stating plainly: '''a rule whose name
-  * contains a `/` — a `release/` prefix with a trailing wildcard is the usual shape — cannot be addressed by
-  * [[com.worxbend.codeberg4s.repositories.access.RepositoryAccessApi]]'s by-name endpoints at all.'''
+  * segments. A rule name containing `/` — a `release/` prefix with a trailing `*` is the usual shape — therefore cannot
+  * be sent as several segments the way a [[com.worxbend.codeberg4s.repositories.BranchName]] is: the router would see
+  * `release` and stop matching. It '''can''' be sent as one segment with the slash encoded as `%2F`, because Forgejo
+  * reads a `{param}` route value through `PathParam`, which path-unescapes it, and Gitea's own SDK escapes exactly this
+  * way. That is what the client does with [[value]]: the transport places the whole name in one segment and
+  * percent-encodes the slash.
   *
-  * That is the API's limitation, not this type's. Rejecting the name here trades a request that is certain to answer
-  * `404` for an immediate [[ValidationError]] that says why. Percent-encoding the slash into one segment is not
-  * attempted: nothing in the spec, and no capture, says the instance would decode it back, and quietly sending
-  * `release%2F*` in the hope that it does is exactly the guess this library does not make on a caller's behalf.
-  * `branchProtections` still returns such a rule, so it can be read — it just cannot be read, edited or deleted one at
-  * a time.
+  * Validation is therefore the '''segmented''' rule rather than the single-segment one: a blank name, a control
+  * character, a leading or trailing `/`, an empty segment such as the middle of `a//b`, and a `.` or `..` segment are
+  * refused, and a `/` between two real segments is accepted. The traversal check is the one that matters — `..`
+  * survives percent-encoding untouched, so without it a name could walk out of the route it was meant for.
   *
-  * That is also why a rule '''read back''' is a plain `String` on [[BranchProtection.ruleName]] rather than this type:
-  * dropping a rule the instance really holds, because this library cannot address it, would cost the caller the very
-  * information they asked for.
+  * A rule '''read back''' is a plain `String` on [[BranchProtection.ruleName]] rather than this type: dropping a rule
+  * the instance really holds, because this library disliked its spelling, would cost the caller the very information
+  * they asked for. Converting in that direction is the caller's explicit step through [[BranchRuleName.from]].
   */
 opaque type BranchRuleName = String
 
@@ -39,10 +40,10 @@ object BranchRuleName:
 
   /** Parses a branch protection rule name.
     *
-    * Trims surrounding whitespace. Rejects an empty or blank name, a name containing `/`, a name containing a control
-    * character, and the traversal segments `.` and `..` — see [[com.worxbend.codeberg4s.PathSegment]] for why that is a
-    * security boundary and not a convenience, and the type's own note for why the slash is rejected rather than
-    * encoded.
+    * Trims surrounding whitespace. Rejects an empty or blank name, a name containing a control character, a leading or
+    * trailing `/`, an empty `/`-separated part, and the traversal segments `.` and `..` — see
+    * [[com.worxbend.codeberg4s.PathSegment.segmented]] for why that is a security boundary and not a convenience, and
+    * the type's own note for why a `/` between two parts is accepted and encoded rather than refused.
     *
     * Glob characters are '''not''' rejected: `*` and `?` are what a rule name is made of, and they are legal in a URI
     * path segment.
@@ -51,7 +52,7 @@ object BranchRuleName:
     *   the trimmed name, or a [[ValidationError]] on the `"branchRuleName"` field
     */
   def from(value: String): Either[ValidationError, BranchRuleName] =
-    PathSegment.from("branchRuleName", value)
+    PathSegment.segmented("branchRuleName", value)
 
   /** Builds a rule name from a string literal, checked while the code compiles.
     *
@@ -61,11 +62,11 @@ object BranchRuleName:
     * use [[from]] for a value known only at run time.
     */
   inline def apply[V <: String & Singleton](inline value: V): BranchRuleName =
-    SegmentLiteral.plain("branchRuleName", value)
+    SegmentLiteral.segmented("branchRuleName", value)
 
   extension (name: BranchRuleName)
 
-    /** The name as a string, ready to be used as one path segment. */
+    /** The name as a string, sent whole as '''one''' path segment — a `/` in it is percent-encoded, never split. */
     def value: String = name
 
 /** The glob a tag protection rule matches tags with — the `name_pattern` of a `TagProtection`.
@@ -108,41 +109,57 @@ object TagNamePattern:
     /** The pattern as a string, as it is sent in a request body. */
     def value: String = pattern
 
-/** The name of a team being granted or denied access to a repository — the `{team}` of
-  * `/repos/{owner}/{repo}/teams/{team}`.
+/** The slug by which a team is named on the repository access surface — the `{team}` of
+  * `/repos/{owner}/{repo}/teams/{team}`, and an entry of a branch or tag protection's team whitelist.
   *
-  * A team name is unique '''within an organisation''' and nowhere else:
+  * ==Why a slug, and why not [[com.worxbend.codeberg4s.organizations.TeamName]]==
+  *
+  * `com.worxbend.codeberg4s.organizations.TeamName` is the name a caller '''supplies''' when creating or renaming a
+  * team, and it may contain a `/` because it only ever travels in a request body. This type is the same team as the
+  * '''address''' Forgejo resolves it by — one path segment on the team routes, and one array entry on the
+  * `push_whitelist_teams`, `merge_whitelist_teams`, `approvals_whitelist_teams` and `whitelist_teams` properties, where
+  * Forgejo looks the entry up by name within the repository's organisation. The two used to share a name, which made
+  * `import …organizations.TeamName` and `import …repositories.access.TeamName` in one file a compile error and a
+  * reader's puzzle; this one is now `TeamSlug`.
+  *
+  * A team slug is unique '''within an organisation''' and nowhere else:
   * [[com.worxbend.codeberg4s.organizations.TeamId]] already records that two organisations may each own a team called
-  * `owners`. The route resolves the name against the repository's own organisation, so the name is unambiguous for one
+  * `owners`. The route resolves the slug against the repository's own organisation, so the value is unambiguous for one
   * request — but it is not an instance-wide identifier the server never reuses, which is why neither of the two
   * mutating team endpoints is retried. See [[RepositoryAccessApi.addTeam]].
+  *
+  * A whitelist entry '''read back''' is a plain `String` on [[BranchProtection]] and [[TagProtection]], for the reason
+  * [[BranchRuleName]] gives: a team the instance really lists must not vanish because this library disliked its
+  * spelling.
   */
-opaque type TeamName = String
+opaque type TeamSlug = String
 
-object TeamName:
+object TeamSlug:
 
-  /** Parses a team name.
+  /** Parses a team slug.
     *
-    * Trims surrounding whitespace. Rejects an empty or blank name, a name containing `/`, a name containing a control
-    * character, and the traversal segments `.` and `..`.
+    * Trims surrounding whitespace. Rejects an empty or blank value, a value containing `/`, a value containing a
+    * control character, and the traversal segments `.` and `..`. The slash rule holds for the whitelist entries as much
+    * as for the path: a whitelist line Forgejo cannot resolve to a team is an entry that grants nothing while looking
+    * as though it grants something.
     *
     * @return
-    *   the trimmed name, or a [[ValidationError]] on the `"teamName"` field
+    *   the trimmed slug, or a [[ValidationError]] on the `"teamSlug"` field
     */
-  def from(value: String): Either[ValidationError, TeamName] =
-    PathSegment.from("teamName", value)
+  def from(value: String): Either[ValidationError, TeamSlug] =
+    PathSegment.from("teamSlug", value)
 
-  /** Builds a team name from a string literal, checked while the code compiles.
+  /** Builds a team slug from a string literal, checked while the code compiles.
     *
-    * `TeamName("...")` '''is''' the team name, with no `Either` to unwrap: a literal is either valid or it is not, and
-    * an invalid one is a compile error pointing at the literal itself. The rules are [[from]]'s, minus the trim —
+    * `TeamSlug("...")` '''is''' the slug, with no `Either` to unwrap: a literal is either valid or it is not, and an
+    * invalid one is a compile error pointing at the literal itself. The rules are [[from]]'s, minus the trim —
     * surrounding whitespace is refused rather than removed. See [[com.worxbend.codeberg4s.SegmentLiteral]], and use
     * [[from]] for a value known only at run time.
     */
-  inline def apply[V <: String & Singleton](inline value: V): TeamName =
-    SegmentLiteral.plain("teamName", value)
+  inline def apply[V <: String & Singleton](inline value: V): TeamSlug =
+    SegmentLiteral.plain("teamSlug", value)
 
-  extension (name: TeamName)
+  extension (slug: TeamSlug)
 
-    /** The name as a string, ready to be used as one path segment. */
-    def value: String = name
+    /** The slug as a string, ready to be used as one path segment or one whitelist entry. */
+    def value: String = slug

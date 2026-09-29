@@ -80,19 +80,22 @@ import java.time.LocalDate
   * [[isMember]] and [[isPublicMember]] are the two exceptions to the failure contract above, and they are exceptions in
   * one direction only: for those two, and only those two, a `404` is an answer rather than a failure. Each says so.
   *
-  * ==Retries: nothing keyed by an organisation handle is ever repeated==
+  * ==Retries: what creates, renames or destroys by handle is never repeated; what asserts a state is==
   *
-  * Reads are [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]], as everywhere. Every '''write''' on this
-  * class is [[com.worxbend.codeberg4s.core.RetryEligibility.Never]], and one argument covers all of them: an
-  * [[OrgName]] is not an identifier. [[rename]] is in this very class, and [[delete]] frees a handle for anybody to
-  * take, so between a lost success and its retry the handle in the path can come to mean a '''different''' organisation
-  * — and the retry would then block a user, conceal a member or clear an avatar somewhere nobody asked about. The bar
-  * earlier waves set is that [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]] requires the request to name
-  * one instance-wide identifier the server never reuses; a handle that `rename` can move is the opposite of that.
+  * Reads are [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]], as everywhere. The writes on this class
+  * split on one line. [[create]], [[edit]], [[delete]] and [[rename]] are
+  * [[com.worxbend.codeberg4s.core.RetryEligibility.Never]]: each either creates something, replaces a whole record with
+  * a partial one, or destroys or moves something addressed by an [[OrgName]] — and an `OrgName` is not an identifier.
+  * [[rename]] is in this very class, and [[delete]] frees a handle for anybody to take, so between a lost success and
+  * its retry the handle in the path can come to mean a '''different''' organisation, and a repeated delete or rename
+  * would then act on it. [[deleteAvatar]] is [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]]: it asserts
+  * a state — "no custom avatar" — that a repeat re-asserts, creates nothing, and destroys nothing that a re-upload does
+  * not restore; it is the same decision [[com.worxbend.codeberg4s.users.account.UserAccountApi.deleteAvatar]] makes, on
+  * the same terms, and the two used to disagree. The membership and blocking toggles under [[members]] follow the same
+  * state-assertion rule; that class states it.
   *
-  * The neighbours are not bound by that, and say so where they differ: [[hooks]] and [[labels]] address their subject
-  * by a row id, which a stale handle can only turn into a `404`, and [[teamAdmin]] is rooted at `/teams/{id}` for the
-  * same reason.
+  * The neighbours say so where they differ: [[hooks]] and [[labels]] address their subject by a row id, which a stale
+  * handle can only turn into a `404`, and [[teamAdmin]] is rooted at `/teams/{id}` for the same reason.
   *
   * ==Paging==
   *
@@ -291,10 +294,13 @@ final class OrganizationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
     *
     * The organisation falls back to whatever the instance generates for an account without one.
     *
-    * '''Never retried''', for the class-level reason: the only thing this request names is a handle [[rename]] can
-    * move, so a repeat after a lost success could clear the avatar of a different organisation. Emptying an avatar
-    * twice would otherwise be a natural candidate for retrying — the argument that rules it out is about '''whose'''
-    * avatar, not about how many times.
+    * '''Retried''', under the class-level rule for state assertions: after any number of attempts the organisation has
+    * no custom avatar, nothing is created, and the retry after a lost success answers `204` again rather than `404`,
+    * because there is no id to go stale. The exposure a renameable handle carries — the retry clearing the avatar of an
+    * organisation that took the handle in between — is accepted here on the same terms it is accepted for the
+    * username-keyed toggles under [[members]]: the window is one retry backoff and a re-upload restores the state. This
+    * is the decision [[com.worxbend.codeberg4s.users.account.UserAccountApi.deleteAvatar]] already made; the two are
+    * now the same.
     *
     * '''Answers `204`.'''
     *
@@ -304,7 +310,7 @@ final class OrganizationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
     *   the organisation handle
     */
   def deleteAvatar(org: OrgName): Future[Unit] =
-    pipeline.callUnit(OrganizationApi.deleteAvatarRequest(org), RetryEligibility.Never)
+    pipeline.callUnit(OrganizationApi.deleteAvatarRequest(org), RetryEligibility.AlwaysRetry)
 
   // --- repositories ---------------------------------------------------------
 

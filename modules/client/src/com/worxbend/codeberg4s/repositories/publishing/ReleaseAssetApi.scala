@@ -1,9 +1,7 @@
 package com.worxbend.codeberg4s.repositories.publishing
 
-import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RequestBody, RetryEligibility}
-import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.publishing.PublishingRequests.releasePath
 import com.worxbend.codeberg4s.repositories.publishing.wire.EditAttachmentOptionsDto
 import com.worxbend.codeberg4s.repositories.{ReleaseAsset, ReleaseId}
@@ -63,22 +61,20 @@ final class ReleaseAssetApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
 
   /** Lists a release's attachments — `GET /repos/{owner}/{repo}/releases/{id}/assets`.
     *
-    * '''Paging on this endpoint is weaker than on a repository listing, and a caller has to know it.''' The pinned spec
-    * declares no `page` or `limit` parameter for this operation. Both are still sent, because they cost nothing and
-    * Forgejo honours them wherever it supports them — but two things follow:
-    *
-    *   - the returned page always reports itself as the last one, since `nextPage` is read from `rel="next"` and there
-    *     is no `Link` header to read it from;
-    *   - an instance that ignores the parameters answers every request with the '''complete''' attachment list, so
-    *     asking for page two may return the same items as page one rather than nothing.
+    * '''Not paged, and that is the endpoint's decision.''' The pinned spec declares no `page` or `limit` for this
+    * operation, and Forgejo's handler answers every attachment of the release at once, so the result is a `Vector`
+    * rather than a [[com.worxbend.codeberg4s.paging.Page]] — a page reporting a window nobody chose, and an end nobody
+    * could detect from a `Link` header that is never sent, would be a lie about what was requested. An earlier version
+    * of this method sent `page` and `limit` anyway and returned a page that always claimed to be the last.
     *
     * A release carries tens of attachments, not thousands — `golden/repository/release-latest.json` has twenty-one — so
     * the whole list arriving at once is the expected case rather than a hazard.
     *
     * '''Failures.''' The group contract above.
     */
-  def assets(owner: Owner, name: RepoName, id: ReleaseId, params: PageParams): Future[Page[ReleaseAsset]] =
-    pipeline.callPage(ReleaseAssetApi.assetsRequest(owner, name, id, params), params)(using PublishingDecoders.assets)
+  def assets(owner: Owner, name: RepoName, id: ReleaseId): Future[Vector[ReleaseAsset]] =
+    pipeline.call(ReleaseAssetApi.assetsRequest(owner, name, id), RetryEligibility.IdempotentOnly)(using
+      PublishingDecoders.assets)
 
   /** Uploads a file and attaches it to a release — `POST /repos/{owner}/{repo}/releases/{id}/assets`.
     *
@@ -178,13 +174,8 @@ object ReleaseAssetApi:
   final class Attempt private[codeberg4s] (rail: ReleaseAssetApi)(using exec: Exec[Future]):
 
     /** [[ReleaseAssetApi.assets]] with its failure as a value. */
-    def assets(
-        owner: Owner,
-        name: RepoName,
-        id: ReleaseId,
-        params: PageParams,
-    ): Future[Either[CodebergError, Page[ReleaseAsset]]] =
-      exec.attempt(rail.assets(owner, name, id, params))
+    def assets(owner: Owner, name: RepoName, id: ReleaseId): Future[Either[CodebergError, Vector[ReleaseAsset]]] =
+      exec.attempt(rail.assets(owner, name, id))
 
     /** [[ReleaseAssetApi.uploadAsset]] with its failure as a value. */
     def uploadAsset(
@@ -223,13 +214,8 @@ object ReleaseAssetApi:
     ): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.deleteAsset(owner, name, id, asset))
 
-  private def assetsRequest(
-      owner: Owner,
-      name: RepoName,
-      id: ReleaseId,
-      params: PageParams,
-  ): CodebergRequest =
-    read(ListAssetsOperation, assetsPath(owner, name, id), PagingQuery.window(params))
+  private def assetsRequest(owner: Owner, name: RepoName, id: ReleaseId): CodebergRequest =
+    read(ListAssetsOperation, assetsPath(owner, name, id), Nil)
 
   private def uploadAssetRequest(
       owner: Owner,

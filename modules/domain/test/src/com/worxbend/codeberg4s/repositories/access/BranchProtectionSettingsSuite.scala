@@ -30,15 +30,15 @@ final class BranchProtectionSettingsSuite extends FunSuite:
     assertEquals(settings.pushWhitelisting(true), settings.copy(enablePushWhitelist = Some(true)))
     assertEquals(settings.pushWhitelistedTo(Maintainers), settings.copy(pushWhitelistUsernames = Some(Maintainers)))
     assertEquals(
-      settings.pushWhitelistedToTeams(Vector("ops")),
-      settings.copy(pushWhitelistTeams = Some(Vector("ops"))),
+      settings.pushWhitelistedToTeams(Vector(TeamSlug("ops"))),
+      settings.copy(pushWhitelistTeams = Some(Vector(TeamSlug("ops")))),
     )
     assertEquals(settings.pushWhitelistingDeployKeys(true), settings.copy(pushWhitelistDeployKeys = Some(true)))
     assertEquals(settings.mergeWhitelisting(true), settings.copy(enableMergeWhitelist = Some(true)))
     assertEquals(settings.mergeWhitelistedTo(Maintainers), settings.copy(mergeWhitelistUsernames = Some(Maintainers)))
     assertEquals(
-      settings.mergeWhitelistedToTeams(Vector("ops")),
-      settings.copy(mergeWhitelistTeams = Some(Vector("ops"))),
+      settings.mergeWhitelistedToTeams(Vector(TeamSlug("ops"))),
+      settings.copy(mergeWhitelistTeams = Some(Vector(TeamSlug("ops")))),
     )
     assertEquals(settings.statusChecking(true), settings.copy(enableStatusCheck = Some(true)))
     assertEquals(
@@ -52,8 +52,8 @@ final class BranchProtectionSettingsSuite extends FunSuite:
       settings.copy(approvalsWhitelistUsernames = Some(Maintainers)),
     )
     assertEquals(
-      settings.approvalWhitelistedToTeams(Vector("ops")),
-      settings.copy(approvalsWhitelistTeams = Some(Vector("ops"))),
+      settings.approvalWhitelistedToTeams(Vector(TeamSlug("ops"))),
+      settings.copy(approvalsWhitelistTeams = Some(Vector(TeamSlug("ops")))),
     )
     assertEquals(settings.blockingOnRejectedReviews(true), settings.copy(blockOnRejectedReviews = Some(true)))
     assertEquals(
@@ -96,10 +96,11 @@ final class BranchProtectionSettingsSuite extends FunSuite:
     assertEquals(stated.approvalsWhitelistUsernames, None)
 
   test("a user whitelist and a team whitelist are separate lists, not two ways of writing one"):
-    val stated = BranchProtectionSettings.Unchanged.pushWhitelistedTo(Reviewers).pushWhitelistedToTeams(Vector("ops"))
+    val stated =
+      BranchProtectionSettings.Unchanged.pushWhitelistedTo(Reviewers).pushWhitelistedToTeams(Vector(TeamSlug("ops")))
 
     assertEquals(stated.pushWhitelistUsernames.map(_.length), Some(2))
-    assertEquals(stated.pushWhitelistTeams, Some(Vector("ops")))
+    assertEquals(stated.pushWhitelistTeams, Some(Vector(TeamSlug("ops"))))
 
   test("deploy keys bypassing the push whitelist is its own switch, and not implied by enabling the whitelist"):
     val stated = BranchProtectionSettings.Unchanged.pushWhitelisting(true)
@@ -153,17 +154,17 @@ final class BranchProtectionSettingsSuite extends FunSuite:
       enablePush                    = Some(false),
       enablePushWhitelist           = Some(false),
       pushWhitelistUsernames        = Some(Reviewers),
-      pushWhitelistTeams            = Some(Vector("release-managers")),
+      pushWhitelistTeams            = Some(Vector(TeamSlug("release-managers"))),
       pushWhitelistDeployKeys       = Some(false),
       enableMergeWhitelist          = Some(false),
       mergeWhitelistUsernames       = Some(Reviewers),
-      mergeWhitelistTeams           = Some(Vector("release-managers")),
+      mergeWhitelistTeams           = Some(Vector(TeamSlug("release-managers"))),
       enableStatusCheck             = Some(false),
       statusCheckContexts           = Some(Vector("ci/test")),
       requiredApprovals             = Some(approvals(1L)),
       enableApprovalsWhitelist      = Some(false),
       approvalsWhitelistUsernames   = Some(Reviewers),
-      approvalsWhitelistTeams       = Some(Vector("release-managers")),
+      approvalsWhitelistTeams       = Some(Vector(TeamSlug("release-managers"))),
       blockOnRejectedReviews        = Some(false),
       blockOnOfficialReviewRequests = Some(false),
       blockOnOutdatedBranch         = Some(false),

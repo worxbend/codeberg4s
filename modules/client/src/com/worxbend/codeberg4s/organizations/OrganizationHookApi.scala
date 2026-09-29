@@ -65,13 +65,15 @@ import scala.concurrent.Future
   *
   * ==Retries==
   *
-  * Reads are [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]]. [[create]] is never retried. [[edit]]
-  * and [[delete]] are, and the argument is the same one
-  * [[com.worxbend.codeberg4s.repositories.hooks.RepositoryHookApi]] makes: both name the hook by a
-  * [[com.worxbend.codeberg4s.repositories.hooks.HookId]], a database row id Forgejo never reuses. The `{org}` segment
-  * of the path does not weaken that even though [[OrgName]] is a handle [[OrganizationApi.rename]] can move: a hook id
-  * belongs to exactly one organisation, so a stale handle can only turn the call into a `404` and can never make it act
-  * on a different hook.
+  * Reads are [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]]. [[create]] and [[edit]] are never
+  * retried; [[delete]] is. The rule, the same one [[com.worxbend.codeberg4s.repositories.hooks.RepositoryHookApi]]
+  * applies: a `PATCH` whose body is a partial update is never repeated, because a repeat re-applies the update against
+  * whatever the hook has become and can overwrite a change made in between — the argument that keeps
+  * [[com.worxbend.codeberg4s.issues.IssueApi.edit]] and every other partial edit in this library off the retry path —
+  * while a `DELETE` by a [[com.worxbend.codeberg4s.repositories.hooks.HookId]], a database row id Forgejo never reuses,
+  * is repeated because a repeat reaches the same hook or nothing. The `{org}` segment of the path does not weaken that
+  * even though [[OrgName]] is a handle [[OrganizationApi.rename]] can move: a hook id belongs to exactly one
+  * organisation, so a stale handle can only turn the call into a `404` and can never make it act on a different hook.
   *
   * @param pipeline
   *   the shared request pipeline; the only thing here that reaches the network
@@ -140,11 +142,13 @@ final class OrganizationHookApi private[codeberg4s] (pipeline: ApiPipeline[Futur
 
   /** Edits a webhook — `PATCH /orgs/{org}/hooks/{id}`.
     *
-    * '''Retried''', on the argument the class note states: the request names one hook by an identifier Forgejo never
-    * reuses and assigns a stated value to each key it mentions, so applying it twice leaves the hook exactly where
-    * applying it once would and creates nothing. The one cost is the usual one — if the first attempt succeeded and its
-    * response was lost, the retry addresses a hook already in the requested state and simply reports it again, so
-    * unlike a delete there is not even a `404` to explain.
+    * '''Never retried''', under the rule the class note states for a partial `PATCH`. The hook id would make a repeat
+    * reach the same hook, and the command does assign stated values — but only to the keys it mentions, against
+    * whatever the hook has become by the time the retry lands. A lost success followed by a retry re-applies the update
+    * over a change somebody made in between, silently, which is the hazard
+    * [[com.worxbend.codeberg4s.issues.IssueApi.edit]] and every other partial edit in this library refuse; that the
+    * earlier argument for repeating this call held for the delete beside it does not make it hold here. [[get]]
+    * resolves the uncertainty after a failed attempt.
     *
     * '''What the command does not mention is left alone'''; see [[com.worxbend.codeberg4s.repositories.hooks.EditHook]]
     * for how "unsubscribe from everything" is spelled differently from "leave the subscriptions alone".
@@ -159,7 +163,7 @@ final class OrganizationHookApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     *   what to change; an empty command is a well-formed request that changes nothing
     */
   def edit(org: OrgName, id: HookId, command: EditHook): Future[Webhook] =
-    pipeline.call(OrganizationHookApi.editRequest(org, id, command), RetryEligibility.AlwaysRetry)(using
+    pipeline.call(OrganizationHookApi.editRequest(org, id, command), RetryEligibility.Never)(using
       OrganizationDecoders.webhook)
 
   /** Deletes a webhook — `DELETE /orgs/{org}/hooks/{id}`.

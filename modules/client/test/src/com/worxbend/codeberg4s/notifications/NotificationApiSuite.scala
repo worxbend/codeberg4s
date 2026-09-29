@@ -177,6 +177,17 @@ final class NotificationApiSuite extends FunSuite with ClientSuiteHarness:
           assertEquals(pathOf(backend), "https://forge.example/api/v1/notifications/threads/4821")
           assertEquals(queryOf(backend), Nil)
 
+  test("notifications.threads.read with a status sends it as to-status, in Forgejo's own vocabulary"):
+    val backend = RecordingBackend(responding(205, ""))
+
+    onApi(backend): api =>
+      api
+        .markThreadRead(Thread, NotificationStatus.Pinned)
+        .map: _ =>
+          assertEquals(methodOf(backend), "PATCH")
+          assertEquals(pathOf(backend), "https://forge.example/api/v1/notifications/threads/4821")
+          assertEquals(queryOf(backend), List("to-status" -> "pinned"))
+
   test("notifications.repository.read PUTs to the repository's notifications"):
     val backend = RecordingBackend(responding(205, ""))
 
@@ -186,6 +197,24 @@ final class NotificationApiSuite extends FunSuite with ClientSuiteHarness:
         .map: _ =>
           assertEquals(methodOf(backend), "PUT")
           assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/Codeberg/Community/notifications")
+          assertEquals(queryOf(backend), Nil)
+
+  test("a mark-read with a cursor sends last_read_at in RFC 3339 and to-status only when named"):
+    val cursor     = Instant.parse("2026-09-01T08:30:00.123Z")
+    val all        = RecordingBackend(responding(205, ""))
+    val repo       = RecordingBackend(responding(205, ""))
+    val cursorOnly = RecordingBackend(responding(205, ""))
+
+    for
+      _ <- onApi(all)(api => api.markAllRead(Some(cursor), Some(NotificationStatus.Read)))
+      _ <- onApi(repo)(api => api.markRepositoryRead(Handle, Name, Some(cursor), Some(NotificationStatus.Pinned)))
+      _ <- onApi(cursorOnly)(api => api.attempt.markAllRead(Some(cursor), None))
+    yield
+      assertEquals(queryOf(all), List("last_read_at" -> "2026-09-01T08:30:00Z", "to-status" -> "read"))
+      assertEquals(pathOf(repo), "https://forge.example/api/v1/repos/Codeberg/Community/notifications")
+      assertEquals(queryOf(repo), List("last_read_at" -> "2026-09-01T08:30:00Z", "to-status" -> "pinned"))
+      assertEquals(queryOf(cursorOnly), List("last_read_at" -> "2026-09-01T08:30:00Z"))
+      assertEquals(bodyOf(all), NoBody)
 
   // --- retries --------------------------------------------------------------
 

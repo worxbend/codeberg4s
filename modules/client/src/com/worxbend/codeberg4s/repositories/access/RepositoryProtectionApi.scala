@@ -68,8 +68,8 @@ final class RepositoryProtectionApi private[codeberg4s] (pipeline: ApiPipeline[F
     * a page reporting a window nobody chose would be a lie about what was requested. A repository's rule count is
     * bounded by what an administrator typed, so this is not the unbounded read that would make paging necessary.
     *
-    * '''This is the only way to see a rule whose name contains a `/`.''' Those cannot be addressed one at a time; see
-    * [[BranchRuleName]].
+    * '''Every rule is here, spelled as the instance holds it''', which is why [[BranchProtection.ruleName]] is a plain
+    * `String`; converting one for [[branchProtection]] is the caller's step through [[BranchRuleName.from]].
     *
     * '''Failures.''' The group contract above.
     */
@@ -79,9 +79,15 @@ final class RepositoryProtectionApi private[codeberg4s] (pipeline: ApiPipeline[F
 
   /** Reads one branch protection rule — `GET /repos/{owner}/{repo}/branch_protections/{name}`.
     *
+    * '''The name is one path segment, slash included.''' Forgejo routes `{name}` as a single `{param}` segment — unlike
+    * `/repos/{owner}/{repo}/branches/{branch}`, which is a wildcard route and is what
+    * [[com.worxbend.codeberg4s.repositories.BranchName.segments]] exists for — and reads it back through `PathParam`,
+    * which path-unescapes. So a `release/` prefix with a trailing `*` is sent as `release%2F` plus the `*`, in one
+    * segment, exactly as Gitea's own SDK sends it; splitting it into two segments would address `release` and answer
+    * `404`. The same holds for [[editBranchProtection]] and [[deleteBranchProtection]].
+    *
     * '''Failures.''' The group contract above. `404` covers both "no such rule in this repository" and "no such
-    * repository", and — because the route matches one path segment — is also what a rule whose name contains a `/`
-    * would answer if this library let such a name through. It does not; see [[BranchRuleName]].
+    * repository".
     *
     * @param rule
     *   the rule's own name, which is a glob and not a branch

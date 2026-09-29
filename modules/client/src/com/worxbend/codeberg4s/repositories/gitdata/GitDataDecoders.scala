@@ -33,9 +33,9 @@ import com.worxbend.codeberg4s.repositories.wire.CommitDto
   * because unwrapping it would throw away the verdict that is the point of the endpoint. See
   * [[com.worxbend.codeberg4s.repositories.gitdata.CombinedCommitStatus]].
   *
-  * And one endpoint group answers with no JSON at all — `{sha}.diff`, `{sha}.patch`, `/raw`, `/media` and `/archive` —
-  * which is what [[com.worxbend.codeberg4s.miscellaneous.PlainText]] is for. Running a diff through a JSON parser turns
-  * a perfectly good response into a decoding failure.
+  * And one endpoint group answers with no JSON at all — `{sha}.diff`, `{sha}.patch` and the text read of `/raw` — which
+  * is what [[com.worxbend.codeberg4s.miscellaneous.PlainText]] is for. Running a diff through a JSON parser turns a
+  * perfectly good response into a decoding failure.
   */
 private[gitdata] object GitDataDecoders:
 
@@ -91,7 +91,8 @@ private[gitdata] object GitDataDecoders:
   val editorConfig: Decode[EditorConfigDefinitions] =
     WireDecode.single(Json.decoder[EditorConfigDto])(dto => Right(dto.toDomain))
 
-  /** A body that is not JSON: a diff, a patch, or a file this transport could only decode as text.
+  /** A body that is not JSON: a diff, a patch, or the raw file read a caller asked for as text. `/media` and `/archive`
+    * never come here — they are handed back as bytes through [[com.worxbend.codeberg4s.core.ApiPipeline.callDownload]].
     *
     * Never fails — see [[com.worxbend.codeberg4s.miscellaneous.PlainText]].
     */

@@ -275,10 +275,14 @@ final class PullRequestReviewApi private[codeberg4s] (pipeline: ApiPipeline[Futu
     * the message is the only explanation the reviewer ever sees — and [[DismissReview.includingPriors]] extends the
     * dismissal to that reviewer's earlier reviews of the same pull request.
     *
-    * '''Retried''' under [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]], despite being a `POST`. It
-    * creates nothing: it sets a flag on one review named by an instance-wide id, and setting it twice leaves exactly
-    * the state setting it once does. The message is overwritten with the same message, and the priors reached are the
-    * same priors.
+    * '''Never retried''', under [[com.worxbend.codeberg4s.core.RetryEligibility.Never]], and the reason is not the
+    * flag. Setting the dismissed flag twice would indeed leave the state setting it once does — but Forgejo's
+    * `DismissReview` does more than set a flag: every successful call writes a `dismiss_review` comment onto the pull
+    * request's timeline and sends the notifications that comment triggers, so a repeat after a lost success leaves a
+    * second timeline entry and a second round of notifications, for a dismissal that already happened. That is a
+    * created thing, and the bar for [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]] is that nothing is
+    * created. [[undismiss]] is different: Forgejo writes no comment on the way back, which is why it is still retried.
+    * [[list]] resolves the uncertainty after a failed attempt — [[Review.isDismissed]] says whether it took.
     *
     * '''Answers `200`''' with the dismissed review as the body, so [[Review.isDismissed]] can be read back immediately.
     *
@@ -295,7 +299,7 @@ final class PullRequestReviewApi private[codeberg4s] (pipeline: ApiPipeline[Futu
   ): Future[Review] =
     pipeline.call(
       PullRequestReviewApi.dismissReviewRequest(owner, name, number, review, command),
-      RetryEligibility.AlwaysRetry,
+      RetryEligibility.Never,
     )(using PullRequestDecoders.review)
 
   /** Reverses a dismissal — `POST /repos/{owner}/{repo}/pulls/{index}/reviews/{id}/undismissals`.
@@ -303,8 +307,10 @@ final class PullRequestReviewApi private[codeberg4s] (pipeline: ApiPipeline[Futu
     * Puts a dismissed review back into the approval count. It carries no body: the review id is the whole request, and
     * there is nothing to say about restoring one.
     *
-    * '''Retried''' under [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]], for the reason [[dismiss]]
-    * gives — it clears a flag on one review named by an instance-wide id, and clearing it twice leaves the same state.
+    * '''Retried''' under [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]], unlike [[dismiss]]: it clears a
+    * flag on one review named by an instance-wide id, clearing it twice leaves the same state, and — the difference
+    * that matters — Forgejo writes no timeline comment and sends no notification on the way back, so a repeat after a
+    * lost success creates nothing.
     *
     * '''Answers `200`''' with the restored review as the body.
     *

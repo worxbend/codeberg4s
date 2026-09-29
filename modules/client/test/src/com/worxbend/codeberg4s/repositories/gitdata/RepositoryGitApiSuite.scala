@@ -306,7 +306,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
         assertEquals(blob.size, 5L)
         assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
 
-  test("editorconfig sends the path as segments and the ref as a query parameter"):
+  test("editorconfig sends the path as one encoded segment, because editorconfig/{filename} is not a wildcard route"):
     val backend = RecordingBackend(responding(200, """{"indent_style":"space","indent_size":4}"""))
 
     onApi(backend): api =>
@@ -315,7 +315,7 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
         .map: definitions =>
           assertEquals(
             pathOf(backend),
-            "https://forge.example/api/v1/repos/worxbend/codeberg4s/editorconfig/modules/core/Foo.scala",
+            "https://forge.example/api/v1/repos/worxbend/codeberg4s/editorconfig/modules%2Fcore%2FFoo.scala",
           )
           assertEquals(queryOf(backend), List("ref" -> "refs/heads/main"))
           assertEquals(definitions.valueOf("indent_size"), Some("4"))
@@ -329,15 +329,40 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
         assertEquals(queryOf(backend), Nil)
         assertEquals(body, "# codeberg4s\n")
 
-  test("the media read differs from the raw read only in the path segment"):
-    val backend = RecordingBackend(responding(200, "pointer"))
+  test("the media read differs from the raw read only in the path segment, and hands the bytes back undecoded"):
+    // A PNG signature, one byte of which is not valid UTF-8: decoding the body
+    // as text would replace it, so this is what proves nothing decoded it.
+    val png     = Array[Byte](0x89.toByte, 0x50, 0x4E, 0x47, 0x0D, 0x0A)
+    val backend = RecordingBackend(respondingBytes(200, png))
 
     onApi(backend): api =>
       api.files
         .getMediaFile(Handle, Name, path("assets/logo.png"), Some(ref("main")))
-        .map: _ =>
+        .map: response =>
           assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/worxbend/codeberg4s/media/assets/logo.png")
           assertEquals(queryOf(backend), List("ref" -> "main"))
+          assertEquals(response.body.bytes.toList, png.toList)
+
+  test("the raw bytes read dials the raw route and hands the bytes back undecoded"):
+    val png     = Array[Byte](0x89.toByte, 0x50, 0x4E, 0x47, 0x0D, 0x0A)
+    val backend = RecordingBackend(respondingBytes(200, png))
+
+    onApi(backend): api =>
+      api.files
+        .getRawFileBytes(Handle, Name, path("assets/logo.png"), None)
+        .map: response =>
+          assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/worxbend/codeberg4s/raw/assets/logo.png")
+          assertEquals(queryOf(backend), Nil)
+          assertEquals(response.body.bytes.toList, png.toList)
+
+  test("an archive hands the bytes back undecoded, because a zip decoded as text is not recoverable"):
+    val zip     = Array[Byte](0x50, 0x4B, 0x03, 0x04, 0xFF.toByte)
+    val backend = RecordingBackend(respondingBytes(200, zip))
+
+    onApi(backend): api =>
+      api.files
+        .getArchive(Handle, Name, ref("main"), ArchiveFormat.Zip)
+        .map(response => assertEquals(response.body.bytes.toList, zip.toList))
 
   test("an archive glues the format onto the last segment of the ref"):
     val backend = RecordingBackend(responding(200, "PK"))

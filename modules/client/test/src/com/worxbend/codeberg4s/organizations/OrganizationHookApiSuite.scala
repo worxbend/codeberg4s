@@ -102,15 +102,19 @@ final class OrganizationHookApiSuite extends FunSuite with OrganizationStubs:
         .create(Org, CreateHook.to(HookType.Forgejo, "https://ci.example/forgejo", HookContentType.Json))
         .map(_ => assertEquals(attemptsOn(backend), 1, "the hook create was repeated"))
 
-  test("orgs.hooks.edit is retried, because a hook id is a row id the instance never reuses"):
+  test(
+    "orgs.hooks.edit is never retried, because a partial PATCH re-applied after a lost success can overwrite a change"
+  ):
     val backend = RecordingBackend(flakyThen(200, OrganizationHookApiSuite.HookBody))
 
     onApi(backend): api =>
-      api.hooks
+      api.hooks.attempt
         .edit(Org, Hook, EditHook.Empty.activated)
-        .map(_ => assertEquals(attemptsOn(backend), 2, "the 503 was not retried"))
+        .map: outcome =>
+          assert(outcome.isLeft, s"the edit must not be retried into a success, got $outcome")
+          assertEquals(attemptsOn(backend), 1, "the PATCH was repeated")
 
-  test("orgs.hooks.delete is retried, on the same argument as the edit"):
+  test("orgs.hooks.delete is retried, because a hook id is a row id the instance never reuses"):
     val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
@@ -171,6 +175,17 @@ final class OrganizationHookApiSuite extends FunSuite with OrganizationStubs:
       api.hooks.attempt.get(Org, Hook).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$.id")
         case other                                             => fail(s"expected a decoding failure, got $other")
+
+  test("a hook body that does not decode is never quoted, because it carries the authorization header"):
+    val undecodable = """{"type":"forgejo","authorization_header":"Bearer sekrit"}"""
+
+    onApi(responding(200, undecodable)): api =>
+      api.hooks.attempt.get(Org, Hook).map:
+        case Left(error @ CodebergError.DecodingFailed(_, snippet, _, _)) =>
+          assert(!snippet.contains("sekrit"), s"the credential reached the snippet: $snippet")
+          assert(!error.describe.contains("sekrit"), s"the credential reached the description: ${error.describe}")
+        case other                                                        =>
+          fail(s"expected a decoding failure, got $other")
 
 /** The response bodies this suite stubs. Derived from the spec's `Hook` definition; no capture of a hook exists. */
 object OrganizationHookApiSuite:

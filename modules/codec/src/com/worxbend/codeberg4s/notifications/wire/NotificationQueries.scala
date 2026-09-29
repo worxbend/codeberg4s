@@ -1,12 +1,14 @@
 package com.worxbend.codeberg4s.notifications.wire
 
 import com.worxbend.codeberg4s.codec.Timestamps
-import com.worxbend.codeberg4s.notifications.NotificationQuery
+import com.worxbend.codeberg4s.notifications.{NotificationQuery, NotificationStatus}
 
-/** The query strings this group's listing endpoints send.
+import java.time.Instant
+
+/** The query strings this group's endpoints send.
   *
   * Rendering lives beside the DTOs rather than in the API class for the same reason the DTOs do: `all`, `status-types`,
-  * `subject-type`, `since` and `before` are wire spellings, and rule 4 of
+  * `subject-type`, `since`, `before`, `last_read_at` and `to-status` are wire spellings, and rule 4 of
   * [[com.worxbend.codeberg4s.codec.WireConventions]] says a wire spelling is written exactly once. It also means the
   * shape of a request can be asserted on directly, without a stub backend.
   *
@@ -38,3 +40,25 @@ private[codeberg4s] object NotificationQueries:
       query.since.map(moment => "since" -> Timestamps.render(moment)).toList,
       query.before.map(moment => "before" -> Timestamps.render(moment)).toList,
     ).flatten
+
+  /** The `last_read_at` cursor and `to-status` of the two mark-read `PUT`s — `/notifications` and
+    * `/repos/{owner}/{repo}/notifications`.
+    *
+    * Both routes declare the same two parameters under the same spellings, which is why one renderer serves both. The
+    * cursor goes through [[com.worxbend.codeberg4s.codec.Timestamps.render]] for the reason [[notifications]] gives;
+    * the status is the [[com.worxbend.codeberg4s.notifications.NotificationStatus]] wire value, the same vocabulary the
+    * `status-types` filter uses. `all` and `status-types`, which the routes also accept, are deliberately not rendered
+    * — see `NotificationApi.markAllRead`.
+    */
+  def markRead(lastReadAt: Option[Instant], toStatus: Option[NotificationStatus]): List[(String, String)] =
+    lastReadAt.map(moment => "last_read_at" -> Timestamps.render(moment)).toList ++
+      NotificationQueries.toStatus(toStatus)
+
+  /** The `to-status` of the thread `PATCH` — `/notifications/threads/{id}`.
+    *
+    * The spec declares it as a free string defaulting to `read`; the values Forgejo accepts are its own
+    * `NotificationStatus` vocabulary, so the domain enum stands in for the string. Absent, nothing is sent and the
+    * instance's default applies.
+    */
+  def toStatus(status: Option[NotificationStatus]): List[(String, String)] =
+    status.map(wanted => "to-status" -> wanted.wireValue).toList

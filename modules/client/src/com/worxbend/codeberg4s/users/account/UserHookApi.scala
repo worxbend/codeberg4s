@@ -113,11 +113,14 @@ final class UserHookApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usin
 
   /** Edits one of the account's webhooks — `PATCH /user/hooks/{id}`.
     *
-    * '''Retried''', and the argument is the one earlier waves set the bar with: the request names one instance-wide
-    * identifier that Forgejo never reuses — [[com.worxbend.codeberg4s.repositories.hooks.HookId]] is a database row id
-    * — and states the value it wants each key it mentions to have. Applying that twice leaves the hook exactly where
-    * applying it once would, and creates nothing. Unlike a delete there is not even a `404` to explain afterwards: a
-    * retry after a lost success simply reports the hook in the state that was asked for.
+    * '''Never retried''', under the one rule this library applies to a `PATCH` whose body is a partial update: a repeat
+    * re-applies the update against whatever the hook has become, and a lost success followed by a retry can therefore
+    * overwrite a change made in between, silently. The hook id — [[com.worxbend.codeberg4s.repositories.hooks.HookId]]
+    * is a database row id Forgejo never reuses — guarantees a repeat reaches the same hook, which is what makes
+    * [[delete]] safe to repeat; it does not make a partial replacement safe, which is why
+    * [[com.worxbend.codeberg4s.issues.IssueApi.edit]] and every other partial edit in this library are
+    * [[com.worxbend.codeberg4s.core.RetryEligibility.Never]] too. [[get]] resolves the uncertainty after a failed
+    * attempt.
     *
     * '''What the command does not mention is left alone'''; see [[com.worxbend.codeberg4s.repositories.hooks.EditHook]]
     * for how "unsubscribe from everything" is spelled differently from "leave the subscriptions alone".
@@ -127,7 +130,7 @@ final class UserHookApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usin
     * '''Failures.''' The group contract above.
     */
   def edit(id: HookId, command: EditHook): Future[Webhook] =
-    pipeline.call(UserHookApi.editRequest(id, command), RetryEligibility.AlwaysRetry)(using UserAccountDecoders.webhook)
+    pipeline.call(UserHookApi.editRequest(id, command), RetryEligibility.Never)(using UserAccountDecoders.webhook)
 
   /** Deletes one of the account's webhooks — `DELETE /user/hooks/{id}`.
     *

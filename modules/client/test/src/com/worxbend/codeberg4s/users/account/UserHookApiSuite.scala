@@ -101,11 +101,15 @@ final class UserHookApiSuite extends AccountApiSuite:
         assertEquals(pathOf(backend), s"$HooksRoot/11")
         assertEquals(bodyOf(backend), """{"active":false}""")
 
-  test("editing a hook is retried, because it names a row id and states the value it wants"):
+  test(
+    "editing a hook is never retried, because a partial PATCH re-applied after a lost success can overwrite a change"
+  ):
     val backend = RecordingBackend(flakyThen(200, UserHookApiSuite.HookBody))
 
     onApi(backend): api =>
-      api.edit(Hook, EditHook.Empty.deactivated).map(_ => assertEquals(attemptsOn(backend), 2))
+      api.attempt.edit(Hook, EditHook.Empty.deactivated).map: outcome =>
+        assert(outcome.isLeft, s"the edit must not be retried into a success, got $outcome")
+        assertEquals(attemptsOn(backend), 1, "the PATCH was repeated")
 
   test("deleting a hook is a DELETE by id that reads no body"):
     val backend = RecordingBackend(responding(204, ""))
@@ -148,6 +152,17 @@ final class UserHookApiSuite extends AccountApiSuite:
   test("a 200 whose payload has no id becomes DecodingFailed at the id's own path"):
     onApi(responding(200, """{"type":"forgejo"}""")): api =>
       api.attempt.get(Hook).map(outcome => assertEquals(decodingPathOf(outcome), "$.id"))
+
+  test("a hook body that does not decode is never quoted, because it carries the authorization header"):
+    val undecodable = """{"type":"forgejo","authorization_header":"Bearer hunter2"}"""
+
+    onApi(responding(200, undecodable)): api =>
+      api.attempt.get(Hook).map:
+        case Left(error @ CodebergError.DecodingFailed(_, snippet, _, _)) =>
+          assert(!snippet.contains("hunter2"), s"the credential reached the snippet: $snippet")
+          assert(!error.describe.contains("hunter2"), s"the credential reached the description: ${error.describe}")
+        case other                                                        =>
+          fail(s"expected a decoding failure, got $other")
 
   test("a bad element of a listing reports its own position"):
     onApi(responding(200, """[{"id":1},{"type":"forgejo"}]""")): api =>

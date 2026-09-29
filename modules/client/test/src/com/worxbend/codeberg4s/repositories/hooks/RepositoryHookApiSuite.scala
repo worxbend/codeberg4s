@@ -101,13 +101,13 @@ final class RepositoryHookApiSuite extends FunSuite with HookStubs:
           assertEquals(pathOf(backend), s"$Repository/hooks/4242")
           assertEquals(bodyOf(backend), """{"active":false}""")
 
-  test("hooks.edit is retried, because it names one hook and states the value it should have"):
+  test("hooks.edit is never retried, because a partial PATCH re-applied after a lost success can overwrite a change"):
     val backend = RecordingBackend(flakyThen(200, RepositoryHookApiSuite.HookBody))
 
     onApi(backend): api =>
-      api.edit(Handle, Name, Identifier, EditHook.Empty.deactivated).map: hook =>
-        assertEquals(hook.id.value, 4242L)
-        assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
+      api.attempt.edit(Handle, Name, Identifier, EditHook.Empty.deactivated).map: outcome =>
+        assert(outcome.isLeft, s"the edit must not be retried into a success, got $outcome")
+        assertEquals(backend.allInteractions.size, 1, "the PATCH was repeated")
 
   test("hooks.delete addresses the hook by id and is retried"):
     val backend = RecordingBackend(flakyThen(204, ""))
@@ -208,6 +208,23 @@ final class RepositoryHookApiSuite extends FunSuite with HookStubs:
       api.attempt.get(Handle, Name, Identifier).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$.id")
         case other                                             => fail(s"expected a decoding failure, got $other")
+
+  test("a hook body that does not decode is never quoted, because it carries the authorization header"):
+    val undecodable = """{"type":"forgejo","authorization_header":"token abc123"}"""
+    val single      = onApi(responding(200, undecodable))(api => api.attempt.get(Handle, Name, Identifier))
+    val listing     = onApi(responding(200, s"[$undecodable]"))(api => api.attempt.list(Handle, Name, window(1, 30)))
+
+    for
+      one  <- single
+      many <- listing
+    yield
+      for outcome <- List(one, many) do
+        outcome match
+          case Left(error @ CodebergError.DecodingFailed(_, snippet, _, _)) =>
+            assert(!snippet.contains("abc123"), s"the credential reached the snippet: $snippet")
+            assert(!error.describe.contains("abc123"), s"the credential reached the description: ${error.describe}")
+          case other                                                        =>
+            fail(s"expected a decoding failure, got $other")
 
   test("a bad element of a hook listing reports its position, all the way through the pipeline"):
     onApi(responding(200, """[{"id":1},{"type":"forgejo"}]""")): api =>

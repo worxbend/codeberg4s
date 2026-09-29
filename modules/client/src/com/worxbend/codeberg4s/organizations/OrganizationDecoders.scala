@@ -92,13 +92,19 @@ private[organizations] object OrganizationDecoders:
     WireDecode.single(Json.decoder[SearchEnvelopeDto[TeamDto]]): envelope =>
       WireModel.all(JsonPath.Root.field("data"), envelope.data)
 
-  /** One webhook object, as the organisation hook routes return it. */
+  /** One webhook object, as the organisation hook routes return it. Marked
+    * [[com.worxbend.codeberg4s.core.Decode.sensitive]]: the `Hook` payload carries `authorization_header`, a bearer
+    * credential replayed on every delivery, so a body that does not decode must not be quoted into
+    * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] or handed to a telemetry sink.
+    */
   val webhook: Decode[Webhook] =
-    WireDecode.single(Json.decoder[WebhookDto])(_.toDomain)
+    Decode.sensitive(WireDecode.single(Json.decoder[WebhookDto])(_.toDomain))
 
-  /** A bare array of webhook objects, as `GET /orgs/{org}/hooks` returns it. */
+  /** A bare array of webhook objects, as `GET /orgs/{org}/hooks` returns it. Sensitive for the reason [[webhook]]
+    * gives.
+    */
   val webhooks: Decode[Vector[Webhook]] =
-    WireDecode.vector(Json.decoder[Vector[WebhookDto]])
+    Decode.sensitive(WireDecode.vector(Json.decoder[Vector[WebhookDto]]))
 
   /** One label object, as the organisation label routes return it. */
   val label: Decode[Label] =

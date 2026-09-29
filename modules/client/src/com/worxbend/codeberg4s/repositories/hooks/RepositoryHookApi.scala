@@ -63,8 +63,10 @@ import scala.concurrent.Future
   * ==Retries==
   *
   * Reads use [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]]. Writes are decided per endpoint and each
-  * decision is justified where it is made; in summary, [[create]] and [[test]] are never retried and everything else
-  * that writes is, because it names one hook and states the value it wants that hook to have.
+  * decision is justified where it is made; in summary, [[create]], [[test]] and [[edit]] are never retried — the first
+  * two because they create something or cause a delivery, the third because a `PATCH` whose body is a partial update is
+  * never repeated anywhere in this library — and the deletes and the Git-hook edit are, because each names one hook by
+  * an identifier or a fixed name and asserts the whole state it wants that hook to have.
   *
   * @param pipeline
   *   the shared request pipeline; the only thing here that reaches the network
@@ -117,12 +119,14 @@ final class RepositoryHookApi private[codeberg4s] (pipeline: ApiPipeline[Future]
 
   /** Edits a webhook — `PATCH /repos/{owner}/{repo}/hooks/{id}`.
     *
-    * '''Retried''', and the argument is the one earlier waves set the bar with: the request names one instance-wide
-    * identifier that Forgejo never reuses — [[HookId]] is a database row id — and states the value it wants each key it
-    * mentions to have. Applying that twice leaves the hook exactly where applying it once would, and creates nothing.
-    * The one cost is the usual one: if the first attempt succeeded and its response was lost, a retry addresses a hook
-    * that is already in the requested state and simply reports it again, so unlike a delete there is not even a `404`
-    * to explain.
+    * '''Never retried''', under the one rule this library applies to a `PATCH` whose body is a partial update: a repeat
+    * re-applies the update against whatever the hook has become, and a lost success followed by a retry can therefore
+    * overwrite a change made in between, silently. [[HookId]] is a database row id Forgejo never reuses, which
+    * guarantees a repeat reaches the same hook and is what makes [[delete]] safe to repeat — it does not make a partial
+    * replacement safe, which is why [[com.worxbend.codeberg4s.issues.IssueApi.edit]] and every other partial edit in
+    * this library are [[com.worxbend.codeberg4s.core.RetryEligibility.Never]] too. [[editGitHook]] is the contrast: it
+    * assigns the hook's whole content, so a repeat cannot lose anybody's change. [[get]] resolves the uncertainty after
+    * a failed attempt.
     *
     * '''What the command does not mention is left alone'''; see [[EditHook]] for how "unsubscribe from everything" is
     * spelled differently from "leave the subscriptions alone".
@@ -130,7 +134,7 @@ final class RepositoryHookApi private[codeberg4s] (pipeline: ApiPipeline[Future]
     * '''Failures.''' The group contract above.
     */
   def edit(owner: Owner, name: RepoName, id: HookId, command: EditHook): Future[Webhook] =
-    pipeline.call(RepositoryHookApi.editRequest(owner, name, id, command), RetryEligibility.AlwaysRetry)(using
+    pipeline.call(RepositoryHookApi.editRequest(owner, name, id, command), RetryEligibility.Never)(using
       RepositoryHookDecoders.webhook)
 
   /** Deletes a webhook — `DELETE /repos/{owner}/{repo}/hooks/{id}`.
@@ -199,11 +203,12 @@ final class RepositoryHookApi private[codeberg4s] (pipeline: ApiPipeline[Future]
 
   /** Installs or replaces a Git hook's script — `PATCH /repos/{owner}/{repo}/hooks/git/{id}`.
     *
-    * '''Retried''', on the same terms as [[edit]] and with one difference worth stating: the name this addresses —
-    * `pre-receive`, `update`, `post-receive` — is a fixed slot rather than an identifier the server allocates, so it is
-    * not "never reused" in the sense a row id is. It does not need to be. The request assigns a stated script to a
-    * stated slot of a stated repository, so applying it twice leaves exactly the state applying it once would, and
-    * creates nothing.
+    * '''Retried''', unlike [[edit]]: this `PATCH` assigns the hook's whole script rather than a partial update, so a
+    * repeat after a lost success re-assigns the same script and cannot lose anybody's change. One difference from the
+    * deletes is worth stating: the name this addresses — `pre-receive`, `update`, `post-receive` — is a fixed slot
+    * rather than an identifier the server allocates, so it is not "never reused" in the sense a row id is. It does not
+    * need to be. The request assigns a stated script to a stated slot of a stated repository, so applying it twice
+    * leaves exactly the state applying it once would, and creates nothing.
     *
     * '''This installs code the instance will execute.''' See [[EditGitHook]] for why nothing here validates it.
     *

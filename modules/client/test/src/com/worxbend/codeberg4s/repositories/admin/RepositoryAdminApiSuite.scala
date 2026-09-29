@@ -220,7 +220,7 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
 
   // --- fork syncing ---------------------------------------------------------
 
-  test("the default fork-sync read and the branch one differ only by the branch segments"):
+  test("the default fork-sync read and the branch one differ only by the branch segment"):
     val plain    = RecordingBackend(responding(200, RepositoryAdminApiSuite.SyncForkBody))
     val branched = RecordingBackend(responding(200, RepositoryAdminApiSuite.SyncForkBody))
 
@@ -231,17 +231,17 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
       _ <- onApi(branched)(api =>
              api.mirrors
                .branchForkSyncInfo(Handle, Name, Branch)
-               .map(_ => assertEquals(pathOf(branched), s"$Endpoint/sync_fork/release/v1"))
+               .map(_ => assertEquals(pathOf(branched), s"$Endpoint/sync_fork/release%2Fv1"))
            )
     yield ()
 
-  test("a slashed branch name reaches the wire as real separators, not as one escaped segment"):
+  test("a slashed branch name is one escaped segment, because sync_fork/{branch} is not a wildcard route"):
     val backend = RecordingBackend(responding(204, ""))
 
     onApi(backend): api =>
       api.mirrors.syncForkBranch(Handle, Name, Branch).map: _ =>
         assertEquals(methodOf(backend), "POST")
-        assertEquals(pathOf(backend), s"$Endpoint/sync_fork/release/v1")
+        assertEquals(pathOf(backend), s"$Endpoint/sync_fork/release%2Fv1")
 
   test("a fork-sync read reports how far behind the fork is"):
     onApi(responding(200, RepositoryAdminApiSuite.SyncForkBody)): api =>

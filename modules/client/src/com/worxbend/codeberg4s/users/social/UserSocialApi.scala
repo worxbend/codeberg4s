@@ -270,9 +270,12 @@ final class UserSocialApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     *
     * A block stops the other account from following, from opening issues and pull requests, and from commenting.
     *
-    * '''Retried''' under [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]], by [[follow]]'s argument: the
-    * end state is "the account is blocked" however many attempts arrive, and nothing is created whose identity a repeat
-    * could duplicate. The `block_id` a listing later shows is the instance's, not something this request names.
+    * '''Retried''' under [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]], by [[follow]]'s argument and
+    * under the one rule this library applies to a `PUT` or `DELETE` blocking or membership toggle keyed by a username:
+    * it is idempotent server-side. The end state is "the account is blocked" however many attempts arrive, and nothing
+    * is created whose identity a repeat could duplicate. The `block_id` a listing later shows is the instance's, not
+    * something this request names. [[com.worxbend.codeberg4s.organizations.OrganizationMemberApi.blockUser]] makes the
+    * same decision for the organisation-level block, on the same terms.
     *
     * '''Answers `204` with no body''', so nothing is decoded.
     *
