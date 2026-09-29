@@ -44,9 +44,10 @@ import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
   * @param connectTimeout
   *   how long to wait for the connection to be established
   * @param readTimeout
-  *   how long to wait for the response headers once the request has been sent. It bounds the wait for the status line
-  *   and headers, not the body: the body is bounded by size, through [[maxResponseBodyBytes]] and
-  *   [[maxDownloadBodyBytes]], rather than by time
+  *   how long the whole response may take once the request has been sent — status line, headers and body together. The
+  *   transport races the exchange against this deadline, so a body that stalls part-way fails with
+  *   `TransportCause.Timeout` rather than hanging. The body is additionally bounded by size, through
+  *   [[maxResponseBodyBytes]] and [[maxDownloadBodyBytes]], rather than by time
   * @param maxResponseBodyBytes
   *   the most bytes a textual response may carry before the call fails with [[TransportCause.ResponseTooLarge]]; see
   *   [[DefaultMaxResponseBodyBytes]]
@@ -92,7 +93,9 @@ object CodebergConfig:
   /** Time allowed to establish a connection when using the Codeberg defaults. */
   val DefaultConnectTimeout: FiniteDuration = 10.seconds
 
-  /** Time allowed for the response headers to arrive once the request has been sent, when using the Codeberg defaults. */
+  /** Time allowed for the whole response — headers and body — once the request has been sent, when using the Codeberg
+    * defaults.
+    */
   val DefaultReadTimeout: FiniteDuration = 30.seconds
 
   /** 16 MiB — the most a textual response may carry before the call is abandoned.

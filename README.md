@@ -342,16 +342,16 @@ import com.worxbend.codeberg4s.pulls.PullRequestNumber
 import scala.concurrent.Future
 
 val merged: Either[ValidationError, Future[Unit]] =
-  PullRequestNumber
-    .from(1234L)
-    .map: number =>
-      client.pulls.merge(
-        owner,
-        name,
-        number,
-        MergePullRequest.using(MergeStyle.Squash).deletingSourceBranch,
-      )
+  for
+    number  <- PullRequestNumber.from(1234L)
+    command <- MergePullRequest.using(MergeStyle.Squash)
+  yield client.pulls.merge(owner, name, number, command.deletingSourceBranch)
 ```
+
+`MergePullRequest.using` returns an `Either` because `MergeStyle` is shared with
+a repository's `default_merge_style`, which accepts one spelling more
+(`rebase-update-only`) than the merge endpoint does; asking to merge with it is
+refused here rather than by the server.
 
 `PullRequestState` is `Open | Closed | Merged`, folded from Forgejo's `state`
 string *and* its separate `merged` boolean. Reading a merged pull request as
@@ -649,7 +649,11 @@ two byte bounds are plain quantities and are taken as given.
 `CodebergConfig.toString` is safe to log: the credential types redact
 themselves.
 
-`Auth` is `Anonymous`, `Token(ApiToken)` or `Basic(username, Password)`.
+`Auth` is `Anonymous`, `Token(ApiToken)` or basic credentials. The basic form is
+built with `Auth.basic(username, password)`, which returns an `Either`: the
+username is trimmed and must be non-blank, free of control characters and free
+of `:`, because the wire format joins the two with a colon and a username that
+contains one would silently authenticate as somebody else.
 
 ### Response size
 

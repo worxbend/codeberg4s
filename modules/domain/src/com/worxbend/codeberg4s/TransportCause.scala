@@ -33,10 +33,10 @@ enum TransportCause:
 
   /** The response body passed the byte bound configured in [[CodebergConfig]] and was abandoned part-read.
     *
-    * A case of its own rather than an [[Unknown]] because retrying differs: an unclassified failure may be transient
-    * and is attempted again, whereas an instance that answered with too many bytes will answer with too many bytes
-    * again. Repeating it would download the oversized body once per attempt — the opposite of what a bound is for — so
-    * this case is excluded from retrying.
+    * A case of its own rather than an [[Unknown]] because the two say different things: an unclassified failure is one
+    * the adapter could not name, whereas an instance that answered with too many bytes will answer with too many bytes
+    * again. Neither is retried — repeating this one would download the oversized body once per attempt, the opposite of
+    * what a bound is for — but a caller reading the failure deserves to know which of the two it was.
     *
     * Which bound was passed depends on the operation: [[CodebergConfig.maxDownloadBodyBytes]] for the two archive
     * downloads under `client.repos.actions`, [[CodebergConfig.maxResponseBodyBytes]] for everything else.

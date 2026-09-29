@@ -182,9 +182,9 @@ object WikiPageMetaDto:
   * `{"commits": [...], "count": n}`. The elements are therefore reported at `$.commits[n]` and not at `$[n]`, which is
   * what [[WikiCommitListDto.EntriesKey]] exists to keep true in one place.
   *
-  * The body's own `count` is '''not''' what [[com.worxbend.codeberg4s.paging.Page.totalCount]] reports — that comes
-  * from the `X-Total-Count` header, as it does for every other paged call in this library — so it is read here and
-  * offered as [[WikiCommitListDto.count]] for a caller who wants to compare the two.
+  * The body's own `count` is read here as [[WikiCommitListDto.count]] and becomes the page's total when the response
+  * carries no `X-Total-Count` header — Forgejo sends no `Link` header for this listing, so the total is what lets
+  * [[com.worxbend.codeberg4s.core.Pages.fromEnvelope]] offer a next page at all. The header wins when both are present.
   *
   * '''Derived from `spec/swagger.v1.json`, not from a capture'''; see [[WebhookDto]].
   */

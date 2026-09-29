@@ -9,13 +9,13 @@ import com.worxbend.codeberg4s.repositories.gitdata.GitTreeEntry
   *
   * '''Derived from `spec/swagger.v1.json`, not from a capture.''' The six keys are the spec's.
   *
-  * ==Why the envelope's own paging fields are not converted==
+  * ==How the envelope's own paging fields are used==
   *
-  * `page`, `total_count` and `truncated` describe the window, and this library assembles a window from the response's
-  * `Link` header and from nothing else — see [[com.worxbend.codeberg4s.core.Pages]] and `docs/HAZARDS.md` §5. Keeping
-  * them here, unconverted, records what the wire carries without letting a second end-of-collection test into the
-  * library: `truncated` is the body's version of exactly the claim `items.size` makes, and the reason that claim is
-  * refused is that Forgejo clamps a requested limit while echoing it back.
+  * Forgejo sends no `Link` header for this endpoint, only `X-Total-Count` and the body's own `total_count`, so the
+  * window cannot be assembled from `Link` alone — see [[com.worxbend.codeberg4s.core.Pages.fromEnvelope]] and
+  * `docs/HAZARDS.md` §5. `total_count` is therefore handed to the page builder, which offers a next page while
+  * `page × items.size < total`. `truncated` is still '''not''' used as an end-of-collection test: it is `true` on every
+  * page of a multi-page tree, so it says only "there is more somewhere", not "there is a next page here".
   *
   * @param sha
   *   the `sha` key: the tree that was listed
