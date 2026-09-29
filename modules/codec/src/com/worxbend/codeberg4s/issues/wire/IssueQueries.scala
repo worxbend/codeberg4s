@@ -34,17 +34,23 @@ private[codeberg4s] object IssueQueries:
     *
     * `since` and `before` are rendered by [[Timestamps.render]] in the RFC-3339 form Go parses — a malformed one comes
     * back as a `422` carrying a raw Go parse error, per `docs/HAZARDS.md` §4.
+    *
+    * `type` and `sort` take the same wire vocabularies as the cross-repository [[search]] — the spec declares the same
+    * enums for both operations — so the same domain enums render them.
     */
   def issues(query: IssueQuery): List[(String, String)] =
     List(
       query.state.map(filter => "state" -> filter.wireValue),
       Option.when(query.labels.nonEmpty)("labels" -> query.labels.map(_.value).mkString(",")),
       query.text.map(keywords => "q" -> keywords),
+      query.kind.map(which    => "type" -> which.wireValue),
       Option.when(query.milestones.nonEmpty)("milestones" -> query.milestones.map(_.value).mkString(",")),
-      query.since.map(moment     => "since" -> Timestamps.render(moment)),
-      query.before.map(moment    => "before" -> Timestamps.render(moment)),
-      query.createdBy.map(login  => "created_by" -> login),
-      query.assignedBy.map(login => "assigned_by" -> login),
+      query.since.map(moment      => "since" -> Timestamps.render(moment)),
+      query.before.map(moment     => "before" -> Timestamps.render(moment)),
+      query.createdBy.map(login   => "created_by" -> login),
+      query.assignedBy.map(login  => "assigned_by" -> login),
+      query.mentionedBy.map(login => "mentioned_by" -> login),
+      query.sort.map(order        => "sort" -> order.wireValue),
     ).flatten
 
   /** The `state` filter of `GET /repos/{owner}/{repo}/milestones`.

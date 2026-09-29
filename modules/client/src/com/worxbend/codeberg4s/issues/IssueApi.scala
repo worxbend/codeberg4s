@@ -168,17 +168,19 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
 
   /** Lists an issue's comments — `GET /repos/{owner}/{repo}/issues/{index}/comments`.
     *
-    * '''Paging on this endpoint is weaker than on the others, and a caller has to know it.''' The pinned spec declares
-    * no `page` or `limit` parameter for this operation, and the captured response (`golden/issue/comments-list.json`)
-    * carried `X-Total-Count` but '''no''' `Link` header. `page` and `limit` are still sent, because they cost nothing
-    * and Forgejo honours them wherever it supports them — but two things follow that do not hold for [[list]]:
+    * '''Not paged, and that is the endpoint's decision.''' The pinned spec declares no `page` or `limit` for this
+    * operation — only the `since` and `before` window — and Forgejo's handler lists every comment of the issue in one
+    * answer, so the result is a `Vector` rather than a [[com.worxbend.codeberg4s.paging.Page]]: a page reporting a
+    * window nobody chose, and an end nobody could detect, would be a lie about what was requested. An earlier version
+    * of this method sent `page` and `limit` anyway and returned a page that always claimed to be the last; the captured
+    * response (`golden/issue/comments-list.json`) carried `X-Total-Count` and '''no''' `Link` header, which is the
+    * shape of an endpoint that does not page. An issue's comment count is bounded by a conversation, not by a
+    * repository's history, so this is not the unbounded read that would make paging necessary.
     *
-    *   - the returned page always reports itself as the last one, since `nextPage` is read from `rel="next"` and there
-    *     is no `Link` header to read it from;
-    *   - an instance that ignores the parameters answers every request with the '''complete''' comment list, so asking
-    *     for page two may return the same items as page one rather than nothing.
-    *
-    * Compare [[Page.totalCount]] with [[Page.size]] to find out which happened.
+    * '''`since` and `before` are the only filters''', and they take the same [[CommentQuery]] as [[timeline]] and as
+    * [[com.worxbend.codeberg4s.issues.IssueCommentApi.listForRepository]]. A malformed one is a `422` carrying a raw Go
+    * parse error, per `docs/HAZARDS.md` §4; the query renders them through
+    * [[com.worxbend.codeberg4s.codec.Timestamps.render]] so that cannot happen from here.
     *
     * '''Failures.''' The group contract above, plus `500`, which the spec declares for this operation and which arrives
     * as [[com.worxbend.codeberg4s.CodebergError.Api]] like any other status.
@@ -186,9 +188,13 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     * '''The name keeps its `list` prefix''', against the rule in `SCALA_CODE_STYLE.md` that a sub-resource listing is
     * named after its plural noun: on this class `comments` is already the [[comments]] sub-API accessor, so the bare
     * noun is not available. This is one of the three recorded exemptions.
+    *
+    * @param query
+    *   the time window to restrict to; [[CommentQuery.Empty]] asks for every comment
     */
-  def listComments(owner: Owner, name: RepoName, number: IssueNumber, params: PageParams): Future[Page[Comment]] =
-    pipeline.callPage(IssueApi.listCommentsRequest(owner, name, number, params), params)(using IssueDecoders.comments)
+  def listComments(owner: Owner, name: RepoName, number: IssueNumber, query: CommentQuery): Future[Vector[Comment]] =
+    pipeline.call(IssueApi.listCommentsRequest(owner, name, number, query), RetryEligibility.IdempotentOnly)(using
+      IssueDecoders.comments)
 
   /** Comments on an issue — `POST /repos/{owner}/{repo}/issues/{index}/comments`.
     *
@@ -212,9 +218,10 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     * arrive on [[Issue.labels]].
     *
     * '''Paging.''' The endpoint declares `page` and `limit` and reports `X-Total-Count`, but `golden/MANIFEST.md`
-    * records that it sends no `Link` header, so — as with [[listComments]] — the returned page reports itself as the
-    * last one whatever the total says. Compare [[Page.totalCount]] with [[Page.size]] to decide whether to ask for
-    * another window.
+    * records that it sends no `Link` header, so — as with
+    * [[com.worxbend.codeberg4s.notifications.NotificationApi.list]] — the returned page reports itself as the last one
+    * whatever the total says. Compare [[Page.totalCount]] with [[Page.size]] to decide whether to ask for another
+    * window.
     *
     * '''Failures.''' The group contract above.
     *
@@ -445,9 +452,9 @@ object IssueApi:
         owner: Owner,
         name: RepoName,
         number: IssueNumber,
-        params: PageParams,
-    ): Future[Either[CodebergError, Page[Comment]]] =
-      exec.attempt(rail.listComments(owner, name, number, params))
+        query: CommentQuery,
+    ): Future[Either[CodebergError, Vector[Comment]]] =
+      exec.attempt(rail.listComments(owner, name, number, query))
 
     /** [[IssueApi.createComment]] with its failure as a value. */
     def createComment(
@@ -568,9 +575,9 @@ object IssueApi:
       owner: Owner,
       name: RepoName,
       number: IssueNumber,
-      params: PageParams,
+      query: CommentQuery,
   ): CodebergRequest =
-    read(ListCommentsOperation, IssueRequests.issuePath(owner, name, number) :+ "comments", PagingQuery.window(params))
+    read(ListCommentsOperation, IssueRequests.issuePath(owner, name, number) :+ "comments", IssueQueries.comments(query))
 
   private def createCommentRequest(
       owner: Owner,

@@ -2,10 +2,12 @@ package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.paging.PageParams
+import com.worxbend.codeberg4s.repositories.ContentPath
 import com.worxbend.codeberg4s.repositories.RepositorySearchMode
 import com.worxbend.codeberg4s.repositories.RepositorySearchQuery
 import com.worxbend.codeberg4s.repositories.RepositorySearchSort
 import com.worxbend.codeberg4s.repositories.SortDirection
+import com.worxbend.codeberg4s.repositories.gitdata.RefName
 
 import munit.FunSuite
 
@@ -102,6 +104,20 @@ final class RepositoryQueriesSuite extends FunSuite:
         "limit",
       ),
     )
+
+  test("the commit listing sends nothing when no filter is set, so the default branch's history comes back"):
+    assertEquals(RepositoryQueries.commits(None, None, None), Nil)
+
+  test("the commit filters are sent whole under sha, path and not, a slashed ref included"):
+    val release = orFail(RefName.from("release/v1"))
+    val main    = orFail(RefName.from("main"))
+    val docs    = orFail(ContentPath.from("docs/HAZARDS.md"))
+
+    assertEquals(
+      RepositoryQueries.commits(Some(release), Some(docs), Some(main)),
+      List("sha" -> "release/v1", "path" -> "docs/HAZARDS.md", "not" -> "main"),
+    )
+    assertEquals(RepositoryQueries.commits(None, Some(docs), None), List("path" -> "docs/HAZARDS.md"))
 
   /** The search parameters without the paging window, which every case above would otherwise repeat. */
   private def filters(query: RepositorySearchQuery): List[(String, String)] =

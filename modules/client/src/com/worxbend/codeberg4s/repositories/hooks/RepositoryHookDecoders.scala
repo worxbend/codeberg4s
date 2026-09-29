@@ -35,13 +35,16 @@ private[hooks] object RepositoryHookDecoders:
   private val RevisionsPath: JsonPath =
     JsonPath.Root.field(WikiCommitListDto.EntriesKey)
 
-  /** One webhook object. */
+  /** One webhook object. Marked [[com.worxbend.codeberg4s.core.Decode.sensitive]]: the `Hook` payload carries
+    * `authorization_header`, a bearer credential replayed on every delivery, so a body that does not decode must not be
+    * quoted into [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] or handed to a telemetry sink.
+    */
   val webhook: Decode[Webhook] =
-    WireDecode.single(Json.decoder[WebhookDto])(_.toDomain)
+    Decode.sensitive(WireDecode.single(Json.decoder[WebhookDto])(_.toDomain))
 
-  /** A bare array of webhook objects, as the hook listing returns it. */
+  /** A bare array of webhook objects, as the hook listing returns it. Sensitive for the reason [[webhook]] gives. */
   val webhooks: Decode[Vector[Webhook]] =
-    WireDecode.vector(Json.decoder[Vector[WebhookDto]])
+    Decode.sensitive(WireDecode.vector(Json.decoder[Vector[WebhookDto]]))
 
   /** One Git hook object. */
   val gitHook: Decode[GitHook] =

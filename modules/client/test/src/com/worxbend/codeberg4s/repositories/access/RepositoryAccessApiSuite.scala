@@ -51,7 +51,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
 
   private val Collaborator: Username = orFail(Username.from("alice"))
 
-  private val Squad: TeamName = orFail(TeamName.from("owners"))
+  private val Squad: TeamSlug = orFail(TeamSlug.from("owners"))
 
   // --- branch protections ---------------------------------------------------
 
@@ -72,6 +72,21 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
       api.protections.branchProtection(Handle, Name, Rule).map: rule =>
         assertEquals(pathOf(backend), s"$Endpoint/branch_protections/main")
         assertEquals(rule.ruleName, "main")
+
+  test("a slashed rule name is one percent-encoded segment, because branch_protections/{name} is not a wildcard route"):
+    val read    = RecordingBackend(responding(200, RepositoryAccessApiSuite.BranchBody))
+    val edited  = RecordingBackend(responding(200, RepositoryAccessApiSuite.BranchBody))
+    val deleted = RecordingBackend(responding(204, ""))
+    val slashed = orFail(BranchRuleName.from("release/*"))
+
+    for
+      _ <- onApi(read)(api => api.protections.branchProtection(Handle, Name, slashed))
+      _ <- onApi(edited)(api => api.protections.editBranchProtection(Handle, Name, slashed, EditBranchProtection.Nothing))
+      _ <- onApi(deleted)(api => api.protections.deleteBranchProtection(Handle, Name, slashed))
+    yield
+      assertEquals(pathOf(read), s"$Endpoint/branch_protections/release%2F*")
+      assertEquals(pathOf(edited), s"$Endpoint/branch_protections/release%2F*")
+      assertEquals(pathOf(deleted), s"$Endpoint/branch_protections/release%2F*")
 
   test("repos.branchProtections.create POSTs the rendered options"):
     val backend = RecordingBackend(responding(201, RepositoryAccessApiSuite.BranchBody))
@@ -181,7 +196,7 @@ final class RepositoryAccessApiSuite extends FunSuite with ClientSuiteHarness:
 
   test("repos.tagProtections.edit PATCHes only what the caller stated"):
     val backend = RecordingBackend(responding(200, RepositoryAccessApiSuite.TagBody))
-    val command = EditTagProtection.Nothing.exemptingTeams(Vector("release"))
+    val command = EditTagProtection.Nothing.exemptingTeams(Vector(TeamSlug("release")))
 
     onApi(backend): api =>
       api.protections.editTagProtection(Handle, Name, TagRule, command).map: _ =>

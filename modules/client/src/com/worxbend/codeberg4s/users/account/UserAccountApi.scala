@@ -131,9 +131,11 @@ final class UserAccountApi private[codeberg4s] (pipeline: ApiPipeline[Future])(u
   /** Removes the account's avatar — `DELETE /user/avatar`.
     *
     * '''Retried''', because the request names one identity the instance never reassigns and asks for a state rather
-    * than an object: after any number of attempts the account has no custom avatar, and nothing is created. The one
-    * cost a caller should know is narrower than for a delete-by-name — there is no id to go stale, so a retry after a
-    * lost success answers `204` again rather than `404`; what it can do is remove an avatar uploaded between the two
+    * than an object: after any number of attempts the account has no custom avatar, and nothing is created. The same
+    * rule — an avatar delete asserts a state, so it is repeated — now governs
+    * [[com.worxbend.codeberg4s.organizations.OrganizationApi.deleteAvatar]], which used to differ. The one cost a
+    * caller should know is narrower than for a delete-by-name — there is no id to go stale, so a retry after a lost
+    * success answers `204` again rather than `404`; what it can do is remove an avatar uploaded between the two
     * attempts, which is a race a caller uploading and deleting concurrently already has.
     *
     * '''Answers `204`.''' Forgejo falls back to the account's generated identicon.

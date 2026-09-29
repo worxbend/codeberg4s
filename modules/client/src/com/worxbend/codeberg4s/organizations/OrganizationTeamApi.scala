@@ -223,10 +223,13 @@ final class OrganizationTeamApi private[codeberg4s] (pipeline: ApiPipeline[Futur
 
   /** Adds an account to a team — `PUT /teams/{id}/members/{username}`.
     *
-    * '''Retried.''' The request names the team by an id Forgejo never reuses and states an end condition — "this
-    * account is in this team" — rather than an increment. Applying it twice leaves exactly the state applying it once
-    * would, and nothing is created: a second attempt after a lost success finds the membership already there and
-    * answers `204` again.
+    * '''Retried''', under the one rule this library applies to a `PUT` or `DELETE` membership toggle keyed by a
+    * username: it is idempotent server-side, so it is [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]].
+    * The request names the team by an id Forgejo never reuses and states an end condition — "this account is in this
+    * team" — rather than an increment. Applying it twice leaves exactly the state applying it once would, and nothing
+    * is created: a second attempt after a lost success finds the membership already there and answers `204` again.
+    * [[OrganizationApi.members]] and [[com.worxbend.codeberg4s.users.social.UserSocialApi]] apply the same rule to
+    * their toggles.
     *
     * The residual risk is the account handle, which Forgejo does let a user change, freeing the old one. It is a much
     * weaker exposure than the one that makes the repository writes below
@@ -290,12 +293,13 @@ final class OrganizationTeamApi private[codeberg4s] (pipeline: ApiPipeline[Futur
 
   /** Gives a team access to a repository — `PUT /teams/{id}/repos/{org}/{repo}`.
     *
-    * '''Never retried''', and the contrast with [[addMember]] is deliberate. The team is named by an id Forgejo never
-    * reuses, but the '''subject''' is named by `{org}/{repo}` — a pair either half of which can be renamed and then
-    * taken by somebody else. If the first attempt succeeded and its response was lost, a retry can therefore grant the
-    * team access to whatever now answers to that name, which is a different repository's source code. That the window
-    * is small does not make it acceptable: this call moves read access to content, which is the one thing a client
-    * library must not gamble with on the caller's behalf.
+    * '''Never retried''', and the contrast with [[addMember]] is deliberate: the rule that repeats a membership toggle
+    * is stated for toggles '''keyed by a username''', and this one is keyed by a repository. The team is named by an id
+    * Forgejo never reuses, but the '''subject''' is named by `{org}/{repo}` — a pair either half of which can be
+    * renamed and then taken by somebody else. If the first attempt succeeded and its response was lost, a retry can
+    * therefore grant the team access to whatever now answers to that name, which is a different repository's source
+    * code. That the window is small does not make it acceptable: this call moves read access to content, which is the
+    * one thing a client library must not gamble with on the caller's behalf.
     *
     * A caller who wants an at-least-once guarantee reads [[repository]] afterwards and repeats deliberately.
     *

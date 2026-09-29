@@ -5,7 +5,6 @@ import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
 import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
-import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.repositories.ReleaseId
 import com.worxbend.codeberg4s.repositories.TagName
 
@@ -89,13 +88,15 @@ final class RepositoryPublishingApiSuite extends FunSuite with ClientSuiteHarnes
         assertEquals(release.id.value, 11189746L)
         assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
 
-  test("repos.releases.getByTag sends a slashed tag as real path segments, not as one encoded segment"):
+  test(
+    "repos.releases.getByTag sends a slashed tag as one encoded segment, because releases/tags/{tag} is not a wildcard route"
+  ):
     val backend = RecordingBackend(responding(200, RepositoryPublishingApiSuite.ReleaseBody))
 
     onApi(backend): api =>
       api
         .releaseByTag(Handle, Name, Slashed)
-        .map(_ => assertEquals(pathOf(backend), s"$Base/releases/tags/v16.0/forgejo"))
+        .map(_ => assertEquals(pathOf(backend), s"$Base/releases/tags/v16.0%2Fforgejo"))
 
   test("repos.releases.edit PATCHes only what the command sets"):
     val backend = RecordingBackend(responding(200, RepositoryPublishingApiSuite.ReleaseBody))
@@ -134,13 +135,13 @@ final class RepositoryPublishingApiSuite extends FunSuite with ClientSuiteHarnes
           assert(outcome.isLeft, s"the delete must not be retried into a success, got $outcome")
           assertEquals(backend.allInteractions.size, 1, "the DELETE was retried")
 
-  test("repos.releases.deleteByTag addresses the release by its tag, slashes intact"):
+  test("repos.releases.deleteByTag addresses the release by its tag, the slash percent-encoded"):
     val backend = RecordingBackend(responding(204, ""))
 
     onApi(backend): api =>
       api.deleteReleaseByTag(Handle, Name, Slashed).map: _ =>
         assertEquals(methodOf(backend), "DELETE")
-        assertEquals(pathOf(backend), s"$Base/releases/tags/v16.0/forgejo")
+        assertEquals(pathOf(backend), s"$Base/releases/tags/v16.0%2Fforgejo")
 
   test("a 204 with a body Forgejo should not have sent is still a success, because no decoder runs"):
     onApi(responding(204, """{"unexpected":true}""")): api =>
@@ -148,24 +149,18 @@ final class RepositoryPublishingApiSuite extends FunSuite with ClientSuiteHarnes
 
   // --- release assets -------------------------------------------------------
 
-  test("repos.releases.assets.list pages the release's attachments"):
+  test("repos.releases.assets.list reads the release's attachments whole, sending no paging parameters"):
     val backend = RecordingBackend(responding(200, RepositoryPublishingApiSuite.AssetListBody))
 
     onApi(backend): api =>
-      api.assets.assets(Handle, Name, Id, window(2, 25)).map: page =>
+      api.assets.assets(Handle, Name, Id).map: assets =>
         assertEquals(pathOf(backend), s"$Base/releases/11189746/assets")
-        assertEquals(queryOf(backend), List("page" -> "2", "limit" -> "25"))
-        assertEquals(page.items.map(_.name), Vector("forgejo-16.0.2-linux-amd64"))
-
-  test("an attachment listing with no Link header reports itself as the last page, whatever the total says"):
-    onApi(responding(200, RepositoryPublishingApiSuite.AssetListBody)): api =>
-      api.assets.assets(Handle, Name, Id, PageParams.First).map: page =>
-        assertEquals(page.isLast, true)
-        assertEquals(page.nextPage, None)
+        assertEquals(queryOf(backend), Nil)
+        assertEquals(assets.map(_.name), Vector("forgejo-16.0.2-linux-amd64"))
 
   test("a bad element of an attachment listing reports its position, all the way through the pipeline"):
     onApi(responding(200, """[{"id":1,"name":"a"},{"id":2}]""")): api =>
-      api.assets.attempt.assets(Handle, Name, Id, PageParams.First).map:
+      api.assets.attempt.assets(Handle, Name, Id).map:
         case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$[1].name")
         case other                                             => fail(s"expected a decoding failure, got $other")
 

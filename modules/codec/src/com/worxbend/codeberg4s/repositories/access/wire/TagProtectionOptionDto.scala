@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.access.wire
 
 import com.worxbend.codeberg4s.codec.{Json, JsonValue}
-import com.worxbend.codeberg4s.repositories.access.{CreateTagProtection, EditTagProtection}
+import com.worxbend.codeberg4s.repositories.access.{CreateTagProtection, EditTagProtection, TeamSlug}
 import com.worxbend.codeberg4s.users.Username
 
 /** Forgejo's `CreateTagProtectionOption` and `EditTagProtectionOption` request models — the bodies of `POST` on
@@ -27,7 +27,7 @@ private[codeberg4s] object TagProtectionOptionDto:
       JsonValue.Obj(
         TagProtectionWire.NamePattern        -> JsonValue.Str(command.namePattern.value),
         TagProtectionWire.WhitelistUsernames -> logins(command.whitelistUsernames),
-        TagProtectionWire.WhitelistTeams     -> texts(command.whitelistTeams),
+        TagProtectionWire.WhitelistTeams     -> slugs(command.whitelistTeams),
       )
     )
 
@@ -39,11 +39,11 @@ private[codeberg4s] object TagProtectionOptionDto:
     List(
       command.namePattern.map(pattern       => TagProtectionWire.NamePattern -> JsonValue.Str(pattern.value)),
       command.whitelistUsernames.map(values => TagProtectionWire.WhitelistUsernames -> logins(values)),
-      command.whitelistTeams.map(values     => TagProtectionWire.WhitelistTeams -> texts(values)),
+      command.whitelistTeams.map(values     => TagProtectionWire.WhitelistTeams -> slugs(values)),
     ).flatten
 
   private def logins(values: Vector[Username]): JsonValue =
     JsonValue.Arr.from(values.map(name => JsonValue.Str(name.value)))
 
-  private def texts(values: Vector[String]): JsonValue =
-    JsonValue.Arr.from(values.map(JsonValue.Str.apply))
+  private def slugs(values: Vector[TeamSlug]): JsonValue =
+    JsonValue.Arr.from(values.map(slug => JsonValue.Str(slug.value)))

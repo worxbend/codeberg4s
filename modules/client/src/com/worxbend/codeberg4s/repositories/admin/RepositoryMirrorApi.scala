@@ -170,6 +170,13 @@ final class RepositoryMirrorApi private[codeberg4s] (pipeline: ApiPipeline[Futur
 
   /** Describes how far one branch of the fork is behind upstream — `GET /repos/{owner}/{repo}/sync_fork/{branch}`.
     *
+    * '''The branch is one path segment, slash included.''' `/sync_fork/{branch}` is a `{param}` route in Forgejo's
+    * router — it matches exactly one segment and reads it through `PathParam`, which path-unescapes — unlike
+    * `/branches/{branch}`, which is a wildcard route and is what
+    * [[com.worxbend.codeberg4s.repositories.BranchName.segments]] exists for. So `release/v1` is sent as
+    * `release%2Fv1`, exactly as Gitea's own SDK sends it; split into two segments it would route to nothing and answer
+    * `404`. [[syncForkBranch]] shares the path and the rule.
+    *
     * '''Failures.''' The group contract above. A branch that does not exist upstream is `allowed: false` rather than a
     * failure — see [[ForkSyncInfo]].
     */
@@ -194,6 +201,9 @@ final class RepositoryMirrorApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     pipeline.callUnit(RepositoryMirrorApi.syncForkRequest(owner, name), RetryEligibility.Never)
 
   /** Fast-forwards one branch of the fork to upstream — `POST /repos/{owner}/{repo}/sync_fork/{branch}`.
+    *
+    * '''The branch is one path segment, slash included''', for the reason [[branchForkSyncInfo]] gives: this is a
+    * single-segment `{branch}` route, not the wildcard `/branches/{branch}` is.
     *
     * '''Never retried''', for the reason [[syncFork]] gives.
     *
@@ -320,16 +330,22 @@ object RepositoryMirrorApi:
     read(ForkSyncInfoOperation, syncForkPath(owner, name), Nil)
 
   private def branchForkSyncInfoRequest(owner: Owner, name: RepoName, branch: BranchName): CodebergRequest =
-    read(BranchForkSyncInfoOperation, syncForkPath(owner, name) ++ branch.segments, Nil)
+    read(BranchForkSyncInfoOperation, syncForkBranchPath(owner, name, branch), Nil)
 
   private def syncForkRequest(owner: Owner, name: RepoName): CodebergRequest =
     bodiless(SyncForkOperation, HttpMethod.Post, syncForkPath(owner, name))
 
   private def syncForkBranchRequest(owner: Owner, name: RepoName, branch: BranchName): CodebergRequest =
-    bodiless(SyncForkBranchOperation, HttpMethod.Post, syncForkPath(owner, name) ++ branch.segments)
+    bodiless(SyncForkBranchOperation, HttpMethod.Post, syncForkBranchPath(owner, name, branch))
 
   private def pushMirrorsPath(owner: Owner, name: RepoName): List[String] =
     RepositoryRequests.repositoryPath(owner, name) :+ "push_mirrors"
 
   private def syncForkPath(owner: Owner, name: RepoName): List[String] =
     RepositoryRequests.repositoryPath(owner, name) :+ "sync_fork"
+
+  /** `…/sync_fork/{branch}`, with the branch kept whole: the route is a single `{branch}` segment, so a `/` in it is
+    * percent-encoded by the transport rather than split. See [[RepositoryMirrorApi.branchForkSyncInfo]].
+    */
+  private def syncForkBranchPath(owner: Owner, name: RepoName, branch: BranchName): List[String] =
+    syncForkPath(owner, name) :+ branch.value

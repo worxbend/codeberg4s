@@ -10,6 +10,9 @@ import com.worxbend.codeberg4s.repositories.admin.CreateRepository
 import com.worxbend.codeberg4s.users.UserVisibility
 
 import sttp.client4.testing.RecordingBackend
+import sttp.client4.testing.ResponseStub
+import sttp.model.Header
+import sttp.model.StatusCode
 
 import munit.FunSuite
 
@@ -117,16 +120,17 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
           assertEquals(pathOf(backend), "https://forge.example/api/v1/orgs/forgejo/avatar")
           assertEquals(bodyOf(backend), """{"image":"Zm9yZ2U="}""")
 
-  test("orgs.avatar.delete sends a bodiless DELETE and is never retried"):
+  test("orgs.avatar.delete sends a bodiless DELETE and is retried, because it asserts a state"):
     val backend = RecordingBackend(flakyThen(204, ""))
 
     onApi(backend): api =>
-      api.attempt
+      api
         .deleteAvatar(Org)
         .map: _ =>
           assertEquals(methodOf(backend), "DELETE")
           assertEquals(pathOf(backend), "https://forge.example/api/v1/orgs/forgejo/avatar")
-          assertEquals(attemptsOn(backend), 1, "the avatar delete was repeated")
+          assertEquals(bodyOf(backend), NoBody)
+          assertEquals(attemptsOn(backend), 2, "the 503 was not retried")
 
   // --- repositories ---------------------------------------------------------
 
@@ -207,13 +211,50 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
     onApi(backend): api =>
       api.members.publicizeMember(Org, Account).map(_ => assertEquals(bodyOf(backend), NoBody))
 
-  test("no membership write is retried, because an organisation handle is not an identifier"):
-    val backend = RecordingBackend(flakyThen(204, ""))
+  test("every membership toggle keyed by a username is retried, because a repeat re-asserts the same state"):
+    val publicized = RecordingBackend(flakyThen(204, ""))
+    val concealed  = RecordingBackend(flakyThen(204, ""))
+    val removed    = RecordingBackend(flakyThen(204, ""))
+
+    for
+      _ <- onApi(publicized)(api => api.members.publicizeMember(Org, Account))
+      _ <- onApi(concealed)(api => api.members.concealMember(Org, Account))
+      _ <- onApi(removed)(api => api.members.removeMember(Org, Account))
+    yield
+      assertEquals(attemptsOn(publicized), 2, "the publicise was not retried")
+      assertEquals(attemptsOn(concealed), 2, "the conceal was not retried")
+      assertEquals(attemptsOn(removed), 2, "the removal was not retried")
+
+  test("a 303 from the membership probe falls back to the public probe, so a bare backend answers the same question"):
+    val backend = RecordingBackend(
+      cycling(
+        ResponseStub.adjust(
+          "",
+          StatusCode(303),
+          List(Header("Location", "/api/v1/orgs/forgejo/public_members/earl-warren"))
+        ),
+        ResponseStub.adjust("", StatusCode(204)),
+      )
+    )
 
     onApi(backend): api =>
-      api.members.attempt
-        .publicizeMember(Org, Account)
-        .map(_ => assertEquals(attemptsOn(backend), 1, "a membership write was repeated"))
+      api.members.isMember(Org, Account).map: member =>
+        assertEquals(member, true)
+        assertEquals(attemptsOn(backend), 2, "the public probe was not asked")
+        assertEquals(
+          backend.allInteractions.map((request, _) => request.uri.toString),
+          List(
+            "https://forge.example/api/v1/orgs/forgejo/members/earl-warren",
+            "https://forge.example/api/v1/orgs/forgejo/public_members/earl-warren",
+          ),
+        )
+
+  test("a 303 followed by a 404 from the public probe is a false, not a failure"):
+    val backend =
+      RecordingBackend(cycling(ResponseStub.adjust("", StatusCode(303)), ResponseStub.adjust("", StatusCode(404))))
+
+    onApi(backend): api =>
+      api.members.attempt.isMember(Org, Account).map(result => assertEquals(result, Right(false)))
 
   // --- blocks ---------------------------------------------------------------
 
@@ -233,6 +274,17 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
         (methodOf(unblocked), pathOf(unblocked)),
         ("PUT", "https://forge.example/api/v1/orgs/forgejo/unblock/earl-warren"),
       )
+
+  test("both blocking toggles are retried, on the same rule as the user-level block"):
+    val blocked   = RecordingBackend(flakyThen(204, ""))
+    val unblocked = RecordingBackend(flakyThen(204, ""))
+
+    for
+      _ <- onApi(blocked)(api => api.members.blockUser(Org, Account))
+      _ <- onApi(unblocked)(api => api.members.unblockUser(Org, Account))
+    yield
+      assertEquals(attemptsOn(blocked), 2, "the block was not retried")
+      assertEquals(attemptsOn(unblocked), 2, "the unblock was not retried")
 
   test("orgs.blocks.list pages the block records and decodes their two fields"):
     val backend = RecordingBackend(responding(200, """[{"block_id":41,"created_at":"2026-02-09T10:11:12Z"}]"""))

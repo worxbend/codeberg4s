@@ -5,7 +5,7 @@ import com.worxbend.codeberg4s.users.Username
 /** What `POST /repos/{owner}/{repo}/tag_protections` is told.
   *
   * {{{
-  * CreateTagProtection.matching(pattern).exemptingTeams(Vector("release-managers"))
+  * CreateTagProtection.matching(pattern).exemptingTeams(Vector(TeamSlug("release-managers")))
   * }}}
   *
   * '''An omitted whitelist is an empty whitelist here, not a default.''' `CreateTagProtectionOption` has three
@@ -19,19 +19,20 @@ import com.worxbend.codeberg4s.users.Username
   *   the accounts to exempt. Typed, because a blank entry would be a whitelist line that exempts nobody while looking
   *   like it exempts someone — see [[BranchProtectionSettings]] for the same argument at more length
   * @param whitelistTeams
-  *   the teams to exempt, as plain names; a team name is scoped to an organisation and this library cannot check one
+  *   the teams to exempt, as [[TeamSlug]]s — the name Forgejo resolves within the repository's organisation, validated
+  *   for the same reason the usernames are
   */
 final case class CreateTagProtection(
     namePattern: TagNamePattern,
     whitelistUsernames: Vector[Username],
-    whitelistTeams: Vector[String],
+    whitelistTeams: Vector[TeamSlug],
 ):
 
   /** Replaces the accounts exempt from the rule. */
   def exempting(usernames: Vector[Username]): CreateTagProtection = copy(whitelistUsernames = usernames)
 
   /** Replaces the teams exempt from the rule. */
-  def exemptingTeams(teams: Vector[String]): CreateTagProtection = copy(whitelistTeams = teams)
+  def exemptingTeams(teams: Vector[TeamSlug]): CreateTagProtection = copy(whitelistTeams = teams)
 
 object CreateTagProtection:
 
@@ -54,12 +55,12 @@ object CreateTagProtection:
   * @param whitelistUsernames
   *   the replacement exemption list, absent to leave it alone. An empty vector is '''not''' absence: it clears the list
   * @param whitelistTeams
-  *   the replacement team exemption list, on the same reading
+  *   the replacement team exemption list, on the same reading; see [[TeamSlug]]
   */
 final case class EditTagProtection(
     namePattern: Option[TagNamePattern],
     whitelistUsernames: Option[Vector[Username]],
-    whitelistTeams: Option[Vector[String]],
+    whitelistTeams: Option[Vector[TeamSlug]],
 ):
 
   /** States a new glob for the rule to match. */
@@ -69,7 +70,7 @@ final case class EditTagProtection(
   def exempting(usernames: Vector[Username]): EditTagProtection = copy(whitelistUsernames = Some(usernames))
 
   /** Replaces the teams exempt from the rule; an empty vector clears the exemptions. */
-  def exemptingTeams(teams: Vector[String]): EditTagProtection = copy(whitelistTeams = Some(teams))
+  def exemptingTeams(teams: Vector[TeamSlug]): EditTagProtection = copy(whitelistTeams = Some(teams))
 
 object EditTagProtection:
 

@@ -11,6 +11,7 @@ import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.paging.PageSize
+import com.worxbend.codeberg4s.repositories.gitdata.RefName
 
 import sttp.client4.Backend
 import sttp.client4.testing.BackendStub
@@ -67,6 +68,29 @@ final class RepositoryApiSuite extends FunSuite:
 
     dialling(RepositoryApiSuite.FileBody)(_.repos.getContents(Handle, Name, path)): uri =>
       assertEquals(uri, "https://forge.example/api/v1/repos/forgejo/forgejo/contents/models/user.go")
+
+  test("getContents sends a ref as one query value, slashes intact, and nothing when none was given"):
+    val path = orFail(ContentPath.from("models/user.go"))
+    val ref  = orFail(RefName.from("refs/heads/main"))
+
+    dialling(RepositoryApiSuite.FileBody)(_.repos.getContents(Handle, Name, path, Some(ref))): uri =>
+      assertEquals(
+        uri,
+        "https://forge.example/api/v1/repos/forgejo/forgejo/contents/models/user.go?ref=refs/heads/main",
+      )
+
+  test("commits with a query sends sha, path and not ahead of the window, and the plain overload sends none"):
+    val query = CommitQuery.Empty
+      .startingAt(orFail(RefName.from("release/v1")))
+      .touching(orFail(ContentPath.from("docs/HAZARDS.md")))
+      .excluding(orFail(RefName.from("main")))
+
+    dialling("[]")(_.repos.commits(Handle, Name, query, FirstPage)): uri =>
+      assertEquals(
+        uri,
+        "https://forge.example/api/v1/repos/forgejo/forgejo/commits" +
+          "?sha=release/v1&path=docs/HAZARDS.md&not=main&page=1&limit=30",
+      )
 
   test("getRelease dials the release by its identifier"):
     val id = orFail(ReleaseId.from(11189746L))

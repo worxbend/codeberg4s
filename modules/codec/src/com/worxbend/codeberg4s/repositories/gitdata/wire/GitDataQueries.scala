@@ -62,12 +62,11 @@ private[codeberg4s] object GitDataQueries:
       query.state.map(wanted  => "state" -> wanted.wireName),
     ).flatten
 
-  /** The optional `ref` parameter of `/raw`, `/media` and `/editorconfig`.
+  /** The optional `ref` parameter of `/raw`, `/media`, `/editorconfig` and `/contents`.
     *
-    * A query parameter rather than a path segment, so the slashes in `refs/heads/main` are percent-encoded by the
-    * transport and that is correct here — the opposite of what
-    * [[com.worxbend.codeberg4s.repositories.gitdata.RefName.segments]] exists for. Absent means the repository's
-    * default branch.
+    * A query parameter rather than a path segment, so `refs/heads/main` travels as one value, slashes and all, and that
+    * is correct here — the opposite of what [[com.worxbend.codeberg4s.repositories.gitdata.RefName.segments]] exists
+    * for. Absent means the repository's default branch.
     */
   def atRef(ref: Option[RefName]): List[(String, String)] =
     ref.map(name => "ref" -> name.value).toList

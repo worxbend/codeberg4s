@@ -122,10 +122,12 @@ final class RepositoryPublishingApi private[codeberg4s] (pipeline: ApiPipeline[F
     * A different operation from `client.repos.getRelease`, which addresses a release by
     * [[com.worxbend.codeberg4s.repositories.ReleaseId]]. Use this one when the tag is what is known.
     *
-    * '''The tag reaches the wire as several path segments when it contains `/`''' — `v16.0/forgejo` appears in
-    * `golden/repository/tags-list.json` — because Forgejo routes this path with a wildcard and a name percent-encoded
-    * whole into one segment answers `404`. That is what [[com.worxbend.codeberg4s.repositories.TagName.segments]] is
-    * for, and why a raw `String` is not accepted here.
+    * '''The tag reaches the wire as one path segment, slash included''' — `v16.0/forgejo` appears in
+    * `golden/repository/tags-list.json` and is sent as `v16.0%2Fforgejo`. This is the opposite of [[getTag]], and the
+    * difference is Forgejo's router: `/tags/` is a wildcard route that matches across segments, so a slashed tag has to
+    * be split there, while `/releases/tags/{tag}` is a `{param}` route that matches exactly one segment and reads it
+    * through `PathParam`, which path-unescapes. Split here, `v16.0/forgejo` would route to nothing and answer `404`;
+    * Gitea's own SDK escapes the tag whole, and so does this library.
     *
     * '''Failures.''' The group contract above; `404` additionally covers "no release on that tag", including the case
     * where the tag itself exists.
@@ -167,7 +169,8 @@ final class RepositoryPublishingApi private[codeberg4s] (pipeline: ApiPipeline[F
   /** Deletes the release attached to a tag — `DELETE /repos/{owner}/{repo}/releases/tags/{tag}`.
     *
     * The same deletion as [[deleteRelease]], addressed by tag instead of by identifier; the tag survives it too. The
-    * tag reaches the wire as several path segments when it contains `/`, as in [[releaseByTag]].
+    * tag reaches the wire as one path segment with any `/` percent-encoded, as in [[releaseByTag]] and for the same
+    * reason: `/releases/tags/{tag}` is a single-segment route.
     *
     * '''Never retried''' — see the group's retry note.
     *
@@ -195,8 +198,11 @@ final class RepositoryPublishingApi private[codeberg4s] (pipeline: ApiPipeline[F
 
   /** Reads one tag — `GET /repos/{owner}/{repo}/tags/{tag}`.
     *
-    * The same `Tag` model `client.repos.tags` returns, one at a time. The tag reaches the wire as several path segments
-    * when it contains `/`, as in [[releaseByTag]].
+    * The same `Tag` model `client.repos.tags` returns, one at a time. '''The tag reaches the wire as several path
+    * segments when it contains `/`''' — `/tags/` is a wildcard route in Forgejo's router, so `v16.0/forgejo` has to
+    * arrive as two segments and a `%2F` would address a tag that does not exist. That is what
+    * [[com.worxbend.codeberg4s.repositories.TagName.segments]] is for, and it is the opposite of [[releaseByTag]],
+    * whose route is a single `{tag}` segment. [[deleteTag]] shares this path and this rule.
     *
     * '''Failures.''' The group contract above.
     */
@@ -257,7 +263,10 @@ final class RepositoryPublishingApi private[codeberg4s] (pipeline: ApiPipeline[F
     * this group that is: the request asserts that the topic set does '''not''' contain `topic`, which is a value being
     * stated and not a uniquely identified resource being destroyed. A repeat cannot remove anything a first attempt did
     * not, because a topic is a name in a set and not a row someone else can recreate under the same identity with
-    * different content.
+    * different content. The one cost is the usual one for a name-keyed delete: if the first attempt succeeded and its
+    * response was lost, the retry finds no such topic and Forgejo answers `404`, so a removal that '''did''' happen
+    * surfaces as `Api(404)`. Read that `404` as "it is gone", not as "it was never there";
+    * [[com.worxbend.codeberg4s.repositories.RepositoryApi.topics]] settles it.
     *
     * '''Failures.''' The group contract above. Success is `204` with no body.
     */
@@ -487,9 +496,12 @@ object RepositoryPublishingApi:
       GenerateRepoOptionDto.render(command),
     )
 
-  /** `…/releases/tags/{tag}`, with the tag decomposed so a `/` in it reaches the wire as a real separator. */
+  /** `…/releases/tags/{tag}`, with the tag kept whole: the route is a single `{tag}` segment, so a `/` in it is
+    * percent-encoded by the transport rather than split. Contrast [[getTagRequest]], whose `/tags/` route is a wildcard
+    * and takes [[com.worxbend.codeberg4s.repositories.TagName.segments]].
+    */
   private def releaseByTagPath(owner: Owner, name: RepoName, tag: TagName): List[String] =
-    (releasesPath(owner, name) :+ "tags") ++ tag.segments
+    releasesPath(owner, name) ++ List("tags", tag.value)
 
   private def tagsPath(owner: Owner, name: RepoName): List[String] =
     RepositoryRequests.repositoryPath(owner, name) :+ "tags"

@@ -40,13 +40,15 @@ object ApprovalCount:
   * protects anything, which is the single worst outcome this group can produce. [[BranchProtectionSettings.Unchanged]]
   * is the empty bag, and it renders to `{}`.
   *
-  * ==Whitelisted usernames are validated; whitelisted teams are not==
+  * ==Whitelisted usernames and teams are both validated==
   *
   * A username goes in as [[com.worxbend.codeberg4s.users.Username]], which rejects a blank or control-bearing value. A
   * whitelist entry that matches no account is not an error to Forgejo — it is simply an entry that never grants
-  * anything — so a rule built from a stray `""` would look configured and protect nothing. Team names stay `String`,
-  * because a team name is scoped to an organisation and this library has no way to check one; see [[TeamName]] for the
-  * same distinction on the path side.
+  * anything — so a rule built from a stray `""` would look configured and protect nothing. A team goes in as
+  * [[TeamSlug]] for the same reason: it is the name Forgejo resolves within the repository's organisation, and a blank
+  * or slashed entry is a line that grants nothing while looking as though it grants something. Whether the team
+  * '''exists''' is still not checked here — this library has no way to — and an unresolvable slug is an inert entry,
+  * not a `422`.
   *
   * A value '''read back''' is a plain `String` on [[BranchProtection]], for the reason
   * `com.worxbend.codeberg4s.repositories.actions.RunnerLabel` states: dropping a whitelist entry the instance really
@@ -94,17 +96,17 @@ final case class BranchProtectionSettings private[codeberg4s] (
     enablePush: Option[Boolean],
     enablePushWhitelist: Option[Boolean],
     pushWhitelistUsernames: Option[Vector[Username]],
-    pushWhitelistTeams: Option[Vector[String]],
+    pushWhitelistTeams: Option[Vector[TeamSlug]],
     pushWhitelistDeployKeys: Option[Boolean],
     enableMergeWhitelist: Option[Boolean],
     mergeWhitelistUsernames: Option[Vector[Username]],
-    mergeWhitelistTeams: Option[Vector[String]],
+    mergeWhitelistTeams: Option[Vector[TeamSlug]],
     enableStatusCheck: Option[Boolean],
     statusCheckContexts: Option[Vector[String]],
     requiredApprovals: Option[ApprovalCount],
     enableApprovalsWhitelist: Option[Boolean],
     approvalsWhitelistUsernames: Option[Vector[Username]],
-    approvalsWhitelistTeams: Option[Vector[String]],
+    approvalsWhitelistTeams: Option[Vector[TeamSlug]],
     blockOnRejectedReviews: Option[Boolean],
     blockOnOfficialReviewRequests: Option[Boolean],
     blockOnOutdatedBranch: Option[Boolean],
@@ -127,7 +129,7 @@ final case class BranchProtectionSettings private[codeberg4s] (
     copy(pushWhitelistUsernames = Some(usernames))
 
   /** Replaces the teams on the push whitelist. */
-  def pushWhitelistedToTeams(teams: Vector[String]): BranchProtectionSettings =
+  def pushWhitelistedToTeams(teams: Vector[TeamSlug]): BranchProtectionSettings =
     copy(pushWhitelistTeams = Some(teams))
 
   /** States whether deploy keys with write access bypass the push whitelist. */
@@ -142,7 +144,7 @@ final case class BranchProtectionSettings private[codeberg4s] (
     copy(mergeWhitelistUsernames = Some(usernames))
 
   /** Replaces the teams on the merge whitelist. */
-  def mergeWhitelistedToTeams(teams: Vector[String]): BranchProtectionSettings =
+  def mergeWhitelistedToTeams(teams: Vector[TeamSlug]): BranchProtectionSettings =
     copy(mergeWhitelistTeams = Some(teams))
 
   /** States whether status checks are required before a merge. */
@@ -164,7 +166,7 @@ final case class BranchProtectionSettings private[codeberg4s] (
     copy(approvalsWhitelistUsernames = Some(usernames))
 
   /** Replaces the teams whose approvals count. */
-  def approvalWhitelistedToTeams(teams: Vector[String]): BranchProtectionSettings =
+  def approvalWhitelistedToTeams(teams: Vector[TeamSlug]): BranchProtectionSettings =
     copy(approvalsWhitelistTeams = Some(teams))
 
   /** States whether one rejecting review blocks the merge. */

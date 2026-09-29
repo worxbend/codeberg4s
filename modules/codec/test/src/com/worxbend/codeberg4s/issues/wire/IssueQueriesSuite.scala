@@ -1,7 +1,9 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.issues.IssueKind
 import com.worxbend.codeberg4s.issues.IssueQuery
+import com.worxbend.codeberg4s.issues.IssueSearchSort
 import com.worxbend.codeberg4s.issues.LabelName
 import com.worxbend.codeberg4s.issues.MilestoneTitle
 import com.worxbend.codeberg4s.issues.StateFilter
@@ -58,30 +60,49 @@ final class IssueQueriesSuite extends FunSuite:
     assertEquals(IssueQueries.issues(query), List("created_by" -> "earl-warren", "assigned_by" -> "gusted"))
 
   test("the full-text filter is Forgejo's q"):
-    assertEquals(IssueQueries.issues(IssueQuery.Empty.matching("smart HTTP")), List("q" -> "smart HTTP"))
+    assertEquals(IssueQueries.issues(orFail(IssueQuery.Empty.matching("smart HTTP"))), List("q" -> "smart HTTP"))
+
+  test("a blank keyword sends no q at all, rather than q= two spaces"):
+    assertEquals(IssueQueries.issues(orFail(IssueQuery.Empty.matching("  "))), Nil)
+
+  test("the kind filter is Forgejo's type, in the search's vocabulary"):
+    assertEquals(IssueQueries.issues(IssueQuery.Empty.onlyOf(IssueKind.Issues)), List("type" -> "issues"))
+    assertEquals(IssueQueries.issues(IssueQuery.Empty.onlyOf(IssueKind.Pulls)), List("type" -> "pulls"))
+
+  test("the mention filter keeps Forgejo's snake_case spelling, and the ordering is sort"):
+    assertEquals(IssueQueries.issues(IssueQuery.Empty.mentioning("gusted")), List("mentioned_by" -> "gusted"))
+    assertEquals(IssueQueries.issues(IssueQuery.Empty.sortedBy(IssueSearchSort.Oldest)), List("sort" -> "oldest"))
 
   test("a fully populated query emits every parameter once, in a stable order"):
-    val query = IssueQuery.Empty
-      .withState(StateFilter.Closed)
-      .withLabels(Vector(Bug))
-      .withMilestones(Vector(Release))
-      .updatedSince(Instant.parse("2026-07-01T00:00:00Z"))
-      .updatedBefore(Instant.parse("2026-08-01T00:00:00Z"))
-      .authoredBy("earl-warren")
-      .assignedTo("gusted")
-      .matching("bye")
+    val query = orFail(
+      IssueQuery.Empty
+        .withState(StateFilter.Closed)
+        .withLabels(Vector(Bug))
+        .withMilestones(Vector(Release))
+        .onlyOf(IssueKind.Issues)
+        .updatedSince(Instant.parse("2026-07-01T00:00:00Z"))
+        .updatedBefore(Instant.parse("2026-08-01T00:00:00Z"))
+        .authoredBy("earl-warren")
+        .assignedTo("gusted")
+        .mentioning("oliverpool")
+        .sortedBy(IssueSearchSort.RecentUpdate)
+        .matching("bye")
+    )
 
     assertEquals(
       IssueQueries.issues(query),
       List(
-        "state"       -> "closed",
-        "labels"      -> "bug",
-        "q"           -> "bye",
-        "milestones"  -> "Forgejo v1.18.0-0",
-        "since"       -> "2026-07-01T00:00:00Z",
-        "before"      -> "2026-08-01T00:00:00Z",
-        "created_by"  -> "earl-warren",
-        "assigned_by" -> "gusted",
+        "state"        -> "closed",
+        "labels"       -> "bug",
+        "q"            -> "bye",
+        "type"         -> "issues",
+        "milestones"   -> "Forgejo v1.18.0-0",
+        "since"        -> "2026-07-01T00:00:00Z",
+        "before"       -> "2026-08-01T00:00:00Z",
+        "created_by"   -> "earl-warren",
+        "assigned_by"  -> "gusted",
+        "mentioned_by" -> "oliverpool",
+        "sort"         -> "recentupdate",
       ),
     )
 

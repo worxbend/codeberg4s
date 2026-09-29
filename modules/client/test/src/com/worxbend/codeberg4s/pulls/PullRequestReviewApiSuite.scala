@@ -263,8 +263,8 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
         assertEquals(pathOf(backend), s"$Endpoint/13726/reviews/1654076")
         assertEquals(backend.allInteractions.size, 2, "an idempotent delete was not retried")
 
-  test("pulls.reviews.dismiss posts to the dismissals sub-resource and may be repeated"):
-    val backend = RecordingBackend(cycling(503, 200, PullRequestReviewApiSuite.ReviewBody))
+  test("pulls.reviews.dismiss posts to the dismissals sub-resource"):
+    val backend = RecordingBackend(responding(200, PullRequestReviewApiSuite.ReviewBody))
 
     onApi(backend): api =>
       api.reviews
@@ -273,7 +273,16 @@ final class PullRequestReviewApiSuite extends FunSuite with ClientSuiteHarness:
           assertEquals(methodOf(backend), "POST")
           assertEquals(pathOf(backend), s"$Endpoint/13726/reviews/1654076/dismissals")
           assertEquals(bodyOf(backend), """{"message":"superseded"}""")
-          assertEquals(backend.allInteractions.size, 2, "an idempotent dismissal was not retried")
+
+  test("pulls.reviews.dismiss is never retried, because every call writes a timeline comment and notifies"):
+    val backend = RecordingBackend(cycling(503, 200, PullRequestReviewApiSuite.ReviewBody))
+
+    onApi(backend): api =>
+      api.reviews.attempt
+        .dismiss(Handle, Name, Number, Reviewed, DismissReview.Empty.withMessage("superseded"))
+        .map: outcome =>
+          assert(outcome.isLeft, s"the dismissal must not be retried into a success, got $outcome")
+          assertEquals(backend.allInteractions.size, 1, "the dismissal was repeated")
 
   test("pulls.reviews.undismiss posts an empty body, because the id is the whole request"):
     val backend = RecordingBackend(responding(200, PullRequestReviewApiSuite.ReviewBody))

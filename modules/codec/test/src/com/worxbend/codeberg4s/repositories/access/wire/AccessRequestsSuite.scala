@@ -13,6 +13,7 @@ import com.worxbend.codeberg4s.repositories.access.CreateTagProtection
 import com.worxbend.codeberg4s.repositories.access.EditBranchProtection
 import com.worxbend.codeberg4s.repositories.access.EditTagProtection
 import com.worxbend.codeberg4s.repositories.access.TagNamePattern
+import com.worxbend.codeberg4s.repositories.access.TeamSlug
 import com.worxbend.codeberg4s.users.Username
 
 import munit.FunSuite
@@ -171,7 +172,7 @@ final class AccessRequestsSuite extends FunSuite:
 
   test("every property of CreateTagProtectionOption is sent under the spelling the spec declares"):
     val command = CreateTagProtection.matching(pattern("v*")).exempting(Vector(user("alice"))).exemptingTeams(
-      Vector("release")
+      Vector(TeamSlug("release"))
     )
     val body    = TagProtectionOptionDto.renderCreate(command)
 
@@ -198,7 +199,7 @@ final class AccessRequestsSuite extends FunSuite:
     val command = EditTagProtection.Nothing
       .matching(pattern("v1.*"))
       .exempting(Vector(user("alice")))
-      .exemptingTeams(Vector("release"))
+      .exemptingTeams(Vector(TeamSlug("release")))
     val body    = TagProtectionOptionDto.renderEdit(command)
 
     assertEquals(rendered(body, "name_pattern"), "\"v1.*\"")
@@ -249,17 +250,17 @@ final class AccessRequestsSuite extends FunSuite:
     .pushing(true)
     .pushWhitelisting(true)
     .pushWhitelistedTo(Vector(user("alice")))
-    .pushWhitelistedToTeams(Vector("ops"))
+    .pushWhitelistedToTeams(Vector(TeamSlug("ops")))
     .pushWhitelistingDeployKeys(true)
     .mergeWhitelisting(true)
     .mergeWhitelistedTo(Vector(user("bob")))
-    .mergeWhitelistedToTeams(Vector("review"))
+    .mergeWhitelistedToTeams(Vector(TeamSlug("review")))
     .statusChecking(true)
     .statusCheckingContexts(Vector("ci/build"))
     .requiringApprovals(approvals(2L))
     .approvalWhitelisting(true)
     .approvalWhitelistedTo(Vector(user("carol")))
-    .approvalWhitelistedToTeams(Vector("leads"))
+    .approvalWhitelistedToTeams(Vector(TeamSlug("leads")))
     .blockingOnRejectedReviews(true)
     .blockingOnOfficialReviewRequests(true)
     .blockingOnOutdatedBranch(true)

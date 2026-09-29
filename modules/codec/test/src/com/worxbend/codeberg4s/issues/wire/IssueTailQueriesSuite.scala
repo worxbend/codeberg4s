@@ -33,18 +33,20 @@ final class IssueTailQueriesSuite extends FunSuite:
     assertEquals(IssueQueries.search(IssueSearchQuery.Empty), Nil)
 
   test("the search emits its filters in the order the spec declares them"):
-    val query = IssueSearchQuery.Empty
-      .withState(StateFilter.All)
-      .withLabels(Vector(orFail(LabelName.from("bug")), orFail(LabelName.from("upstream"))))
-      .withMilestones(Vector(orFail(MilestoneTitle.from("v1.0"))))
-      .matching("crash")
-      .prioritising(77L)
-      .onlyOf(IssueKind.Issues)
-      .updatedSince(Since)
-      .updatedBefore(Before)
-      .ownedBy(orFail(Owner.from("forgejo")))
-      .inTeam("reviewers")
-      .sortedBy(IssueSearchSort.NearDueDate)
+    val query = orFail(
+      IssueSearchQuery.Empty
+        .withState(StateFilter.All)
+        .withLabels(Vector(orFail(LabelName.from("bug")), orFail(LabelName.from("upstream"))))
+        .withMilestones(Vector(orFail(MilestoneTitle.from("v1.0"))))
+        .prioritising(77L)
+        .onlyOf(IssueKind.Issues)
+        .updatedSince(Since)
+        .updatedBefore(Before)
+        .ownedBy(orFail(Owner.from("forgejo")))
+        .inTeam("reviewers")
+        .sortedBy(IssueSearchSort.NearDueDate)
+        .matching("crash")
+    )
 
     assertEquals(
       IssueQueries.search(query),

@@ -40,8 +40,14 @@ final class AccessVocabularySuite extends FunSuite:
   test("a branch rule name is trimmed"):
     assertEquals(BranchRuleName.from("  main  ").map(_.value), Right("main"))
 
-  test("a branch rule name with a slash is refused, because the route matches one segment"):
-    assertEquals(BranchRuleName.from("release/next").swap.toOption.map(_.field), Some("branchRuleName"))
+  test("a branch rule name keeps a slash, which the client sends percent-encoded inside the one segment"):
+    assertEquals(BranchRuleName.from("release/next").map(_.value), Right("release/next"))
+    assertEquals(BranchRuleName.from("release/*").map(_.value), Right("release/*"))
+
+  test("a branch rule name refuses a traversal or empty segment, which the encoding would not neutralise"):
+    assertEquals(BranchRuleName.from("release/../main").swap.toOption.map(_.field), Some("branchRuleName"))
+    assertEquals(BranchRuleName.from("release//main").swap.toOption.map(_.field), Some("branchRuleName"))
+    assertEquals(BranchRuleName.from("/main").swap.toOption.map(_.field), Some("branchRuleName"))
 
   test("a blank or control-bearing branch rule name is refused"):
     assertEquals(BranchRuleName.from("   ").swap.toOption.map(_.field), Some("branchRuleName"))
@@ -59,12 +65,12 @@ final class AccessVocabularySuite extends FunSuite:
   test("a control-bearing tag name pattern is refused"):
     assertEquals(TagNamePattern.from("v1\t*").swap.toOption.map(_.field), Some("tagNamePattern"))
 
-  // --- team names -----------------------------------------------------------
+  // --- team slugs -----------------------------------------------------------
 
-  test("a team name is one path segment, trimmed"):
-    assertEquals(TeamName.from(" owners ").map(_.value), Right("owners"))
-    assertEquals(TeamName.from("org/owners").swap.toOption.map(_.field), Some("teamName"))
-    assertEquals(TeamName.from("").swap.toOption.map(_.field), Some("teamName"))
+  test("a team slug is one path segment, trimmed"):
+    assertEquals(TeamSlug.from(" owners ").map(_.value), Right("owners"))
+    assertEquals(TeamSlug.from("org/owners").swap.toOption.map(_.field), Some("teamSlug"))
+    assertEquals(TeamSlug.from("").swap.toOption.map(_.field), Some("teamSlug"))
 
   // --- collaborator permission ----------------------------------------------
 

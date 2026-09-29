@@ -107,15 +107,36 @@ final class IssueApiSuite extends FunSuite with ClientSuiteHarness:
         assertEquals(page.items, Vector.empty[Issue])
         assertEquals(page.isLast, true)
 
-  test("issues.comments.list targets the issue's comments and pages it"):
+  test("issues.list narrows to issues alone with type=issues, since Forgejo lists pull requests too by default"):
     val backend = RecordingBackend(responding(200, "[]"))
 
     onApi(backend): api =>
       api
-        .listComments(Handle, Name, Number, PageParams.First)
-        .map: _ =>
+        .list(Handle, Name, IssueQuery.Empty.onlyOf(IssueKind.Issues), PageParams.First)
+        .map(_ => assertEquals(queryOf(backend), List("type" -> "issues", "page" -> "1", "limit" -> "30")))
+
+  test("issues.comments.list targets the issue's comments and sends no paging, because the endpoint declares none"):
+    val backend = RecordingBackend(responding(200, "[]"))
+
+    onApi(backend): api =>
+      api
+        .listComments(Handle, Name, Number, CommentQuery.Empty)
+        .map: comments =>
           assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/Codeberg/Community/issues/2966/comments")
-          assertEquals(queryOf(backend), List("page" -> "1", "limit" -> "30"))
+          assertEquals(queryOf(backend), Nil)
+          assertEquals(comments, Vector.empty[Comment])
+
+  test("issues.comments.list sends the since/before window it was given"):
+    val backend = RecordingBackend(responding(200, "[]"))
+    val between = CommentQuery.Empty
+      .updatedSince(Instant.parse("2026-07-01T00:00:00Z"))
+      .updatedBefore(Instant.parse("2026-08-01T00:00:00Z"))
+
+    onApi(backend): api =>
+      api
+        .listComments(Handle, Name, Number, between)
+        .map: _ =>
+          assertEquals(queryOf(backend), List("since" -> "2026-07-01T00:00:00Z", "before" -> "2026-08-01T00:00:00Z"))
 
   test("issues.labels.list targets the repository's labels, not an issue's"):
     val backend = RecordingBackend(responding(200, IssueApiSuite.LabelListBody))
@@ -283,8 +304,8 @@ final class IssueApiSuite extends FunSuite with ClientSuiteHarness:
   test("both rails agree on a comment listing failure as well, so the choice of rail is only a choice of style"):
     onApi(responding(404, IssueApiSuite.NotFoundBody)): api =>
       for
-        raised <- api.listComments(Handle, Name, Number, PageParams.First).failed
-        typed  <- api.attempt.listComments(Handle, Name, Number, PageParams.First)
+        raised <- api.listComments(Handle, Name, Number, CommentQuery.Empty).failed
+        typed  <- api.attempt.listComments(Handle, Name, Number, CommentQuery.Empty)
       yield assertRailsAgree(raised, typed)
 
   // --- harness --------------------------------------------------------------

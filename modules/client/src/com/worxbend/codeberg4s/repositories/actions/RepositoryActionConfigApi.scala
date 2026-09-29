@@ -182,7 +182,10 @@ final class RepositoryActionConfigApi private[codeberg4s] (pipeline: ApiPipeline
 
   /** Deletes a secret — `DELETE /repos/{owner}/{repo}/actions/secrets/{secretname}`.
     *
-    * '''Retried''', for the reason [[deleteArtifact]] gives, and with the same `404`-after-a-lost-success consequence.
+    * '''Retried''', for the reason [[deleteArtifact]] gives, and with the same `404`-after-a-lost-success consequence,
+    * spelled out: if the first attempt succeeded and its response was lost, the retry finds no secret of that name and
+    * Forgejo answers `404`, so a deletion that '''did''' happen surfaces as `Api(404)`. Read that `404` as "it is
+    * gone", not as "it was never there"; [[secrets]] settles it.
     *
     * '''Failures.''' The group contract above.
     */
@@ -261,7 +264,10 @@ final class RepositoryActionConfigApi private[codeberg4s] (pipeline: ApiPipeline
 
   /** Deletes a variable — `DELETE /repos/{owner}/{repo}/actions/variables/{variablename}`.
     *
-    * '''Retried''', for the reason [[deleteArtifact]] gives, and with the same `404`-after-a-lost-success consequence.
+    * '''Retried''', for the reason [[deleteArtifact]] gives, and with the same `404`-after-a-lost-success consequence,
+    * spelled out: if the first attempt succeeded and its response was lost, the retry finds no variable of that name
+    * and Forgejo answers `404`, so a deletion that '''did''' happen surfaces as `Api(404)`. Read that `404` as "it is
+    * gone", not as "it was never there"; [[variables]] settles it.
     *
     * '''Failures.''' The group contract above.
     */

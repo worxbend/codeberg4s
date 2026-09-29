@@ -9,6 +9,8 @@ import com.worxbend.codeberg4s.{CodebergError, HttpMethod, Owner, RepoName, Repo
 
 import scala.concurrent.Future
 
+import java.time.Instant
+
 /** The notification inbox: listing threads, reading one, and marking threads read.
   *
   * Reached as `client.notifications`. Both error rails are here (ADR-0005): the methods on this class fail the `Future`
@@ -52,8 +54,9 @@ import scala.concurrent.Future
   *   - [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] when a retryable failure outlived the policy.
   *
   * [[com.worxbend.codeberg4s.CodebergError.Validation]] is '''not''' produced by any operation here. Every argument is
-  * an already-validated type — [[com.worxbend.codeberg4s.Owner]], [[NotificationThreadId]] — so a value that would
-  * forge a path or a query parameter is rejected by its own smart constructor before a client is ever involved.
+  * an already-validated type — [[com.worxbend.codeberg4s.Owner]], [[NotificationThreadId]], [[NotificationStatus]] — so
+  * a value that would forge a path or a query parameter is rejected by its own smart constructor before a client is
+  * ever involved.
   *
   * ==Retries==
   *
@@ -66,9 +69,11 @@ import scala.concurrent.Future
   * resource has become. Neither hazard exists here, because these calls carry no body and set a state that is already
   * the state they set.
   *
-  * The one caveat, stated because it is the honest bound on that claim: `PUT /notifications` accepts a `last_read_at`
-  * cursor which, if it were sent, would make the operation depend on when it ran. This library does not send it — see
-  * [[markAllRead]] — which is part of what keeps the repeat harmless.
+  * The claim survives the optional parameters, and it is worth saying why. A `last_read_at` cursor, when the caller
+  * sends one, is a fixed instant the caller chose: every attempt of one call sends the same cursor and therefore
+  * describes the same set of threads, so a retry re-asserts the same statement rather than a later one. What
+  * '''would''' have broken the claim is a cursor this library minted from the clock at each attempt, and it does not do
+  * that — see [[markAllRead]]. A `to-status` names the end state and nothing else, so the same argument covers it.
   */
 final class NotificationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using exec: Exec[Future]):
 
@@ -81,10 +86,11 @@ final class NotificationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
     * response; it says nothing about a `Link` header, and no capture exists to settle it. Since
     * [[com.worxbend.codeberg4s.core.Pages]] reads `nextPage` from `rel="next"` and from nothing else, an instance that
     * sends no `Link` produces a page that reports itself as the last one however large `totalCount` is — the same
-    * situation as [[com.worxbend.codeberg4s.issues.IssueApi.listComments]], and the same remedy: compare
-    * [[com.worxbend.codeberg4s.paging.Page.totalCount]] with [[com.worxbend.codeberg4s.paging.Page.size]] to decide
-    * whether to ask for another window. Never infer the end from a short page: Forgejo clamps `limit` to its own
-    * maximum while echoing the requested value (`docs/HAZARDS.md` §5). A page past the end is `200` with `[]`.
+    * situation as [[com.worxbend.codeberg4s.repositories.publishing.ReleaseAssetApi]] describes for a listing without
+    * paging, and the same remedy: compare [[com.worxbend.codeberg4s.paging.Page.totalCount]] with
+    * [[com.worxbend.codeberg4s.paging.Page.size]] to decide whether to ask for another window. Never infer the end from
+    * a short page: Forgejo clamps `limit` to its own maximum while echoing the requested value (`docs/HAZARDS.md` §5).
+    * A page past the end is `200` with `[]`.
     *
     * '''Failures.''' The group contract above. A `422` here most often means a malformed `since` or `before`.
     *
@@ -97,13 +103,13 @@ final class NotificationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
   def list(query: NotificationQuery, params: PageParams): Future[Page[NotificationThread]] =
     pipeline.callPage(NotificationApi.listRequest(query, params), params)(using NotificationDecoders.threads)
 
-  /** Marks the authenticated user's notification threads read — `PUT /notifications`.
+  /** Marks the authenticated user's notification threads read — `PUT /notifications`, with the instance's defaults.
     *
     * '''No parameters, on purpose.''' Forgejo accepts `all`, `status-types`, `to-status` and `last_read_at` here; this
-    * library sends none of them and takes the instance's documented defaults, which are "the unread ones" and "mark
-    * them read". Sending `last_read_at` in particular would make the call time-dependent and cost it the retry
-    * guarantee below, and the other three describe a "mark everything pinned" operation that is a different thing from
-    * what this method's name promises.
+    * overload sends none of them and takes the instance's documented defaults, which are "the unread ones" and "mark
+    * them read". The two of those a caller can usefully choose are on the other overload; `all` and `status-types`
+    * describe a "mark everything pinned" operation that is a different thing from what this method's name promises, and
+    * are not offered.
     *
     * '''The response body is deliberately ignored.''' The spec answers `205` with a list of the threads that changed,
     * but a `205` whose body is empty is also a success as far as [[com.worxbend.codeberg4s.core.StatusMapping]] is
@@ -116,7 +122,36 @@ final class NotificationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
     * '''Failures.''' The group contract above.
     */
   def markAllRead(): Future[Unit] =
-    pipeline.callUnit(NotificationApi.markAllReadRequest, RetryEligibility.AlwaysRetry)
+    markAllRead(None, None)
+
+  /** Marks the authenticated user's notification threads read — `PUT /notifications`, with a cursor and a target
+    * status.
+    *
+    * '''`last_read_at` is the cursor that makes this safe to call on a schedule.''' Forgejo marks only the threads
+    * updated '''before''' it — "anything updated since this time will not be updated", in the spec's words — so a
+    * caller who took the instant at which they last showed the inbox does not mark read a thread that changed while
+    * they were looking. Rendered by [[com.worxbend.codeberg4s.codec.Timestamps.render]] in the RFC 3339 form Go parses;
+    * a cursor Forgejo cannot parse is a `422` carrying a raw Go parse error (`docs/HAZARDS.md` §4). The instant is
+    * '''the caller's''', fixed for every attempt of the call, which is what keeps the retry below honest; see the group
+    * note.
+    *
+    * '''`to-status` names the end state.''' Forgejo's default is [[NotificationStatus.Read]]; a caller may instead pin
+    * the threads or, less usefully, mark them unread. The values are the same three the `status-types` filter takes,
+    * which is why the domain's [[NotificationStatus]] is reused rather than a second enum minted for one parameter.
+    *
+    * Absent, neither parameter is sent and the instance's default applies — an absent parameter and an empty one are
+    * different requests, as everywhere in this library. The response body is ignored and the call is retried, both for
+    * the reasons the no-argument overload gives.
+    *
+    * '''Failures.''' The group contract above; a `422` most often means a cursor Forgejo could not parse.
+    *
+    * @param lastReadAt
+    *   mark only the threads updated before this instant, absent to mark them all
+    * @param toStatus
+    *   the status to mark the threads with, absent for the instance's default of `read`
+    */
+  def markAllRead(lastReadAt: Option[Instant], toStatus: Option[NotificationStatus]): Future[Unit] =
+    pipeline.callUnit(NotificationApi.markAllReadRequest(lastReadAt, toStatus), RetryEligibility.AlwaysRetry)
 
   /** How many threads are unread — `GET /notifications/new`.
     *
@@ -143,20 +178,41 @@ final class NotificationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
     pipeline.call(NotificationApi.getThreadRequest(id), RetryEligibility.IdempotentOnly)(using
       NotificationDecoders.thread)
 
-  /** Marks one notification thread read — `PATCH /notifications/threads/{id}`.
+  /** Marks one notification thread read — `PATCH /notifications/threads/{id}`, with the instance's default status.
     *
     * '''Retried''', unlike every other `PATCH` in this library. The difference is real rather than stylistic:
     * [[com.worxbend.codeberg4s.issues.IssueApi.edit]] sends a partial update whose repeat can overwrite somebody else's
     * change, while this call sends no body at all and sets a state it may already have set. Forgejo's `to-status`
-    * parameter is not sent, so the instance's documented default of `read` applies and the operation stays the one this
-    * method's name promises.
+    * parameter is not sent by this overload, so the instance's documented default of `read` applies and the operation
+    * stays the one this method's name promises; the other overload names a status.
     *
     * '''The response body is deliberately ignored''', for the reason [[markAllRead]] gives.
     *
     * '''Failures.''' The group contract above, plus the `403`/`404` pair [[getThread]] describes.
     */
   def markThreadRead(id: NotificationThreadId): Future[Unit] =
-    pipeline.callUnit(NotificationApi.markThreadReadRequest(id), RetryEligibility.AlwaysRetry)
+    pipeline.callUnit(NotificationApi.markThreadReadRequest(id, None), RetryEligibility.AlwaysRetry)
+
+  /** Sets one notification thread's status — `PATCH /notifications/threads/{id}?to-status=…`.
+    *
+    * The same call as the one-argument [[markThreadRead]] with Forgejo's `to-status` named: [[NotificationStatus.Read]]
+    * is what the instance would do anyway, [[NotificationStatus.Pinned]] keeps the thread at the top of the inbox, and
+    * [[NotificationStatus.Unread]] puts it back. The spec declares the parameter as a free string with `read` as its
+    * default; the three values are Forgejo's own `NotificationStatus` vocabulary, the same one `status-types` filters
+    * by, so the domain enum is reused rather than a second one minted.
+    *
+    * Retried, and the body ignored, exactly as the one-argument overload — naming the end state changes neither
+    * argument.
+    *
+    * '''Failures.''' As [[markThreadRead]].
+    *
+    * @param id
+    *   the thread's identifier
+    * @param toStatus
+    *   the status to leave the thread in
+    */
+  def markThreadRead(id: NotificationThreadId, toStatus: NotificationStatus): Future[Unit] =
+    pipeline.callUnit(NotificationApi.markThreadReadRequest(id, Some(toStatus)), RetryEligibility.AlwaysRetry)
 
   /** Lists the authenticated user's notification threads for one repository —
     * `GET /repos/{owner}/{repo}/notifications`.
@@ -178,15 +234,40 @@ final class NotificationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
     pipeline.callPage(NotificationApi.listRepositoryRequest(owner, name, query, params), params)(using
       NotificationDecoders.threads)
 
-  /** Marks the authenticated user's threads for one repository read — `PUT /repos/{owner}/{repo}/notifications`.
+  /** Marks the authenticated user's threads for one repository read — `PUT /repos/{owner}/{repo}/notifications`, with
+    * the instance's defaults.
     *
-    * The repository-scoped twin of [[markAllRead]], with the same three properties: no parameters are sent, the `205`
-    * body is ignored, and the call is retried because repeating it is a no-op.
+    * The repository-scoped twin of the no-argument [[markAllRead]], with the same three properties: no parameters are
+    * sent, the `205` body is ignored, and the call is retried because repeating it is a no-op.
     *
     * '''Failures.''' The group contract above.
     */
   def markRepositoryRead(owner: Owner, name: RepoName): Future[Unit] =
-    pipeline.callUnit(NotificationApi.markRepositoryReadRequest(owner, name), RetryEligibility.AlwaysRetry)
+    markRepositoryRead(owner, name, None, None)
+
+  /** Marks the authenticated user's threads for one repository read — `PUT /repos/{owner}/{repo}/notifications`, with a
+    * cursor and a target status.
+    *
+    * The repository-scoped twin of the two-argument [[markAllRead]]: `last_read_at` and `to-status` mean exactly what
+    * they mean there, and absent parameters are not sent.
+    *
+    * '''Failures.''' The group contract above; a `422` most often means a cursor Forgejo could not parse.
+    *
+    * @param lastReadAt
+    *   mark only the threads updated before this instant, absent to mark them all
+    * @param toStatus
+    *   the status to mark the threads with, absent for the instance's default of `read`
+    */
+  def markRepositoryRead(
+      owner: Owner,
+      name: RepoName,
+      lastReadAt: Option[Instant],
+      toStatus: Option[NotificationStatus],
+  ): Future[Unit] =
+    pipeline.callUnit(
+      NotificationApi.markRepositoryReadRequest(owner, name, lastReadAt, toStatus),
+      RetryEligibility.AlwaysRetry,
+    )
 
 /** The requests this group issues, its operation ids, and its typed rail. */
 object NotificationApi:
@@ -228,9 +309,16 @@ object NotificationApi:
     ): Future[Either[CodebergError, Page[NotificationThread]]] =
       exec.attempt(rail.list(query, params))
 
-    /** [[NotificationApi.markAllRead]] with its failure as a value. */
+    /** The no-argument [[NotificationApi.markAllRead]] with its failure as a value. */
     def markAllRead(): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.markAllRead())
+
+    /** The two-argument [[NotificationApi.markAllRead]] with its failure as a value. */
+    def markAllRead(
+        lastReadAt: Option[Instant],
+        toStatus: Option[NotificationStatus],
+    ): Future[Either[CodebergError, Unit]] =
+      exec.attempt(rail.markAllRead(lastReadAt, toStatus))
 
     /** [[NotificationApi.unreadCount]] with its failure as a value. */
     def unreadCount(): Future[Either[CodebergError, UnreadCount]] =
@@ -240,9 +328,13 @@ object NotificationApi:
     def getThread(id: NotificationThreadId): Future[Either[CodebergError, NotificationThread]] =
       exec.attempt(rail.getThread(id))
 
-    /** [[NotificationApi.markThreadRead]] with its failure as a value. */
+    /** The one-argument [[NotificationApi.markThreadRead]] with its failure as a value. */
     def markThreadRead(id: NotificationThreadId): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.markThreadRead(id))
+
+    /** The two-argument [[NotificationApi.markThreadRead]] with its failure as a value. */
+    def markThreadRead(id: NotificationThreadId, toStatus: NotificationStatus): Future[Either[CodebergError, Unit]] =
+      exec.attempt(rail.markThreadRead(id, toStatus))
 
     /** [[NotificationApi.listRepository]] with its failure as a value. */
     def listRepository(
@@ -253,9 +345,18 @@ object NotificationApi:
     ): Future[Either[CodebergError, Page[NotificationThread]]] =
       exec.attempt(rail.listRepository(owner, name, query, params))
 
-    /** [[NotificationApi.markRepositoryRead]] with its failure as a value. */
+    /** The two-argument [[NotificationApi.markRepositoryRead]] with its failure as a value. */
     def markRepositoryRead(owner: Owner, name: RepoName): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.markRepositoryRead(owner, name))
+
+    /** The four-argument [[NotificationApi.markRepositoryRead]] with its failure as a value. */
+    def markRepositoryRead(
+        owner: Owner,
+        name: RepoName,
+        lastReadAt: Option[Instant],
+        toStatus: Option[NotificationStatus],
+    ): Future[Either[CodebergError, Unit]] =
+      exec.attempt(rail.markRepositoryRead(owner, name, lastReadAt, toStatus))
 
   /** Declared ahead of the requests that read it: an `object`'s `val`s initialise in source order, so a path defined
     * below a request built from it would be `null` when that request is constructed.
@@ -269,8 +370,8 @@ object NotificationApi:
       NotificationQueries.notifications(query) ++ PagingQuery.window(params),
     )
 
-  private val markAllReadRequest: CodebergRequest =
-    bodiless(MarkAllReadOperation, HttpMethod.Put, NotificationsPath)
+  private def markAllReadRequest(lastReadAt: Option[Instant], toStatus: Option[NotificationStatus]): CodebergRequest =
+    bodiless(MarkAllReadOperation, HttpMethod.Put, NotificationsPath, NotificationQueries.markRead(lastReadAt, toStatus))
 
   private val unreadCountRequest: CodebergRequest =
     read(UnreadCountOperation, NotificationsPath :+ "new", Nil)
@@ -278,8 +379,8 @@ object NotificationApi:
   private def getThreadRequest(id: NotificationThreadId): CodebergRequest =
     read(GetThreadOperation, threadPath(id), Nil)
 
-  private def markThreadReadRequest(id: NotificationThreadId): CodebergRequest =
-    bodiless(MarkThreadReadOperation, HttpMethod.Patch, threadPath(id))
+  private def markThreadReadRequest(id: NotificationThreadId, toStatus: Option[NotificationStatus]): CodebergRequest =
+    bodiless(MarkThreadReadOperation, HttpMethod.Patch, threadPath(id), NotificationQueries.toStatus(toStatus))
 
   private def listRepositoryRequest(
       owner: Owner,
@@ -293,8 +394,18 @@ object NotificationApi:
       NotificationQueries.notifications(query) ++ PagingQuery.window(params),
     )
 
-  private def markRepositoryReadRequest(owner: Owner, name: RepoName): CodebergRequest =
-    bodiless(MarkRepositoryReadOperation, HttpMethod.Put, repositoryNotificationsPath(owner, name))
+  private def markRepositoryReadRequest(
+      owner: Owner,
+      name: RepoName,
+      lastReadAt: Option[Instant],
+      toStatus: Option[NotificationStatus],
+  ): CodebergRequest =
+    bodiless(
+      MarkRepositoryReadOperation,
+      HttpMethod.Put,
+      repositoryNotificationsPath(owner, name),
+      NotificationQueries.markRead(lastReadAt, toStatus),
+    )
 
   private def threadPath(id: NotificationThreadId): List[String] =
     NotificationsPath ++ List("threads", id.value.toString)

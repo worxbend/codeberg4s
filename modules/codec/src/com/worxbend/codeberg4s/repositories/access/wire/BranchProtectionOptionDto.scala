@@ -5,7 +5,8 @@ import com.worxbend.codeberg4s.repositories.access.{
   ApprovalCount,
   BranchProtectionSettings,
   CreateBranchProtection,
-  EditBranchProtection
+  EditBranchProtection,
+  TeamSlug
 }
 import com.worxbend.codeberg4s.users.Username
 
@@ -43,17 +44,17 @@ private[wire] object BranchProtectionSettingsDto:
       settings.enablePush.map(flag(BranchProtectionWire.EnablePush)),
       settings.enablePushWhitelist.map(flag(BranchProtectionWire.EnablePushWhitelist)),
       settings.pushWhitelistUsernames.map(logins(BranchProtectionWire.PushWhitelistUsernames)),
-      settings.pushWhitelistTeams.map(texts(BranchProtectionWire.PushWhitelistTeams)),
+      settings.pushWhitelistTeams.map(slugs(BranchProtectionWire.PushWhitelistTeams)),
       settings.pushWhitelistDeployKeys.map(flag(BranchProtectionWire.PushWhitelistDeployKeys)),
       settings.enableMergeWhitelist.map(flag(BranchProtectionWire.EnableMergeWhitelist)),
       settings.mergeWhitelistUsernames.map(logins(BranchProtectionWire.MergeWhitelistUsernames)),
-      settings.mergeWhitelistTeams.map(texts(BranchProtectionWire.MergeWhitelistTeams)),
+      settings.mergeWhitelistTeams.map(slugs(BranchProtectionWire.MergeWhitelistTeams)),
       settings.enableStatusCheck.map(flag(BranchProtectionWire.EnableStatusCheck)),
       settings.statusCheckContexts.map(texts(BranchProtectionWire.StatusCheckContexts)),
       settings.requiredApprovals.map(approvals(BranchProtectionWire.RequiredApprovals)),
       settings.enableApprovalsWhitelist.map(flag(BranchProtectionWire.EnableApprovalsWhitelist)),
       settings.approvalsWhitelistUsernames.map(logins(BranchProtectionWire.ApprovalsWhitelistUsernames)),
-      settings.approvalsWhitelistTeams.map(texts(BranchProtectionWire.ApprovalsWhitelistTeams)),
+      settings.approvalsWhitelistTeams.map(slugs(BranchProtectionWire.ApprovalsWhitelistTeams)),
       settings.blockOnRejectedReviews.map(flag(BranchProtectionWire.BlockOnRejectedReviews)),
       settings.blockOnOfficialReviewRequests.map(flag(BranchProtectionWire.BlockOnOfficialReviewRequests)),
       settings.blockOnOutdatedBranch.map(flag(BranchProtectionWire.BlockOnOutdatedBranch)),
@@ -79,6 +80,9 @@ private[wire] object BranchProtectionSettingsDto:
 
   private def logins(key: String): Vector[Username] => (String, JsonValue) =
     values => key -> JsonValue.Arr.from(values.map(name => JsonValue.Str(name.value)))
+
+  private def slugs(key: String): Vector[TeamSlug] => (String, JsonValue) =
+    values => key -> JsonValue.Arr.from(values.map(slug => JsonValue.Str(slug.value)))
 
 /** Forgejo's `CreateBranchProtectionOption` request model — the body of
   * `POST /repos/{owner}/{repo}/branch_protections`.

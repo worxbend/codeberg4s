@@ -7,7 +7,8 @@ import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.access.RepositoryAccessApi
 import com.worxbend.codeberg4s.repositories.actions.RepositoryActionApi
 import com.worxbend.codeberg4s.repositories.admin.RepositoryAdminApi
-import com.worxbend.codeberg4s.repositories.gitdata.RepositoryGitApi
+import com.worxbend.codeberg4s.repositories.gitdata.wire.GitDataQueries
+import com.worxbend.codeberg4s.repositories.gitdata.{RefName, RepositoryGitApi}
 import com.worxbend.codeberg4s.repositories.hooks.{
   RepositoryFlagApi,
   RepositoryHookApi,
@@ -169,6 +170,9 @@ final class RepositoryApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     * The commit history of an active repository is long: `forgejo/forgejo` is past forty thousand commits, so this is
     * the operation where treating a page as the whole collection hurts most.
     *
+    * This overload sends no filter and lists the default branch from its tip; the other takes a [[CommitQuery]] to
+    * start elsewhere, follow one path, or leave a ref's commits out.
+    *
     * '''Failures.''' As [[get]], plus [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] when a commit carries no
     * `sha` or a nested object is unusable, reported at the failing path such as `$[3].commit.tree.sha`. An empty
     * repository answers `409`, which arrives as [[com.worxbend.codeberg4s.CodebergError.Api]] — it has no commits to
@@ -182,7 +186,25 @@ final class RepositoryApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     *   the page to fetch and how many commits it may hold
     */
   def commits(owner: Owner, name: RepoName, params: PageParams): Future[Page[Commit]] =
-    pipeline.callPage(RepositoryApi.commitsRequest(owner, name, params), params)(using RepositoryDecoders.commits)
+    commits(owner, name, CommitQuery.Empty, params)
+
+  /** Lists commits from a chosen ref, along a path, or excluding a ref — `GET /repos/{owner}/{repo}/commits` with
+    * `sha`, `path` and `not`.
+    *
+    * The spec's `sha` parameter takes a branch or tag as readily as a commit, which is why [[CommitQuery.startingAt]]
+    * takes a [[com.worxbend.codeberg4s.repositories.gitdata.RefName]]; `not` is the `^ref` of `git log`, and `path`
+    * narrows the history to commits touching a file or directory. Each is sent only when set — see [[CommitQuery]] — so
+    * [[CommitQuery.Empty]] is exactly the three-argument overload.
+    *
+    * '''Failures.''' As the three-argument overload; a `sha` or `not` naming nothing is a `404`.
+    *
+    * @param query
+    *   where to start, what to follow and what to leave out; [[CommitQuery.Empty]] for the default branch's history
+    * @param params
+    *   the page to fetch and how many commits it may hold
+    */
+  def commits(owner: Owner, name: RepoName, query: CommitQuery, params: PageParams): Future[Page[Commit]] =
+    pipeline.callPage(RepositoryApi.commitsRequest(owner, name, query, params), params)(using RepositoryDecoders.commits)
 
   /** Lists a repository's releases — `GET /repos/{owner}/{repo}/releases`.
     *
@@ -268,7 +290,21 @@ final class RepositoryApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     *   the repository-relative path of the file or directory; it is sent as several path segments, see [[ContentPath]]
     */
   def getContents(owner: Owner, name: RepoName, path: ContentPath): Future[RepositoryContent] =
-    pipeline.call(RepositoryApi.contentsRequest(owner, name, path), RetryEligibility.IdempotentOnly)(using
+    getContents(owner, name, path, None)
+
+  /** Reads a file or a directory at a ref — `GET /repos/{owner}/{repo}/contents/{filepath}?ref=…`.
+    *
+    * The three-argument overload with the spec's `ref` query added: the branch, tag or commit to read at. It is a query
+    * parameter and not a path segment, so a `refs/heads/main` reaches the wire as one value, slashes intact, exactly as
+    * on [[com.worxbend.codeberg4s.repositories.gitdata.RepositoryFileApi.getRawFile]]; absent, nothing is sent and the
+    * repository's default branch answers. Everything else — the two body shapes, the failures, the retry — is as the
+    * three-argument overload says.
+    *
+    * @param ref
+    *   the branch, tag or commit to read at, absent for the repository's default branch
+    */
+  def getContents(owner: Owner, name: RepoName, path: ContentPath, ref: Option[RefName]): Future[RepositoryContent] =
+    pipeline.call(RepositoryApi.contentsRequest(owner, name, path, ref), RetryEligibility.IdempotentOnly)(using
       RepositoryDecoders.contents)
 
   /** Lists the repositories forked from this one — `GET /repos/{owner}/{repo}/forks`.
@@ -357,9 +393,18 @@ object RepositoryApi:
     def tags(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Tag]]] =
       exec.attempt(rail.tags(owner, name, params))
 
-    /** [[RepositoryApi.commits]] with its failure as a value. */
+    /** The three-argument [[RepositoryApi.commits]] with its failure as a value. */
     def commits(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Commit]]] =
       exec.attempt(rail.commits(owner, name, params))
+
+    /** The four-argument [[RepositoryApi.commits]] with its failure as a value. */
+    def commits(
+        owner: Owner,
+        name: RepoName,
+        query: CommitQuery,
+        params: PageParams,
+    ): Future[Either[CodebergError, Page[Commit]]] =
+      exec.attempt(rail.commits(owner, name, query, params))
 
     /** [[RepositoryApi.releases]] with its failure as a value. */
     def releases(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Release]]] =
@@ -373,13 +418,22 @@ object RepositoryApi:
     def topics(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Topic]]] =
       exec.attempt(rail.topics(owner, name, params))
 
-    /** [[RepositoryApi.getContents]] with its failure as a value. */
+    /** The three-argument [[RepositoryApi.getContents]] with its failure as a value. */
     def getContents(
         owner: Owner,
         name: RepoName,
         path: ContentPath,
     ): Future[Either[CodebergError, RepositoryContent]] =
       exec.attempt(rail.getContents(owner, name, path))
+
+    /** The four-argument [[RepositoryApi.getContents]] with its failure as a value. */
+    def getContents(
+        owner: Owner,
+        name: RepoName,
+        path: ContentPath,
+        ref: Option[RefName],
+    ): Future[Either[CodebergError, RepositoryContent]] =
+      exec.attempt(rail.getContents(owner, name, path, ref))
 
     /** [[RepositoryApi.forks]] with its failure as a value. */
     def forks(owner: Owner, name: RepoName, params: PageParams): Future[Either[CodebergError, Page[Repository]]] =
@@ -400,8 +454,12 @@ object RepositoryApi:
   private def tagsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
     read(ListTagsOperation, RepositoryRequests.repositoryPath(owner, name) :+ "tags", PagingQuery.window(params))
 
-  private def commitsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
-    read(ListCommitsOperation, RepositoryRequests.repositoryPath(owner, name) :+ "commits", PagingQuery.window(params))
+  private def commitsRequest(owner: Owner, name: RepoName, query: CommitQuery, params: PageParams): CodebergRequest =
+    read(
+      ListCommitsOperation,
+      RepositoryRequests.repositoryPath(owner, name) :+ "commits",
+      RepositoryQueries.commits(query.sha, query.path, query.not) ++ PagingQuery.window(params),
+    )
 
   private def releasesRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
     read(ListReleasesOperation, RepositoryRequests.repositoryPath(owner, name) :+ "releases", PagingQuery.window(params))
@@ -412,8 +470,12 @@ object RepositoryApi:
   private def topicsRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
     read(ListTopicsOperation, RepositoryRequests.repositoryPath(owner, name) :+ "topics", PagingQuery.window(params))
 
-  private def contentsRequest(owner: Owner, name: RepoName, path: ContentPath): CodebergRequest =
-    read(GetContentsOperation, (RepositoryRequests.repositoryPath(owner, name) :+ "contents") ++ path.segments, Nil)
+  private def contentsRequest(owner: Owner, name: RepoName, path: ContentPath, ref: Option[RefName]): CodebergRequest =
+    read(
+      GetContentsOperation,
+      (RepositoryRequests.repositoryPath(owner, name) :+ "contents") ++ path.segments,
+      GitDataQueries.atRef(ref),
+    )
 
   private def forksRequest(owner: Owner, name: RepoName, params: PageParams): CodebergRequest =
     read(ListForksOperation, RepositoryRequests.repositoryPath(owner, name) :+ "forks", PagingQuery.window(params))

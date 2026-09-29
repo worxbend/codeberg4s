@@ -55,14 +55,16 @@ final class IssueApiTailSuite extends FunSuite with IssueLaneHarness:
 
   test("the search sends only the filters the caller set, and only the true booleans"):
     val backend = RecordingBackend(responding(200, "[]"))
-    val query   = IssueSearchQuery.Empty
-      .withState(StateFilter.All)
-      .withLabels(Vector(orFail(LabelName.from("bug"))))
-      .matching("crash")
-      .onlyOf(IssueKind.Pulls)
-      .assignedToMe
-      .ownedBy(Handle)
-      .sortedBy(IssueSearchSort.RecentUpdate)
+    val query   = orFail(
+      IssueSearchQuery.Empty
+        .withState(StateFilter.All)
+        .withLabels(Vector(orFail(LabelName.from("bug"))))
+        .onlyOf(IssueKind.Pulls)
+        .assignedToMe
+        .ownedBy(Handle)
+        .sortedBy(IssueSearchSort.RecentUpdate)
+        .matching("crash")
+    )
 
     onApi(backend): api =>
       api

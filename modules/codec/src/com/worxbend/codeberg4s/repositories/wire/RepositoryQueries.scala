@@ -2,7 +2,8 @@ package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.paging.PageParams
-import com.worxbend.codeberg4s.repositories.RepositorySearchQuery
+import com.worxbend.codeberg4s.repositories.gitdata.RefName
+import com.worxbend.codeberg4s.repositories.{ContentPath, RepositorySearchQuery}
 
 /** The query strings this group's endpoints send.
   *
@@ -47,3 +48,21 @@ private[codeberg4s] object RepositoryQueries:
       query.sort.map(attribute  => "sort" -> attribute.wireValue),
       query.order.map(direction => "order" -> direction.wireValue),
     ).flatten ++ PagingQuery.window(params)
+
+  /** The `sha`, `path` and `not` filters of `GET /repos/{owner}/{repo}/commits`, in the order the spec declares them.
+    *
+    * Each is emitted only when the caller set it: an absent `sha` lists the default branch, an absent `path` every
+    * commit, an absent `not` excludes nothing, and an empty value for any of them is a request Forgejo has to reject. A
+    * ref reaches the wire whole — `refs/heads/main` as one value, slashes intact — because these are query parameters
+    * and not the wildcard path segments [[com.worxbend.codeberg4s.repositories.gitdata.RefName.segments]] exists for;
+    * the same holds for the path, which is one value rather than several segments.
+    *
+    * Taken as three optionals rather than as one query value because the query type that groups them lives in the
+    * client module, where the codec cannot see it; the paging window is appended by the caller, as for [[search]].
+    */
+  def commits(sha: Option[RefName], path: Option[ContentPath], not: Option[RefName]): List[(String, String)] =
+    List(
+      sha.map(ref     => "sha" -> ref.value),
+      path.map(target => "path" -> target.value),
+      not.map(ref     => "not" -> ref.value),
+    ).flatten

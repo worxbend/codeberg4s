@@ -56,9 +56,22 @@ import scala.concurrent.Future
   *
   * ==Retries==
   *
-  * Reads use [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]]. The writes each name one organisation
-  * and one account and set a flag rather than creating a row, so the state after N attempts is the state after one and
-  * they use [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]]; each says so on its own method.
+  * Reads use [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]]. The writes follow one rule, stated once
+  * here and applied on every method: '''a `PUT` or `DELETE` membership or blocking toggle keyed by a username is
+  * idempotent server-side, so it is [[com.worxbend.codeberg4s.core.RetryEligibility.AlwaysRetry]].''' Each names one
+  * organisation and one account, carries no body, and asserts an end state — "is a member", "is public", "is blocked" —
+  * rather than creating a row, so a repeat after a lost success is a no-op that answers `204` again, and the state
+  * after N attempts is the state after one. This is the same rule
+  * [[com.worxbend.codeberg4s.users.social.UserSocialApi]] applies to its follows, stars and blocks, and
+  * [[OrganizationApi.teamAdmin]] to its team memberships; they used to disagree with this class, and now do not.
+  *
+  * The counter-argument this class once made — that an [[OrgName]] is a handle [[OrganizationApi.rename]] can move
+  * between a lost success and a retry, so the retry might toggle somebody in a different organisation — is real and is
+  * the same exposure a renameable username carries on every one of those other calls. It is accepted for all of them on
+  * the same terms: the window is a single retry backoff, the action is one already visible in the listings, and each is
+  * undone by one call. What it does not cover is a write that '''names''' something new or destroys something by a
+  * reusable name, which is why [[OrganizationApi.delete]] and [[OrganizationApi.rename]] stay
+  * [[com.worxbend.codeberg4s.core.RetryEligibility.Never]].
   */
 
 final class OrganizationMemberApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using exec: Exec[Future]):
@@ -118,10 +131,18 @@ final class OrganizationMemberApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     * distinguishes the middle one.
     *
     * '''There is a `303` in the spec, and it is not a failure either.''' Forgejo redirects a caller who may not see the
-    * full membership to `/orgs/{org}/public_members/{username}`, which then answers the narrower question. The
-    * transport follows redirects, so what arrives here is the redirected `204` or `404` — meaning a `true` from this
-    * method can mean "a public member" rather than "a member", when the credentials could not see more.
-    * [[isPublicMember]] asks the narrow question deliberately.
+    * full membership to `/orgs/{org}/public_members/{username}`, which then answers the narrower question — meaning a
+    * `true` from this method can mean "a public member" rather than "a member", when the credentials could not see
+    * more. [[isPublicMember]] asks the narrow question deliberately.
+    *
+    * '''Whether the redirect is followed depends on the backend, so this method does not rely on it.''' A client built
+    * by `CodebergClient.apply` sits on sttp's default backend, which follows redirects, and the `204` or `404` that
+    * arrives here is the redirected answer. A client built by `CodebergClient.usingBackend` sits on whatever the caller
+    * supplied, and a bare backend — a `BackendStub`, or a backend deliberately built without `FollowRedirectsBackend` —
+    * hands the `303` itself back. This method treats any `3xx` as "not determinable from here" and asks
+    * [[isPublicMember]] instead, which is exactly the question the redirect would have asked, so the answer is the same
+    * on either kind of backend. A backend that follows redirects never shows a `3xx` here at all, and the fallback
+    * costs nothing.
     *
     * '''Retried''' under [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]] like any other `GET`. A `404`
     * is not a retryable status, so the `false` answer is never reached by way of an exhausted retry budget.
@@ -136,7 +157,13 @@ final class OrganizationMemberApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     *   the account handle
     */
   def isMember(org: OrgName, username: Username): Future[Boolean] =
-    OrganizationMemberApi.probe(pipeline, OrganizationMemberApi.isMemberRequest(org, username))
+    val asked = OrganizationMemberApi.probe(pipeline, OrganizationMemberApi.isMemberRequest(org, username))
+
+    exec.flatMap(exec.attempt(asked)):
+      case Right(answer)                                                                        => exec.pure(answer)
+      case Left(CodebergError.Api(_, status, _, _)) if OrganizationMemberApi.isRedirect(status) =>
+        isPublicMember(org, username)
+      case Left(error)                                                                          => exec.raise(error)
 
   /** Asks whether an account is a '''public''' member — `GET /orgs/{org}/public_members/{username}`.
     *
@@ -159,9 +186,11 @@ final class OrganizationMemberApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     * '''This removes them from every team as well''', because team membership is a subset of organisation membership.
     * Removing someone from one team is [[teamAdmin]]'s `removeMember`.
     *
-    * '''Never retried''', for the class-level reason: the request names the organisation by a handle [[rename]] can
-    * move, and what it does is remove a person's access. A repeat after a lost success could evict an account from an
-    * organisation nobody asked about.
+    * '''Retried''', under the class-level rule: a `DELETE` membership toggle keyed by a username asserts "this account
+    * is not a member", a repeat after a lost success finds that already true, and nothing is created. The cost is the
+    * usual one for a name-keyed delete — Forgejo answers `404` for an account that is not a member, so a lost success
+    * followed by a retry surfaces `Api(404)` for a removal that did happen; read that `404` as "it is done", not as "it
+    * was never there".
     *
     * '''Answers `204`.'''
     *
@@ -173,17 +202,15 @@ final class OrganizationMemberApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     *   the account to remove
     */
   def removeMember(org: OrgName, username: Username): Future[Unit] =
-    pipeline.callUnit(OrganizationMemberApi.removeMemberRequest(org, username), RetryEligibility.Never)
+    pipeline.callUnit(OrganizationMemberApi.removeMemberRequest(org, username), RetryEligibility.AlwaysRetry)
 
   /** Makes a membership public — `PUT /orgs/{org}/public_members/{username}`.
     *
     * The account then appears in [[publicMembers]] and on the organisation's page. Forgejo lets a member publicise
     * their own membership and an owner publicise anyone's.
     *
-    * '''Never retried''', for the class-level reason. Setting a flag twice is setting it once, so the '''repetition'''
-    * is harmless; what is not is the handle, which [[rename]] can move between the lost success and the retry — and
-    * this call publishes a fact about a person's affiliation, which is not something to publish about the wrong
-    * organisation.
+    * '''Retried''', under the class-level rule: a `PUT` membership toggle keyed by a username sets a flag, setting it
+    * twice is setting it once, and nothing is created — a repeat after a lost success answers `204` again.
     *
     * '''Answers `204`.'''
     *
@@ -196,14 +223,16 @@ final class OrganizationMemberApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     *   the account whose membership becomes public
     */
   def publicizeMember(org: OrgName, username: Username): Future[Unit] =
-    pipeline.callUnit(OrganizationMemberApi.publicizeMemberRequest(org, username), RetryEligibility.Never)
+    pipeline.callUnit(OrganizationMemberApi.publicizeMemberRequest(org, username), RetryEligibility.AlwaysRetry)
 
   /** Conceals a membership — `DELETE /orgs/{org}/public_members/{username}`.
     *
     * The account stays a member and stops appearing in [[publicMembers]]. This is '''not''' [[removeMember]]: nothing
     * about the account's access changes.
     *
-    * '''Never retried''', for [[publicizeMember]]'s reason.
+    * '''Retried''', for [[publicizeMember]]'s reason: it clears the same flag, and clearing it twice is clearing it
+    * once. Forgejo treats concealing a membership that is already private as done rather than as missing, so there is
+    * not even a `404`-after-a-lost-success reading to warn about.
     *
     * '''Answers `204`.'''
     *
@@ -215,7 +244,7 @@ final class OrganizationMemberApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     *   the account whose membership is concealed
     */
   def concealMember(org: OrgName, username: Username): Future[Unit] =
-    pipeline.callUnit(OrganizationMemberApi.concealMemberRequest(org, username), RetryEligibility.Never)
+    pipeline.callUnit(OrganizationMemberApi.concealMemberRequest(org, username), RetryEligibility.AlwaysRetry)
 
   // --- blocks ---------------------------------------------------------------
 
@@ -242,8 +271,11 @@ final class OrganizationMemberApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     * A blocked account cannot follow the organisation, open issues on its repositories or interact with it. Forgejo
     * removes them from the organisation as a side effect if they were a member, which is why this is not simply a flag.
     *
-    * '''Never retried''', for the class-level reason, and the side effect above is why it matters here: the handle can
-    * move between a lost success and a retry, and the retry would then evict somebody from a different organisation.
+    * '''Retried''', under the class-level rule: a `PUT` blocking toggle keyed by a username asserts "this account is
+    * blocked", and Forgejo holds one block per pair, so a repeat after a lost success creates no second block. The one
+    * cost is that Forgejo answers `422` for an account that is already blocked, so a lost success followed by a retry
+    * can surface `Api(422)` for a block that did take; [[blockedUsers]] resolves the doubt. This is the same decision
+    * [[com.worxbend.codeberg4s.users.social.UserSocialApi.block]] makes for the user-level block, on the same terms.
     *
     * '''Answers `204`.'''
     *
@@ -256,7 +288,7 @@ final class OrganizationMemberApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     *   the account to block
     */
   def blockUser(org: OrgName, username: Username): Future[Unit] =
-    pipeline.callUnit(OrganizationMemberApi.blockUserRequest(org, username), RetryEligibility.Never)
+    pipeline.callUnit(OrganizationMemberApi.blockUserRequest(org, username), RetryEligibility.AlwaysRetry)
 
   /** Lifts a block — `PUT /orgs/{org}/unblock/{username}`.
     *
@@ -264,7 +296,8 @@ final class OrganizationMemberApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     * second path rather than by deleting the record [[blockedUsers]] reports — which is why [[BlockId]] is never handed
     * to anything.
     *
-    * '''Never retried''', for [[blockUser]]'s reason.
+    * '''Retried''', for [[blockUser]]'s reason, with the mirror-image cost: `422` is what an account that is not
+    * blocked produces, so a lost success followed by a retry can surface `Api(422)` for an unblock that did take.
     *
     * '''Answers `204`''', and does not restore a membership the block removed.
     *
@@ -276,7 +309,7 @@ final class OrganizationMemberApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     *   the account to unblock
     */
   def unblockUser(org: OrgName, username: Username): Future[Unit] =
-    pipeline.callUnit(OrganizationMemberApi.unblockUserRequest(org, username), RetryEligibility.Never)
+    pipeline.callUnit(OrganizationMemberApi.unblockUserRequest(org, username), RetryEligibility.AlwaysRetry)
 
   // --- teams ----------------------------------------------------------------
 
@@ -462,6 +495,15 @@ object OrganizationMemberApi:
     * [[com.worxbend.codeberg4s.pulls.PullRequestApi]] does the same for its merge probe.
     */
   private val NotAMember: Int = 404
+
+  /** Whether `status` is the redirect Forgejo issues from the full membership probe to the public one.
+    *
+    * The spec declares a `303`; the range is accepted rather than the one code because a reverse proxy may rewrite it,
+    * and any `3xx` reaching [[OrganizationMemberApi.isMember]] means exactly one thing — the backend did not follow the
+    * redirect — which the method answers by asking the public question itself.
+    */
+  private def isRedirect(status: Int): Boolean =
+    status >= 300 && status < 400
 
   /** Runs a status-only membership probe: `204` is `true`, `404` is `false`, everything else fails.
     *
