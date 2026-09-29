@@ -299,7 +299,7 @@ cross-build.
 ## How do I report a bug, or contribute?
 
 The repository is at
-[codeberg.org/worxbend/codeberg4s](https://codeberg.org/worxbend/codeberg4s).
+[github.com/worxbend/codeberg4s](https://github.com/worxbend/codeberg4s).
 
 Note that `docs/READINESS.md` lists the contribution path — `CONTRIBUTING.md`,
 issue templates, a security policy — as still missing at the time of writing. If

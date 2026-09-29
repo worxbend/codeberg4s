@@ -21,7 +21,7 @@ which won and why, and the ADR is authoritative. The divergences that matter:
 | package prefix `codeberg4s.*` (§3) | `com.worxbend.codeberg4s.*` | [ADR-0005](docs/adr/0005-future-public-api.md) |
 | module `sttp-transport` (§3) | module `transport`, under the Mill `modules/<name>/src` layout | [docs/VERSIONS.md §2](docs/VERSIONS.md) |
 | softwaremill/retry evaluated first (§3.3 ADR-4) | `RetryPolicy` implemented in `core`, no new dependency | [ADR-0004](docs/adr/0004-retry-implemented-in-core.md) |
-| Gherkin acceptance pipeline (§2, §6.2), `acceptance-runner` module | not built; no Gherkin tooling exists in this repository | [CLAUDE.md](CLAUDE.md) § Acceptance tests, [docs/CONSTITUTION_MAPPING.md](docs/CONSTITUTION_MAPPING.md) |
+| Gherkin acceptance pipeline (§2, §6.2), `acceptance-runner` module | not built; no Gherkin tooling exists in this repository | [CONTRIBUTING.md](CONTRIBUTING.md) § Tests ("no acceptance tests"), [docs/CONSTITUTION_MAPPING.md](docs/CONSTITUTION_MAPPING.md) |
 | quicklens as a candidate utility (§0) | not a dependency | [docs/VERSIONS.md §6](docs/VERSIONS.md) |
 
 For what is actually built and what is left, read

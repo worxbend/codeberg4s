@@ -19,9 +19,9 @@ Include, as far as you can:
   with a placeholder and say so. Do not send working credentials; a report is
   not worth creating a second incident.
 
-If the repository's host offers private vulnerability reporting (GitHub's
-"Report a vulnerability" button, for instance), that works too and reaches the
-same person.
+GitHub's private vulnerability reporting — the "Report a vulnerability" button
+on [github.com/worxbend/codeberg4s](https://github.com/worxbend/codeberg4s/security)
+— works too and reaches the same person.
 
 There is no bug bounty and no published PGP key. If you need an encrypted
 channel, say so in a first message containing nothing sensitive and one will be

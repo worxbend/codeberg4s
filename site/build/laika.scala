@@ -56,7 +56,7 @@ import laika.theme.config.Color
 object SiteInfo:
   val title: String       = "codeberg4s"
   val description: String = "A Scala 3 client for the Codeberg / Forgejo REST API v1, with a Future-based public API."
-  val sourceUrl: String   = "https://codeberg.org/worxbend/codeberg4s"
+  val sourceUrl: String   = "https://github.com/worxbend/codeberg4s"
   val licence: String     = "MIT"
 
   /** The Helium defaults that would be fetched from a Google server on every page view. */

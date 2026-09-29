@@ -4,9 +4,9 @@ import munit.FunSuite
 
 /** The tag every suite in `modules/it` carries.
   *
-  * `modules/it` is the environmentally unsuitable boundary described in `CLAUDE.md` and `PLAN.md` §6.5: the one module
-  * allowed to start a container or open a socket to the public internet. Two independent things keep it out of the
-  * default gate, and both are deliberate:
+  * `modules/it` is the environmentally unsuitable boundary described in `CONTRIBUTING.md` § "Tests", the header of
+  * `verify.sh` and `PLAN.md` §6.5: the one module allowed to start a container or open a socket to the public internet.
+  * Two independent things keep it out of the default gate, and both are deliberate:
   *
   *   1. `verify.sh` names the unit-test modules one by one and `modules.it.test` is not among them, so the default run
   *      never reaches this code at all;

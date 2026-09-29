@@ -23,6 +23,47 @@ Forgejo. They are the ground truth for codec tests; the Swagger spec is not.
 - Do not regenerate a fixture to make a test pass. If the API shape changed,
   re-harvest deliberately and update this manifest.
 
+## Personal data and takedown
+
+**What is here.** These are public API responses exactly as Codeberg served
+them to an anonymous client, so they carry the personal data Forgejo exposes on
+public objects: `login` and `username`, `full_name`, `avatar_url`, and an
+`email` on every user object and on every commit author and committer. Most of
+those addresses are the `<login>@noreply.codeberg.org` placeholder Forgejo
+substitutes for accounts that keep their address private; a small number are
+real addresses, because the account holder chose to publish theirs or because
+the commit was authored with it. Twenty-nine of the fifty-four fixtures contain
+an `email` field (every `issue/`, `pull/` and `user/` file, and most of
+`repository/`). Nothing here was obtained by authentication, and nothing here
+is data the same anonymous request would not return today.
+
+**Why it is kept.** The rule above — bodies are verbatim — is the point of the
+directory. The codecs are tested against what the server really sends, field
+by field, and a fixture with a hand-changed value is a fixture that proves the
+decoder handles the hand-changed value. Redacting on capture would also make
+the manifest's byte-exactness claim false for every file. So the data is
+retained as captured, and the exception below is the only edit the verbatim
+rule admits.
+
+**If someone asks for their data to be removed.** Do it, and do it this way:
+
+1. Replace the value with a same-shape placeholder wherever it appears — for
+   an address, another syntactically valid address that cannot deliver, such
+   as `redacted-1@example.invalid`; for a name, another short string; never
+   `null`, never a removed key, because those change what the decoder is
+   being asked to prove. Do not touch any other field in the file.
+2. Re-run the codec suite (`./mill modules.codec.test`); it must stay green
+   with no test changed. If a test was asserting on the redacted value itself,
+   that assertion moves to the placeholder in the same commit.
+3. Record the redaction in this manifest, in a "Redactions" list under this
+   section: the date, the file(s) and the field, and the placeholder used —
+   not the value removed. The `Origin` column stays `real`, because the
+   response is still the captured one with a single field replaced.
+4. Commit it on its own, with a message that says a takedown was honoured.
+
+A request reaches the maintainer through `SECURITY.md`'s contact address; it
+is not a vulnerability, but it is handled with the same promptness.
+
 ## Fixtures
 
 `Total` and `Link` record whether the response carried `X-Total-Count` and an

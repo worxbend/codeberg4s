@@ -16,7 +16,7 @@ can tell a deliberate pin from a stale one.
 
 ---
 
-## 1. Resolution method (CLAUDE.md, SCALA_CODE_STYLE.md § Tooling)
+## 1. Resolution method (SCALA_CODE_STYLE.md § Tooling)
 
 The method is fixed and not a matter of preference:
 
@@ -145,7 +145,7 @@ test sweep.
 | scoverage | `2.5.2` | `build.mill` → `Versions.scoverage` | `2.5.2` | current |
 | Scalafmt | `3.11.5` | `.scalafmt.conf` → `version` | `3.11.5` | current |
 | Scalafix | via Mill's `__.fix` | `.scalafix.conf` (rules only, no version) | `scalafix-core` `0.14.7` | resolved transitively by Mill |
-| Stryker4s | not yet wired | — | — | scaffold only when the task calls for it (CLAUDE.md § Quality analysis) |
+| Stryker4s | not yet wired | — | — | scaffold only when the task calls for it (`CONTRIBUTING.md` § Tests; `docs/CONSTITUTION_MAPPING.md` § Stryker4s records what has been proven) |
 
 ### scoverage `2.5.2`
 

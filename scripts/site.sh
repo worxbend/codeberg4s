@@ -524,7 +524,7 @@ examples_table() {
     [[ -n "$needs" ]] || needs="nothing"
     printf '| [`%s`](%s) | %s | %s |\n' \
       "$name" \
-      "https://codeberg.org/worxbend/codeberg4s/src/branch/main/modules/examples/src/com/worxbend/codeberg4s/examples/$name.scala" \
+      "https://github.com/worxbend/codeberg4s/blob/main/modules/examples/src/com/worxbend/codeberg4s/examples/$name.scala" \
       "$summary" \
       "$needs"
   done
