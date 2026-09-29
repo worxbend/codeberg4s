@@ -1,10 +1,21 @@
 name: CI
 
-# The fast gate on the canonical remote (codeberg.org).
+# The fast gate, as run by a Forgejo instance that mirrors this repository.
+#
+# GitHub is the canonical forge: https://github.com/worxbend/codeberg4s is
+# `Publish.projectUrl` in build.mill, the only git remote, and the host of the
+# release workflow, the nightly analysis, the documentation site and the issue
+# tracker (see .github/workflows/). This file exists so that a Forgejo mirror —
+# Codeberg, or any self-hosted instance — runs the same gate on the same
+# commits and reports it on its own pull requests. It is a mirror gate: nothing
+# is released, scheduled or published from here, and a result here that
+# disagrees with GitHub's is a bug in this file, not a second opinion.
 #
 # ./verify.sh is the single source of truth for what CI checks — the same
 # script a contributor runs locally and the same one .github/workflows/ci.yml
-# runs. Nothing is checked here that is not checked there.
+# runs. Nothing is checked here that is not checked there, and the two jobs
+# below are the two jobs that workflow has: the routine gate and the property
+# suites.
 #
 # The `nightly` and `spec-drift` jobs that used to live in this file have moved
 # to .github/workflows/nightly.yml. Both were gated on
@@ -22,11 +33,27 @@ name: CI
 # there. An instance configured to pull actions from somewhere else needs the
 # SHAs re-resolved against that forge; the tags alone would silently work and
 # silently mean something different.
+#
+# `permissions`, `concurrency` and `timeout-minutes` mirror .github/workflows/
+# ci.yml so the two files ask for the same thing. Forgejo Actions honours
+# `timeout-minutes`; the other two are read on the versions that implement them
+# and ignored — not rejected — on the ones that do not, so declaring them costs
+# nothing and means the same here as there when they do apply.
 
 on:
   push:
     branches: [main]
   pull_request:
+
+permissions:
+  contents: read
+
+# A second push to the same branch makes the first run's answer worthless.
+# main is excluded from cancellation because its history is what the mirror
+# is compared against.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   # Keep every cache inside the workspace. The constitution requires that the
@@ -37,7 +64,11 @@ env:
 
 jobs:
   verify:
+    name: verify.sh
     runs-on: docker
+    # The same budget as the GitHub job: the fast gate from a cold Coursier
+    # cache. A run that takes longer has hung, not slowed down.
+    timeout-minutes: 45
     container:
       # Must not be older than the `-java-output-version:25` in build.mill.
       # Mill provisions its own JDK from .mill-jvm-version, so the image's JDK
@@ -56,7 +87,8 @@ jobs:
 
       # verify.sh runs scripts/coverage-gate.sc through scala-cli, so the image
       # needs scala-cli as well as a JDK. Pinned by version and checksum for
-      # the same reason scripts/cpd.sh pins PMD.
+      # the same reason scripts/cpd.sh pins PMD; renovate.json knows this pair
+      # and proposes both halves together.
       - name: Install scala-cli
         env:
           SCALA_CLI_VERSION: "1.15.0"
@@ -73,3 +105,28 @@ jobs:
 
       - name: Verify
         run: ./verify.sh
+
+  properties:
+    name: verify.sh --properties
+    runs-on: docker
+    # The same budget as the GitHub job of the same name.
+    timeout-minutes: 30
+    container:
+      image: docker.io/eclipse-temurin:25-jdk
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Cache Coursier
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .cache/coursier
+          # Its own key prefix, as on GitHub: the property run never produces a
+          # coverage report, so its footprint differs from the verify job's.
+          key: coursier-properties-${{ hashFiles('build.mill', '.mill-version', '.mill-jvm-version') }}
+          restore-keys: coursier-properties-
+
+      # `--properties` runs the suites tagged `Property` and nothing else, and
+      # asserts that a `*Props` suite really reported tests. It needs no
+      # scala-cli: the coverage gate is not part of this mode.
+      - name: Property suites
+        run: ./verify.sh --properties

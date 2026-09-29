@@ -13,16 +13,25 @@ import mill.scalalib.*
 import mill.scalalib.publish.*
 import mill.scalalib.scalafmt.ScalafmtModule
 
+/** Every third-party version this build pins, in one place.
+  *
+  * The trailing `// renovate:` comment on each line names one Maven artifact published under that version, for the
+  * regex manager in `renovate.json`: the `mvn"…"` strings below name their artifact at the use site rather than beside
+  * the version, so without the annotation nothing could tell an update tool which artifact a `val` stands for. Renovate
+  * has no Mill manager, which is why the annotation carries that weight. Resolve a new version the way
+  * `SCALA_CODE_STYLE.md` § Tooling says — the `maven-metadata.xml` on repo1, last stable — and keep the artifact named
+  * here one that really is published under the same version as the others sharing the `val`.
+  */
 object Versions:
-  val scala          = "3.8.4"
-  val sttp           = "4.0.26"
-  val sttpModel      = "1.7.18"
-  val jsoniter       = "2.40.1"
-  val munit          = "1.3.5"
-  val munitScalcheck = "1.3.0"
-  val scalacheck     = "1.19.0"
-  val testcontainers = "0.44.1"
-  val scoverage      = "2.5.2"
+  val scala          = "3.8.4"  // renovate: depName=org.scala-lang:scala3-library_3
+  val sttp           = "4.0.26" // renovate: depName=com.softwaremill.sttp.client4:core_3
+  val sttpModel      = "1.7.18" // renovate: depName=com.softwaremill.sttp.model:core_3
+  val jsoniter       = "2.40.1" // renovate: depName=com.github.plokhotnyuk.jsoniter-scala:jsoniter-scala-core_3
+  val munit          = "1.3.5"  // renovate: depName=org.scalameta:munit_3
+  val munitScalcheck = "1.3.0"  // renovate: depName=org.scalameta:munit-scalacheck_3
+  val scalacheck     = "1.19.0" // renovate: depName=org.scalacheck:scalacheck_3
+  val testcontainers = "0.44.1" // renovate: depName=com.dimafeng:testcontainers-scala-munit_3
+  val scoverage      = "2.5.2"  // renovate: depName=org.scoverage:scalac-scoverage-reporter_3
 
 /** Everything the published POMs say about this project.
   *
@@ -37,14 +46,18 @@ object Versions:
 object Publish:
   val group      = "com.worxbend"
   val version    = "0.1.0-SNAPSHOT"
-  val projectUrl = "https://codeberg.org/worxbend/codeberg4s"
+  /** The canonical forge. GitHub hosts the repository, the issue tracker, the release and nightly workflows and the
+    * documentation site; a Forgejo mirror only re-runs the gate (`.forgejo/workflows/ci.yml`). Every link that names
+    * the project — the issue-template contact links, `CONTRIBUTING.md`, the site — follows this value.
+    */
+  val projectUrl = "https://github.com/worxbend/codeberg4s"
 
   private val repoPath = "worxbend/codeberg4s.git"
 
   private val scm = VersionControl(
     browsableRepository = Some(projectUrl),
-    connection          = Some(VersionControlConnection.gitHttps("codeberg.org", repoPath)),
-    developerConnection = Some(VersionControlConnection.gitSsh("codeberg.org", s":$repoPath", Some("git"))),
+    connection          = Some(VersionControlConnection.gitHttps("github.com", repoPath)),
+    developerConnection = Some(VersionControlConnection.gitSsh("github.com", s":$repoPath", Some("git"))),
   )
 
   val pom = PomSettings(
@@ -53,7 +66,7 @@ object Publish:
     url            = projectUrl,
     licenses       = Seq(License.MIT),
     versionControl = scm,
-    developers     = Seq(Developer("w0rxbend", "w0rxbend", "https://codeberg.org/worxbend")),
+    developers     = Seq(Developer("w0rxbend", "w0rxbend", "https://github.com/worxbend")),
   )
 
   /** The already-released versions that every artifact in this build must stay binary compatible with.
@@ -85,7 +98,8 @@ object Publish:
 
 /** Common settings for every module in the build, published or not.
   *
-  * Warnings are errors here on purpose — see CLAUDE.md "Compiler settings".
+  * Warnings are errors here on purpose — see `CONTRIBUTING.md` § "Compiler", and the Scaladoc on `scalacOptions`
+  * below for the one flag that is about the JDK rather than about warnings.
   */
 trait Codeberg4sModule extends ScalaModule with ScalafmtModule with ScoverageModule with ScalafixModule:
   def scalaVersion     = Versions.scala

@@ -28,8 +28,9 @@ macros module is compile-time only.
 > codec instead of deriving any. The dependency has since been dropped — see
 > "Consequences".
 
-Meanwhile the style guide — which `CLAUDE.md` names the single source of truth
-for the HTTP/JSON boundary — said jsoniter all along.
+Meanwhile the style guide — which the repository's working instructions, now
+`CONTRIBUTING.md`, name the source of truth for how Scala is written here, the
+HTTP/JSON boundary included — said jsoniter all along.
 
 ## Decision
 

@@ -48,7 +48,7 @@ If you are new to the library, `HelloCodeberg` then `HandlingErrors` then
 it fails, then the one operational fact that makes long-running use correct.
 
 The source is browsable at
-[`modules/examples/src/com/worxbend/codeberg4s/examples`](https://codeberg.org/worxbend/codeberg4s/src/branch/main/modules/examples/src/com/worxbend/codeberg4s/examples).
+[`modules/examples/src/com/worxbend/codeberg4s/examples`](https://github.com/worxbend/codeberg4s/tree/main/modules/examples/src/com/worxbend/codeberg4s/examples).
 
 ## Snippets versus programs
 

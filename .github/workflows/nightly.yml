@@ -11,6 +11,20 @@ name: Nightly
 # here now rather than in both places: two copies of a drift detector are two
 # things to keep in step, and the one that matters is the one that actually
 # fires.
+#
+# The property suites used to have a job here as well. They run on every push
+# and pull request now (`properties` in ci.yml): a ScalaCheck suite with a
+# pinned seed is deterministic, so a nightly re-run of the same commit added
+# nothing, and a job that only ran at 03:00 let a broken property sit unseen
+# for a day. See verify.sh's header for what `--properties` is.
+#
+# Two jobs share the slow analysis, on purpose. `with-slow` runs duplication
+# and CRAP and MUST be green — both gates pass today, so red there is a real
+# regression. `mutation` runs `--nightly`, which ends in Stryker4s, and that is
+# expected to fail until the plugin is wired (see the job). Keeping them apart
+# is what lets the first say something: when both lived in one job, the
+# mutation step's certain failure turned every nightly red, and a gate that is
+# always red is one nobody reads.
 
 on:
   schedule:
@@ -27,15 +41,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  full-analysis:
-    name: verify.sh --nightly
+  with-slow:
+    name: verify.sh --with-slow
     # GitHub disables scheduled workflows in forks, but workflow_dispatch is
     # not disabled, so the guard is not redundant.
     if: ${{ !github.event.repository.fork }}
     runs-on: ubuntu-latest
-    # Stryker4s runs the test command once per mutant. If a real score is ever
-    # produced for this repository it will be hours, not minutes.
-    timeout-minutes: 360
+    # The fast gate is given 45 minutes from a cold cache (ci.yml). CPD adds
+    # one PMD download and CRAP one more scala-cli script on top; 90 is
+    # generous, and a run that takes longer has hung.
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -43,47 +58,82 @@ jobs:
         with:
           cache-prefix: coursier-nightly
 
-      # EXPECTED TO FAIL TODAY, AND DELIBERATELY NOT MARKED continue-on-error.
-      #
-      # `--nightly` implies `--with-slow`, so it runs the duplication and CRAP
-      # gates (both of which pass) and then mutation testing, which does not:
-      # scripts/mutate.sh refuses to exit 0 without a real mutation score, and
-      # build.mill does not yet declare the Stryker4s Mill plugin. See
-      # docs/ROADMAP.md Phase 4.
-      #
-      # A `continue-on-error: true` here would turn that into a green tick, and
-      # a nightly reporting green while mutation testing has never produced a
-      # score is a lie the rest of this repository's tooling is careful not to
-      # tell. It stays red until the plugin is wired, and then it means
-      # something.
-      - name: Full analysis
-        run: ./verify.sh --nightly
+      # Everything the fast gate runs, then duplication against its recorded
+      # baseline (CPD_BASELINE_GROUPS in verify.sh) and CRAP against its limit.
+      # This is the only place those two gates run, so this job has to be green
+      # and is not marked continue-on-error anywhere.
+      - name: Slow analysis
+        run: ./verify.sh --with-slow
 
-  properties:
-    name: Property suites
-    # A job of its own, not a step of `full-analysis`. That job is expected to
-    # end red at the mutation step (see above), and a step added after it would
-    # never run; a step added before it would be reported under a name that says
-    # "mutation testing" when it failed. The property suites are the only thing
-    # that runs these tests at all, so their result has to be readable on its
-    # own.
+  mutation:
+    name: verify.sh --nightly (mutation testing)
     if: ${{ !github.event.repository.fork }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Stryker4s runs the test command once per mutant. If a real score is ever
+    # produced for this repository it will be hours, not minutes.
+    timeout-minutes: 360
+    # EXPECTED TO FAIL TODAY, and the reason is written into the run's summary
+    # by the last step rather than left for someone to rediscover in the log.
+    #
+    # `--nightly` implies `--with-slow`, so this job repeats the gates the job
+    # above ran and then reaches mutation testing, which fails: scripts/mutate.sh
+    # refuses to exit 0 without a real mutation score, and build.mill does not
+    # yet declare the Stryker4s Mill plugin. See docs/ROADMAP.md Phase 4 and
+    # docs/CONSTITUTION_MAPPING.md § "Stryker4s".
+    #
+    # continue-on-error keeps that certain failure from deciding the whole
+    # run's result, so that the `with-slow` and `spec-drift` jobs beside it can
+    # be read at a glance. It is NOT a claim that mutation testing passed: the
+    # job is still reported as failed, its summary says why, and the day the
+    # plugin is wired this line comes out in the same commit so the gate means
+    # something again. A green tick on a job that had produced no score would
+    # be a lie; a failed job whose summary says "no score yet" is the truth.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: ./.github/actions/scala-toolchain
         with:
-          cache-prefix: coursier-properties
+          # Same footprint as the job above — the fast gate plus PMD and the
+          # scala-cli scripts — so the same cache lane.
+          cache-prefix: coursier-nightly
 
-      # `--properties` runs the ScalaCheck suites and nothing else: the routine
-      # gate excludes the `Property` tag, so without this job the suites would
-      # be compiled by CI and executed by nobody. The script asserts that a
-      # `*Props` suite actually reported tests, so a mis-scoped tag filter fails
-      # here rather than passing green with an empty run.
-      - name: Property suites
-        run: ./verify.sh --properties
+      - name: Mutation testing
+        id: mutate
+        run: ./verify.sh --nightly
+
+      - name: Say why the job is red
+        if: always()
+        env:
+          OUTCOME: ${{ steps.mutate.outcome }}
+        run: |
+          set -euo pipefail
+          if [ "$OUTCOME" = "success" ]; then
+            {
+              echo "## Mutation testing produced a score"
+              echo
+              echo "\`./verify.sh --nightly\` exited 0, which means \`scripts/mutate.sh\` reported a real"
+              echo "mutation score above its threshold. Remove \`continue-on-error: true\` from the"
+              echo "\`mutation\` job in \`.github/workflows/nightly.yml\` so a future regression fails"
+              echo "the nightly again, and move the Stryker4s row in \`docs/CONSTITUTION_MAPPING.md\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo "## Mutation testing is red, and is expected to be"
+            echo
+            echo "\`./verify.sh --nightly\` ends in \`scripts/mutate.sh\`, which refuses to exit 0"
+            echo "without a real mutation score, and \`build.mill\` does not yet declare the"
+            echo "Stryker4s Mill plugin — so no score has ever been produced for this repository."
+            echo "This job carries \`continue-on-error: true\` so that its certain failure does not"
+            echo "hide the result of the \`with-slow\` and \`spec-drift\` jobs, which must be green."
+            echo
+            echo "Nothing about this outcome is a pass. The step above it — duplication against"
+            echo "its baseline and CRAP — is what the \`with-slow\` job reports on separately."
+            echo
+            echo "What wires it: the two \`build.mill\` lines and the run described in"
+            echo "\`docs/CONSTITUTION_MAPPING.md\` § \"Stryker4s\" and \`docs/ROADMAP.md\` Phase 4."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   spec-drift:
     name: Spec drift

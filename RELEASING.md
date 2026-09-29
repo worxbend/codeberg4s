@@ -200,8 +200,14 @@ gate.
 
 **It is deliberately not in `verify.sh`.** The check downloads the previous
 artifacts from Maven Central, and the fast gate has to run offline and in
-seconds. It belongs in the release procedure instead, which is where the
-checklist at the bottom of this document puts it.
+seconds. It belongs in the release procedure instead: the checklist at the
+bottom of this document puts it there, and
+[`.github/workflows/release.yml`](.github/workflows/release.yml) runs it as
+its own step, "Binary compatibility (MIMA)", after `./verify.sh` and before
+anything is signed. That step reads the `binaryCompatibleWith` declaration out
+of `build.mill`; while it is `Seq.empty` the step skips and writes why into the
+run summary, and if the declaration cannot be found at all the step fails
+rather than guess, so renaming the list cannot switch the check off.
 
 #### Turning it on, after `0.1.0` is published
 
@@ -455,7 +461,10 @@ an artifact becomes immutable.
    command says so. From `0.1.1` onwards it must be green, or every report it
    makes must be either a filter written per
    ["The filter, and how to write it"](#the-filter-and-how-to-write-it) or a
-   reason to renumber the release.
+   reason to renumber the release. The release workflow runs the same command
+   again before publishing, and skips it with a summary line while the list is
+   empty — so running it here is what lets you fix a report before the tag,
+   not the only time it runs.
 
 6. **Prove the artifacts assemble** before asking a public repository to
    accept them:
@@ -486,9 +495,11 @@ an artifact becomes immutable.
    The workflow refuses to publish when the two disagree, and refuses a tag
    whose version still ends in `-SNAPSHOT`.
 
-9. **Watch the workflow.** It re-runs `./verify.sh` from a clean checkout
-   before publishing anything. A release is not exempt from the gate; it is
-   the build that most needs it.
+9. **Watch the workflow.** It re-runs `./verify.sh` from a clean checkout,
+   then `./mill modules.__.mimaReportBinaryIssues` when
+   `Publish.binaryCompatibleWith` names a release to compare against, before
+   publishing anything. A release is not exempt from the gate; it is the build
+   that most needs it.
 
 10. **Verify it landed** — see below — and only then announce it.
 
@@ -604,7 +615,9 @@ Copy this into the release pull request.
 - [ ] `./scripts/site.sh` green — it compiles every documentation snippet
       against the real library, and `./verify.sh` does not cover it
 - [ ] `./mill modules.__.mimaReportBinaryIssues` green, or every report
-      filtered with a reason (not applicable to `0.1.0`)
+      filtered with a reason (not applicable to `0.1.0`) — the release
+      workflow's "Binary compatibility (MIMA)" step runs it again and skips,
+      with a summary line, while `Publish.binaryCompatibleWith` is empty
 - [ ] `./mill modules.__.publishLocal`, then something compiled against it
 - [ ] Public signature changes reviewed against the versioning policy above
 - [ ] Version bump committed on its own, `chore(build): release X.Y.Z`

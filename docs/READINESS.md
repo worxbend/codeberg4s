@@ -39,7 +39,7 @@ Checked, not assumed:
 
 ## Nice to have — not blocking 0.1.0
 
-- Dependency update automation for the Scala and Mill side (Renovate; Codeberg supports it, and Dependabot has no Mill support). The GitHub Actions pins are already covered by `.github/dependabot.yml`.
+- Dependency update automation for the Scala and Mill side is configured but unobserved. `renovate.json` covers Mill itself, the Mill plugins, the `Versions` pins in `build.mill` and the version-plus-sha256 pairs for scala-cli, Coursier and PMD — all through regex managers, because Renovate has no Mill manager (checked 2026-09-29). What cannot be checked from a clone is whether the Renovate app is enabled on the GitHub repository; until a Renovate pull request has been seen, treat this as wired, not proven. The GitHub Actions pins stay with `.github/dependabot.yml`, and Renovate's own Actions manager is disabled so the two never overlap.
 - A spec-drift issue opener rather than a warning in a log.
 - Scala.js / Native cross-builds, which `PLAN.md` §0 explicitly defers.
 - A JMH harness. `scripts/alloc-bench.sh` measures allocation and wall-clock off the real golden fixtures and is what the codec work was judged against, but it is a single-threaded counter that does not fork a JVM per benchmark — its own header documents the two ways that misleads.

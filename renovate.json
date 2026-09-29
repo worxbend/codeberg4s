@@ -1,0 +1,114 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": [
+    "Keeps the pins Dependabot cannot see moving: Mill itself, the Mill plugins and the Scala",
+    "dependencies in build.mill, and the version-plus-sha256 pairs for the tools CI downloads.",
+    "GitHub Actions pins stay with .github/dependabot.yml, so that manager is disabled here.",
+    "",
+    "Renovate has no Mill manager (checked against docs.renovatebot.com/modules/manager/ and the",
+    "lib/modules/manager tree on 2026-09-29), so every Mill-side pin is read by a regex manager:",
+    "the `//| - group::artifact:version` plugin header of build.mill, the `val name = \"x.y.z\"`",
+    "lines of `object Versions` — each annotated with the Maven coordinate it stands for, because",
+    "the artifact is named at the use site and not beside the version — and .mill-version.",
+    "",
+    "Tool downloads are pinned by version AND checksum. The regex managers capture both halves",
+    "so a proposal changes them together; Renovate's github-releases datasource looks the new",
+    "asset's digest up from the release. A version bump that arrives without a matching checksum",
+    "fails loudly anyway — sha256sum --check in the toolchain action, and scripts/cpd.sh refusing",
+    "a PMD_VERSION it has no PMD_SHA256 for — so nothing here can quietly widen a pin."
+  ],
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Warsaw",
+  "schedule": ["before 7am on monday"],
+  "labels": ["dependencies"],
+  "commitMessagePrefix": "build(deps):",
+  "commitMessageAction": "bump",
+  "prConcurrentLimit": 5,
+  "github-actions": {
+    "enabled": false
+  },
+  "packageRules": [
+    {
+      "description": "Mill, its plugins and the compiler move on their own: each is a build change, not a library bump.",
+      "matchPackageNames": [
+        "com.lihaoyi:mill-dist",
+        "com.lihaoyi:mill-contrib-scoverage_3",
+        "com.goyeau:mill-scalafix_mill1_3",
+        "com.github.lolgab:mill-mima_mill1_3",
+        "org.scala-lang:scala3-library_3"
+      ],
+      "commitMessagePrefix": "build(mill):"
+    },
+    {
+      "description": "mill-contrib-scoverage is versioned with Mill itself and must match .mill-version — one pull request for both.",
+      "matchPackageNames": ["com.lihaoyi:mill-dist", "com.lihaoyi:mill-contrib-scoverage_3"],
+      "groupName": "mill"
+    },
+    {
+      "description": "Tool pins: version and checksum in one change, under the ci scope the workflow files use.",
+      "matchManagers": ["custom.regex"],
+      "matchDatasources": ["github-releases"],
+      "commitMessagePrefix": "ci(deps):"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Mill itself. .mill-version holds one version string; the bootstrap script fetches com.lihaoyi:mill-dist from Maven Central.",
+      "managerFilePatterns": ["/^\\.mill-version$/"],
+      "matchStrings": ["^(?<currentValue>\\S+)\\s*$"],
+      "depNameTemplate": "com.lihaoyi:mill-dist",
+      "datasourceTemplate": "maven"
+    },
+    {
+      "customType": "regex",
+      "description": "Mill plugins declared with a double `::` in build.mill's header — cross-built per Mill line, published as <artifact>_mill1_3.",
+      "managerFilePatterns": ["/^build\\.mill$/"],
+      "matchStrings": ["^//\\| - (?<group>[^:\\s]+)::(?<artifact>[^:\\s]+)::(?<currentValue>[^:\\s]+)\\s*$"],
+      "depNameTemplate": "{{{group}}}:{{{artifact}}}_mill1_3",
+      "datasourceTemplate": "maven"
+    },
+    {
+      "customType": "regex",
+      "description": "Mill plugins declared with a single `::` in build.mill's header — cross-built for Scala 3 only, published as <artifact>_3.",
+      "managerFilePatterns": ["/^build\\.mill$/"],
+      "matchStrings": ["^//\\| - (?<group>[^:\\s]+)::(?<artifact>[^:\\s]+):(?<currentValue>[^:\\s]+)\\s*$"],
+      "depNameTemplate": "{{{group}}}:{{{artifact}}}_3",
+      "datasourceTemplate": "maven"
+    },
+    {
+      "customType": "regex",
+      "description": "The `object Versions` pins in build.mill. Each `val` carries a trailing `// renovate: depName=<group>:<artifact>` naming one artifact that is published under that version, because the mvn\"…\" strings name the artifact at the use site, not beside the version.",
+      "managerFilePatterns": ["/^build\\.mill$/"],
+      "matchStrings": ["^\\s*val\\s+\\w+\\s*=\\s*\"(?<currentValue>[^\"]+)\"\\s*//\\s*renovate: depName=(?<depName>\\S+)\\s*$"],
+      "datasourceTemplate": "maven"
+    },
+    {
+      "customType": "regex",
+      "description": "scala-cli in the toolchain action and the Forgejo workflow: version and sha256 of the x86_64 Linux asset, captured as one pin.",
+      "managerFilePatterns": ["/^\\.github/actions/scala-toolchain/action\\.yml$/", "/^\\.forgejo/workflows/ci\\.yml$/"],
+      "matchStrings": ["SCALA_CLI_VERSION: \"(?<currentValue>[^\"]+)\"\\s+SCALA_CLI_SHA256: \"(?<currentDigest>[a-f0-9]{64})\""],
+      "depNameTemplate": "VirtusLab/scala-cli",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "description": "The Coursier CLI in the toolchain action: version and sha256 of the x86_64 Linux asset, captured as one pin.",
+      "managerFilePatterns": ["/^\\.github/actions/scala-toolchain/action\\.yml$/"],
+      "matchStrings": ["COURSIER_CLI_VERSION: \"(?<currentValue>[^\"]+)\"\\s+COURSIER_CLI_SHA256: \"(?<currentDigest>[a-f0-9]{64})\""],
+      "depNameTemplate": "coursier/coursier",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "description": "PMD in scripts/cpd.sh: the default version and the sha256 of its pmd-dist-<version>-bin.zip, captured as one pin. PMD tags releases pmd_releases/<version>.",
+      "managerFilePatterns": ["/^scripts/cpd\\.sh$/"],
+      "matchStrings": ["PMD_DEFAULT_VERSION=\"(?<currentValue>[^\"]+)\"\\s+readonly PMD_DEFAULT_SHA256=\"(?<currentDigest>[a-f0-9]{64})\""],
+      "depNameTemplate": "pmd/pmd",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^pmd_releases/(?<version>.+)$"
+    }
+  ]
+}

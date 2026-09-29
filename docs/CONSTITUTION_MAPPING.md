@@ -1,14 +1,16 @@
 # Constitution mapping — swarm-forge `engineering.prompt` → Scala / Mill
 
-`CLAUDE.md` adapts unclebob's swarm-forge engineering constitution to this repo.
-The constitution's startup tool table covers Go, Clojure and Java only; Scala is
-unlisted. This document records the equivalents chosen, and — just as important
-— which of them are **actually wired into the build today** versus documented but
-deliberately not scaffolded.
+This repository's working rules — `CONTRIBUTING.md` for the gate and the
+process, `SCALA_CODE_STYLE.md` for the code — adapt unclebob's swarm-forge
+engineering constitution to this repo. The constitution's startup tool table
+covers Go, Clojure and Java only; Scala is unlisted. This document records the
+equivalents chosen, and — just as important — which of them are **actually
+wired into the build today** versus documented but deliberately not
+scaffolded.
 
-`CLAUDE.md` is explicit that a tool the build does not use must not be
-scaffolded. The "Status" column is therefore normative, not aspirational, and it
-distinguishes four things:
+`CONTRIBUTING.md` § "Tests" is explicit that a tool the build does not use
+must not be scaffolded. The "Status" column is therefore normative, not
+aspirational, and it distinguishes four things:
 
 - **Wired** — in the build or in `verify.sh`, exercised by an ordinary run, and
   observed to fail when it should.
@@ -111,11 +113,11 @@ a defect it is supposed to catch.
 
 ## Why the acceptance pipeline is dormant
 
-`CLAUDE.md` §"Acceptance tests" states plainly: *"No Gherkin/APS pipeline exists
-in this repo. Those rules from the original are dormant; do not scaffold one
-unless asked."* `PLAN.md` §6.2 describes one in detail, but the repo owner's
-instruction file is the later and more specific authority, and the owner
-confirmed the exclusion when scoping this build.
+`CONTRIBUTING.md` § "Tests" states plainly that no Gherkin / APS pipeline
+exists in this repository, that those rules from the original are dormant, and
+that one is not to be scaffolded unless asked. `PLAN.md` §6.2 describes one in
+detail, but the contributor guide is the later and more specific authority, and
+the owner confirmed the exclusion when scoping this build.
 
 If APS is adopted later, the constitution's constraints apply as written:
 Babashka variants preferred with Go as fallback, installed fresh from upstream
@@ -128,7 +130,7 @@ wrap); and manifests are tool-managed — never hand-edited.
 
 - **Small, reviewable increments.** One logical change per commit, Conventional
   Commits, committed as work completes rather than in one lump. Enforced by
-  `CLAUDE.md` §"Commit granularity".
+  `CONTRIBUTING.md` § "Granularity".
 - **Testable vs environmentally-unsuitable module separation.** `modules/it` is
   the only module allowed to touch a real network or a container, and it is
   excluded from coverage, mutation, CRAP and CPD runs.

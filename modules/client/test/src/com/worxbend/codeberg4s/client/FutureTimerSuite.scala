@@ -55,13 +55,20 @@ final class FutureTimerSuite extends FunSuite:
 
   test("sleep returns before the delay has elapsed, so no caller thread is parked"):
     val timer  = FutureTimer()
-    val effect = timer.sleep(FutureTimerSuite.ObservableDelay)
+    val effect = timer.sleep(FutureTimerSuite.UnreachableDelay)
 
-    assert(!effect.isCompleted, "sleep blocked the calling thread instead of scheduling the completion")
+    // Read before closing: the claim is about the moment `sleep` returned. With an hour-long delay the completion
+    // cannot have been served in between, whatever the scheduler thread or a busy CI runner was doing — which the
+    // 200 ms this used to wait for could not promise. Closing then cancels the wait instead of serving it, so the
+    // test ends now rather than in an hour, and the cancellation is the outcome awaited below.
+    val completedOnReturn = effect.isCompleted
+    timer.close()
 
-    effect.map: _ =>
-      timer.close()
-      assert(effect.isCompleted)
+    assert(!completedOnReturn, "sleep blocked the calling thread instead of scheduling the completion")
+
+    effect.failed.map:
+      case _: CancellationException => ()
+      case other                    => fail(s"expected the closed timer to cancel the pending sleep, got $other")
 
   test("the scheduler runs on a named daemon thread, so a forgotten client cannot hold the JVM open"):
     val timer = FutureTimer()
@@ -80,13 +87,16 @@ final class FutureTimerSuite extends FunSuite:
     timer.close()
     timer.close()
 
-    assert(timer.sleep(FutureTimerSuite.ObservableDelay).isCompleted, "a closed timer must reject new work at once")
+    // Synchronous on purpose, and genuinely so: a shut-down `ScheduledThreadPoolExecutor` rejects `schedule` by
+    // throwing `RejectedExecutionException` before anything is queued, and `sleep` turns that into `Future.failed`,
+    // which is complete the moment it is constructed. Nothing here depends on another thread running first.
+    assert(timer.sleep(FutureTimerSuite.PositiveDelay).isCompleted, "a closed timer must reject new work at once")
 
   test("sleep after close fails the future instead of throwing"):
     val timer = FutureTimer()
     timer.close()
 
-    timer.sleep(FutureTimerSuite.ObservableDelay).failed.map:
+    timer.sleep(FutureTimerSuite.PositiveDelay).failed.map:
       case _: RejectedExecutionException => ()
       case other                         => fail(s"expected the scheduler to reject the work, got $other")
 
@@ -109,10 +119,16 @@ final class FutureTimerSuite extends FunSuite:
 
 object FutureTimerSuite:
 
-  /** Long enough that a scheduled completion cannot plausibly have happened before the next statement runs. */
-  private val ObservableDelay: FiniteDuration = 200.millis
+  /** Any positive delay: enough to reach the scheduler rather than the non-positive shortcut. Its length never matters,
+    * because every test that uses it has already closed the timer, and a closed scheduler rejects the work
+    * synchronously.
+    */
+  private val PositiveDelay: FiniteDuration = 200.millis
 
-  /** Far longer than the test can run, so a sleep given this delay is certainly still waiting when the timer closes. */
+  /** Far longer than the test can run, so a sleep given this delay is certainly still waiting when the timer closes —
+    * and certainly not complete when `sleep` returns, which is what makes that assertion deterministic rather than a
+    * race against the scheduler.
+    */
   private val UnreachableDelay: FiniteDuration = 1.hour
 
   /** How long a closed timer is given to fail its waiting sleeps. Closing does the work inline, so this is slack. */

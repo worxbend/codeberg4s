@@ -21,6 +21,11 @@
 #   CPD_MIN_TOKENS   duplication length that counts (default below)
 #   CPD_FORMAT       PMD renderer: text, csv, markdown, xml (default text)
 #   PMD_VERSION      PMD release to use (default below)
+#   PMD_SHA256       sha256 of pmd-dist-$PMD_VERSION-bin.zip. Required whenever
+#                    PMD_VERSION is not the default: the checksum below belongs
+#                    to that one release, and a download this script cannot
+#                    verify is one it refuses to run. renovate.json proposes the
+#                    version and the checksum together.
 #   PMD_HOME         a pre-installed PMD directory; skips the download entirely
 
 set -euo pipefail
@@ -34,8 +39,18 @@ cd "$(dirname "$0")/.."
 # reviewer veto list in PLAN.md §8.
 readonly MIN_TOKENS="${CPD_MIN_TOKENS:-40}"
 
-readonly PMD_V="${PMD_VERSION:-7.26.0}"
-readonly PMD_SHA256="9f55cb7ff0e9f9a66dd2f005eaa370e84c8a4cd971b134aa14a930c4a283ebc9"
+# The version and the checksum are one pin, and move together: a PMD_VERSION
+# other than the default has no checksum here, so it must arrive with its own
+# PMD_SHA256 or the download is refused (see the install section). Both lines
+# are read by renovate.json, which proposes the pair in one pull request.
+readonly PMD_DEFAULT_VERSION="7.26.0"
+readonly PMD_DEFAULT_SHA256="9f55cb7ff0e9f9a66dd2f005eaa370e84c8a4cd971b134aa14a930c4a283ebc9"
+readonly PMD_V="${PMD_VERSION:-$PMD_DEFAULT_VERSION}"
+if [[ "$PMD_V" == "$PMD_DEFAULT_VERSION" ]]; then
+  readonly PMD_SHA256="${PMD_SHA256:-$PMD_DEFAULT_SHA256}"
+else
+  readonly PMD_SHA256="${PMD_SHA256:-}"
+fi
 readonly FORMAT="${CPD_FORMAT:-text}"
 
 # Production sources. modules/*/test/src is deliberately absent, and modules/it
@@ -68,6 +83,17 @@ if [[ ! -x "$PMD_DIR/bin/pmd" ]]; then
     echo "cpd.sh: PMD_HOME=$PMD_HOME has no bin/pmd" >&2
     exit 2
   fi
+  # Refused before a byte is downloaded: the checksum below only knows the
+  # default release, so any other version has to bring its own. Running an
+  # unverified PMD would make the duplication gate depend on whatever the
+  # download happened to be — the exact hole the checksum exists to close.
+  if [[ -z "$PMD_SHA256" ]]; then
+    echo "cpd.sh: PMD_VERSION=$PMD_V is not the pinned $PMD_DEFAULT_VERSION and no PMD_SHA256 was given" >&2
+    echo "        — refusing to download a release this script cannot verify." >&2
+    echo "        Either pass PMD_SHA256=<sha256 of pmd-dist-$PMD_V-bin.zip>, or point PMD_HOME at" >&2
+    echo "        an installation you have verified yourself." >&2
+    exit 2
+  fi
   echo "  fetching PMD $PMD_V into $TOOL_DIR (once) ..."
   mkdir -p "$TOOL_DIR"
   zip="$TOOL_DIR/pmd-dist-$PMD_V-bin.zip"
@@ -76,15 +102,15 @@ if [[ ! -x "$PMD_DIR/bin/pmd" ]]; then
     echo "         (offline? install PMD yourself and re-run with PMD_HOME=/path/to/pmd-bin-$PMD_V)" >&2
     exit 2
   fi
-  if [[ "$PMD_V" == "7.26.0" ]]; then
-    actual=$(sha256sum "$zip" | cut -d' ' -f1)
-    if [[ "$actual" != "$PMD_SHA256" ]]; then
-      echo "cpd.sh: checksum mismatch for $zip" >&2
-      echo "         expected $PMD_SHA256" >&2
-      echo "         actual   $actual" >&2
-      rm -f "$zip"
-      exit 2
-    fi
+  # Every download is verified — the default release against the checksum
+  # pinned above, any other against the PMD_SHA256 the caller supplied.
+  actual=$(sha256sum "$zip" | cut -d' ' -f1)
+  if [[ "$actual" != "$PMD_SHA256" ]]; then
+    echo "cpd.sh: checksum mismatch for $zip" >&2
+    echo "         expected $PMD_SHA256" >&2
+    echo "         actual   $actual" >&2
+    rm -f "$zip"
+    exit 2
   fi
   unzip -q -o "$zip" -d "$TOOL_DIR"
   rm -f "$zip"

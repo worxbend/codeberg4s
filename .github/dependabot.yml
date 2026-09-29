@@ -14,11 +14,14 @@
 #
 # Two things it deliberately does not cover:
 #
-#   * Scala and Mill dependencies. Dependabot has no Mill support, and
-#     build.mill is where those versions live. `mill mill.scalalib.Dependency/
-#     showUpdates` reports them today, and docs/READINESS.md still names
-#     Renovate as the eventual automation for them — Renovate also runs on
-#     Codeberg, which Dependabot does not.
+#   * Scala and Mill dependencies, and the version-plus-checksum tool pins.
+#     Dependabot has no Mill support, and build.mill is where those versions
+#     live. renovate.json covers them instead, through regex managers — Mill
+#     itself (.mill-version), the plugin header and the `Versions` object of
+#     build.mill, and the scala-cli, Coursier and PMD pins — and disables its
+#     own GitHub Actions manager so the two tools never propose the same bump.
+#     `mill mill.scalalib.Dependency/showUpdates` still answers the question
+#     by hand.
 #
 #   * .forgejo/workflows/ci.yml. Dependabot reads .github/workflows and the
 #     directories listed below; it does not see the Forgejo workflow, and it
@@ -50,7 +53,8 @@ updates:
           - "*"
     open-pull-requests-limit: 5
     # Produces subjects like "ci(deps): bump actions/checkout from 7.0.1 to
-    # 7.0.2", which is the Conventional Commits form CLAUDE.md requires.
+    # 7.0.2", which is the Conventional Commits form CONTRIBUTING.md § "Commits"
+    # requires.
     commit-message:
       prefix: ci
       include: scope

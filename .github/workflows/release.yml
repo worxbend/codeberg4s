@@ -82,6 +82,53 @@ jobs:
       - name: Verify
         run: ./verify.sh
 
+      # Binary compatibility against the releases named in
+      # `Publish.binaryCompatibleWith`. RELEASING.md § "Binary compatibility is
+      # checked by MIMA" is why this is not in verify.sh: it downloads the
+      # previous artifacts from Maven Central, and the fast gate runs offline.
+      # A release is the one build that must not skip it, so it runs here,
+      # before anything is signed.
+      #
+      # While that list is `Seq.empty` — until the first release is on Central —
+      # there is nothing to compare against and the plugin fails with its own
+      # "No previous artifacts configured", which would block `0.1.0` on a check
+      # that cannot run. The step reads the list's declaration out of build.mill
+      # and, when it is empty, says so in the run summary and skips. It refuses
+      # to guess: if the declaration cannot be found at all, that is a failure,
+      # because a renamed list would otherwise turn the check off for good.
+      - name: Binary compatibility (MIMA)
+        run: |
+          set -euo pipefail
+          declaration=$(grep -E '^[[:space:]]*val binaryCompatibleWith[[:space:]]*:[[:space:]]*Seq\[String\][[:space:]]*=' build.mill || true)
+          if [ -z "$declaration" ]; then
+            echo "could not find \`val binaryCompatibleWith: Seq[String] = …\` in build.mill" >&2
+            echo "the MIMA step reads that declaration to decide whether there is a release to compare against — restore it or update this step" >&2
+            exit 1
+          fi
+          echo "build.mill: $declaration"
+          if grep -qE '=[[:space:]]*Seq\.empty[[:space:]]*$' <<<"$declaration"; then
+            {
+              echo "## Binary compatibility: skipped"
+              echo
+              echo "\`Publish.binaryCompatibleWith\` is \`Seq.empty\`, so no released version exists to"
+              echo "compare against and MIMA was not run. This is expected for the first release only;"
+              echo "the follow-up commit that moves \`main\` to the next \`-SNAPSHOT\` adds the version just"
+              echo "released to that list (RELEASING.md § \"Verifying the release landed\")."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Publish.binaryCompatibleWith is Seq.empty — nothing to compare against; MIMA skipped."
+            exit 0
+          fi
+          ./mill modules.__.mimaReportBinaryIssues
+          {
+            echo "## Binary compatibility: checked"
+            echo
+            echo "\`./mill modules.__.mimaReportBinaryIssues\` found no incompatibility with:"
+            echo
+            echo '```scala'
+            echo "$declaration"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       # publishAll resolves __:PublishModule.publishArtifacts — every
       # PublishModule in the build, which is exactly the five library modules.
       # modules.it is not a PublishModule, so integration tests cannot leak

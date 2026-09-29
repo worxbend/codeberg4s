@@ -27,7 +27,7 @@ your PATH is still worth having, because `./verify.sh` shells out to scala-cli
 scripts that Mill does not run.
 
 ```bash
-git clone https://codeberg.org/worxbend/codeberg4s
+git clone https://github.com/worxbend/codeberg4s
 cd codeberg4s
 ./verify.sh
 ```
@@ -69,9 +69,15 @@ onto the table above.
 
 **`./verify.sh` is the single source of truth for what CI checks.** Both
 `.github/workflows/ci.yml` and `.forgejo/workflows/ci.yml` do nothing except
-run it. There is no check in CI that you cannot run locally, and adding one to
-a workflow instead of to the script is how "green on my machine" stops meaning
-anything.
+run it — the routine gate in one job and `--properties` in another. There is
+no check in CI that you cannot run locally, and adding one to a workflow
+instead of to the script is how "green on my machine" stops meaning anything.
+
+GitHub is the canonical forge: [github.com/worxbend/codeberg4s](https://github.com/worxbend/codeberg4s)
+is the only remote, `Publish.projectUrl` in `build.mill`, and where releases,
+the nightly analysis, the documentation site and the issue tracker live. The
+Forgejo workflow exists so a mirror can run the same gate on the same commits;
+it releases nothing and decides nothing.
 
 Two of its modes have honest caveats, and you should know them before you hit
 them:
@@ -92,9 +98,14 @@ them:
 - **`--nightly` is expected to fail**, at the mutation step, until Stryker4s is
   declared in `build.mill`. `scripts/mutate.sh` refuses to exit 0 without a
   real score, and no score has ever been produced for this repository. See
-  [`docs/ROADMAP.md`](docs/ROADMAP.md) Phase 4. It is not marked
-  `continue-on-error` in CI, because a nightly reporting green on a gate that
-  has never run would be a lie.
+  [`docs/ROADMAP.md`](docs/ROADMAP.md) Phase 4. In
+  `.github/workflows/nightly.yml` that mode has a job of its own, `mutation`,
+  which carries `continue-on-error: true` and writes the reason it is red into
+  the run summary — so that its certain failure does not hide the `with-slow`
+  job beside it, which runs duplication and CRAP and must be green. The job is
+  still reported as failed; nothing turns a gate that has never run into a
+  green tick. When the plugin is wired, the `continue-on-error` comes out in
+  the same commit.
 
 ---
 
@@ -108,6 +119,19 @@ failure — the codebase has a `discard` extension in
 `com.worxbend.codeberg4s.syntax` for the cases where discarding is what you
 mean. `@nowarn` is for generated sources only, and always carries a comment
 saying why.
+
+The full list is `scalacOptions` in `build.mill`, and it is deliberately short:
+`-deprecation`, `-feature` and `-explain` so a warning says what to do about
+itself, the three `-W` flags above, `-Werror` to make every one of them fatal,
+and `-java-output-version:25`. That last one is not about warnings. It is
+Scala 3's spelling of `javac --release`: it stamps the class-file version
+*and* hides every JDK API newer than Java 25, so a call that would not exist
+on a Java 25 runtime fails here rather than at a consumer's link time. Without
+it the compiler emits its default — Java 17 bytecode for Scala 3.8.4 —
+whatever JDK ran the build. `.mill-jvm-version` pins the JDK that has to
+understand `25`; the Scaladoc on `scalacOptions` in `build.mill` says the same
+thing next to the code. Do not weaken any of these to make a warning go away;
+fix the code, or write the narrow `@nowarn` with its reason.
 
 ### Scalafix
 
@@ -335,7 +359,8 @@ shared model.
   routine gate, coverage, mutation and complexity runs. That separation is
   deliberate; do not remove the tag to get a suite into the default run. They
   are still executed — by their own mode, which runs them and nothing else, and
-  by the `Property suites` job in `.github/workflows/nightly.yml`:
+  by the `properties` job that runs beside the gate on every push and pull
+  request, in `.github/workflows/ci.yml` and `.forgejo/workflows/ci.yml`:
 
   ```bash
   ./verify.sh --properties
@@ -357,6 +382,18 @@ shared model.
   CODEBERG_IT=1 ./mill modules.it.test.testOnly com.worxbend.codeberg4s.it.CodebergLiveSmokeSuite
   ```
 
+- **There are no acceptance tests, and none are to be scaffolded.** `PLAN.md`
+  §6.2 describes a Gherkin / Acceptance-Pipeline-Specification stage in detail;
+  it was never built, no Gherkin tooling exists in this repository, and the
+  repository owner confirmed the exclusion when scoping the build. Those rules
+  are dormant: do not add a feature file, a runner module or a step-definition
+  library unless asked to. The same discipline applies to every quality tool —
+  nothing is scaffolded that the build does not run, and
+  [`docs/CONSTITUTION_MAPPING.md`](docs/CONSTITUTION_MAPPING.md) records what
+  is wired, what is merely proven to run, and what is deliberately absent. The
+  behaviour those acceptance tests would have pinned is pinned instead by the
+  golden fixtures, the unit suites on both rails, and the opt-in suites in
+  `modules/it`.
 - Coverage floors are enforced by `scripts/coverage-gate.sc` against
   scoverage's own numbers: 90 % statement / 85 % branch on `domain`, `core` and
   `codec`. A missing report is a failure, not a skip.

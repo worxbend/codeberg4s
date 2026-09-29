@@ -6,7 +6,8 @@
 ## Context
 
 The repository carries two documents that disagree about the shape of the public
-API, and `CLAUDE.md` names one of them the single source of truth:
+API, and the repository's working instructions — now `CONTRIBUTING.md` — name
+one of them the source of truth for style:
 
 | Question             | `PLAN.md`                                 | `SCALA_CODE_STYLE.md`                          |
 | -------------------- | ----------------------------------------- | ---------------------------------------------- |
@@ -33,7 +34,8 @@ Concretely:
 - Pagination is `Page[A]` plus `listAll` / `foldPages` (`PLAN.md` §3.2), not
   `Flow`.
 - The package prefix is `com.worxbend.codeberg4s` — the style guide wins here,
-  because package layout is squarely inside the area `CLAUDE.md` delegates to it,
+  because package layout is squarely inside the area `CONTRIBUTING.md` delegates
+  to it,
   and `PLAN.md`'s `codeberg4s.*` was an illustrative sketch rather than a
   decision.
 - Every other rule in `SCALA_CODE_STYLE.md` applies unchanged: indentation
