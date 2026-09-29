@@ -137,6 +137,21 @@ final class RepositoryApiSuite extends FunSuite:
       client.repos.topics(Handle, Name, FirstPage).map: page =>
         assertEquals(page.items.map(_.value), Vector("forge", "git"))
 
+  test("topics takes its next page from X-Total-Count, because Forgejo sends no Link on this route"):
+    val headers = List(Header("X-Total-Count", "5"))
+
+    onStub(responding(200, RepositoryApiSuite.TopicsBody, headers)): client =>
+      client.repos.topics(Handle, Name, FirstPage).map: page =>
+        assertEquals(page.items.size, 2)
+        assertEquals(page.totalCount, Some(5))
+        assertEquals(page.nextPage.map(_.value), Some(2))
+
+  test("a topics page that covers the total is the last page"):
+    val headers = List(Header("X-Total-Count", "2"))
+
+    onStub(responding(200, RepositoryApiSuite.TopicsBody, headers)): client =>
+      client.repos.topics(Handle, Name, FirstPage).map(page => assertEquals(page.isLast, true))
+
   test("a topic name that could not go back into a request path is a decoding failure"):
     onStub(responding(200, """{"topics": ["forge", "bad/name"]}""", Nil)): client =>
       client.repos.attempt.topics(Handle, Name, FirstPage).map:

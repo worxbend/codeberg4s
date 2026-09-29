@@ -110,7 +110,7 @@ final class PullRequestApiSuite extends FunSuite with ClientSuiteHarness:
         assertEquals(page.items, Vector.empty[PullRequest])
         assertEquals(page.isLast, true)
 
-  test("pulls.reviews.list targets the pull request's reviews and always reports itself as the last page"):
+  test("pulls.reviews.list targets the pull request's reviews and pages by the total, since no Link is sent"):
     val backend = RecordingBackend(responding(200, PullRequestApiSuite.ReviewListBody, PullRequestApiSuite.TotalOnly))
 
     onApi(backend): api =>
@@ -119,7 +119,8 @@ final class PullRequestApiSuite extends FunSuite with ClientSuiteHarness:
         assertEquals(queryOf(backend), List("page" -> "1", "limit" -> "30"))
         assertEquals(page.items.map(_.state), Vector(Some(ReviewState.Approved)))
         assertEquals(page.totalCount, Some(3))
-        assertEquals(page.isLast, true, "this endpoint sends no Link header, so there is no next page to report")
+        assertEquals(page.nextPage.map(_.value), Some(2), "one review of three served: the total says two more pages")
+        assertEquals(page.isLast, false)
 
   test("pulls.commits.list decodes the repository wave's commit model"):
     val backend = RecordingBackend(responding(200, PullRequestApiSuite.CommitListBody))

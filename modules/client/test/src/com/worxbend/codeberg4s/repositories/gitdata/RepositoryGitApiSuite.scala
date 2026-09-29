@@ -88,11 +88,29 @@ final class RepositoryGitApiSuite extends FunSuite with ClientSuiteHarness:
         assertEquals(page.nextPage.map(_.value), Some(2))
         assertEquals(page.isLast, false)
 
-  test("a tree page whose response carries no Link header reports itself as the last one"):
+  test("a tree page with no headers at all takes its total, and its next page, from the body's total_count"):
+    // What Forgejo actually sends on this route: neither Link nor X-Total-Count.
+    // Before the body's count was read, every tree reported page one as its
+    // last page, and a walk over a large repository stopped there.
+    onApi(responding(200, RepositoryGitApiSuite.LargeTreeBody)): api =>
+      api.tree(Handle, Name, Sha, true, PageParams.First).map: page =>
+        assertEquals(page.size, 1)
+        assertEquals(page.totalCount, Some(4210))
+        assertEquals(page.nextPage.map(_.value), Some(2))
+        assertEquals(page.isLast, false)
+
+  test("a tree whose total_count the page already covers is the last page"):
     onApi(responding(200, RepositoryGitApiSuite.TruncatedTreeBody)): api =>
       api.tree(Handle, Name, Sha, true, PageParams.First).map: page =>
+        assertEquals(page.totalCount, Some(1))
         assertEquals(page.isLast, true)
         assertEquals(page.nextPage, None)
+
+  test("a tree body with no total_count and no headers is the last page, however full"):
+    onApi(responding(200, """{"tree":[{"path": "a", "sha": "1a2b"}, {"path": "b", "sha": "2b3c"}]}""")): api =>
+      api.tree(Handle, Name, Sha, true, PageParams.First).map: page =>
+        assertEquals(page.totalCount, None)
+        assertEquals(page.isLast, true)
 
   test("a single-commit read sends only the parts the caller took a position on"):
     val backend = RecordingBackend(responding(200, RepositoryGitApiSuite.CommitBody))
@@ -473,6 +491,15 @@ object RepositoryGitApiSuite:
       |  "tree": [{"path": "README.md", "mode": "100644", "type": "blob", "size": 42, "sha": "1a2b3c4d"}],
       |  "truncated": false,
       |  "total_count": 1
+      |}""".stripMargin
+
+  /** One entry of a tree of 4 210, as the route serves it: the count in the body and no paging header anywhere. */
+  private val LargeTreeBody: String =
+    """{
+      |  "sha": "1111111111111111111111111111111111111111",
+      |  "tree": [{"path": "README.md", "mode": "100644", "type": "blob", "size": 42, "sha": "1a2b3c4d"}],
+      |  "truncated": true,
+      |  "total_count": 4210
       |}""".stripMargin
 
   private val PagedHeaders: List[Header] =

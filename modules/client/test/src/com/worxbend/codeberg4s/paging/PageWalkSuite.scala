@@ -2,6 +2,9 @@ package com.worxbend.codeberg4s.paging
 
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
+import com.worxbend.codeberg4s.core.CodebergResponse
+import com.worxbend.codeberg4s.core.Pages
+import com.worxbend.codeberg4s.core.ResponseBody
 
 import munit.FunSuite
 
@@ -89,6 +92,56 @@ final class PageWalkSuite extends FunSuite:
     val items = await(PageWalk.all(PageParams.First)(fetch))
 
     assertEquals(items.size, 50)
+
+  test("the walk terminates on pages whose next page was synthesised from X-Total-Count, gathering everything"):
+    // Seven items, served three at a time by an endpoint that sets X-Total-Count
+    // and never Link. Page three serves the last one; the arithmetic cannot tell
+    // it from a clamped middle page, so a fourth page is asked for, comes back
+    // empty, and ends the walk. The cost is one spare request; the alternative
+    // was stopping after page one.
+    val visited = ListBuffer.empty[Int]
+
+    def fetch(params: PageParams): Future[Page[Int]] =
+      val number   = params.page.value
+      visited.append(number)
+      val items    = Vector.range((number - 1) * 3, math.min(number * 3, 7))
+      val response = CodebergResponse(200, Map("X-Total-Count" -> List("7")), ResponseBody.utf8("[]"))
+      Future.successful(Pages.from(response, params, items))
+
+    val items = await(PageWalk.all(PageParams.First)(fetch))
+
+    assertEquals(items, Vector.range(0, 7))
+    assertEquals(visited.toList, List(1, 2, 3, 4))
+
+  test("a fetch that throws instead of returning a Future fails the walk rather than escaping it"):
+    val boom = IllegalStateException("client has been closed")
+
+    val result = PageWalk.all(PageParams.First)((_: PageParams) => throw boom)
+
+    assertEquals(result.value.flatMap(_.failed.toOption), Some(boom))
+
+  test("a fetch that throws on a later page fails the walk the same way"):
+    val boom = IllegalStateException("client has been closed")
+
+    def fetch(params: PageParams): Future[Page[Int]] =
+      if params.page.value >= 2 then throw boom
+      else Future.successful(Page(Vector(1), params, None, PageNumber.from(2).toOption, None))
+
+    val result = PageWalk.all(PageParams.First)(fetch)
+
+    assertEquals(result.value.flatMap(_.failed.toOption), Some(boom))
+
+  test("a step that throws fails the Future on the attempt rail rather than yielding a Left"):
+    // A defect in the caller's fold is not a failure of the listing, so it is
+    // not laundered into a CodebergError nobody can act on.
+    val listing = Listing(count = 3, size = 2)
+    val boom    = IllegalStateException("the fold cannot cope")
+
+    val result = PageWalk.attempt.fold(PageParams.First, 0)(params => listing.fetch(params).map(Right(_))): (_, _) =>
+      throw boom
+
+    assertEquals(result.value.flatMap(_.failed.toOption), Some(boom))
+    assertEquals(listing.requested, List(1), "no further page is requested once the step has failed")
 
   test("the page size the caller chose is carried to every page"):
     val requested = ListBuffer.empty[PageParams]

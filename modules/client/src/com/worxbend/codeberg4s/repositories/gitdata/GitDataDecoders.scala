@@ -2,7 +2,7 @@ package com.worxbend.codeberg4s.repositories.gitdata
 
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.Json
-import com.worxbend.codeberg4s.core.Decode
+import com.worxbend.codeberg4s.core.{Decode, ListEnvelope}
 import com.worxbend.codeberg4s.miscellaneous.PlainText
 import com.worxbend.codeberg4s.pulls.PullRequest
 import com.worxbend.codeberg4s.pulls.wire.PullRequestDto
@@ -28,9 +28,11 @@ import com.worxbend.codeberg4s.repositories.wire.CommitDto
   * ==Three envelope shapes and one non-envelope==
   *
   * Most of this group answers with a bare object or a bare array. Two do not: the tree listing wraps its entries in
-  * `{"sha", "tree", "truncated", …}` and the combined status wraps its statuses in an object that also carries the
-  * reduced verdict. The first is unwrapped here, because a tree listing is a page like any other; the second is not,
-  * because unwrapping it would throw away the verdict that is the point of the endpoint. See
+  * `{"sha", "tree", "total_count", "truncated", …}` and the combined status wraps its statuses in an object that also
+  * carries the reduced verdict. The first is unwrapped here to a [[com.worxbend.codeberg4s.core.ListEnvelope]] — the
+  * entries plus the body's `total_count`, which is the only total this route sends, since Forgejo sets neither
+  * `X-Total-Count` nor `Link` on it — so that the page can tell where the tree ends. The second is not unwrapped,
+  * because doing so would throw away the verdict that is the point of the endpoint. See
   * [[com.worxbend.codeberg4s.repositories.gitdata.CombinedCommitStatus]].
   *
   * And one endpoint group answers with no JSON at all — `{sha}.diff`, `{sha}.patch`, `/raw`, `/media` and `/archive` —
@@ -47,9 +49,16 @@ private[gitdata] object GitDataDecoders:
   val blobs: Decode[Vector[GitBlob]] =
     WireDecode.vector(Json.decoder[Vector[GitBlobDto]])
 
-  /** The `{"sha", "tree", …}` envelope, unwrapped to the entries it carries. */
-  val treeEntries: Decode[Vector[GitTreeEntry]] =
-    WireDecode.single(Json.decoder[GitTreeDto])(_.toDomain)
+  /** The `{"sha", "tree", "total_count", …}` envelope: its entries, and its own count of the whole tree.
+    *
+    * `total_count` is `len(entries)` of the whole tree in Forgejo's handler, whatever page was asked for, which is
+    * exactly what [[com.worxbend.codeberg4s.core.Pages.fromEnvelope]] needs. `truncated` is not read: it is `true`
+    * whenever the tree does not fit in one page — on every page of such a tree, the last included — so it says nothing
+    * the count does not say better.
+    */
+  val tree: Decode[ListEnvelope[GitTreeEntry]] =
+    WireDecode.single(Json.decoder[GitTreeDto]): dto =>
+      dto.toDomain.map(entries => ListEnvelope(entries, ListEnvelope.countOf(dto.totalCount)))
 
   /** One `Commit` object, as the single-commit read returns it. */
   val commit: Decode[Commit] =

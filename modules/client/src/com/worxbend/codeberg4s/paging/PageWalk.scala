@@ -20,11 +20,14 @@ import scala.concurrent.{ExecutionContext, Future}
   * '''Why this is not a method on each listing.''' Sixty `listAll` methods would be sixty places for the termination
   * rule to be got wrong, and the termination rule is the subtle part — see below.
   *
-  * '''Termination.''' The walk stops when the server stops offering a next page, which it signals through the RFC 5988
-  * `Link` header and nothing else. It never compares the number of items returned against the number requested: Forgejo
-  * silently clamps `limit` to its `max_response_items` (50 on codeberg.org) while echoing the requested value back in
-  * `Link`, so a caller asking for 100 gets 50 items on every full page and would stop after the first.
-  * `docs/HAZARDS.md` §5 has the measured evidence.
+  * '''Termination.''' The walk stops when the page it was handed offers no next page. Where that offer comes from is
+  * decided once, in [[com.worxbend.codeberg4s.core.Pages]]: the RFC 5988 `Link` header when the server sent one, and
+  * the `X-Total-Count` arithmetic when it did not — several Forgejo listings set the total and never a `Link`. Neither
+  * signal compares the number of items returned against the number requested: Forgejo silently clamps `limit` to its
+  * `max_response_items` (50 on codeberg.org) while echoing the requested value back in `Link`, so a caller asking for
+  * 100 gets 50 items on every full page and would stop after the first. `docs/HAZARDS.md` §5 has the measured evidence.
+  * On the total-count path the last page may be followed by one empty page, which ends the walk; the walk makes no
+  * attempt to avoid that request, because the arithmetic that would avoid it is the broken one.
   *
   * '''Sequencing.''' Pages are fetched one at a time, each after the previous has been consumed. That is deliberate:
   * fetching pages concurrently against a rate-limited instance is a good way to earn a `429`, and the page after this
@@ -39,6 +42,13 @@ import scala.concurrent.{ExecutionContext, Future}
   *
   * '''Failure.''' A failure part-way through a walk discards the pages already gathered, on either rail; use [[fold]]
   * if partial progress needs to be kept somewhere.
+  *
+  * '''Defects.''' A `fetch` that throws instead of returning a `Future` — on the first page as much as on any later one
+  * — fails the returned `Future` with what it threw; it never escapes a call to a walk, and on the `.attempt` rail it
+  * is '''not''' turned into a `Left`, because it is a defect in the caller's operation rather than a failure of the
+  * listing. A `step` or `onPage` that throws does the same on both rails: the `Future` fails, the walk stops, and no
+  * further page is requested. Neither is a [[com.worxbend.codeberg4s.CodebergError]]; both stay the exception that was
+  * thrown.
   *
   * '''The page cap is a failure, not a quiet stop.''' A walk visits at most [[MaxPages]] pages. Reaching that cap with
   * the server still offering another page reports [[com.worxbend.codeberg4s.CodebergError.WalkTruncated]] — a failed
@@ -152,8 +162,11 @@ object PageWalk:
     def fold[A, B](first: PageParams, zero: B)(fetch: PageParams => Future[Either[CodebergError, Page[A]]])(
         step: (B, Page[A]) => B
     )(using ExecutionContext): Future[Either[CodebergError, B]] =
+      // Future.delegate rather than a bare call: a fetch that throws on the first
+      // page would otherwise escape this method as an exception, where the same
+      // throw on page two — made inside flatMap — fails the Future. Both now do.
       def loop(params: PageParams, state: B, visited: Int): Future[Either[CodebergError, B]] =
-        fetch(params).flatMap:
+        Future.delegate(fetch(params)).flatMap:
           case Left(error) => Future.successful(Left(error))
           case Right(page) =>
             val next    = step(state, page)

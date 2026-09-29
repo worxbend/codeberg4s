@@ -225,7 +225,11 @@ final class RepositoryApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
   /** Lists a repository's topics — `GET /repos/{owner}/{repo}/topics`.
     *
     * The body is `{"topics": [...]}` rather than an array, which is handled here. The endpoint declares `page` and
-    * `limit`, so the result is a page like every other listing.
+    * `limit`, so the result is a page like every other listing — with one difference in how it ends. Forgejo sets
+    * `X-Total-Count` on this route and never a `Link` header, and the envelope carries no count of its own, so the next
+    * page is derived from the header total by the rule [[com.worxbend.codeberg4s.core.Pages]] states: offered while
+    * `page × topics.size < total`, and never from the number of names against the `limit` asked for. Before the total
+    * was read, a repository with more topics than one page reported its first page as its last.
     *
     * '''Failures.''' As [[get]], plus [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] when the body is not a
     * JSON object at all, or when one of the names inside the envelope is not a valid
