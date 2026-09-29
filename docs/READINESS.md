@@ -1,6 +1,6 @@
 # Readiness review — what stands between this repo and a third party using it
 
-The library itself is done: 439 of 439 in-scope operations, `./verify.sh
+The library itself is done: 432 of 432 in-scope operations, `./verify.sh
 --with-slow` green, 100 % domain coverage, 3658 tests. What follows is
 everything *else* a consumer needs, assessed honestly against the state of the
 repo rather than against intentions.

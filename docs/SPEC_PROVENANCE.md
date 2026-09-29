@@ -17,8 +17,8 @@ of truth** for every model, endpoint, and codec in this repository.
 | Fallback mirror (not used) | `https://code.forgejo.org/swagger.v1.json` |
 | Command | `curl -sL https://codeberg.org/swagger.v1.json -o spec/swagger.v1.json` |
 | HTTP status | `200` |
-| Fetch date (`date -I`, local) | `2026-08-01` |
-| Fetch instant (UTC, server `Date` header) | `2026-08-01T20:58:48Z` |
+| Fetch date (`date -I`, local) | `2026-09-29` |
+| Fetch instant (UTC, server `Date` header) | `2026-09-29T19:14:42Z` |
 | Serving node (`x-server-name`) | `s_forgejo_secondary_alpspitz` |
 
 ## 2. Integrity
@@ -26,24 +26,24 @@ of truth** for every model, endpoint, and codec in this repository.
 | Field | Value |
 | --- | --- |
 | Path | `spec/swagger.v1.json` |
-| Bytes | `853878` |
-| sha256 | `90c40aa5e69a387700d1f28f6e61ba3ed01837b96e21fdfd8795e944fddaf9d5` |
+| Bytes | `853956` |
+| sha256 | `253d09802be4a97244170c8c68afce22d1ce2e2a7ff6fc3ede2cd0ec4b9eafa0` |
 | Validity | `python3 -m json.tool spec/swagger.v1.json` — parses clean |
 
 Verify at any time:
 
 ```bash
 sha256sum spec/swagger.v1.json
-# 90c40aa5e69a387700d1f28f6e61ba3ed01837b96e21fdfd8795e944fddaf9d5  spec/swagger.v1.json
+# 253d09802be4a97244170c8c68afce22d1ce2e2a7ff6fc3ede2cd0ec4b9eafa0  spec/swagger.v1.json
 ```
 
 ## 3. Version correspondence
 
 | Field | Value |
 | --- | --- |
-| Spec `info.version` | `16.0.0-dev-668-1bdb1938+gitea-1.22.0` |
+| Spec `info.version` | `16.0.0-dev-753-6bcc6da0+gitea-1.22.0` |
 | Spec `info.title` | `Forgejo API` |
-| Live `GET https://codeberg.org/api/v1/version` | `{"version":"16.0.0-dev-668-1bdb1938+gitea-1.22.0"}` |
+| Live `GET https://codeberg.org/api/v1/version` | `{"version":"16.0.0-dev-753-6bcc6da0+gitea-1.22.0"}` |
 | Match? | **Yes** — the pinned spec is exactly the document the live instance serves |
 | Swagger version | `2.0` |
 | `basePath` | `/api/v1` |
@@ -55,7 +55,7 @@ sha256sum spec/swagger.v1.json
 The version string decomposes as:
 
 - `16.0.0-dev` — Forgejo 16.0.0 development line.
-- `-668-1bdb1938` — 668 commits past the tag, at commit `1bdb1938`.
+- `-753-6bcc6da0` — 753 commits past the tag, at commit `6bcc6da0`.
 - `+gitea-1.22.0` — the Gitea API compatibility level Forgejo advertises.
 
 Codeberg tracks a Forgejo development branch, so this string moves between
@@ -94,3 +94,17 @@ divergences — union responses the spec flattens, error bodies with undeclared
 fields, and pagination behaviour the spec does not describe — are catalogued
 with live evidence in [`HAZARDS.md`](HAZARDS.md). Read that file before trusting
 any schema in this document.
+
+## 7. Re-pin history
+
+Every re-pin is recorded here with what it changed, so a reader can tell a
+cosmetic bump from one that moved the API surface.
+
+| Date | `info.version` | sha256 | What changed |
+| --- | --- | --- | --- |
+| 2026-08-01 | `16.0.0-dev-668-1bdb1938+gitea-1.22.0` | `90c40aa5…fddaf9d5` | Initial pin. |
+| 2026-09-29 | `16.0.0-dev-753-6bcc6da0+gitea-1.22.0` | `253d0980…9eafa0` | Structural diff against the previous pin: **0 operations added, removed or changed**; 0 definitions added or removed; one definition changed — `IssueMeta` gained `required: [index, owner, repo]`, which [`IssueRef`](../modules/domain/src/com/worxbend/codeberg4s/issues/IssueRef.scala) already treated as mandatory. Everything else that differs is `info.version`. The live probes in [`HAZARDS.md`](HAZARDS.md) were made against the 2026-08-01 pin and carry over unchanged, because no response definition moved. |
+
+The 2026-09-29 diff was produced by loading both documents and comparing every
+`paths[*][method]` object, every `definitions[*]` object and every other
+top-level key as parsed JSON, not as text.

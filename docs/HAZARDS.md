@@ -2,7 +2,7 @@
 
 PLAN.md §1.3 lists six hazards inherited from other Forgejo client generators.
 This document verifies each one against **both** the pinned spec
-(`spec/swagger.v1.json`, sha256 `90c40aa5…fddaf9d5`) **and** live read-only
+(`spec/swagger.v1.json`, sha256 `253d0980…9eafa0`) **and** live read-only
 probes against `https://codeberg.org/api/v1`.
 
 Every header block and body below is **verbatim** captured output, not a

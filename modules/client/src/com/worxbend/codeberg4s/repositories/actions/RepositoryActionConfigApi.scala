@@ -127,24 +127,6 @@ final class RepositoryActionConfigApi private[codeberg4s] (pipeline: ApiPipeline
   def deleteRunner(owner: Owner, name: RepoName, id: RunnerId): Future[Unit] =
     pipeline.callUnit(RepositoryActionConfigApi.deleteRunnerRequest(owner, name, id), RetryEligibility.AlwaysRetry)
 
-  /** Obtains the token a new runner registers with — `GET /repos/{owner}/{repo}/actions/runners/registration-token`.
-    *
-    * '''A `GET` that hands out a credential.''' It is safe in the RFC 9110 sense — reading it changes nothing on the
-    * instance — so it is retried like any other read. What it returns is nonetheless a secret with the authority to
-    * attach a machine that will execute workflow code, which is why it comes back as a [[RunnerRegistrationToken]] and
-    * not as a `String`.
-    *
-    * Distinct from [[registerRunner]]: that call creates the runner and hands back its token, this one hands back a
-    * token the runner binary uses to create itself.
-    *
-    * '''Failures.''' The group contract above. The spec declares no failure status for this operation at all, which is
-    * a gap in the spec rather than a promise — `401` and `404` both occur.
-    */
-  def runnerRegistrationToken(owner: Owner, name: RepoName): Future[RunnerRegistrationToken] =
-    pipeline.call(RepositoryActionConfigApi.runnerRegistrationTokenRequest(owner, name), RetryEligibility.IdempotentOnly)(
-      using RepositoryActionDecoders.registrationToken
-    )
-
   /** Finds jobs waiting for a runner with the given labels — `GET /repos/{owner}/{repo}/actions/runners/jobs`.
     *
     * '''Not paged''', for the reason [[runJobs]] gives: the spec declares no `page` or `limit`.
@@ -306,9 +288,6 @@ object RepositoryActionConfigApi:
   /** The stable operation id of [[RepositoryActionConfigApi.deleteRunner]]. */
   val DeleteRunnerOperation: String = "repos.actions.runners.delete"
 
-  /** The stable operation id of [[RepositoryActionConfigApi.runnerRegistrationToken]]. */
-  val RunnerRegistrationTokenOperation: String = "repos.actions.runners.registrationToken"
-
   /** The stable operation id of [[RepositoryActionConfigApi.searchRunnerJobs]]. */
   val SearchRunnerJobsOperation: String = "repos.actions.runners.jobs.search"
 
@@ -369,13 +348,6 @@ object RepositoryActionConfigApi:
     /** [[RepositoryActionConfigApi.deleteRunner]] with its failure as a value. */
     def deleteRunner(owner: Owner, name: RepoName, id: RunnerId): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.deleteRunner(owner, name, id))
-
-    /** [[RepositoryActionConfigApi.runnerRegistrationToken]] with its failure as a value. */
-    def runnerRegistrationToken(
-        owner: Owner,
-        name: RepoName,
-    ): Future[Either[CodebergError, RunnerRegistrationToken]] =
-      exec.attempt(rail.runnerRegistrationToken(owner, name))
 
     /** [[RepositoryActionConfigApi.searchRunnerJobs]] with its failure as a value. */
     def searchRunnerJobs(
@@ -479,9 +451,6 @@ object RepositoryActionConfigApi:
 
   private def deleteRunnerRequest(owner: Owner, name: RepoName, id: RunnerId): CodebergRequest =
     remove(DeleteRunnerOperation, runnerPath(owner, name, id))
-
-  private def runnerRegistrationTokenRequest(owner: Owner, name: RepoName): CodebergRequest =
-    read(RunnerRegistrationTokenOperation, runnersPath(owner, name) :+ "registration-token", Nil)
 
   private def searchRunnerJobsRequest(
       owner: Owner,

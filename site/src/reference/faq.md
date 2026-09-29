@@ -187,11 +187,13 @@ Very likely much of it, and that is a plausible expectation rather than a tested
 claim.
 
 Forgejo forked from Gitea and the v1 API is largely shared — codeberg.org's own
-version string is `16.0.0-dev-668-1bdb1938+gitea-1.22.0`. But **nothing in this
+version string is `16.0.0-dev-753-6bcc6da0+gitea-1.22.0`. But **nothing in this
 repository runs against Gitea**: the container integration suite starts
 `codeberg.org/forgejo/forgejo:12`, and the live smoke suite talks to
 codeberg.org. Endpoints Forgejo added or renamed after the fork will not exist,
-and the models are built from Forgejo captures.
+the models are built from Forgejo captures, and operations Forgejo has
+deprecated are not offered at all — the library targets the API codeberg.org
+serves today, not the widest common subset.
 
 If you try it, `client.misc.nodeInfo()` reports which software you actually
 reached and `client.version.get()` reports its version. If you find divergences,

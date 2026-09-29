@@ -62,7 +62,7 @@ private[actions] object RepositoryActionDecoders:
     * [[RepositoryActionApi]] reads, while the definitions — including the
     * [[com.worxbend.codeberg4s.core.Decode.sensitive]] marking on the two credential-carrying shapes — exist once.
     */
-  export ActionDecoders.{jobs, registeredRunner, registrationToken, runner, runners, secrets, variable, variables}
+  export ActionDecoders.{jobs, registeredRunner, runner, runners, secrets, variable, variables}
 
   /** The dispatch acknowledgement, which is present only when the request asked for it.
     *

@@ -5,8 +5,10 @@ REST API v1.
 
 - **`Future`-based public API** — no effect system leaks into your code, and no
   effect system is added to your classpath.
-- **Works against any Forgejo or Gitea-compatible instance.** Codeberg is the
-  default base URI, not a hardcoded one.
+- **Targets the API Codeberg serves today.** Endpoints and models follow the
+  Forgejo spec pinned in `spec/swagger.v1.json`, and operations Forgejo has
+  deprecated are not offered. Codeberg is the default base URI, not a
+  hardcoded one — see "Compatibility" for what that means on another instance.
 - **Two error rails.** Use exceptions if that suits your codebase, or typed
   `Either` values if it does not. Same implementation underneath.
 - **Illegal requests are unrepresentable.** Owners, repository names, branches,
@@ -19,9 +21,10 @@ REST API v1.
   another page exists.
 - **Small dependency footprint** — sttp client4 and jsoniter-scala. That is the list.
 
-> Status: pre-release, `0.1.0` in progress. **All 439 in-scope operations are
+> Status: pre-release, `0.1.0` in progress. **All 432 in-scope operations are
 > implemented** on both rails — the whole Forgejo v1 API except `admin`,
-> `activitypub` and `package`, which `PLAN.md` puts out of scope for v1.
+> `activitypub` and `package`, which `PLAN.md` puts out of scope for v1, and
+> the seven operations the spec itself marks deprecated.
 > [`docs/ROADMAP.md`](docs/ROADMAP.md) tracks phases;
 > [`docs/API_INVENTORY.md`](docs/API_INVENTORY.md) has the endpoint-level
 > checklist and the honest percentage. Nothing is published to Maven Central
@@ -61,6 +64,26 @@ say so — moving the floor down is a one-line change to `build.mill`.
 transitively. Depend on a narrower one if you want less: `codeberg4s-domain` is
 the models and the error ADT with no dependencies at all, which is enough to
 write code that *handles* a `CodebergError` without linking a HTTP client.
+
+## Compatibility
+
+**The target is the API codeberg.org serves, and nothing older.** Every endpoint
+and model follows the Forgejo spec pinned in `spec/swagger.v1.json` — currently
+`16.0.0-dev-753-6bcc6da0+gitea-1.22.0`, re-pinned 2026-09-29 — and a nightly job
+compares that pin against the live document, so drift is noticed within a day.
+Two consequences follow:
+
+- **Deprecated operations are not offered.** The spec marks seven in-scope
+  operations `deprecated: true` — the singular `POST /org/{org}/repos`, the
+  per-issue comment edit and delete, the per-user tracked-time listing, and the
+  three runner registration-token reads — and each has a current replacement
+  that is implemented. [`docs/API_INVENTORY.md`](docs/API_INVENTORY.md) §4 lists
+  them with their replacements.
+- **Other instances work to the extent they serve the same API.** The base URI
+  is configuration, so the client talks to any Forgejo at that API level. An
+  older Forgejo, or a Gitea, may lack endpoints, and a missing one arrives as an
+  ordinary `404`. Nothing in this repository is tested against Gitea. The
+  [self-hosted guide](site/src/guides/09-self-hosted.md) has the details.
 
 ## Quick start
 

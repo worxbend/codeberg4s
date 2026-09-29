@@ -25,6 +25,14 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Changed
 
+- **The pinned spec moved to `16.0.0-dev-753-6bcc6da0+gitea-1.22.0`**, the
+  document codeberg.org served on 2026-09-29. A structural diff against the
+  previous pin found no operation added, removed or changed; the one definition
+  that moved, `IssueMeta`, gained a `required` list that `IssueRef` already
+  enforced. `docs/SPEC_PROVENANCE.md` §7 records the diff, and the README's new
+  "Compatibility" section states the policy the re-pin serves: the target is the
+  API codeberg.org serves today, not the widest common subset.
+
 - **The review comments moved to `client.pulls.reviews.comments`.** `comments`,
   `createComment`, `getComment` and `deleteComment` are now on
   `ReviewCommentApi`, one level below the reviews they belong to, since every
@@ -438,6 +446,31 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
   `case CodebergError.Validation(field, message) => field`. Reading `.field` and
   `.message` off a value already typed as the failure is unchanged, and so is
   every smart constructor's result type.
+
+### Removed
+
+- **The seven operations the spec marks `deprecated: true`.** This library
+  targets the API codeberg.org serves today, so it no longer offers an operation
+  Forgejo itself has deprecated when a current replacement exists — and each of
+  these has one:
+
+  | Removed | Replacement |
+  | --- | --- |
+  | `client.organizations.createRepositoryDeprecated` — `POST /org/{org}/repos` | `client.organizations.createRepository` |
+  | `client.issues.comments.editDeprecated` and `deleteDeprecated` — `…/issues/{index}/comments/{id}` | `client.issues.comments.edit` and `delete` |
+  | `client.repos.admin.insights.trackedTimesFor` — `GET …/times/{user}` | `client.repos.admin.insights.trackedTimes` with `TrackedTimeQuery.forUser` |
+  | `runnerRegistrationToken` on `client.users.account.actions`, `client.repos.actions.config` and `client.organizations.actions` — `GET …/actions/runners/registration-token`, deprecated in Forgejo 15 | `registerRunner` on the same group, which creates the runner and returns its token |
+
+  The operation ids `orgs.repos.createDeprecated`, `issues.comments.editDeprecated`,
+  `issues.comments.deleteDeprecated`, `repos.admin.times.user` and the three
+  `…actions.runners.registrationToken` ids go with them, as does the wire model
+  `RegistrationTokenDto`. `RunnerRegistrationToken` stays, because a registered
+  runner still carries one. The in-scope surface is 432 of 432 operations;
+  `docs/API_INVENTORY.md` §4 lists the seven with their replacements.
+
+  BREAKING CHANGE: a call to any of the seven no longer compiles. Move to the
+  replacement in the table; every replacement takes the same arguments minus the
+  issue number the deprecated comment routes carried and ignored.
 
 ## [0.1.0] — unreleased
 

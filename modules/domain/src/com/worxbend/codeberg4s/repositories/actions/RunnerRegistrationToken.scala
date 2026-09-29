@@ -12,9 +12,9 @@ import com.worxbend.codeberg4s.ValidationError
   *
   * Unlike [[SecretValue]] this one travels '''from''' the instance: it is decoded out of a response body, so a decoding
   * failure on that response would carry the raw payload — and therefore the material — into
-  * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]], where no mask can reach it. The decoders that read the
-  * registration and registration-token responses are marked sensitive for that reason, and the pipeline reports a
-  * placeholder in place of the body excerpt on those two endpoints alone.
+  * [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]], where no mask can reach it. The decoder that reads the
+  * registration response is marked sensitive for that reason, and the pipeline reports a placeholder in place of the
+  * body excerpt wherever that decoder is used.
   *
   * Instances compare structurally on the underlying material. The comparison is not constant-time.
   */

@@ -29,9 +29,9 @@ import scala.concurrent.Future
   * ==A comment id has no issue in it==
   *
   * `/repos/{owner}/{repo}/issues/comments/{id}` carries no issue number, because [[CommentId]] is instance-wide. The
-  * two `…/issues/{index}/comments/{id}` operations are Forgejo's '''deprecated''' spelling of the same thing, kept here
-  * as [[editDeprecated]] and [[deleteDeprecated]] for callers talking to an older instance. New code should use
-  * [[edit]] and [[delete]]; the deprecated pair sends an issue number the instance ignores.
+  * two `…/issues/{index}/comments/{id}` operations are Forgejo's '''deprecated''' spelling of the same thing —
+  * `issueEditCommentDeprecated` and `issueDeleteCommentDeprecated` in `spec/swagger.v1.json` — and this library does
+  * not offer them: it targets the current API only, and the deprecated pair sends an issue number the instance ignores.
   *
   * ==Failures==
   *
@@ -128,44 +128,6 @@ final class IssueCommentApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
   def delete(owner: Owner, name: RepoName, id: CommentId): Future[Unit] =
     pipeline.callUnit(IssueCommentApi.deleteRequest(owner, name, id), RetryEligibility.AlwaysRetry)
 
-  /** [[edit]] against Forgejo's deprecated per-issue route —
-    * `PATCH /repos/{owner}/{repo}/issues/{index}/comments/{id}`.
-    *
-    * '''Prefer [[edit]].''' The `spec/swagger.v1.json` operation id is literally `issueEditCommentDeprecated`. The
-    * issue number in the path is not used to find the comment — [[CommentId]] is instance-wide — so passing the wrong
-    * one edits the comment anyway. This exists for an instance old enough not to route the current spelling.
-    *
-    * '''Never retried''', and `None` is a success; both for the reasons [[edit]] gives.
-    *
-    * '''Failures.''' The group contract above, plus the `500` this operation declares.
-    */
-  def editDeprecated(
-      owner: Owner,
-      name: RepoName,
-      number: IssueNumber,
-      id: CommentId,
-      command: EditComment,
-  ): Future[Option[Comment]] =
-    pipeline.call(
-      IssueCommentApi.editDeprecatedRequest(owner, name, number, id, command),
-      RetryEligibility.Never,
-    )(using IssueDecoders.comment)
-
-  /** [[delete]] against Forgejo's deprecated per-issue route —
-    * `DELETE /repos/{owner}/{repo}/issues/{index}/comments/{id}`.
-    *
-    * '''Prefer [[delete]]''', for the reason [[editDeprecated]] gives.
-    *
-    * '''Retried''', with the same `404`-after-a-lost-success consequence [[delete]] describes.
-    *
-    * '''Failures.''' The group contract above, plus the `500` this operation declares.
-    */
-  def deleteDeprecated(owner: Owner, name: RepoName, number: IssueNumber, id: CommentId): Future[Unit] =
-    pipeline.callUnit(
-      IssueCommentApi.deleteDeprecatedRequest(owner, name, number, id),
-      RetryEligibility.AlwaysRetry,
-    )
-
 /** The requests this group issues, its operation ids, and its typed rail. */
 object IssueCommentApi:
 
@@ -180,14 +142,6 @@ object IssueCommentApi:
 
   /** The stable operation id of [[IssueCommentApi.delete]]. */
   val DeleteOperation: String = "issues.comments.delete"
-
-  /** The stable operation id of [[IssueCommentApi.editDeprecated]], kept distinct from [[EditOperation]] so telemetry
-    * can show which spelling a caller still uses.
-    */
-  val EditDeprecatedOperation: String = "issues.comments.editDeprecated"
-
-  /** The stable operation id of [[IssueCommentApi.deleteDeprecated]]. */
-  val DeleteDeprecatedOperation: String = "issues.comments.deleteDeprecated"
 
   /** The typed rail of [[IssueCommentApi]]: every operation, with [[com.worxbend.codeberg4s.CodebergError]] as a value.
     *
@@ -222,25 +176,6 @@ object IssueCommentApi:
     def delete(owner: Owner, name: RepoName, id: CommentId): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.delete(owner, name, id))
 
-    /** [[IssueCommentApi.editDeprecated]] with its failure as a value. */
-    def editDeprecated(
-        owner: Owner,
-        name: RepoName,
-        number: IssueNumber,
-        id: CommentId,
-        command: EditComment,
-    ): Future[Either[CodebergError, Option[Comment]]] =
-      exec.attempt(rail.editDeprecated(owner, name, number, id, command))
-
-    /** [[IssueCommentApi.deleteDeprecated]] with its failure as a value. */
-    def deleteDeprecated(
-        owner: Owner,
-        name: RepoName,
-        number: IssueNumber,
-        id: CommentId,
-    ): Future[Either[CodebergError, Unit]] =
-      exec.attempt(rail.deleteDeprecated(owner, name, number, id))
-
   private def listForRepositoryRequest(
       owner: Owner,
       name: RepoName,
@@ -271,33 +206,3 @@ object IssueCommentApi:
 
   private def deleteRequest(owner: Owner, name: RepoName, id: CommentId): CodebergRequest =
     remove(DeleteOperation, IssueRequests.commentPath(owner, name, id))
-
-  private def editDeprecatedRequest(
-      owner: Owner,
-      name: RepoName,
-      number: IssueNumber,
-      id: CommentId,
-      command: EditComment,
-  ): CodebergRequest =
-    write(
-      EditDeprecatedOperation,
-      HttpMethod.Patch,
-      deprecatedPath(owner, name, number, id),
-      EditIssueCommentOptionDto.render(command),
-    )
-
-  private def deleteDeprecatedRequest(
-      owner: Owner,
-      name: RepoName,
-      number: IssueNumber,
-      id: CommentId,
-  ): CodebergRequest =
-    remove(DeleteDeprecatedOperation, deprecatedPath(owner, name, number, id))
-
-  private def deprecatedPath(
-      owner: Owner,
-      name: RepoName,
-      number: IssueNumber,
-      id: CommentId,
-  ): List[String] =
-    IssueRequests.issuePath(owner, name, number) ++ List("comments", id.value.toString)

@@ -8,8 +8,7 @@ import com.worxbend.codeberg4s.repositories.actions.wire.{
   ActionRunnerDto,
   ActionSecretDto,
   ActionVariableDto,
-  RegisteredRunnerDto,
-  RegistrationTokenDto
+  RegisteredRunnerDto
 }
 
 /** The Actions response shapes that '''every''' Actions surface can receive, decoded once and shared.
@@ -54,12 +53,6 @@ private[codeberg4s] object ActionDecoders:
     */
   val registeredRunner: Decode[RegisteredRunner] =
     Decode.sensitive(WireDecode.single(Json.decoder[RegisteredRunnerDto])(_.toDomain))
-
-  /** The one-key object the registration-token endpoint returns — the same credential with nothing around it, and
-    * [[com.worxbend.codeberg4s.core.Decode.sensitive]] for the same reason as [[registeredRunner]].
-    */
-  val registrationToken: Decode[RunnerRegistrationToken] =
-    Decode.sensitive(WireDecode.single(Json.decoder[RegistrationTokenDto])(_.toDomain))
 
   /** A bare array of secret objects — names and timestamps, never values. */
   val secrets: Decode[Vector[ActionSecret]] =

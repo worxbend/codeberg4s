@@ -99,7 +99,7 @@ def instanceProfile(client: CodebergClient)(using ExecutionContext): Future[(Str
 The cheapest liveness probe there is, and the one endpoint every Forgejo answers
 anonymously. Use it to check that a base URI really points at a Forgejo API root
 before you debug anything else. Measured against codeberg.org it answers
-`16.0.0-dev-668-1bdb1938+gitea-1.22.0`, which also tells you which Gitea release
+`16.0.0-dev-753-6bcc6da0+gitea-1.22.0`, which also tells you which Gitea release
 the Forgejo lineage forked from.
 
 ### `client.misc.apiSettings()` — the one that matters for pagination
@@ -203,7 +203,10 @@ on its own, and a password cannot. Both redact themselves identically. See
 ### Endpoints may be missing or may behave differently
 
 This library targets Forgejo v1 as pinned in `spec/swagger.v1.json`, at
-`16.0.0-dev-668-1bdb1938+gitea-1.22.0`. An older instance will not have every
+`16.0.0-dev-753-6bcc6da0+gitea-1.22.0`, and it targets that API rather than the
+widest common subset: operations the spec marks `deprecated: true` are not
+offered at all, so a caller who needs one of those routes on an old instance has
+to send it by hand. An older instance will not have every
 endpoint, and a missing endpoint arrives as an ordinary
 `CodebergError.Api(ctx, 404, body)` — indistinguishable, at the type level, from
 a repository that does not exist. `client.version.get()` at startup is how you

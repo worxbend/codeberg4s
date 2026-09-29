@@ -246,7 +246,7 @@ in somebody else's pull request. `git add` new files before running the gate;
 
 ## Adding an operation, end to end
 
-The library covers all 439 in-scope operations, so this is mostly for the ones
+The library covers all 432 in-scope operations, so this is mostly for the ones
 `PLAN.md` puts out of scope, for a new upstream endpoint, or for one the
 inventory shows as out of scope and you want reconsidered. It is also the
 clearest description of how the layers fit together.

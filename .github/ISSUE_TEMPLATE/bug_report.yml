@@ -50,7 +50,7 @@ body:
       description: >
         The value of `client.version.get()`, or the string at the bottom of the
         instance's web UI. Leave blank only if you genuinely cannot obtain it.
-      placeholder: "16.0.0-dev-668-1bdb1938+gitea-1.22.0"
+      placeholder: "16.0.0-dev-753-6bcc6da0+gitea-1.22.0"
     validations:
       required: false
 

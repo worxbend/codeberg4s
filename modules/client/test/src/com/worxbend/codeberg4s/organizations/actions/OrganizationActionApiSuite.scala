@@ -112,15 +112,6 @@ final class OrganizationActionApiSuite extends FunSuite with ClientSuiteHarness:
         assertEquals(pathOf(backend), s"$Endpoint/runners/37")
         assertEquals(backend.allInteractions.size, 2, "the 503 was not retried")
 
-  test("orgs.actions.runners.registrationToken dials the deprecated endpoint and masks what it returns"):
-    val backend = RecordingBackend(responding(200, """{"token": "REG-TOKEN"}"""))
-
-    onApi(backend): api =>
-      api.runnerRegistrationToken(Org).map: token =>
-        assertEquals(pathOf(backend), s"$Endpoint/runners/registration-token")
-        assertEquals(token.reveal, "REG-TOKEN")
-        assertEquals(token.toString, "***")
-
   test("orgs.actions.runners.jobs.search comma-joins the labels into the one parameter Forgejo declares"):
     val backend = RecordingBackend(responding(200, OrganizationActionApiSuite.JobListBody))
 

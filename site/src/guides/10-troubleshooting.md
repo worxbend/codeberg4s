@@ -169,7 +169,7 @@ The three realistic explanations, in order of likelihood:
 
 1. **The instance is a different Forgejo version.** A field this library requires
    was added later, or renamed. Compare `client.version.get()` against the pinned
-   `16.0.0-dev-668-1bdb1938+gitea-1.22.0`.
+   `16.0.0-dev-753-6bcc6da0+gitea-1.22.0`.
 2. **A field this library treats as required is genuinely absent.** The models
    are built from captured responses rather than from the specification, because
    the specification declares **no** `required` list on any response model and no

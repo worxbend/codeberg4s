@@ -303,15 +303,6 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
         assertEquals(methodOf(backend), "DELETE")
         assertEquals(pathOf(backend), s"$Endpoint/runners/37")
 
-  test("actions.runners.registrationToken reads the token endpoint and masks what it returns"):
-    val backend = RecordingBackend(responding(200, """{"token":"QWERTY123"}"""))
-
-    onApi(backend): api =>
-      api.config.runnerRegistrationToken(Handle, Name).map: token =>
-        assertEquals(pathOf(backend), s"$Endpoint/runners/registration-token")
-        assertEquals(token.reveal, "QWERTY123")
-        assertEquals(s"$token", RunnerRegistrationToken.Redacted)
-
   test("actions.runners.jobs.search comma-joins its labels into one parameter"):
     val backend = RecordingBackend(responding(200, "[]"))
     val labels  = Vector(orFail(RunnerLabel.from("ubuntu-latest")), orFail(RunnerLabel.from("docker")))

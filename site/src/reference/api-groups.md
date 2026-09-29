@@ -59,7 +59,7 @@ record full of nullable fields.
 | Accessor | Class | Operations | Covers |
 | --- | --- | ---: | --- |
 | `client.repos.actions` | `repositories.actions.RepositoryActionApi` | 14 | a repository's Actions record: runs, jobs, tasks, artifacts, workflow dispatch, and the two ZIP downloads |
-| `client.repos.actions.config` | `repositories.actions.RepositoryActionConfigApi` | 14 | what those runs run on and with: runners, secrets, variables |
+| `client.repos.actions.config` | `repositories.actions.RepositoryActionConfigApi` | 13 | what those runs run on and with: runners, secrets, variables |
 | `client.repos.git` | `repositories.gitdata.RepositoryGitApi` | 13 | raw Git data and commit-level reads: blobs, trees, refs, notes, annotated tags, comparison, diffpatch |
 | `client.repos.git.statuses` | `repositories.gitdata.CommitStatusApi` | 3 | what CI said about a commit, and which pull request brought it |
 | `client.repos.git.files` | `repositories.gitdata.RepositoryFileApi` | 4 | a repository's bytes: raw file, media file, archive, editor config |
@@ -75,7 +75,7 @@ record full of nullable fields.
 | `client.repos.admin.mirrors` | `repositories.admin.RepositoryMirrorApi` | 10 | pull mirrors, push mirrors and fork sync |
 | `client.repos.admin.contents` | `repositories.admin.RepositoryContentApi` | 5 | reading a repository's files and **writing files** into it |
 | `client.repos.admin.watchers` | `repositories.admin.RepositoryWatcherApi` | 7 | watching, starring, and who may be assigned or asked to review |
-| `client.repos.admin.insights` | `repositories.admin.RepositoryInsightApi` | 8 | activity, languages, pins, topics, tracked time |
+| `client.repos.admin.insights` | `repositories.admin.RepositoryInsightApi` | 7 | activity, languages, pins, topics, tracked time |
 
 `client.repos.actions` holds the only two operations in the library whose
 success body is not text: `downloadArtifact` and `downloadRunLogs` answer a ZIP,
@@ -113,7 +113,7 @@ names an account. Do not assume the second family is anonymous — see
 | Accessor | Class | Operations | Covers |
 | --- | --- | ---: | --- |
 | `client.users.account` | `users.account.UserAccountApi` | 10 | the authenticated account itself: settings, avatar, email addresses, its repositories and teams |
-| `client.users.actions` | `users.account.UserActionApi` | 13 | the authenticated account's own Actions configuration: runners, secrets, variables |
+| `client.users.actions` | `users.account.UserActionApi` | 12 | the authenticated account's own Actions configuration: runners, secrets, variables |
 | `client.users.applications` | `users.account.UserApplicationApi` | 5 | the OAuth2 applications the account has registered |
 | `client.users.hooks` | `users.account.UserHookApi` | 5 | the webhooks the account owns |
 | `client.users.quota` | `users.account.UserQuotaApi` | 5 | what the account may store, and what is taking up the room |
@@ -142,7 +142,7 @@ timestamp — so "closed" and "when" cannot get out of step.
 
 | Accessor | Class | Operations | Covers |
 | --- | --- | ---: | --- |
-| `client.issues.comments` | `issues.IssueCommentApi` | 6 | reading, editing and deleting a comment once it exists; listing every comment in a repository |
+| `client.issues.comments` | `issues.IssueCommentApi` | 4 | reading, editing and deleting a comment once it exists; listing every comment in a repository |
 | `client.issues.dependencies` | `issues.IssueDependencyApi` | 6 | what an issue depends on and what it blocks — one edge, read from both ends |
 | `client.issues.pins` | `issues.IssuePinApi` | 3 | the repository's pinned-issue shortlist and its order |
 | `client.issues.attachments` | `issues.IssueAttachmentApi` | 10 | files attached to an issue and files attached to a comment |
@@ -191,10 +191,9 @@ because Forgejo answers `200` with no body.
 
 ## `client.organizations` — organisations and teams
 
-**16 operations:** `get`, `list`, `create`, `edit`, `delete`, `rename`,
-`updateAvatar`, `deleteAvatar`, `repositories`, `createRepository`,
-`createRepositoryDeprecated`, `teams`, `getTeam`, `teamMembers`,
-`teamRepositories`, `activities`
+**15 operations:** `get`, `list`, `create`, `edit`, `delete`, `rename`,
+`updateAvatar`, `deleteAvatar`, `repositories`, `createRepository`, `teams`,
+`getTeam`, `teamMembers`, `teamRepositories`, `activities`
 
 Teams are rooted at `/teams/{id}` rather than under the organisation, which is
 why `getTeam` takes only an id.
@@ -208,7 +207,7 @@ why `getTeam` takes only an id.
 | `client.organizations.members` | `organizations.OrganizationMemberApi` | 13 | who belongs, who says so publicly, who is blocked, and which organisations a given account is in |
 | `client.organizations.teamAdmin` | `organizations.OrganizationTeamApi` | 11 | creating and changing teams, and deciding who and what they reach |
 | `client.organizations.quota` | `organizations.OrganizationQuotaApi` | 5 | the organisation's storage limits, usage, and what is using it |
-| `client.organizations.actions` | `organizations.actions.OrganizationActionApi` | 14 | the runners the organisation owns, and the secrets and variables its repositories inherit |
+| `client.organizations.actions` | `organizations.actions.OrganizationActionApi` | 13 | the runners the organisation owns, and the secrets and variables its repositories inherit |
 
 `teamAdmin` is named that way because `client.organizations.teams` is already an
 operation — the listing — on `OrganizationApi`.

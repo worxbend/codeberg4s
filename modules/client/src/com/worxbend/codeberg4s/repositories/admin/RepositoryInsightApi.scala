@@ -8,7 +8,6 @@ import com.worxbend.codeberg4s.issues.{Issue, TrackedTime, TrackedTimeQuery}
 import com.worxbend.codeberg4s.miscellaneous.SigningKey
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.repositories.admin.wire.AdminQueries
-import com.worxbend.codeberg4s.users.Username
 import com.worxbend.codeberg4s.{CodebergError, Owner, RepoName, RepositoryRequests}
 
 import scala.concurrent.Future
@@ -157,18 +156,6 @@ final class RepositoryInsightApi private[codeberg4s] (pipeline: ApiPipeline[Futu
     pipeline.callPage(RepositoryInsightApi.trackedTimesRequest(owner, name, query, params), params)(using
       RepositoryAdminDecoders.trackedTimes)
 
-  /** Lists one account's tracked time in the repository — `GET /repos/{owner}/{repo}/times/{user}`.
-    *
-    * '''Not paged''', unlike [[trackedTimes]] — the spec's own name for the response is
-    * `TrackedTimeListWithoutPagination`, and it sends no paging headers. This is a genuine difference between two
-    * endpoints that otherwise answer the same model, not an oversight here.
-    *
-    * '''Failures.''' The group contract above.
-    */
-  def trackedTimesFor(owner: Owner, name: RepoName, user: Username): Future[Vector[TrackedTime]] =
-    pipeline.call(RepositoryInsightApi.trackedTimesForRequest(owner, name, user), RetryEligibility.IdempotentOnly)(using
-      RepositoryAdminDecoders.trackedTimes)
-
   /** Searches the instance's topics — `GET /topics/search`.
     *
     * Instance-wide, not repository-scoped: this is how a caller discovers what topics exist before setting one with
@@ -208,9 +195,6 @@ object RepositoryInsightApi:
 
   /** The stable operation id of [[RepositoryInsightApi.trackedTimes]]. */
   val ListTrackedTimesOperation: String = "repos.admin.times.list"
-
-  /** The stable operation id of [[RepositoryInsightApi.trackedTimesFor]]. */
-  val UserTrackedTimesOperation: String = "repos.admin.times.user"
 
   /** The stable operation id of [[RepositoryInsightApi.searchTopics]]. */
   val SearchTopicsOperation: String = "repos.admin.topics.search"
@@ -258,14 +242,6 @@ object RepositoryInsightApi:
     ): Future[Either[CodebergError, Page[TrackedTime]]] =
       exec.attempt(rail.trackedTimes(owner, name, query, params))
 
-    /** [[RepositoryInsightApi.trackedTimesFor]] with its failure as a value. */
-    def trackedTimesFor(
-        owner: Owner,
-        name: RepoName,
-        user: Username,
-    ): Future[Either[CodebergError, Vector[TrackedTime]]] =
-      exec.attempt(rail.trackedTimesFor(owner, name, user))
-
     /** [[RepositoryInsightApi.searchTopics]] with its failure as a value. */
     def searchTopics(keyword: String, params: PageParams): Future[Either[CodebergError, Page[TopicSummary]]] =
       exec.attempt(rail.searchTopics(keyword, params))
@@ -305,9 +281,6 @@ object RepositoryInsightApi:
       timesPath(owner, name),
       IssueQueries.trackedTimes(query) ++ PagingQuery.window(params),
     )
-
-  private def trackedTimesForRequest(owner: Owner, name: RepoName, user: Username): CodebergRequest =
-    read(UserTrackedTimesOperation, timesPath(owner, name) :+ user.value, Nil)
 
   private def searchTopicsRequest(keyword: String, params: PageParams): CodebergRequest =
     read(

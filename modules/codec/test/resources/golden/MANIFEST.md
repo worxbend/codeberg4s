@@ -8,7 +8,7 @@ Forgejo. They are the ground truth for codec tests; the Swagger spec is not.
 | Base URL | `https://codeberg.org/api/v1` |
 | Capture date | 2026-08-01 (UTC) |
 | Server version | `16.0.0-dev-668-1bdb1938+gitea-1.22.0` (from `/version`) |
-| Spec version | `16.0.0-dev-668-1bdb1938+gitea-1.22.0` (`spec/swagger.v1.json`) — identical, so the delta below is not a version skew |
+| Spec version | `16.0.0-dev-753-6bcc6da0+gitea-1.22.0` (`spec/swagger.v1.json`, re-pinned 2026-09-29) — 85 commits past the captures; the re-pin changed no operation or response definition, so the delta below is still not a version skew |
 | Authentication | none — anonymous, read-only `GET` |
 | Requests issued | 61, one per second |
 | Fixtures stored | 54 (53 real, 1 synthetic) |

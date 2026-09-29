@@ -5,8 +5,8 @@ Generated from the **pinned** spec, never a live fetch.
 | | |
 | --- | --- |
 | Spec file | `spec/swagger.v1.json` |
-| Spec sha256 | `90c40aa5e69a387700d1f28f6e61ba3ed01837b96e21fdfd8795e944fddaf9d5` |
-| Spec `info.version` | `16.0.0-dev-668-1bdb1938+gitea-1.22.0` |
+| Spec sha256 | `253d09802be4a97244170c8c68afce22d1ce2e2a7ff6fc3ede2cd0ec4b9eafa0` |
+| Spec `info.version` | `16.0.0-dev-753-6bcc6da0+gitea-1.22.0` |
 | Swagger version | `2.0` |
 | `basePath` | `/api/v1` |
 | Paths | 326 |
@@ -31,25 +31,27 @@ tick per request builder those classes actually construct.
 
 | | |
 | --- | --- |
-| In-scope v1 rows in §3 | **439** (tag-weighted; 438 distinct — `createCurrentUserRepo` is listed under both `repository` and `user`) |
-| Implemented | **439** |
+| In-scope v1 rows in §3 | **432** (tag-weighted; 431 distinct — `createCurrentUserRepo` is listed under both `repository` and `user`) |
+| Implemented | **432** |
 | Coverage of the in-scope surface | **100 %** |
-| Coverage of the whole spec (506 operations) | 86.8 % |
+| Coverage of the whole spec (506 operations) | 85.4 % |
 
 | Tag | Implemented | In scope | Done |
 | --- | ---: | ---: | ---: |
 | `notification` | 7 | 7 | **100 %** |
 | `settings` | 4 | 4 | **100 %** |
 | `miscellaneous` | 14 | 14 | **100 %** |
-| `issue` | 67 | 67 | **100 %** |
-| `organization` | 69 | 69 | **100 %** |
-| `user` | 80 | 80 | **100 %** |
-| `repository` | 198 | 198 | **100 %** |
-| **total** | **439** | **439** | **100 %** |
+| `issue` | 65 | 65 | **100 %** |
+| `organization` | 67 | 67 | **100 %** |
+| `user` | 79 | 79 | **100 %** |
+| `repository` | 196 | 196 | **100 %** |
+| **total** | **432** | **432** | **100 %** |
 
-The remaining 67 operations of the 506 the spec declares are the ones `PLAN.md`
-§0 puts out of scope for v1: `admin` (51), `activitypub` (11) and `package` (6).
-They are listed in §4 and are deliberately not implemented.
+The remaining 74 operations of the 506 the spec declares are deliberately not
+implemented and are listed in §4: the 67 that `PLAN.md` §0 puts out of scope for
+v1 — `admin` (51), `activitypub` (11) and `package` (6) — and the 7 the spec
+itself marks `deprecated: true`, dropped on 2026-09-29 because this library
+targets the API codeberg.org serves today, not the widest common subset.
 
 Two operations answer a ZIP rather than JSON or text —
 `DownloadActionArtifact` and `repoGetActionRunLogs`. They are reachable as
@@ -79,7 +81,8 @@ Tag counts sum to 507 against 506 distinct operations because
 `POST /user/repos` (`createCurrentUserRepo`) is tagged both `repository` and
 `user`; it is listed under both tables below and must only be implemented once.
 
-In-scope v1 surface: **439 tag-weighted operations** (438 distinct).
+In-scope v1 surface: **432 tag-weighted operations** (431 distinct) — the 439
+the in-scope tags contain, less the 7 the spec marks `deprecated: true` (§4).
 
 ---
 
@@ -104,6 +107,7 @@ In-scope v1 surface: **439 tag-weighted operations** (438 distinct).
 | `package` | 6 | deferred | Package registry. Not in the v1 value order (PLAN.md §7); revisit after G3-final. |
 | `activitypub` | 11 | out-of-scope | Federation endpoints. Explicit non-goal, PLAN.md §0. |
 | `admin` | 51 | out-of-scope | Instance administration. Explicit non-goal, PLAN.md §0. |
+| *deprecated* | 7 | excluded | Operations the spec marks `deprecated: true`, spread over `user`, `repository`, `issue` and `organization`. The library targets the current API only; each one's replacement is named in §4. |
 
 **OAuth2 token acquisition** is out of scope as a *flow*, per PLAN.md §0: the
 library accepts a pre-obtained token only. The endpoints that manage OAuth2
@@ -134,7 +138,7 @@ when implementing it.
 pagination contract (verified live, HAZARDS.md §5). `—` on an array-returning
 GET is an unbounded collection — flagged in the Notes column.
 
-### 3.1 `user` — 80 operations
+### 3.1 `user` — 79 operations (80 in the spec; 1 deprecated, listed in §4)
 
 GET 47 · POST 12 · PATCH 3 · PUT 6 · DELETE 12
 
@@ -144,7 +148,6 @@ GET 47 · POST 12 · PATCH 3 · PUT 6 · DELETE 12
 | [x] | GET | `/user/actions/runners` | `getUserRunners` | token | page+limit |  |
 | [x] | POST | `/user/actions/runners` | `registerUserRunner` | token | — |  |
 | [x] | GET | `/user/actions/runners/jobs` | `userSearchRunJobs` | token | — | array response, no paging params |
-| [x] | GET | `/user/actions/runners/registration-token` | `userGetRunnerRegistrationToken` | token | — |  |
 | [x] | DELETE | `/user/actions/runners/{runner_id}` | `deleteUserRunner` | token | — |  |
 | [x] | GET | `/user/actions/runners/{runner_id}` | `getUserRunner` | token | — |  |
 | [x] | DELETE | `/user/actions/secrets/{secretname}` | `deleteUserSecret` | token | — |  |
@@ -221,7 +224,7 @@ GET 47 · POST 12 · PATCH 3 · PUT 6 · DELETE 12
 | [x] | POST | `/users/{username}/tokens` | `userCreateToken` | token | — |  |
 | [x] | DELETE | `/users/{username}/tokens/{token}` | `userDeleteAccessToken` | token | — |  |
 
-### 3.2 `repository` — 198 operations
+### 3.2 `repository` — 196 operations (198 in the spec; 2 deprecated, listed in §4)
 
 GET 105 · POST 42 · PATCH 10 · PUT 10 · DELETE 31
 
@@ -240,7 +243,6 @@ GET 105 · POST 42 · PATCH 10 · PUT 10 · DELETE 31
 | [x] | GET | `/repos/{owner}/{repo}/actions/runners` | `getRepoRunners` | optional | page+limit |  |
 | [x] | POST | `/repos/{owner}/{repo}/actions/runners` | `registerRepoRunner` | token | — |  |
 | [x] | GET | `/repos/{owner}/{repo}/actions/runners/jobs` | `repoSearchRunJobs` | optional | — | array response, no paging params |
-| [x] | GET | `/repos/{owner}/{repo}/actions/runners/registration-token` | `repoGetRunnerRegistrationToken` | optional | — |  |
 | [x] | DELETE | `/repos/{owner}/{repo}/actions/runners/{runner_id}` | `deleteRepoRunner` | token | — |  |
 | [x] | GET | `/repos/{owner}/{repo}/actions/runners/{runner_id}` | `getRepoRunner` | optional | — |  |
 | [x] | GET | `/repos/{owner}/{repo}/actions/runs` | `ListActionRuns` | optional | page+limit |  |
@@ -407,7 +409,6 @@ GET 105 · POST 42 · PATCH 10 · PUT 10 · DELETE 31
 | [x] | GET | `/repos/{owner}/{repo}/teams/{team}` | `repoCheckTeam` | optional | — |  |
 | [x] | PUT | `/repos/{owner}/{repo}/teams/{team}` | `repoAddTeam` | token | — |  |
 | [x] | GET | `/repos/{owner}/{repo}/times` | `repoTrackedTimes` | optional | page+limit |  |
-| [x] | GET | `/repos/{owner}/{repo}/times/{user}` | `userTrackedTimes` | optional | — | array response, no paging params |
 | [x] | GET | `/repos/{owner}/{repo}/topics` | `repoListTopics` | optional | page+limit |  |
 | [x] | PUT | `/repos/{owner}/{repo}/topics` | `repoUpdateTopics` | token | — |  |
 | [x] | DELETE | `/repos/{owner}/{repo}/topics/{topic}` | `repoDeleteTopic` | token | — |  |
@@ -426,7 +427,7 @@ GET 105 · POST 42 · PATCH 10 · PUT 10 · DELETE 31
 | [x] | GET | `/topics/search` | `topicSearch` | optional | page+limit |  |
 | [x] | POST | `/user/repos` | `createCurrentUserRepo` | token | — | dual-tagged `repository`+`user`; implement once |
 
-### 3.3 `issue` — 67 operations
+### 3.3 `issue` — 65 operations (67 in the spec; 2 deprecated, listed in §4)
 
 GET 23 · POST 16 · PATCH 8 · PUT 2 · DELETE 18
 
@@ -460,8 +461,6 @@ GET 23 · POST 16 · PATCH 8 · PUT 2 · DELETE 18
 | [x] | POST | `/repos/{owner}/{repo}/issues/{index}/blocks` | `issueCreateIssueBlocking` | token | — |  |
 | [x] | GET | `/repos/{owner}/{repo}/issues/{index}/comments` | `issueGetComments` | optional | — | array response, no paging params |
 | [x] | POST | `/repos/{owner}/{repo}/issues/{index}/comments` | `issueCreateComment` | token | — |  |
-| [x] | DELETE | `/repos/{owner}/{repo}/issues/{index}/comments/{id}` | `issueDeleteCommentDeprecated` | token | — |  |
-| [x] | PATCH | `/repos/{owner}/{repo}/issues/{index}/comments/{id}` | `issueEditCommentDeprecated` | token | — |  |
 | [x] | POST | `/repos/{owner}/{repo}/issues/{index}/deadline` | `issueEditIssueDeadline` | token | — |  |
 | [x] | DELETE | `/repos/{owner}/{repo}/issues/{index}/dependencies` | `issueRemoveIssueDependencies` | token | — |  |
 | [x] | GET | `/repos/{owner}/{repo}/issues/{index}/dependencies` | `issueListIssueDependencies` | optional | page+limit |  |
@@ -500,13 +499,12 @@ GET 23 · POST 16 · PATCH 8 · PUT 2 · DELETE 18
 | [x] | GET | `/repos/{owner}/{repo}/milestones/{id}` | `issueGetMilestone` | optional | — |  |
 | [x] | PATCH | `/repos/{owner}/{repo}/milestones/{id}` | `issueEditMilestone` | token | — |  |
 
-### 3.4 `organization` — 69 operations
+### 3.4 `organization` — 67 operations (69 in the spec; 2 deprecated, listed in §4)
 
 GET 36 · POST 10 · PATCH 4 · PUT 7 · DELETE 12
 
 | ✔ | Method | Path | operationId | Auth | Paged | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| [x] | POST | `/org/{org}/repos` | `createOrgRepoDeprecated` | token | — |  |
 | [x] | GET | `/orgs` | `orgGetAll` | optional | page+limit |  |
 | [x] | POST | `/orgs` | `orgCreate` | token | — |  |
 | [x] | DELETE | `/orgs/{org}` | `orgDelete` | token | — |  |
@@ -515,7 +513,6 @@ GET 36 · POST 10 · PATCH 4 · PUT 7 · DELETE 12
 | [x] | GET | `/orgs/{org}/actions/runners` | `getOrgRunners` | optional | page+limit |  |
 | [x] | POST | `/orgs/{org}/actions/runners` | `registerOrgRunner` | token | — |  |
 | [x] | GET | `/orgs/{org}/actions/runners/jobs` | `orgSearchRunJobs` | optional | — | array response, no paging params |
-| [x] | GET | `/orgs/{org}/actions/runners/registration-token` | `orgGetRunnerRegistrationToken` | optional | — |  |
 | [x] | DELETE | `/orgs/{org}/actions/runners/{runner_id}` | `deleteOrgRunner` | token | — |  |
 | [x] | GET | `/orgs/{org}/actions/runners/{runner_id}` | `getOrgRunner` | optional | — |  |
 | [x] | GET | `/orgs/{org}/actions/secrets` | `orgListActionsSecrets` | optional | page+limit |  |
@@ -625,6 +622,25 @@ GET 4 · POST 0 · PATCH 0 · PUT 0 · DELETE 0
 ---
 
 ## 4. Deferred endpoint listing (not to be implemented in v1)
+
+### *deprecated* — 7 operations (excluded, 2026-09-29)
+
+The spec marks these `deprecated: true`. They were implemented until
+2026-09-29 and were removed because this library targets the API codeberg.org
+serves today: an operation Forgejo itself has deprecated is not offered when a
+current replacement exists, and each of these has one. `admin`'s three
+deprecated operations are out of scope with the rest of their tag and are not
+repeated here.
+
+| Tag | Method | Path | operationId | Replacement |
+| --- | --- | --- | --- | --- |
+| `organization` | POST | `/org/{org}/repos` | `createOrgRepoDeprecated` | `createOrgRepo` — `POST /orgs/{org}/repos` |
+| `issue` | PATCH | `/repos/{owner}/{repo}/issues/{index}/comments/{id}` | `issueEditCommentDeprecated` | `issueEditComment` — `PATCH /repos/{owner}/{repo}/issues/comments/{id}` |
+| `issue` | DELETE | `/repos/{owner}/{repo}/issues/{index}/comments/{id}` | `issueDeleteCommentDeprecated` | `issueDeleteComment` — `DELETE /repos/{owner}/{repo}/issues/comments/{id}` |
+| `repository` | GET | `/repos/{owner}/{repo}/times/{user}` | `userTrackedTimes` | `repoTrackedTimes` — `GET /repos/{owner}/{repo}/times?user=` |
+| `user` | GET | `/user/actions/runners/registration-token` | `userGetRunnerRegistrationToken` | `userCreateRunner` — `POST /user/actions/runners` (deprecated in Forgejo 15) |
+| `repository` | GET | `/repos/{owner}/{repo}/actions/runners/registration-token` | `repoGetRunnerRegistrationToken` | `repoCreateRunner` — `POST /repos/{owner}/{repo}/actions/runners` (deprecated in Forgejo 15) |
+| `organization` | GET | `/orgs/{org}/actions/runners/registration-token` | `orgGetRunnerRegistrationToken` | `orgCreateRunner` — `POST /orgs/{org}/actions/runners` (deprecated in Forgejo 15) |
 
 ### `package` — 6 operations (deferred)
 

@@ -13,7 +13,6 @@ import com.worxbend.codeberg4s.repositories.CommitSha
 import com.worxbend.codeberg4s.repositories.ContentPath
 import com.worxbend.codeberg4s.repositories.RepositoryId
 import com.worxbend.codeberg4s.repositories.gitdata.RefName
-import com.worxbend.codeberg4s.users.Username
 
 import sttp.client4.Backend
 import sttp.client4.testing.RecordingBackend
@@ -498,15 +497,6 @@ final class RepositoryAdminApiSuite extends FunSuite with ClientSuiteHarness:
         assertEquals(pathOf(backend), s"$Endpoint/times")
         assertEquals(queryOf(backend), List("user" -> "octocat", "page" -> "1", "limit" -> "50"))
 
-  test("the per-user tracked-time listing is unpaged, as the spec's own response name says"):
-    val backend = RecordingBackend(responding(200, RepositoryAdminApiSuite.TrackedTimeListBody))
-
-    onApi(backend): api =>
-      api.insights.trackedTimesFor(Handle, Name, orFail(Username.from("octocat"))).map: entries =>
-        assertEquals(pathOf(backend), s"$Endpoint/times/octocat")
-        assertEquals(queryOf(backend), Nil)
-        assertEquals(entries.map(_.id.value), Vector(5L))
-
   test("the topic search is instance-wide and unwraps the topics envelope"):
     val backend = RecordingBackend(responding(200, RepositoryAdminApiSuite.TopicSearchBody))
 
@@ -615,8 +605,6 @@ object RepositoryAdminApiSuite:
   private val UserListBody: String = """[{"id": 3, "login": "octocat"}]"""
 
   private val IssueListBody: String = """[{"id": 900, "number": 42, "title": "pinned", "state": "open"}]"""
-
-  private val TrackedTimeListBody: String = """[{"id": 5, "time": 3600, "user_name": "octocat"}]"""
 
   private val TopicSearchBody: String =
     """{"topics": [{"id": 41, "topic_name": "scala", "repo_count": 137}]}"""

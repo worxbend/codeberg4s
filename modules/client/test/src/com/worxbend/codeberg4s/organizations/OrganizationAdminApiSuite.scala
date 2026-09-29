@@ -145,30 +145,6 @@ final class OrganizationAdminApiSuite extends FunSuite with OrganizationStubs:
           )
           assertEquals(repository.slug.value, "forgejo/forgejo")
 
-  test("the deprecated repository create really is the singular /org path, not a duplicate of the plural one"):
-    val plural   = RecordingBackend(responding(201, OrganizationAdminApiSuite.RepoBody))
-    val singular = RecordingBackend(responding(201, OrganizationAdminApiSuite.RepoBody))
-    val command  = CreateRepository.named(orFail(RepoName.from("codeberg4s")))
-
-    for
-      _ <- onApi(plural)(api => api.createRepository(Org, command))
-      _ <- onApi(singular)(api => api.createRepositoryDeprecated(Org, command))
-    yield
-      assertEquals(pathOf(plural), "https://forge.example/api/v1/orgs/forgejo/repos")
-      assertEquals(pathOf(singular), "https://forge.example/api/v1/org/forgejo/repos")
-      assertEquals(bodyOf(singular), bodyOf(plural))
-
-  test("the two repository creates carry different operation ids, so the deprecated path can be alerted on"):
-    onApi(responding(404, OrganizationStubs.NotFoundBody)): api =>
-      val command = CreateRepository.named(orFail(RepoName.from("codeberg4s")))
-
-      for
-        plural   <- api.attempt.createRepository(Org, command)
-        singular <- api.attempt.createRepositoryDeprecated(Org, command)
-      yield
-        assertEquals(operationOf(plural), OrganizationApi.CreateRepositoryOperation)
-        assertEquals(operationOf(singular), OrganizationApi.CreateRepositoryDeprecatedOperation)
-
   // --- membership probes ----------------------------------------------------
 
   test("orgs.members.check reads a 204 as membership"):

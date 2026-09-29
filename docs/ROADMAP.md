@@ -84,11 +84,14 @@ the first wave that needs them; later waves consume rather than redefine
 - [x] **The long tail — all 378 remaining in-scope operations**, in three rounds:
       repository Actions, git data and publishing; issues, hooks, access control
       and administration; user account, user social, organizations and
-      miscellaneous. The in-scope surface is now 439 of 439.
+      miscellaneous. The in-scope surface reached 439 of 439; it is 432 of 432
+      since 2026-09-29, when the seven operations the spec marks
+      `deprecated: true` were dropped (`docs/API_INVENTORY.md` §4).
 
-That is **439 of 439 in-scope operations, 100 %** (`docs/API_INVENTORY.md` §0).
-Gate G3-final is met. The 67 operations not implemented are the ones `PLAN.md`
-§0 puts out of scope for v1 — `admin`, `activitypub` and `package`.
+That is **432 of 432 in-scope operations, 100 %** (`docs/API_INVENTORY.md` §0).
+Gate G3-final is met. The 74 operations not implemented are the 67 `PLAN.md`
+§0 puts out of scope for v1 — `admin`, `activitypub` and `package` — and the 7
+the spec marks deprecated, which the library targets past rather than carries.
 
 Per-wave definition of done: models from golden fixtures · codec round-trips ·
 both rails · Scaladoc stating the error contract · inventory checkbox flipped ·
@@ -165,7 +168,7 @@ on paper only until those tools are proven — `docs/CONSTITUTION_MAPPING.md`.)
 
 | Definition-of-done clause | State |
 | ------------------------- | ----- |
-| All in-scope endpoints on both rails with documented error contracts | **439 / 439, 100 %** (`docs/API_INVENTORY.md` §0) — every one on both rails with a Scaladoc error contract |
+| All in-scope endpoints on both rails with documented error contracts | **432 / 432, 100 %** (`docs/API_INVENTORY.md` §0) — every one on both rails with a Scaladoc error contract |
 | `verify.sh` green | **Yes, both modes.** Default run: format, lint, zero-warning compile, **3,658 unit tests**, boundary check, coverage. `--with-slow` adds duplication and CRAP and also passes |
 | Coverage per §6.1 (≥ 90 % line / ≥ 85 % branch on `domain`+`core`+`codec`) | **Enforced and asserted against a fresh report** by `scripts/coverage-gate.sc`: `domain` 100.00 % / 100.00 %, `core` 96.59 % / 92.48 %, `codec` 95.20 % / 91.47 % |
 | Mutation ≥ 80 % | Runner proven, **no score produced — the figure is unproven** — see Phase 4 |

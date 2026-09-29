@@ -9,7 +9,7 @@ import com.worxbend.codeberg4s.repositories.actions.RunnerStatus
 
 import munit.FunSuite
 
-/** Decoding the three runner-shaped payloads: a runner, a registration result, and a bare registration token.
+/** Decoding the two runner-shaped payloads: a runner and a registration result.
   *
   * '''Payloads written by hand from `spec/swagger.v1.json`, not captured'''; see [[ActionArtifactDto]].
   */
@@ -75,20 +75,6 @@ final class ActionRunnerDtoSuite extends FunSuite:
 
   test("a registration result without an id is still usable, because the token is the point"):
     assertEquals(registered("""{"token":"QWERTY123"}""").id, None)
-
-  test("a bare registration token decodes to the masked credential"):
-    val token = Json.decode[RegistrationTokenDto]("""{"token":"  QWERTY123  "}""") match
-      case Right(dto)    => dto.toDomain
-      case Left(failure) => fail(s"the payload did not decode: ${failure.message}")
-
-    assertEquals(token.toOption.map(_.reveal), Some("QWERTY123"))
-
-  test("a registration-token response with no token fails at the token's own path"):
-    val failure = Json.decode[RegistrationTokenDto]("""{}""") match
-      case Right(dto)    => dto.toDomain.swap.toOption.map(_.path.render)
-      case Left(problem) => fail(s"the payload did not decode: ${problem.message}")
-
-    assertEquals(failure, Some("$.token"))
 
   private def decodeRunner(body: String): ActionRunnerDto =
     Json.decode[ActionRunnerDto](body) match

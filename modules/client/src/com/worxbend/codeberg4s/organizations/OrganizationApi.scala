@@ -353,31 +353,6 @@ final class OrganizationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
     pipeline.call(OrganizationApi.createRepositoryRequest(org, command), RetryEligibility.Never)(using
       OrganizationDecoders.repository)
 
-  /** Creates a repository owned by the organisation, at the '''deprecated''' path — `POST /org/{org}/repos`.
-    *
-    * '''Prefer [[createRepository]].''' This is the same operation at `/org/{org}/repos` — singular `org` — which
-    * Forgejo keeps for compatibility with clients written before the path was regularised. The spec's own operation id
-    * says so: `createOrgRepoDeprecated`. It is implemented here because a Forgejo release removing it is a thing a
-    * caller may need to detect, and because an operation this library silently omitted would be one nobody could tell
-    * was missing.
-    *
-    * Everything else — the body, the ownership, the `201`, the retry decision — is [[createRepository]]'s. A future
-    * Forgejo that has dropped the route answers `404`, which on this path means "the route is gone" as readily as "no
-    * such organisation".
-    *
-    * '''Never retried''', for [[createRepository]]'s reason.
-    *
-    * '''Failures.''' The group contract above.
-    *
-    * @param org
-    *   the organisation that will own the repository
-    * @param command
-    *   the repository to create
-    */
-  def createRepositoryDeprecated(org: OrgName, command: CreateRepository): Future[Repository] =
-    pipeline.call(OrganizationApi.createRepositoryDeprecatedRequest(org, command), RetryEligibility.Never)(using
-      OrganizationDecoders.repository)
-
   // --- members --------------------------------------------------------------
 
   /** Lists an organisation's teams — `GET /orgs/{org}/teams`.
@@ -504,11 +479,6 @@ object OrganizationApi:
   /** The stable operation id of [[OrganizationApi.createRepository]]. */
   val CreateRepositoryOperation: String = "orgs.repos.create"
 
-  /** The stable operation id of [[OrganizationApi.createRepositoryDeprecated]], which is a different route and
-    * therefore a different id: a caller alerting on the deprecated path must be able to see it separately.
-    */
-  val CreateRepositoryDeprecatedOperation: String = "orgs.repos.createDeprecated"
-
   /** The stable operation id of [[OrganizationApi.teams]]. */
   val TeamsOperation: String = "orgs.teams.list"
 
@@ -573,13 +543,6 @@ object OrganizationApi:
     /** [[OrganizationApi.createRepository]] with its failure as a value. */
     def createRepository(org: OrgName, command: CreateRepository): Future[Either[CodebergError, Repository]] =
       exec.attempt(rail.createRepository(org, command))
-
-    /** [[OrganizationApi.createRepositoryDeprecated]] with its failure as a value. */
-    def createRepositoryDeprecated(
-        org: OrgName,
-        command: CreateRepository,
-    ): Future[Either[CodebergError, Repository]] =
-      exec.attempt(rail.createRepositoryDeprecated(org, command))
 
     /** [[OrganizationApi.teams]] with its failure as a value. */
     def teams(org: OrgName, params: PageParams): Future[Either[CodebergError, Page[Team]]] =
@@ -657,17 +620,6 @@ object OrganizationApi:
       CreateRepositoryOperation,
       HttpMethod.Post,
       reposPath(org),
-      RepositoryOptionDto.renderCreate(command),
-    )
-
-  /** The deprecated route is `/org/{org}/repos` — singular, and therefore not
-    * [[OrganizationRequests.organizationPath]].
-    */
-  private def createRepositoryDeprecatedRequest(org: OrgName, command: CreateRepository): CodebergRequest =
-    write(
-      CreateRepositoryDeprecatedOperation,
-      HttpMethod.Post,
-      List("org", org.value, "repos"),
       RepositoryOptionDto.renderCreate(command),
     )
 

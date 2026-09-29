@@ -99,16 +99,6 @@ final class UserActionApiSuite extends AccountApiSuite:
     onApi(backend): api =>
       api.deleteRunner(Runner).map(_ => assertEquals(attemptsOn(backend), 2))
 
-  test("the registration token is a GET that yields a credential which masks itself"):
-    val backend = RecordingBackend(responding(200, """{"token":"QWERTY123"}"""))
-
-    onApi(backend): api =>
-      api.runnerRegistrationToken().map: token =>
-        assertEquals(methodOf(backend), "GET")
-        assertEquals(pathOf(backend), s"$ActionsRoot/runners/registration-token")
-        assertEquals(token.reveal, "QWERTY123")
-        assertEquals(token.toString, RunnerRegistrationToken.Redacted)
-
   test("the job search comma-joins its labels into the one parameter Forgejo declares"):
     val backend = RecordingBackend(responding(200, "[]"))
     val labels  = Vector(orFail(RunnerLabel.from("docker")), orFail(RunnerLabel.from("ubuntu-latest")))

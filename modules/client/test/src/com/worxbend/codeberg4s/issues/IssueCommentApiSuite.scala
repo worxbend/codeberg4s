@@ -98,31 +98,6 @@ final class IssueCommentApiSuite extends FunSuite with IssueLaneHarness:
         assertEquals(bodyOf(backend), "empty")
         assertEquals(backend.allInteractions.size, 2, "the 503 on a delete was not retried")
 
-  test("the deprecated edit route carries the issue number the current route does not"):
-    val backend = RecordingBackend(responding(200, CommentBody))
-
-    onApi(backend): api =>
-      api
-        .editDeprecated(Handle, Name, Number, CommentRef, orFail(EditComment.of("looks right")))
-        .map: _ =>
-          assertEquals(
-            pathOf(backend),
-            "https://forge.example/api/v1/repos/Codeberg/Community/issues/2966/comments/20366420",
-          )
-
-  test("the deprecated delete route carries the issue number too, and reports its own operation id"):
-    val backend = RecordingBackend(responding(404, IssueLaneHarness.NotFoundBody))
-
-    onApi(backend): api =>
-      api.attempt.deleteDeprecated(Handle, Name, Number, CommentRef).map:
-        case Left(CodebergError.Api(ctx, _, _, _)) =>
-          assertEquals(ctx.operation, IssueCommentApi.DeleteDeprecatedOperation)
-          assertEquals(
-            pathOf(backend),
-            "https://forge.example/api/v1/repos/Codeberg/Community/issues/2966/comments/20366420",
-          )
-        case other                                 => fail(s"expected an Api failure, got $other")
-
   test("a 404 reaches both rails as the very same failure"):
     onApi(responding(404, IssueLaneHarness.NotFoundBody)): api =>
       for

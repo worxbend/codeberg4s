@@ -22,7 +22,6 @@ import com.worxbend.codeberg4s.repositories.actions.{
   RegisteredRunner,
   RunnerId,
   RunnerLabel,
-  RunnerRegistrationToken,
   RunnerVisibility,
   SecretName,
   SecretValue,
@@ -156,8 +155,9 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     * what the runner binary authenticates with; it masks itself in every rendering path, but it is still a secret that
     * has to reach exactly one machine.
     *
-    * '''This is the supported way to obtain a runner token.''' [[runnerRegistrationToken]] is deprecated in Forgejo 15
-    * and this call is what the spec points at instead.
+    * '''This is the only way to obtain a runner token here.''' Forgejo 15 deprecated the
+    * `GET /orgs/{org}/actions/runners/registration-token` read in favour of this call, and this library does not offer
+    * the deprecated read: it targets the current API only.
     *
     * '''Failures.''' The group contract above. A `400` means Forgejo rejected the payload — most often a blank name,
     * which [[com.worxbend.codeberg4s.repositories.actions.RegisterRunner.named]] has already refused.
@@ -181,26 +181,6 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     */
   def deleteRunner(org: OrgName, id: RunnerId): Future[Unit] =
     pipeline.callUnit(OrganizationActionApi.deleteRunnerRequest(org, id), RetryEligibility.AlwaysRetry)
-
-  /** Obtains the token a new runner registers with — `GET /orgs/{org}/actions/runners/registration-token`.
-    *
-    * '''Deprecated by the API, not by this library.''' `spec/swagger.v1.json` marks this operation `deprecated: true`
-    * and its description says to use the web UI or [[registerRunner]] instead, as of Forgejo 15. It is implemented
-    * because the endpoint still exists and older instances still need it; it is '''not''' marked `@deprecated` in
-    * Scala, because that annotation would make every call site — including this class's own typed rail — a compiler
-    * warning, and warnings are errors in this build.
-    *
-    * '''A `GET` that hands out a credential.''' It is safe in the RFC 9110 sense — reading it changes nothing on the
-    * instance — so it is retried like any other read. What it returns is nonetheless a secret with the authority to
-    * attach a machine that will execute workflow code for every repository in the organisation, which is why it comes
-    * back as a [[com.worxbend.codeberg4s.repositories.actions.RunnerRegistrationToken]] and not as a `String`.
-    *
-    * '''Failures.''' The group contract above. The spec declares no failure status for this operation at all, which is
-    * a gap in the spec rather than a promise — `401` and `404` both occur.
-    */
-  def runnerRegistrationToken(org: OrgName): Future[RunnerRegistrationToken] =
-    pipeline.call(OrganizationActionApi.registrationTokenRequest(org), RetryEligibility.IdempotentOnly)(using
-      ActionDecoders.registrationToken)
 
   /** Finds the organisation's jobs waiting for a runner with the given labels — `GET /orgs/{org}/actions/runners/jobs`.
     *
@@ -366,9 +346,6 @@ object OrganizationActionApi:
   /** The stable operation id of [[OrganizationActionApi.deleteRunner]]. */
   val DeleteRunnerOperation: String = "orgs.actions.runners.delete"
 
-  /** The stable operation id of [[OrganizationActionApi.runnerRegistrationToken]]. */
-  val RunnerRegistrationTokenOperation: String = "orgs.actions.runners.registrationToken"
-
   /** The stable operation id of [[OrganizationActionApi.searchRunnerJobs]]. */
   val SearchRunnerJobsOperation: String = "orgs.actions.runners.jobs.search"
 
@@ -423,10 +400,6 @@ object OrganizationActionApi:
     /** [[OrganizationActionApi.deleteRunner]] with its failure as a value. */
     def deleteRunner(org: OrgName, id: RunnerId): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.deleteRunner(org, id))
-
-    /** [[OrganizationActionApi.runnerRegistrationToken]] with its failure as a value. */
-    def runnerRegistrationToken(org: OrgName): Future[Either[CodebergError, RunnerRegistrationToken]] =
-      exec.attempt(rail.runnerRegistrationToken(org))
 
     /** [[OrganizationActionApi.searchRunnerJobs]] with its failure as a value. */
     def searchRunnerJobs(
@@ -495,9 +468,6 @@ object OrganizationActionApi:
 
   private def deleteRunnerRequest(org: OrgName, id: RunnerId): CodebergRequest =
     remove(DeleteRunnerOperation, runnerPath(org, id))
-
-  private def registrationTokenRequest(org: OrgName): CodebergRequest =
-    read(RunnerRegistrationTokenOperation, runnersPath(org) :+ "registration-token", Nil)
 
   private def searchRunnerJobsRequest(org: OrgName, labels: Vector[RunnerLabel]): CodebergRequest =
     read(SearchRunnerJobsOperation, runnersPath(org) :+ "jobs", ActionQueries.runnerJobs(labels))

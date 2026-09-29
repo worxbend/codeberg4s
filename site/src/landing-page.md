@@ -1,10 +1,11 @@
 A Scala 3 client for the [Codeberg](https://codeberg.org) and
-[Forgejo](https://forgejo.org) REST API v1. All 439 in-scope operations are
+[Forgejo](https://forgejo.org) REST API v1. All 432 in-scope operations are
 implemented, on both error rails, against models built from captured responses
 rather than from the published Swagger spec.
 
-Codeberg is the *default* base URI, not a hardcoded one: the same client talks
-to any Forgejo or Gitea-compatible instance.
+Codeberg is the *default* base URI, not a hardcoded one, and the API codeberg.org
+serves today is the target: the same client talks to any Forgejo at that API
+level, and operations Forgejo has deprecated are not offered.
 
 ## The four properties that matter
 

@@ -19,7 +19,7 @@
       "name": "This file is distributed under the MIT license for the purpose of interoperability",
       "url": "http://opensource.org/licenses/MIT"
     },
-    "version": "16.0.0-dev-668-1bdb1938+gitea-1.22.0"
+    "version": "16.0.0-dev-753-6bcc6da0+gitea-1.22.0"
   },
   "basePath": "/api/v1",
   "paths": {
@@ -27634,6 +27634,11 @@
     "IssueMeta": {
       "description": "IssueMeta basic issue information",
       "type": "object",
+      "required": [
+        "index",
+        "owner",
+        "repo"
+      ],
       "properties": {
         "index": {
           "type": "integer",

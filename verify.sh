@@ -79,11 +79,14 @@ readonly COVERED_MODULES=(
 # change that adds one group fails, and a change that removes ten is told to
 # bank the win by lowering this number.
 #
-# MEASURED, NOT RECALLED: `scripts/cpd.sh --report` on 2026-08-31 against
+# MEASURED, NOT RECALLED: `scripts/cpd.sh --report` on 2026-09-29 against
 # modules/{domain,core,codec,transport,client}/src with PMD 7.26.0 at 40
-# tokens — 156 groups, after collapsing the duplicated BlockedUser model. The
-# 161 it read a few commits earlier was the same tree with that duplicate still
-# in it.
+# tokens — 159 groups, after dropping the seven operations the spec marks
+# deprecated. The same tool read 160 on the commit before that change
+# (94fe214), so the 156 recorded on 2026-08-31 had already been overtaken by
+# four groups that the commits of 2026-09-01/02 added without banking; the
+# removal paid one of them back. The 2026-08-31 figure was 156 after
+# collapsing the duplicated BlockedUser model, 161 with it still in.
 #
 # THIS NUMBER IS NOT COMPARABLE TO ANY MEASUREMENT BELOW, and the drop from
 # 363 was not earned by deleting code alone. `.scalafix.conf` used to set
@@ -134,7 +137,7 @@ readonly COVERED_MODULES=(
 #
 # Deliberately not overridable from the environment: moving the baseline has to
 # appear in a diff, with a commit message saying why.
-readonly CPD_BASELINE_GROUPS=156
+readonly CPD_BASELINE_GROUPS=159
 
 with_slow=false
 nightly=false

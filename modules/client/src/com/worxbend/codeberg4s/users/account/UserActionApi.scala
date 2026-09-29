@@ -20,7 +20,6 @@ import com.worxbend.codeberg4s.repositories.actions.{
   RegisteredRunner,
   RunnerId,
   RunnerLabel,
-  RunnerRegistrationToken,
   RunnerVisibility,
   SecretName,
   SecretValue,
@@ -160,22 +159,6 @@ final class UserActionApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     */
   def deleteRunner(id: RunnerId): Future[Unit] =
     pipeline.callUnit(UserActionApi.deleteRunnerRequest(id), RetryEligibility.AlwaysRetry)
-
-  /** Obtains the token a new account-level runner registers with — `GET /user/actions/runners/registration-token`.
-    *
-    * '''A `GET` that hands out a credential.''' It is safe in the RFC 9110 sense — reading it changes nothing on the
-    * instance — so it is retried like any other read. What it returns is nonetheless a secret with the authority to
-    * attach a machine that will execute workflow code for every repository the account owns, which is why it comes back
-    * as a [[com.worxbend.codeberg4s.repositories.actions.RunnerRegistrationToken]] and not as a `String`.
-    *
-    * Distinct from [[registerRunner]]: that call creates the runner and hands back its token, this one hands back a
-    * token the runner binary uses to create itself.
-    *
-    * '''Failures.''' The group contract above. The spec declares `401` and `403` for this operation and no `404`.
-    */
-  def runnerRegistrationToken(): Future[RunnerRegistrationToken] =
-    pipeline.call(UserActionApi.runnerRegistrationTokenRequest, RetryEligibility.IdempotentOnly)(using
-      ActionDecoders.registrationToken)
 
   /** Finds the account's jobs waiting for a runner with the given labels — `GET /user/actions/runners/jobs`.
     *
@@ -318,9 +301,6 @@ object UserActionApi:
   /** The stable operation id of [[UserActionApi.deleteRunner]]. */
   val DeleteRunnerOperation: String = "users.account.actions.runners.delete"
 
-  /** The stable operation id of [[UserActionApi.runnerRegistrationToken]]. */
-  val RunnerRegistrationTokenOperation: String = "users.account.actions.runners.registrationToken"
-
   /** The stable operation id of [[UserActionApi.searchRunnerJobs]]. */
   val SearchRunnerJobsOperation: String = "users.account.actions.runners.jobs.search"
 
@@ -371,10 +351,6 @@ object UserActionApi:
     /** [[UserActionApi.deleteRunner]] with its failure as a value. */
     def deleteRunner(id: RunnerId): Future[Either[CodebergError, Unit]] =
       exec.attempt(rail.deleteRunner(id))
-
-    /** [[UserActionApi.runnerRegistrationToken]] with its failure as a value. */
-    def runnerRegistrationToken(): Future[Either[CodebergError, RunnerRegistrationToken]] =
-      exec.attempt(rail.runnerRegistrationToken())
 
     /** [[UserActionApi.searchRunnerJobs]] with its failure as a value. */
     def searchRunnerJobs(labels: Vector[RunnerLabel]): Future[Either[CodebergError, Vector[ActionRunJob]]] =
@@ -438,9 +414,6 @@ object UserActionApi:
 
   private def deleteRunnerRequest(id: RunnerId): CodebergRequest =
     remove(DeleteRunnerOperation, runnerPath(id))
-
-  private def runnerRegistrationTokenRequest: CodebergRequest =
-    read(RunnerRegistrationTokenOperation, runnersPath :+ "registration-token", Nil)
 
   private def searchRunnerJobsRequest(labels: Vector[RunnerLabel]): CodebergRequest =
     read(SearchRunnerJobsOperation, runnersPath :+ "jobs", ActionQueries.runnerJobs(labels))
