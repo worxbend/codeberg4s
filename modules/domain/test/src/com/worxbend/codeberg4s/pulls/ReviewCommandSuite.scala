@@ -178,6 +178,15 @@ final class ReviewCommandSuite extends FunSuite:
   test("the update styles spell themselves the way the query parameter needs"):
     assertEquals(UpdateStyle.values.toVector.map(_.wireValue), Vector("merge", "rebase"))
 
+  test("every update style round-trips through its wire spelling, trimming and ignoring case"):
+    UpdateStyle.values.foreach(style => assertEquals(UpdateStyle.parse(style.wireValue), Some(style)))
+    assertEquals(UpdateStyle.parse("  REBASE "), Some(UpdateStyle.Rebase))
+
+  test("an update style is a narrower set than a merge style, so a merge spelling is not an update style"):
+    assertEquals(UpdateStyle.parse("rebase-merge"), None)
+    assertEquals(UpdateStyle.parse("squash"), None)
+    assertEquals(UpdateStyle.values.length, 2)
+
   test("binary changes are left out until the caller asks, because they multiply the response size"):
     assertEquals(DiffRequest.of(DiffFormat.Diff).includeBinary, false)
     assertEquals(DiffRequest.of(DiffFormat.Diff).includingBinary.includeBinary, true)

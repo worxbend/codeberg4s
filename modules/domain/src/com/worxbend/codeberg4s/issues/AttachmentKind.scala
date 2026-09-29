@@ -20,7 +20,7 @@ enum AttachmentKind:
   /** The attachment is a link the instance recorded; the bytes are somebody else's. */
   case External
 
-  /** A kind this library does not know, kept verbatim rather than discarded. */
+  /** A kind this library does not know, kept verbatim — trimmed, in its own case — rather than discarded. */
   case Other(word: String)
 
   /** The value this kind is spelled with on the wire. */
@@ -41,10 +41,15 @@ object AttachmentKind:
   /** Reads the `type` field, matched case-insensitively after trimming.
     *
     * '''Total, and deliberately so.''' An unrecognised value becomes [[AttachmentKind.Other]] rather than a decoding
-    * failure, for the reason the type note gives. That is why this returns a kind and not an `Either`.
+    * failure, for the reason the type note gives. That is why this returns a kind and not an `Either`. The word `Other`
+    * carries is the trimmed original in its own case, not the lower-cased copy the match was made on, so [[wireValue]]
+    * renders back what arrived; a blank value is `Other("")`, as on
+    * [[com.worxbend.codeberg4s.notifications.NotificationSubjectType.from]].
     */
   def from(value: String): AttachmentKind =
-    value.trim.toLowerCase(Locale.ROOT) match
+    val trimmed = value.trim
+
+    trimmed.toLowerCase(Locale.ROOT) match
       case UploadedWire => Uploaded
       case ExternalWire => External
-      case other        => Other(other)
+      case _            => Other(trimmed)

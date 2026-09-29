@@ -103,7 +103,8 @@ val config: Either[ValidationError, CodebergConfig] =
 ```
 
 `Auth` has three cases: `Anonymous`, `Token(ApiToken)` and
-`Basic(username, Password)`. Create a personal access token at
+`Basic(username, Password)`, the last built with `Auth.basic`, which validates
+the username. Create a personal access token at
 `https://codeberg.org/user/settings/applications`.
 
 `ApiToken` is a redacting type: its `toString` is `***`, interpolating it gives

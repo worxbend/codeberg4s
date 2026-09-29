@@ -1,9 +1,6 @@
 package com.worxbend.codeberg4s.repositories.admin
 
-import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.repositories.BranchName
-
-import java.util.Base64 as JavaBase64
 
 /** Everything `POST /repos/{owner}/{repo}/branches` may be told, as one value.
   *
@@ -53,49 +50,3 @@ object CreateBranch:
   *   what the branch will be called
   */
 final case class RenameBranch(newName: BranchName)
-
-/** An avatar image, on its way to `POST /repos/{owner}/{repo}/avatar`.
-  *
-  * ==This endpoint is a JSON body, not a multipart upload==
-  *
-  * `spec/swagger.v1.json` declares the body as `UpdateRepoAvatarOption`, an object with one `image` property described
-  * as "image must be base64 encoded", consumed as `application/json`. It is '''not''' `multipart/form-data` — release
-  * assets are, and reaching for [[com.worxbend.codeberg4s.core.RequestBody.Multipart]] here would produce a request
-  * Forgejo rejects. The distinction is easy to get wrong from memory, which is why it is written down here and asserted
-  * in the API suite.
-  *
-  * The value is therefore Base64 text and this type carries exactly that. [[AvatarImage.ofBytes]] does the encoding for
-  * a caller who has the file's bytes; [[AvatarImage.ofBase64]] takes text a caller already encoded.
-  *
-  * Forgejo decides for itself which image formats and which sizes it accepts, and rejects the rest with a `422`. This
-  * type therefore validates only that there is something to send.
-  */
-final case class AvatarImage private (base64: String)
-
-object AvatarImage:
-
-  /** Wraps Base64 text the caller already produced.
-    *
-    * The text is not decoded to check that it is valid Base64: a caller who encoded it themselves knows the encoding
-    * they used, and a round trip through a decoder here would cost the bytes twice to catch a mistake Forgejo reports
-    * anyway. Only a blank value is rejected.
-    *
-    * @return
-    *   the image, or a [[com.worxbend.codeberg4s.ValidationError]] on the `"avatarImage"` field
-    */
-  def ofBase64(value: String): Either[ValidationError, AvatarImage] =
-    if value.trim.isEmpty then Left(ValidationError("avatarImage", "must not be blank"))
-    else Right(AvatarImage(value.trim))
-
-  /** Encodes `bytes` as Base64 and wraps the result.
-    *
-    * Cannot fail for a non-empty array; an empty one is rejected, because an avatar of no bytes is a caller mistake
-    * rather than a request. The encoding is the MIME-free, unpadded-line variant `java.util.Base64.getEncoder`
-    * produces, which is what Forgejo's Go decoder expects.
-    *
-    * @return
-    *   the image, or a [[com.worxbend.codeberg4s.ValidationError]] on the `"avatarImage"` field
-    */
-  def ofBytes(bytes: Array[Byte]): Either[ValidationError, AvatarImage] =
-    if bytes.isEmpty then Left(ValidationError("avatarImage", "must not be empty"))
-    else Right(AvatarImage(JavaBase64.getEncoder.encodeToString(bytes)))

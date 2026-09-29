@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.repositories.actions
 
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{SecretHash, ValidationError}
 
 /** The material of an Actions secret, on its way '''to''' the instance and never back.
   *
@@ -42,7 +42,8 @@ final class SecretValue private (private val material: String):
       case that: SecretValue => material.equals(that.material)
       case _                 => false
 
-  override def hashCode(): Int = material.hashCode
+  /** A hash of a digest of the material, never `String.hashCode` of it; see [[com.worxbend.codeberg4s.SecretHash]]. */
+  override def hashCode(): Int = SecretHash.of(material)
 
 object SecretValue:
 

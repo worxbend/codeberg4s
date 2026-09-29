@@ -1,7 +1,8 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
+import com.worxbend.codeberg4s.AvatarImage
 import com.worxbend.codeberg4s.codec.{Json, JsonValue}
-import com.worxbend.codeberg4s.repositories.admin.{AvatarImage, CreateBranch, RenameBranch}
+import com.worxbend.codeberg4s.repositories.admin.{CreateBranch, RenameBranch}
 
 /** Forgejo's `CreateBranchRepoOption` and `UpdateBranchRepoOption` request models — the bodies of
   * `POST /repos/{owner}/{repo}/branches` and `PATCH /repos/{owner}/{repo}/branches/{branch}`.
@@ -51,7 +52,7 @@ private[codeberg4s] object BranchOptionDto:
   * `spec/swagger.v1.json` declares this operation as `consumes: application/json` with a one-property object whose
   * `image` is described as "image must be base64 encoded". Release assets are the multipart endpoint; this one is not,
   * and reaching for [[com.worxbend.codeberg4s.core.RequestBody.Multipart]] here produces a request Forgejo rejects.
-  * That is why [[com.worxbend.codeberg4s.repositories.admin.AvatarImage]] carries Base64 text rather than bytes.
+  * That is why [[com.worxbend.codeberg4s.AvatarImage]] carries Base64 text rather than bytes.
   *
   * `image` is the model's only property and is always emitted.
   */

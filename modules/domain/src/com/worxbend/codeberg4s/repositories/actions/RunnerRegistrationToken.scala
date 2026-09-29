@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.repositories.actions
 
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{SecretHash, ValidationError}
 
 /** A one-shot credential that lets a runner register itself against a repository.
   *
@@ -35,7 +35,8 @@ final class RunnerRegistrationToken private (private val material: String):
       case that: RunnerRegistrationToken => material.equals(that.material)
       case _                             => false
 
-  override def hashCode(): Int = material.hashCode
+  /** A hash of a digest of the material, never `String.hashCode` of it; see [[com.worxbend.codeberg4s.SecretHash]]. */
+  override def hashCode(): Int = SecretHash.of(material)
 
 object RunnerRegistrationToken:
 

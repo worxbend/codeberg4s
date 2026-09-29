@@ -46,6 +46,9 @@ final class ApiTokenSuite extends FunSuite:
     assertEquals(token(Secret), token(Secret))
     assertEquals(token(Secret).hashCode(), token(Secret).hashCode())
 
+  test("a token's hash is not String.hashCode of the material, so a hash-keyed collection does not expose it"):
+    assertNotEquals(token(Secret).hashCode(), Secret.hashCode)
+
   test("tokens with different material are not equal"):
     assertNotEquals(token(Secret), token("cb-other-secret"))
 

@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.repositories.hooks
 
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{SecretHash, ValidationError}
 
 /** Credential material a webhook carries, on its way '''to''' the instance and never back.
   *
@@ -50,7 +50,8 @@ final class HookSecret private (private val material: String):
       case that: HookSecret => material.equals(that.material)
       case _                => false
 
-  override def hashCode(): Int = material.hashCode
+  /** A hash of a digest of the material, never `String.hashCode` of it; see [[com.worxbend.codeberg4s.SecretHash]]. */
+  override def hashCode(): Int = SecretHash.of(material)
 
 object HookSecret:
 

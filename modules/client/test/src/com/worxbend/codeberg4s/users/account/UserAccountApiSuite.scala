@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.users.account
 
+import com.worxbend.codeberg4s.AvatarImage
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException
 import com.worxbend.codeberg4s.RepoName

@@ -45,7 +45,13 @@ final class ActionIdentifiersSuite extends FunSuite:
     assertEquals(JobAttempt.from(1L).toOption.map(_.value), Some(1L))
 
   test("a runner id can be built from the numeric id every runner object reports"):
-    assertEquals(RunnerId.of(37L).value, "37")
+    assertEquals(RunnerId.of(37L).toOption.map(_.value), Some("37"))
+
+  test("a runner id built from a number rejects zero, like every other numeric identifier"):
+    assertEquals(field(RunnerId.of(0L)), Some("runnerId"))
+
+  test("a runner id built from a number rejects a negative identifier"):
+    assertEquals(field(RunnerId.of(-37L)), Some("runnerId"))
 
   test("a runner id accepts a uuid-shaped value, because the path parameter is declared as a string"):
     assertEquals(

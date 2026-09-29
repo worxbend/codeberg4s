@@ -49,6 +49,9 @@ final class PasswordSuite extends FunSuite:
     assertNotEquals(password(Secret).hashCode, password(s"$Secret!").hashCode)
     assertNotEquals(password(Secret).hashCode, Password.Redacted.hashCode)
 
+  test("the hash is a digest of the material, not String.hashCode of it"):
+    assertNotEquals(password(Secret).hashCode, Secret.hashCode)
+
   private def password(value: String): Password =
     Password.from(value) match
       case Right(parsed) => parsed

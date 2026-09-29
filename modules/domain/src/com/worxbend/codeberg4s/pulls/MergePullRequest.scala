@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.pulls
 
+import com.worxbend.codeberg4s.ValidationError
 import com.worxbend.codeberg4s.repositories.CommitSha
 
 /** Everything `POST /repos/{owner}/{repo}/pulls/{index}/merge` may be told, as one value.
@@ -8,7 +9,8 @@ import com.worxbend.codeberg4s.repositories.CommitSha
   *
   * '''The style is mandatory and is not a `String`.''' [[MergeStyle]] is the only argument [[MergePullRequest.using]]
   * takes, because `MergePullRequestOption.Do` is the only property Forgejo declares as required, and the difference
-  * between two of its six values is the difference between rewriting a branch's history and not.
+  * between two of its values is the difference between rewriting a branch's history and not. One member of that enum,
+  * [[MergeStyle.RebaseUpdateOnly]], is a repository default rather than a merge, and `using` refuses it — see there.
   *
   * '''Every flag is a named method, not a Boolean parameter.''' `merge(pull, force = true, delete = true)` makes a
   * reader reconstruct which `true` was which, and one of them deletes a branch. `SCALA_CODE_STYLE.md` bans that shape
@@ -79,17 +81,28 @@ object MergePullRequest:
 
   /** Starts a merge command from the only thing Forgejo insists on.
     *
-    * Total rather than an `Either`: [[MergeStyle]] is a closed set, so there is nothing left to reject. Whether the
-    * repository '''permits''' that style is a server-side question — see [[MergeStyle]] — and comes back as a `405`.
+    * Refuses [[MergeStyle.RebaseUpdateOnly]]: it is a value of a repository's `default_merge_style` and not of
+    * `MergePullRequestOption.Do`, so the merge endpoint answers it with a `405` that reads like a forbidden style
+    * rather than like the caller bug it is. Every other style is accepted here; whether the repository '''permits''' it
+    * is a server-side question — see [[MergeStyle]] — and still comes back as a `405`.
+    *
+    * @return
+    *   the command, or a [[ValidationError]] on the `"mergeStyle"` field
     */
-  def using(style: MergeStyle): MergePullRequest =
-    MergePullRequest(
-      style                  = style,
-      title                  = None,
-      message                = None,
-      headCommit             = None,
-      mergedCommit           = None,
-      deleteBranchAfterMerge = false,
-      forceMerge             = false,
-      mergeWhenChecksSucceed = false,
-    )
+  def using(style: MergeStyle): Either[ValidationError, MergePullRequest] =
+    style match
+      case MergeStyle.RebaseUpdateOnly =>
+        Left(ValidationError("mergeStyle", "must be a style the merge endpoint accepts, not rebase-update-only"))
+      case accepted                    =>
+        Right(
+          MergePullRequest(
+            style                  = accepted,
+            title                  = None,
+            message                = None,
+            headCommit             = None,
+            mergedCommit           = None,
+            deleteBranchAfterMerge = false,
+            forceMerge             = false,
+            mergeWhenChecksSucceed = false,
+          )
+        )

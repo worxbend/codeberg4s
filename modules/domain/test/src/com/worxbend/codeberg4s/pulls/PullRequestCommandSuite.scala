@@ -169,7 +169,7 @@ final class PullRequestCommandSuite extends FunSuite:
   // -- MergePullRequest -----------------------------------------------------
 
   test("a merge command starts from a style, with every flag off and every option absent"):
-    val command = MergePullRequest.using(MergeStyle.Squash)
+    val command = orFail(MergePullRequest.using(MergeStyle.Squash))
 
     assertEquals(command.style, MergeStyle.Squash)
     assertEquals(command.title, None)
@@ -180,8 +180,23 @@ final class PullRequestCommandSuite extends FunSuite:
     assertEquals(command.forceMerge, false)
     assertEquals(command.mergeWhenChecksSucceed, false)
 
-  test("the style a merge was started from is the style it keeps"):
-    assertEquals(MergeStyle.values.toList.map(style => MergePullRequest.using(style).style), MergeStyle.values.toList)
+  test("the style a merge was started from is the style it keeps, for every style the merge endpoint accepts"):
+    val accepted = List(
+      MergeStyle.Merge,
+      MergeStyle.Rebase,
+      MergeStyle.RebaseMerge,
+      MergeStyle.Squash,
+      MergeStyle.FastForwardOnly,
+      MergeStyle.ManuallyMerged,
+    )
+
+    assertEquals(accepted.map(style => orFail(MergePullRequest.using(style)).style), accepted)
+
+  test("rebase-update-only is refused, because it is a repository default and not a merge the endpoint performs"):
+    assertEquals(
+      MergePullRequest.using(MergeStyle.RebaseUpdateOnly).swap.toOption.map(error => (error.field, error.message)),
+      Some(("mergeStyle", "must be a style the merge endpoint accepts, not rebase-update-only")),
+    )
 
   test("every merge builder sets its own field and leaves every sibling alone"):
     val merge = populatedMerge
@@ -195,33 +210,33 @@ final class PullRequestCommandSuite extends FunSuite:
     assertEquals(merge.whenChecksSucceed, merge.copy(mergeWhenChecksSucceed = true))
 
   test("expecting a head is what makes a repeated merge safe, and it is off unless asked for"):
-    assertEquals(MergePullRequest.using(MergeStyle.Merge).headCommit, None)
-    assertEquals(MergePullRequest.using(MergeStyle.Merge).expecting(Head).headCommit, Some(Head))
+    assertEquals(orFail(MergePullRequest.using(MergeStyle.Merge)).headCommit, None)
+    assertEquals(orFail(MergePullRequest.using(MergeStyle.Merge)).expecting(Head).headCommit, Some(Head))
 
   test("the expected head and the already-merged commit are separate fields and do not overwrite each other"):
-    val command = MergePullRequest.using(MergeStyle.ManuallyMerged).expecting(Head).recordingMerge(Landed)
+    val command = orFail(MergePullRequest.using(MergeStyle.ManuallyMerged)).expecting(Head).recordingMerge(Landed)
 
     assertEquals(command.headCommit, Some(Head))
     assertEquals(command.mergedCommit, Some(Landed))
 
   test("deleting the source branch is never a default — only deletingSourceBranch turns it on"):
-    assertEquals(MergePullRequest.using(MergeStyle.Merge).deleteBranchAfterMerge, false)
-    assertEquals(MergePullRequest.using(MergeStyle.Merge).forcing.deleteBranchAfterMerge, false)
-    assertEquals(MergePullRequest.using(MergeStyle.Merge).deletingSourceBranch.deleteBranchAfterMerge, true)
+    assertEquals(orFail(MergePullRequest.using(MergeStyle.Merge)).deleteBranchAfterMerge, false)
+    assertEquals(orFail(MergePullRequest.using(MergeStyle.Merge)).forcing.deleteBranchAfterMerge, false)
+    assertEquals(orFail(MergePullRequest.using(MergeStyle.Merge)).deletingSourceBranch.deleteBranchAfterMerge, true)
 
   test("forcing and scheduling are independent flags, so one cannot be mistaken for the other"):
-    val forced = MergePullRequest.using(MergeStyle.Merge).forcing
+    val forced = orFail(MergePullRequest.using(MergeStyle.Merge)).forcing
 
     assertEquals(forced.forceMerge, true)
     assertEquals(forced.mergeWhenChecksSucceed, false)
 
-    val scheduled = MergePullRequest.using(MergeStyle.Merge).whenChecksSucceed
+    val scheduled = orFail(MergePullRequest.using(MergeStyle.Merge)).whenChecksSucceed
 
     assertEquals(scheduled.mergeWhenChecksSucceed, true)
     assertEquals(scheduled.forceMerge, false)
 
   test("a fast-forward-only merge still accepts a title, which the instance then ignores"):
-    assertEquals(MergePullRequest.using(MergeStyle.FastForwardOnly).withTitle("t").title, Some("t"))
+    assertEquals(orFail(MergePullRequest.using(MergeStyle.FastForwardOnly)).withTitle("t").title, Some("t"))
 
   private def populatedCreate: CreatePullRequest =
     orFail(CreatePullRequest.of("original", PullRequestHead.branch(Stable), Main))

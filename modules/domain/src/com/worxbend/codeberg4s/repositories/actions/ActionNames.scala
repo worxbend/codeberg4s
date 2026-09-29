@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.repositories.actions
 
-import com.worxbend.codeberg4s.{PathSegment, SegmentLiteral, ValidationError}
+import com.worxbend.codeberg4s.{PathSegment, PositiveId, SegmentLiteral, ValidationError}
 
 /** The identifier of a registered runner, as the runner endpoints take it in a path.
   *
@@ -38,10 +38,16 @@ object RunnerId:
 
   /** The identifier of the runner whose numeric `id` is `value`.
     *
-    * Total rather than validated: a `Long` renders to digits, which are always a legal path segment.
+    * Validated the way every other numeric identifier in this library is — see [[com.worxbend.codeberg4s.PositiveId]]:
+    * a `Long` always renders to a legal path segment, but `0` and a negative number are never row ids Forgejo issued,
+    * and `/runners/0` is answered with a `404` that reads like a missing runner rather than like the caller bug it is.
+    * Refusing them here reports the mistake on the field where it was made.
+    *
+    * @return
+    *   the identifier, or a [[ValidationError]] on the `"runnerId"` field
     */
-  def of(value: Long): RunnerId =
-    value.toString
+  def of(value: Long): Either[ValidationError, RunnerId] =
+    PositiveId.from("runnerId", value).map(_.toString)
 
   extension (id: RunnerId)
 

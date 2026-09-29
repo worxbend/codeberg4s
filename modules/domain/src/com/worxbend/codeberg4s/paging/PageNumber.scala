@@ -33,8 +33,16 @@ object PageNumber:
     /** The page index as an `Int`, ready for the `page` query parameter. */
     def value: Int = page
 
-    /** The following page. Always valid, since page numbers have no upper bound. */
-    def next: PageNumber = page + 1
+    /** The following page.
+      *
+      * Always valid: page numbers have no upper bound, and the one place `Int` runs out is handled rather than wrapped.
+      * `Int.MaxValue.next` is `Int.MaxValue` again — saturating, not overflowing — because `page + 1` there would be a
+      * negative number, which is exactly the value [[from]] exists to keep out of a `page` parameter. No instance holds
+      * two billion pages of anything, so a fold that reaches this point is one that has already stopped terminating on
+      * an empty page, and repeating the last page is the failure that ends in a `Left` rather than in an invalid
+      * request.
+      */
+    def next: PageNumber = if page < Int.MaxValue then page + 1 else page
 
     /** The preceding page, or `None` when this is already the first page. */
     def previous: Option[PageNumber] = if page > MinValue then Some(page - 1) else None

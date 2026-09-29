@@ -59,9 +59,15 @@ final class IssueTailValueSuite extends FunSuite:
     assertEquals(AttachmentKind.External.wireValue, "external")
     assertEquals(AttachmentKind.Other("lfs").wireValue, "lfs")
 
-  test("an attachment kind is lower-cased on the way in, because the spec fixes its vocabulary"):
-    assertEquals(AttachmentKind.from("LFS"), AttachmentKind.Other("lfs"))
+  test("a named attachment kind is matched case-insensitively, because the spec fixes its vocabulary"):
     assertEquals(AttachmentKind.from("Attachment"), AttachmentKind.Uploaded)
+
+  test("an unknown attachment kind keeps the instance's own case, trimmed, so wireValue round-trips"):
+    assertEquals(AttachmentKind.from(" LFS "), AttachmentKind.Other("LFS"))
+    assertEquals(AttachmentKind.from(" LFS ").wireValue, "LFS")
+
+  test("a blank attachment kind is Other of the empty string, as NotificationSubjectType does"):
+    assertEquals(AttachmentKind.from("  "), AttachmentKind.Other(""))
 
   test("a reaction keeps its case, because its vocabulary is the instance's and a shortcode is case-sensitive"):
     assertEquals(ReactionContent.from("ROCKET").map(_.value), Right("ROCKET"))
@@ -106,6 +112,10 @@ final class IssueTailValueSuite extends FunSuite:
   test("a label reference renders to the path segment its arm implies"):
     assertEquals(LabelRef.ById(orFail(LabelId.from(102L))).pathSegment, "102")
     assertEquals(LabelRef.ByName(orFail(LabelName.from("bug"))).pathSegment, "bug")
+
+  test("a label named by name cannot render a dot segment, because LabelName refuses '.' and '..' at construction"):
+    assertEquals(LabelName.from(".").map(name => LabelRef.ByName(name).pathSegment).isLeft, true)
+    assertEquals(LabelName.from("..").map(name => LabelRef.ByName(name).pathSegment).isLeft, true)
 
   test("the three ways of building a label update all reach the same shape"):
     val byId   = LabelUpdate.byId(Vector(orFail(LabelId.from(102L))))

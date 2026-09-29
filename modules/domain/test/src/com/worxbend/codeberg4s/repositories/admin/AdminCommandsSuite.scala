@@ -11,7 +11,6 @@ import com.worxbend.codeberg4s.repositories.ContentPath
 import munit.FunSuite
 
 import java.nio.charset.StandardCharsets
-import java.util.Base64 as JavaBase64
 
 /** The commands this group builds, and the derived answers its read models offer.
   *
@@ -139,28 +138,6 @@ final class AdminCommandsSuite extends FunSuite:
 
   test("force-overwriting a new branch is opt-in, because a silent force-push is not a default"):
     assertEquals(CommitOptions.Default.overwritingNewBranch.forceOverwriteNewBranch, true)
-
-  // --- avatar ---------------------------------------------------------------
-
-  test("an avatar encodes its bytes, because the endpoint takes base64 in JSON and not a multipart part"):
-    val encoded = JavaBase64.getEncoder.encodeToString(Array[Byte](0, 1, 2))
-
-    assertEquals(orFail(AvatarImage.ofBytes(Array[Byte](0, 1, 2))).base64, encoded)
-
-  test("an avatar of no bytes is rejected"):
-    assertEquals(AvatarImage.ofBytes(Array.empty).swap.toOption.map(_.field), Some("avatarImage"))
-
-  test("a blank avatar string is rejected"):
-    assert(AvatarImage.ofBase64("  ").isLeft, "a blank avatar is not an image")
-
-  test("base64 a caller already encoded is taken verbatim and only trimmed, never re-encoded"):
-    val encoded = JavaBase64.getEncoder.encodeToString(Array[Byte](0, 1, 2))
-
-    assertEquals(orFail(AvatarImage.ofBase64(encoded)).base64, encoded)
-    assertEquals(orFail(AvatarImage.ofBase64(s"  $encoded\n")).base64, encoded)
-
-  test("an avatar accepts text that is not valid base64, because Forgejo is the authority on the image"):
-    assertEquals(orFail(AvatarImage.ofBase64("not base64 at all")).base64, "not base64 at all")
 
   // --- read models ----------------------------------------------------------
 

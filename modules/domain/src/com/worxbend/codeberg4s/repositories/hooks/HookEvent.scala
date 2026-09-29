@@ -101,7 +101,8 @@ enum HookEvent:
     * open. The name is carried verbatim, so it renders back onto the wire unchanged.
     *
     * @param name
-    *   the wire spelling, trimmed and lower-cased by [[HookEvent.parse]] when it came from a response
+    *   the wire spelling, trimmed by [[HookEvent.parse]] when it came from a response but otherwise exactly as the
+    *   instance sent it
     */
   case Other(name: String)
 
@@ -111,11 +112,15 @@ object HookEvent:
     *
     * '''Total.''' A name outside the recognised set becomes [[HookEvent.Other]] rather than `None`, because dropping an
     * event would cost the caller a subscription the instance actually holds. Matching trims and is case-insensitive,
-    * since nothing but Forgejo's own convention guarantees the casing; the value carried by `Other` is the trimmed,
-    * lower-cased spelling, so two spellings of one unknown event compare equal.
+    * since nothing but Forgejo's own convention guarantees the casing; the value carried by `Other` is the '''trimmed
+    * original''' in its own case — not the lower-cased copy the match was made on — so that [[wireValue]] sends back to
+    * the instance exactly the word it used, and an edit that re-submits a hook's events cannot rewrite one. A blank
+    * value is `Other("")`.
     */
   def parse(value: String): HookEvent =
-    value.trim.toLowerCase(Locale.ROOT) match
+    val trimmed = value.trim
+
+    trimmed.toLowerCase(Locale.ROOT) match
       case "create"                       => Create
       case "delete"                       => Delete
       case "fork"                         => Fork
@@ -140,7 +145,7 @@ object HookEvent:
       case "release"                      => Release
       case "package"                      => Package
       case "status"                       => Status
-      case unrecognised                   => Other(unrecognised)
+      case _                              => Other(trimmed)
 
   extension (event: HookEvent)
 

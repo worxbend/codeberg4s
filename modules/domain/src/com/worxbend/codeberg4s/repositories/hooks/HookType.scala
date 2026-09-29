@@ -49,7 +49,9 @@ enum HookType:
   /** Packagist package updates — `packagist`. */
   case Packagist
 
-  /** A type this library does not recognise, kept exactly as the instance spelled it. See the enum note. */
+  /** A type this library does not recognise, kept exactly as the instance spelled it — trimmed, but in its own case, so
+    * that [[HookType.wireValue]] sends back what arrived. See the enum note.
+    */
   case Other(name: String)
 
 object HookType:
@@ -57,10 +59,15 @@ object HookType:
   /** Reads Forgejo's lowercase wire spelling.
     *
     * '''Total''', for the reason [[HookEvent.parse]] gives: a type outside the enumerated set becomes
-    * [[HookType.Other]] rather than costing the caller the whole hook. Trims and is case-insensitive.
+    * [[HookType.Other]] rather than costing the caller the whole hook. Trims and matches case-insensitively, but the
+    * value carried by `Other` is the '''trimmed original''', not the lower-cased copy the match was made on, so it
+    * round-trips through [[HookType.wireValue]] unchanged. A blank value is `Other("")`, as it is on
+    * [[com.worxbend.codeberg4s.notifications.NotificationSubjectType.from]].
     */
   def parse(value: String): HookType =
-    value.trim.toLowerCase(Locale.ROOT) match
+    val trimmed = value.trim
+
+    trimmed.toLowerCase(Locale.ROOT) match
       case "forgejo"    => Forgejo
       case "gitea"      => Gitea
       case "gogs"       => Gogs
@@ -72,7 +79,7 @@ object HookType:
       case "feishu"     => Feishu
       case "wechatwork" => WeChatWork
       case "packagist"  => Packagist
-      case unrecognised => Other(unrecognised)
+      case _            => Other(trimmed)
 
   extension (hookType: HookType)
 
@@ -113,12 +120,18 @@ enum HookContentType:
 
 object HookContentType:
 
-  /** Reads the `content_type` config entry. Total, trimming and case-insensitive; see [[HookEvent.parse]]. */
+  /** Reads the `content_type` config entry.
+    *
+    * Total, trimming and case-insensitive; see [[HookEvent.parse]]. An unrecognised value is carried by
+    * [[HookContentType.Other]] as the trimmed original, in its own case, so it renders back unchanged.
+    */
   def parse(value: String): HookContentType =
-    value.trim.toLowerCase(Locale.ROOT) match
-      case "json"       => Json
-      case "form"       => Form
-      case unrecognised => Other(unrecognised)
+    val trimmed = value.trim
+
+    trimmed.toLowerCase(Locale.ROOT) match
+      case "json" => Json
+      case "form" => Form
+      case _      => Other(trimmed)
 
   extension (contentType: HookContentType)
 

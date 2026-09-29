@@ -28,7 +28,7 @@ final case class ActionRunnerDto(
     *
     * Only `id` is required, and it is turned into a [[com.worxbend.codeberg4s.repositories.actions.RunnerId]] — a
     * string — because that is what the runner path takes; see that type for the argument. A runner without one could
-    * not be read again or deleted.
+    * not be read again or deleted, and one whose `id` is not a positive number is reported at `$.id`.
     *
     * `owner_id` and `repo_id` are dropped when they are `0`, which is how the spec spells "this runner is not owned
     * that way". `status` that is outside the enumerated set becomes `None` rather than failing, per
@@ -36,10 +36,10 @@ final case class ActionRunnerDto(
     */
   def toDomainAt(at: JsonPath): Either[DecodeFailure, ActionRunner] =
     Wire
-      .required(at, "id", id)
+      .validated(at, "id", id)(RunnerId.of)
       .map: identifier =>
         ActionRunner(
-          id          = RunnerId.of(identifier),
+          id          = identifier,
           uuid        = uuid,
           name        = name,
           description = description,

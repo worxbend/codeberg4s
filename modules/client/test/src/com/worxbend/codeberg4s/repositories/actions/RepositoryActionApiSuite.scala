@@ -46,7 +46,7 @@ final class RepositoryActionApiSuite extends FunSuite with ClientSuiteHarness:
 
   private val Artifact: ArtifactId = orFail(ArtifactId.from(881L))
 
-  private val Runner: RunnerId = RunnerId.of(37L)
+  private val Runner: RunnerId = RunnerId("37")
 
   private val Secret: SecretName = orFail(SecretName.from("DEPLOY_KEY"))
 

@@ -18,7 +18,9 @@ package com.worxbend.codeberg4s.issues
   * [[LabelRef.ByName]] is also what addresses a single label for removal, where it becomes one URL path segment.
   * [[LabelName]] permits `/` — Forgejo's scoped labels are spelled `scope/value` — and the transport percent-encodes
   * each segment, so such a name is sent as `scope%2Fvalue`. Whether the instance's router accepts that is Forgejo's
-  * decision, not this library's; [[LabelRef.ById]] avoids the question entirely.
+  * decision, not this library's; [[LabelRef.ById]] avoids the question entirely. What [[LabelName]] does '''not'''
+  * permit is a bare `.` or `..`: those survive percent-encoding untouched and would reach the path as a dot segment, so
+  * [[FilterToken]] refuses them and a `ByName` can never render one.
   */
 enum LabelRef:
 

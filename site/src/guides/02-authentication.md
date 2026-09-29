@@ -12,7 +12,7 @@ guarantees this library makes about never printing it.
 | --- | --- | --- |
 | `Auth.Anonymous` | nothing | public reads, subject to the instance's anonymous rate limit |
 | `Auth.Token(token)` | `Authorization: token <value>` | the normal case |
-| `Auth.Basic(username, password)` | `Authorization: Basic <base64>` | older self-hosted instances that still require it |
+| `Auth.basic(username, password)` | `Authorization: Basic <base64>` | older self-hosted instances that still require it |
 
 Forgejo's OpenAPI document advertises two more schemes — `Sudo`, in header and
 query form, and `X-FORGEJO-OTP` for two-factor login. This library supports
@@ -148,12 +148,19 @@ import com.worxbend.codeberg4s.auth.Password
 val basic: Either[ValidationError, CodebergConfig] =
   Password
     .from(sys.env.getOrElse("FORGEJO_PASSWORD", ""))
-    .map(secret => CodebergConfig(Auth.Basic("ci-bot", secret)))
+    .flatMap(secret => Auth.basic("ci-bot", secret))
+    .map(auth => CodebergConfig(auth))
 ```
 
 `Password.from` applies the same control-character check as `ApiToken.from` but
 **does not trim**: leading and trailing whitespace can be significant in a
 password. It rejects an empty value.
+
+`Auth.basic` validates the username: it is trimmed, and rejected when blank, when
+it contains a `:` — the header encodes `username:password`, so a colon in the
+name would make the instance read a different user and a different password —
+or when it carries a control character. The `Auth.Basic` case still exists for
+pattern matching, but its constructor is not public; `Auth.basic` is the way in.
 
 Prefer a token wherever the instance allows one. A token can be scoped, listed
 and revoked on its own; a password cannot.

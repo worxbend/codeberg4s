@@ -57,6 +57,9 @@ final class RemoteCredentialSuite extends FunSuite:
     assertEquals(credential(Material), credential(Material))
     assertEquals(credential(Material).hashCode(), credential(Material).hashCode())
 
+  test("a remote credential's hash is not String.hashCode of the material"):
+    assertNotEquals(credential(Material).hashCode(), Material.hashCode)
+
   test("credentials with different material are not equal"):
     assertNotEquals(credential(Material), credential("something else"))
 

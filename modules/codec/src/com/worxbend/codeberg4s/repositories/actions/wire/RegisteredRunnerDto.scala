@@ -29,17 +29,17 @@ final case class RegisteredRunnerDto(
     * [[com.worxbend.codeberg4s.repositories.actions.RunnerRegistrationToken.from]] and reported at `$.token`.
     *
     * `id` is optional and becomes a [[com.worxbend.codeberg4s.repositories.actions.RunnerId]] when present, per the
-    * argument on that type.
+    * argument on that type; a present `id` that is not a positive number is reported at `$.id`.
     */
   def toDomainAt(at: JsonPath): Either[DecodeFailure, RegisteredRunner] =
-    Wire
-      .validated(at, "token", token)(RunnerRegistrationToken.from)
-      .map: credential =>
-        RegisteredRunner(
-          id    = id.map(RunnerId.of),
-          uuid  = uuid,
-          token = credential,
-        )
+    for
+      credential <- Wire.validated(at, "token", token)(RunnerRegistrationToken.from)
+      identifier <- Wire.optional(at, "id", id)(RunnerId.of)
+    yield RegisteredRunner(
+      id    = identifier,
+      uuid  = uuid,
+      token = credential,
+    )
 
 object RegisteredRunnerDto:
 

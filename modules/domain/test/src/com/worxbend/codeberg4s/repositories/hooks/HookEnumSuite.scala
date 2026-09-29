@@ -66,9 +66,15 @@ final class HookEnumSuite extends FunSuite:
     assertEquals(HookEvent.parse("action_run_failure"), HookEvent.Other("action_run_failure"))
     assertEquals(HookEvent.parse("action_run_failure").wireValue, "action_run_failure")
 
-  test("event parsing trims and lower-cases, so two spellings of one unknown event compare equal"):
+  test("event parsing trims and matches case-insensitively for the named cases"):
     assertEquals(HookEvent.parse("  PUSH  "), HookEvent.Push)
-    assertEquals(HookEvent.parse(" Weird_Thing "), HookEvent.parse("weird_thing"))
+
+  test("an unknown event keeps the instance's own spelling, trimmed, so re-submitting it cannot rewrite it"):
+    assertEquals(HookEvent.parse(" Weird_Thing "), HookEvent.Other("Weird_Thing"))
+    assertEquals(HookEvent.parse(" Weird_Thing ").wireValue, "Weird_Thing")
+
+  test("a blank event is Other of the empty string, as NotificationSubjectType does"):
+    assertEquals(HookEvent.parse("   "), HookEvent.Other(""))
 
   test("every spec-enumerated hook type parses to a named case and renders back unchanged"):
     TypeSpellings.foreach: spelling =>
@@ -84,6 +90,14 @@ final class HookEnumSuite extends FunSuite:
     assertEquals(HookType.parse("matrix"), HookType.Other("matrix"))
     assertEquals(HookType.parse("matrix").wireValue, "matrix")
 
+  test("an unknown hook type keeps its own case and loses only its padding, so wireValue round-trips"):
+    assertEquals(HookType.parse("  Matrix "), HookType.Other("Matrix"))
+    assertEquals(HookType.parse("  Matrix ").wireValue, "Matrix")
+    assertEquals(HookType.parse(""), HookType.Other(""))
+
+  test("a named hook type is still matched case-insensitively"):
+    assertEquals(HookType.parse(" SLACK "), HookType.Slack)
+
   test("a content type parses to its named case and renders back unchanged"):
     assertEquals(HookContentType.parse("json"), HookContentType.Json)
     assertEquals(HookContentType.parse("FORM").wireValue, "form")
@@ -94,6 +108,8 @@ final class HookEnumSuite extends FunSuite:
   test("an unknown content type renders back the spelling it arrived with, so an edit cannot rewrite it"):
     assertEquals(HookContentType.parse("protobuf").wireValue, "protobuf")
     assertEquals(HookContentType.Other("application/cbor").wireValue, "application/cbor")
+    assertEquals(HookContentType.parse(" Application/CBOR ").wireValue, "Application/CBOR")
+    assertEquals(HookContentType.parse(" "), HookContentType.Other(""))
 
   test("every documented issue form field type parses and renders back unchanged"):
     Vector("markdown", "textarea", "input", "dropdown", "checkboxes").foreach: spelling =>
@@ -105,6 +121,8 @@ final class HookEnumSuite extends FunSuite:
   test("an unknown issue form field type renders back the spelling it arrived with"):
     assertEquals(IssueFormFieldType.parse("slider").wireValue, "slider")
     assertEquals(IssueFormFieldType.Other("matrix").wireValue, "matrix")
+    assertEquals(IssueFormFieldType.parse(" Slider "), IssueFormFieldType.Other("Slider"))
+    assertEquals(IssueFormFieldType.parse(""), IssueFormFieldType.Other(""))
 
   private def isOtherEvent(event: HookEvent): Boolean =
     event match

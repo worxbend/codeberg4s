@@ -28,6 +28,9 @@ final class ActionRunnerDtoSuite extends FunSuite:
   test("a runner's numeric id becomes the string identifier the path takes"):
     assertEquals(runner(ActionRunnerDtoSuite.RunnerBody).id.value, "37")
 
+  test("a runner whose id is not a positive number cannot be converted, and the failure names the id"):
+    assertEquals(runnerFailure("""{"id":0}"""), Some("$.id"))
+
   test("a runner's status becomes an enum"):
     assertEquals(runner(ActionRunnerDtoSuite.RunnerBody).status, Some(RunnerStatus.Idle))
 

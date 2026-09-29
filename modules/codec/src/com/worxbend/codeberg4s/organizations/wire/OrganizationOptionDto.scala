@@ -1,8 +1,8 @@
 package com.worxbend.codeberg4s.organizations.wire
 
+import com.worxbend.codeberg4s.AvatarImage
 import com.worxbend.codeberg4s.codec.{Json, JsonValue}
 import com.worxbend.codeberg4s.organizations.{CreateOrganization, EditOrganization, OrgName}
-import com.worxbend.codeberg4s.users.account.AvatarImage
 
 /** Forgejo's `CreateOrgOption`, `EditOrgOption`, `RenameOrgOption` and `UpdateUserAvatarOption` request models.
   *
@@ -97,8 +97,8 @@ private[codeberg4s] object OrganizationOptionDto:
 
   /** Renders `UpdateUserAvatarOption` — the body of `POST /orgs/{org}/avatar`.
     *
-    * One key, always emitted. The value is already base64 by construction; see
-    * [[com.worxbend.codeberg4s.users.account.AvatarImage]] for why the encoding happens there and not here, and
+    * One key, always emitted. The value is already base64 by construction; see [[com.worxbend.codeberg4s.AvatarImage]]
+    * for why the encoding happens there and not here, and
     * [[com.worxbend.codeberg4s.organizations.OrganizationApi.updateAvatar]] for why that type and not a second one.
     */
   def renderAvatar(image: AvatarImage): String =

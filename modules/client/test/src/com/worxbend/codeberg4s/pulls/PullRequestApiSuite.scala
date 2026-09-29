@@ -198,7 +198,7 @@ final class PullRequestApiSuite extends FunSuite with ClientSuiteHarness:
 
     onApi(backend): api =>
       api
-        .merge(Handle, Name, Number, MergePullRequest.using(MergeStyle.Squash))
+        .merge(Handle, Name, Number, orFail(MergePullRequest.using(MergeStyle.Squash)))
         .map: _ =>
           assertEquals(methodOf(backend), "POST")
           assertEquals(pathOf(backend), "https://forge.example/api/v1/repos/forgejo/forgejo/pulls/13726/merge")
@@ -210,7 +210,7 @@ final class PullRequestApiSuite extends FunSuite with ClientSuiteHarness:
 
     onApi(backend): api =>
       api.attempt
-        .merge(Handle, Name, Number, MergePullRequest.using(MergeStyle.Merge))
+        .merge(Handle, Name, Number, orFail(MergePullRequest.using(MergeStyle.Merge)))
         .map: outcome =>
           assert(outcome.isLeft, s"a 503 on merge must not be retried into a success, got $outcome")
           assertEquals(backend.allInteractions.size, 1, "the merge was sent twice")
@@ -220,20 +220,20 @@ final class PullRequestApiSuite extends FunSuite with ClientSuiteHarness:
 
     onApi(backend): api =>
       api
-        .merge(Handle, Name, Number, MergePullRequest.using(MergeStyle.Merge).expecting(Head))
+        .merge(Handle, Name, Number, orFail(MergePullRequest.using(MergeStyle.Merge)).expecting(Head))
         .map(_ => assertEquals(bodyOf(backend), s"""{"Do":"merge","head_commit_id":"${Head.value}"}"""))
 
   test("a merge ignores the response body, so a 200 decorated with a payload still succeeds"):
     onApi(responding(200, """{"unexpected":true}""")): api =>
       api
-        .merge(Handle, Name, Number, MergePullRequest.using(MergeStyle.Merge))
+        .merge(Handle, Name, Number, orFail(MergePullRequest.using(MergeStyle.Merge)))
         .map(outcome => assertEquals(outcome, ()))
 
   test("a 405 refusal reaches both rails identically, carrying the merge operation id"):
     onApi(responding(405, PullRequestApiSuite.RefusedBody)): api =>
       for
-        raised <- api.merge(Handle, Name, Number, MergePullRequest.using(MergeStyle.Merge)).failed
-        typed  <- api.attempt.merge(Handle, Name, Number, MergePullRequest.using(MergeStyle.Merge))
+        raised <- api.merge(Handle, Name, Number, orFail(MergePullRequest.using(MergeStyle.Merge))).failed
+        typed  <- api.attempt.merge(Handle, Name, Number, orFail(MergePullRequest.using(MergeStyle.Merge)))
       yield
         assertEquals(operationOf(typed), PullRequestApi.MergeOperation)
         assertRailsAgree(raised, typed)

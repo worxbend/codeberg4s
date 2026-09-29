@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.auth
 
-import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.{SecretHash, ValidationError}
 
 /** The password half of HTTP basic credentials.
   *
@@ -29,7 +29,8 @@ final class Password private (private val material: String):
       case that: Password => material.equals(that.material)
       case _              => false
 
-  override def hashCode(): Int = material.hashCode
+  /** A hash of a digest of the material, never `String.hashCode` of it; see [[com.worxbend.codeberg4s.SecretHash]]. */
+  override def hashCode(): Int = SecretHash.of(material)
 
 object Password:
 

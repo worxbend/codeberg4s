@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.repositories.admin
 
+import com.worxbend.codeberg4s.AvatarImage
 import com.worxbend.codeberg4s.ClientSuiteHarness
 import com.worxbend.codeberg4s.CodebergError
 import com.worxbend.codeberg4s.CodebergException

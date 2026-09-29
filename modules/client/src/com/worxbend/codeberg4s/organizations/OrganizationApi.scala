@@ -10,8 +10,7 @@ import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.admin.wire.RepositoryOptionDto
 import com.worxbend.codeberg4s.repositories.admin.{CreateRepository, RepositoryActivity}
 import com.worxbend.codeberg4s.users.User
-import com.worxbend.codeberg4s.users.account.AvatarImage
-import com.worxbend.codeberg4s.{CodebergError, HttpMethod}
+import com.worxbend.codeberg4s.{AvatarImage, CodebergError, HttpMethod}
 
 import scala.concurrent.Future
 
@@ -263,11 +262,10 @@ final class OrganizationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
     * consumed as `application/json`. Reaching for [[com.worxbend.codeberg4s.core.RequestBody.Multipart]] here would
     * produce a request Forgejo rejects.
     *
-    * '''The argument is [[com.worxbend.codeberg4s.users.account.AvatarImage]], which this group imports rather than
-    * forks.''' `UpdateUserAvatarOption` is the '''same''' spec model `POST /user/avatar` takes, and that type already
-    * covers it; `docs/LEDGER.md` calls a forked copy of a shared model a review-blocking defect. There is a second
-    * avatar type in the codebase — [[com.worxbend.codeberg4s.repositories.admin.AvatarImage]], for the different
-    * `UpdateRepoAvatarOption` model — and this endpoint deliberately uses the one whose spec model it actually sends.
+    * '''The argument is the shared [[com.worxbend.codeberg4s.AvatarImage]].''' `UpdateUserAvatarOption` is the
+    * '''same''' spec model `POST /user/avatar` takes, and `UpdateRepoAvatarOption` has the same single property, so one
+    * validated type covers all three avatar endpoints; `docs/LEDGER.md` calls a forked copy of a shared model a
+    * review-blocking defect.
     *
     * Nothing here judges the picture: which formats and sizes an instance accepts are deployment settings, and a limit
     * this library invented would be one a caller could not raise.
