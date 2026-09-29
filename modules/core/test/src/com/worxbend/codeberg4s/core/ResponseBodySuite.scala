@@ -34,10 +34,47 @@ final class ResponseBodySuite extends FunSuite:
 
     assertEquals(ResponseBody.of(raw, StandardCharsets.UTF_8).bytes.toList, raw.toList)
 
-  test("bytes are not copied, because copying is the cost this type exists to avoid"):
-    val raw = Array[Byte](1, 2, 3)
+  test("bytes is a copy, so writing into it changes neither the size nor the text of the body"):
+    val body     = ResponseBody.of("abc".getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8)
+    val returned = body.bytes
 
-    assert(ResponseBody.of(raw, StandardCharsets.UTF_8).bytes.eq(raw))
+    returned(0) = 'z'.toByte
+
+    assertEquals(body.size, 3)
+    assertEquals(body.text, "abc")
+    assertEquals(body.bytes.toList, "abc".getBytes(StandardCharsets.UTF_8).toList)
+    assert(!body.bytes.eq(returned), "two reads of bytes must not share an array")
+
+  test("writing into the adopted array after construction is the caller's breach, not this type's"):
+    // Documents the boundary: the array is adopted uncopied on the way in, so
+    // the constructor's caller — the transport — is the one party that could
+    // still write through. Every reader after that gets a copy.
+    val raw  = Array[Byte](1, 2, 3)
+    val body = ResponseBody.of(raw, StandardCharsets.UTF_8)
+
+    raw(0) = 9
+
+    assertEquals(body.bytes.toList, List[Byte](9, 2, 3))
+
+  // --- leadingText ----------------------------------------------------------
+
+  test("leadingText hands back the whole text when the body fits within the bound"):
+    assertEquals(utf8("""{"a":1}""").leadingText(64), """{"a":1}""")
+
+  test("leadingText decodes only the first maxBytes bytes of a body beyond the bound"):
+    assertEquals(utf8("x".repeat(2000)).leadingText(512), "x".repeat(512))
+
+  test("leadingText is bounded in bytes, not characters, so a cut multi-byte tail is accepted as damage"):
+    val leading = utf8(euro.repeat(100)).leadingText(7)
+
+    assertEquals(leading.length, 3)
+    assertEquals(leading.take(2), euro.repeat(2))
+    assertEquals(leading.charAt(2), replacement)
+
+  test("leadingText of an empty body, or under a bound of zero or less, is empty"):
+    assertEquals(ResponseBody.Empty.leadingText(64), "")
+    assertEquals(utf8("payload").leadingText(0), "")
+    assertEquals(utf8("payload").leadingText(-1), "")
 
   test("text decodes with the charset the response declared"):
     val latin1 = ResponseBody.of("café".getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.ISO_8859_1)
@@ -70,9 +107,10 @@ final class ResponseBodySuite extends FunSuite:
   // --- the UTF-8 requirement ------------------------------------------------
 
   test("utf8Bytes hands back the same array when the response declared UTF-8, so the JSON path copies nothing"):
-    val body = utf8("""{"a":1}""")
+    val raw  = """{"a":1}""".getBytes(StandardCharsets.UTF_8)
+    val body = ResponseBody.of(raw, StandardCharsets.UTF_8)
 
-    assert(body.utf8Bytes.eq(body.bytes))
+    assert(body.utf8Bytes.eq(raw))
 
   test("utf8Bytes transcodes when the response declared something else"):
     val latin1 = ResponseBody.of("café".getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.ISO_8859_1)

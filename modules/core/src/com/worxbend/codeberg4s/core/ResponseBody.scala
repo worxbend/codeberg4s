@@ -22,20 +22,31 @@ import java.util.{Arrays, Locale}
   * server rather than a licence to ignore the header, and [[utf8Bytes]] states the one place where UTF-8 is genuinely
   * required rather than merely expected.
   *
-  * '''Ownership of the array.''' [[bytes]] hands back the array this body holds, without copying it. Copying would
-  * reintroduce the very copy this type exists to remove, so the contract is the other way round: whoever constructs a
-  * `ResponseBody` gives up the array, and whoever reads [[bytes]] must not modify it. Every reader in this library
-  * obeys that — jsoniter reads the array and never writes to it.
+  * '''Ownership of the array.''' Whoever constructs a `ResponseBody` gives up the array — [[ResponseBody.of]] adopts it
+  * without copying — and from then on the body is the only writer it has. Readers get it back two ways. [[bytes]] is
+  * the safe one: it answers a fresh copy, so nothing a caller does with the result can change this body, and it costs
+  * one allocation of the body's size per call — for a 50 MB archive, 50 MB. [[utf8Bytes]] is the fast one, for the JSON
+  * path: when the response declared UTF-8 it hands the held array over uncopied, and the reader — jsoniter, which reads
+  * the array and never writes to it — takes on the duty of not modifying it. Everything inside this library that wants
+  * the raw bytes goes through the second; everything outside it, through the first.
   *
-  * Instances are immutable as long as that contract is kept, and are safe to share between threads.
+  * Instances are therefore immutable to any caller of the public accessors, and safe to share between threads.
   *
   * @param charset
   *   the charset [[text]] decodes with, taken from the response's `Content-Type`
   */
 final class ResponseBody private (private val raw: Array[Byte], val charset: Charset):
 
-  /** The body verbatim, '''not copied'''. Read it; do not write to it. See the note on ownership above. */
-  def bytes: Array[Byte] = raw
+  /** A copy of the body's bytes, verbatim.
+    *
+    * A copy, so that a caller who writes into the result — an archive downloaded and then patched in place, say —
+    * changes their array and not this body: [[size]], [[text]] and [[equals]] keep answering for the bytes that
+    * arrived. The cost is one allocation of [[size]] bytes per call, which is negligible for a JSON document and
+    * exactly the body's size for an archive, so a caller wanting the bytes of a large download should read this once
+    * and keep the result rather than call it repeatedly. See the note on ownership above for the uncopied alternative
+    * the JSON path uses.
+    */
+  def bytes: Array[Byte] = raw.clone()
 
   /** How many bytes the body holds. Cheaper than decoding it, and the thing worth logging. */
   def size: Int = raw.length
@@ -63,17 +74,41 @@ final class ResponseBody private (private val raw: Array[Byte], val charset: Cha
     */
   lazy val text: String = String(raw, charset)
 
-  /** The body as UTF-8 bytes, for a reader that requires UTF-8 rather than merely expecting it.
+  /** The body as UTF-8 bytes, '''not copied''' when the response declared UTF-8, for a reader that requires UTF-8
+    * rather than merely expecting it.
     *
     * JSON is the case. RFC 8259 §8.1 says JSON exchanged between systems that are not one closed ecosystem '''must'''
     * be encoded as UTF-8, and every JSON parser this library could use reads UTF-8 bytes and nothing else. So the JSON
     * path asks for this rather than for [[bytes]], and the check is written down here instead of being assumed
     * anywhere: when the response really did declare UTF-8 — which is what Forgejo declares, on every endpoint — this is
-    * [[bytes]] and costs nothing, and when it declared something else the body is transcoded through [[text]] so that a
-    * non-conforming server is read correctly rather than as mojibake.
+    * the held array itself and costs nothing, and when it declared something else the body is transcoded through
+    * [[text]] so that a non-conforming server is read correctly rather than as mojibake.
+    *
+    * The uncopied array is the one place this type trusts its reader: whoever calls this must read the result and never
+    * write to it. Copying here would reintroduce, on every JSON response, the copy the type exists to remove — see the
+    * note on ownership above. A caller who wants bytes they may modify asks [[bytes]].
     */
   def utf8Bytes: Array[Byte] =
     if charset.equals(StandardCharsets.UTF_8) then raw else text.getBytes(StandardCharsets.UTF_8)
+
+  /** The decoded text of no more than the first `maxBytes` '''bytes''' of the body — the whole [[text]] when the body
+    * fits, otherwise the leading slice decoded on its own.
+    *
+    * This is for a reader that has to hand text to a parser and must not hand it an unbounded amount: the error-body
+    * parser in [[ApiPipeline]], which reads a few hundred bytes of JSON on the failure path and must not be made to
+    * decode and parse a 40 MB payload because a proxy answered a `502` with one. A body within the bound is decoded
+    * once and kept, exactly as [[text]] is; a body beyond it is cut at `maxBytes`, which may split a multi-byte
+    * character at the very end and leave a replacement character there — acceptable, because a payload that large is
+    * not a Forgejo error body and the parser that receives the cut text is expected to reject it. For an excerpt
+    * bounded in characters, and never cut mid-character, see [[excerpt]].
+    *
+    * @param maxBytes
+    *   the most bytes to decode; zero or less yields an empty string
+    */
+  def leadingText(maxBytes: Int): String =
+    if maxBytes <= 0 || raw.isEmpty then ""
+    else if raw.length <= maxBytes then text
+    else String(raw, 0, maxBytes, charset)
 
   /** An excerpt of the decoded body no longer than `maxChars` '''characters'''.
     *
@@ -130,8 +165,9 @@ object ResponseBody:
 
   /** Bytes off the wire, with the charset the response declared for them.
     *
-    * '''The array is adopted, not copied.''' The caller must not keep a reference it later writes through. See the
-    * ownership note on [[ResponseBody]] for why copying here would defeat the purpose of the type.
+    * '''The array is adopted, not copied.''' The caller gives it up and must not keep a reference it later writes
+    * through; from here on, [[ResponseBody.bytes]] copies on the way out so that no reader can either. See the
+    * ownership note on [[ResponseBody]] for why copying on the way in would defeat the purpose of the type.
     */
   def of(bytes: Array[Byte], charset: Charset): ResponseBody = ResponseBody(bytes, charset)
 

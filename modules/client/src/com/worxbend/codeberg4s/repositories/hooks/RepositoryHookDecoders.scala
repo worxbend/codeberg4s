@@ -3,7 +3,7 @@ package com.worxbend.codeberg4s.repositories.hooks
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.client.WireDecode
 import com.worxbend.codeberg4s.codec.{Json, WireModel}
-import com.worxbend.codeberg4s.core.Decode
+import com.worxbend.codeberg4s.core.{Decode, ListEnvelope}
 import com.worxbend.codeberg4s.repositories.hooks.wire.{
   GitHookDto,
   IssueConfigDto,
@@ -63,10 +63,14 @@ private[hooks] object RepositoryHookDecoders:
   val wikiPages: Decode[Vector[WikiPageMeta]] =
     WireDecode.vector(Json.decoder[Vector[WikiPageMetaDto]])
 
-  /** The `{"commits", "count"}` envelope the revision listing returns, unwrapped to its revisions. */
-  val wikiRevisions: Decode[Vector[WikiCommit]] =
+  /** The `{"commits", "count"}` envelope the revision listing returns: its revisions, and the body's own `count` of
+    * them, which stands in for `X-Total-Count` when the instance omits that header.
+    */
+  val wikiRevisions: Decode[ListEnvelope[WikiCommit]] =
     WireDecode.single(Json.decoder[WikiCommitListDto]): envelope =>
-      WireModel.all(RepositoryHookDecoders.RevisionsPath, envelope.entries)
+      WireModel
+        .all(RepositoryHookDecoders.RevisionsPath, envelope.entries)
+        .map(revisions => ListEnvelope(revisions, ListEnvelope.countOf(envelope.count)))
 
   /** The repository's issue configuration. */
   val issueConfig: Decode[IssueConfig] =

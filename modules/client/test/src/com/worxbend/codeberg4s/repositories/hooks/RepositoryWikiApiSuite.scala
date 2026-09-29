@@ -65,11 +65,26 @@ final class RepositoryWikiApiSuite extends FunSuite with HookStubs:
         assertEquals(queryOf(backend), List("page" -> "3"))
         assertEquals(page.items.map(_.sha.value), Vector("d0c4f1e2a3b4c5d6e7f8091a2b3c4d5e6f708192"))
 
-  test("the body's own count is not the page's total count, which comes from the header"):
+  test("the header total wins over the body's own count when the instance sends both"):
     val headers = pagedHeaders(41, s"$Repository/wiki/revisions/Home?page=2")
 
     onApi(responding(200, RepositoryWikiApiSuite.RevisionsBody, headers)): api =>
       api.revisions(Handle, Name, Home, window(1, 30)).map(page => assertEquals(page.totalCount, Some(41)))
+
+  test("without any paging header, the body's count is the total and decides whether a next page exists"):
+    // Forgejo sets X-Total-Count and no Link on this route, and a proxy may
+    // drop the header too; the body's count is the same number and stands in.
+    onApi(responding(200, RepositoryWikiApiSuite.LongHistoryBody)): api =>
+      api.revisions(Handle, Name, Home, window(1, 30)).map: page =>
+        assertEquals(page.items.size, 1)
+        assertEquals(page.totalCount, Some(41))
+        assertEquals(page.nextPage.map(_.value), Some(2))
+
+  test("a history whose count the page already covers is the last page"):
+    onApi(responding(200, RepositoryWikiApiSuite.RevisionsBody)): api =>
+      api.revisions(Handle, Name, Home, window(1, 30)).map: page =>
+        assertEquals(page.totalCount, Some(1))
+        assertEquals(page.isLast, true)
 
   // --- writes ---------------------------------------------------------------
 
@@ -191,3 +206,7 @@ object RepositoryWikiApiSuite:
 
   private val RevisionsBody: String =
     s"""{"commits": [$CommitBody], "count": 1}"""
+
+  /** One revision of a page with forty-one, as the route serves it when no paging header reaches the client. */
+  private val LongHistoryBody: String =
+    s"""{"commits": [$CommitBody], "count": 41}"""

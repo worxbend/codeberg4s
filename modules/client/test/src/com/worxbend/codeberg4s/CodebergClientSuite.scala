@@ -9,21 +9,29 @@ import com.worxbend.codeberg4s.repositories.RepositoryApi
 import com.worxbend.codeberg4s.syntax.discard
 import com.worxbend.codeberg4s.transport.SttpHttpPort
 
+import sttp.capabilities.Effect
 import sttp.client4.Backend
+import sttp.client4.GenericRequest
+import sttp.client4.Response
 import sttp.client4.testing.BackendStub
 import sttp.client4.testing.RecordingBackend
 import sttp.client4.testing.ResponseStub
 import sttp.model.StatusCode
+import sttp.monad.MonadError
 
 import munit.FunSuite
 
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 import scala.jdk.DurationConverters.ScalaDurationOps
+import scala.util.Failure
+import scala.util.Success
 
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 
 /** The published façade, end to end, over a `BackendStub`: nothing in this suite opens a socket.
   *
@@ -146,6 +154,64 @@ final class CodebergClientSuite extends FunSuite with ClientSuiteHarness:
       )
     finally executor.shutdown()
 
+  test("a call made after close on an owned backend fails with the scheduler's rejection, as close documents"):
+    // The shut-down JDK client refuses the request with an IOException, which
+    // the transport classifies as a connection failure and the retry policy
+    // would repeat — but the backoff needs the scheduler close() released, and
+    // that is where the call fails. See the same note on the sibling test
+    // about the interrupt flag.
+    Thread.interrupted().discard
+
+    val executor = ExecutionContext.fromExecutorService(Executors.newSingleThreadExecutor())
+
+    try
+      val http   = SttpHttpPort.defaultHttpClient(CodebergClientSuite.ConnectTimeout, executor)
+      val client = CodebergClient.owning(configFor(Auth.Anonymous), SttpHttpPort.owning(http, executor))(using executor)
+
+      client.close()
+
+      val outcome = Await.ready(client.version.get(), CodebergClientSuite.TerminationLimit).value
+
+      outcome match
+        case Some(Failure(_: RejectedExecutionException)) => ()
+        case other                                        => fail(s"expected the scheduler's rejection, got $other")
+    finally executor.shutdown()
+
+  test("released completes once an owned backend has closed"):
+    val backend = CountingBackend(responding(200, CodebergClientSuite.VersionBody))
+    val client  = CodebergClient.owning(configFor(Auth.Anonymous), backend)
+
+    assert(!client.released.isCompleted, "nothing has been released before close")
+
+    client.close()
+
+    assertEquals(client.released.value, Some(Success(())))
+
+  test("released surfaces a backend whose close failed, which close itself does not report"):
+    val boom = IllegalStateException("the pool would not drain")
+    val backend = CodebergClientSuite.FailingClose(responding(200, CodebergClientSuite.VersionBody), Future.failed(boom))
+    val client = CodebergClient.owning(configFor(Auth.Anonymous), backend)
+
+    client.close()
+
+    assertEquals(client.released.value, Some(Failure(boom)))
+
+  test("a backend whose close throws fails released rather than close"):
+    val boom    = IllegalStateException("close is not supported")
+    val backend = CodebergClientSuite.FailingClose(responding(200, CodebergClientSuite.VersionBody), throw boom)
+    val client  = CodebergClient.owning(configFor(Auth.Anonymous), backend)
+
+    client.close()
+
+    assertEquals(client.released.value, Some(Failure(boom)))
+
+  test("released completes at once for a backend the caller supplied, since there is nothing to release"):
+    val client = CodebergClient.usingBackend(configFor(Auth.Anonymous), responding(200, CodebergClientSuite.VersionBody))
+
+    client.close()
+
+    assertEquals(client.released.value, Some(Success(())))
+
   test("close leaves a backend the caller supplied open, because the caller owns it"):
     val backend = CountingBackend(responding(200, CodebergClientSuite.VersionBody))
     val client  = CodebergClient.usingBackend(configFor(Auth.Anonymous), backend)
@@ -192,6 +258,18 @@ final class CodebergClientSuite extends FunSuite with ClientSuiteHarness:
 
 /** The response bodies this suite stubs, kept out of the test bodies so each test reads as one behaviour. */
 object CodebergClientSuite:
+
+  /** A backend that answers requests from `delegate` and whose `close()` does whatever `closing` does — fails, or
+    * throws — so the suite can watch where that outcome surfaces.
+    */
+  private final class FailingClose(delegate: Backend[Future], closing: => Future[Unit]) extends Backend[Future]:
+
+    override def send[T](request: GenericRequest[T, Any & Effect[Future]]): Future[Response[T]] =
+      delegate.send(request)
+
+    override def close(): Future[Unit] = closing
+
+    override def monad: MonadError[Future] = delegate.monad
 
   /** A token that must not turn up in any rendering of a failure. */
   private val Secret: String = "cb-0123456789abcdef-secret"

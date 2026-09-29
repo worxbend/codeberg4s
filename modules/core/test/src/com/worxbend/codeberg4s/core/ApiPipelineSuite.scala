@@ -332,6 +332,34 @@ final class ApiPipelineSuite extends FunSuite:
       Left(CodebergError.Api(contextOf("issues.list", HttpMethod.Get, None), 422, ApiErrorBody.Empty, None)),
     )
 
+  test("an error body beyond the bound is handed to the parser cut at MaxErrorBodyBytes, never whole"):
+    // A reverse proxy answering a 502 with a multi-megabyte page must not make
+    // every failed attempt decode and parse the whole of it.
+    given Decode[String]                  = body => Right(body.text)
+    val handed                            = AtomicLong(0L)
+    val recording: String => ApiErrorBody = text =>
+      handed.set(text.length.toLong)
+      sys.error("not an error object")
+    val http = FakeHttpPort.always(responseOf(502, "<html>" + "x".repeat(4 * ApiPipeline.MaxErrorBodyBytes)))
+
+    val result = pipelineOf(http, FakeTimer(0L), silent, recording).call[String](listing, RetryEligibility.Never)
+
+    assertEquals(handed.get(), ApiPipeline.MaxErrorBodyBytes.toLong)
+    assertEquals(
+      result,
+      Left(CodebergError.Api(contextOf("issues.list", HttpMethod.Get, None), 502, ApiErrorBody.Empty, None)),
+    )
+
+  test("an error body within the bound reaches the parser whole"):
+    given Decode[String] = body => Right(body.text)
+    val http             = FakeHttpPort.always(responseOf(404, forgejoErrorBody))
+
+    val result = pipelineOf(http, FakeTimer(0L), silent, stubErrorBody).call[String](listing, RetryEligibility.Never)
+
+    result match
+      case Left(CodebergError.Api(_, 404, body, _)) => assertEquals(body.errors, List(forgejoErrorBody))
+      case other                                    => fail(s"expected a 404, got $other")
+
   test("an empty error body becomes Empty without consulting the parser"):
     given Decode[String] = body => Right(body.text)
     val http             = FakeHttpPort.always(responseOf(500, "   "))
@@ -405,6 +433,43 @@ final class ApiPipelineSuite extends FunSuite:
     result match
       case Right(page) => assertEquals(page.isLast, true)
       case Left(error) => fail(s"expected a page, got $error")
+
+  test("callPage synthesises the next page from x-total-count when the response offered no Link header"):
+    given Decode[Vector[Int]] = _ => Right(Vector(1, 2, 3))
+    val http                  = FakeHttpPort.always(responseOf(200, "[1,2,3]", "x-total-count" -> List("10")))
+
+    val result = pipelineOf(http, FakeTimer(0L), silent, stubErrorBody).callPage[Int](listing, PageParams.First)
+
+    result match
+      case Right(page) =>
+        assertEquals(page.totalCount, Some(10))
+        assertEquals(page.nextPage, PageNumber.from(2).toOption)
+      case Left(error) =>
+        fail(s"expected a page, got $error")
+
+  test("callEnvelopePage takes the total from the envelope when no header carries one"):
+    given Decode[ListEnvelope[Int]] = _ => Right(ListEnvelope(Vector(1, 2, 3), Some(4210)))
+    val http                        = FakeHttpPort.always(responseOf(200, """{"tree":[1,2,3],"total_count":4210}"""))
+
+    val result = pipelineOf(http, FakeTimer(0L), silent, stubErrorBody).callEnvelopePage[Int](listing, PageParams.First)
+
+    result match
+      case Right(page) =>
+        assertEquals(page.items, Vector(1, 2, 3))
+        assertEquals(page.totalCount, Some(4210))
+        assertEquals(page.nextPage, PageNumber.from(2).toOption)
+        assertEquals(page.isLast, false)
+      case Left(error) =>
+        fail(s"expected a page, got $error")
+
+  test("callEnvelopePage is retried and classified exactly as callPage"):
+    given Decode[ListEnvelope[Int]] = _ => Right(ListEnvelope(Vector(1), None))
+    val http = FakeHttpPort(Vector(Right(responseOf(503, "")), Right(responseOf(200, """{"tree":[1]}"""))))
+
+    val result = pipelineOf(http, FakeTimer(0L), silent, stubErrorBody).callEnvelopePage[Int](listing, PageParams.First)
+
+    assertEquals(result.map(_.items), Right(Vector(1)))
+    assertEquals(http.sends, 2)
 
   test("callPage reports a body that does not decode as DecodingFailed"):
     given Decode[Vector[Int]] = _ => Left(DecodeFailure(JsonPath.Root.index(0), "expected a number"))

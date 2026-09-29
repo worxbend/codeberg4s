@@ -146,7 +146,7 @@ trait ClientSuiteHarness:
     val timer  = FutureTimer()
 
     val pipeline = ApiPipeline[Future](
-      SttpHttpPort(backend, config),
+      SttpHttpPort(backend, config, timer),
       config,
       timer,
       Telemetry.noOp[Future],

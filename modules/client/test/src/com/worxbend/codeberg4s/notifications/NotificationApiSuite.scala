@@ -96,10 +96,19 @@ final class NotificationApiSuite extends FunSuite with ClientSuiteHarness:
         assertEquals(page.nextPage.map(_.value), Some(2))
         assertEquals(page.isLast, false)
 
-  test("a page whose response carries no Link header reports itself as the last one, whatever the total says"):
+  test("a page whose response carries a total but no Link header offers the next page from the total"):
+    // One thread served of seventy-four: the total says more remain, and with
+    // no Link relation to contradict it, the page says so too.
     onApi(responding(200, NotificationApiSuite.ThreadListBody, List(Header("X-Total-Count", "74")))): api =>
       api.list(NotificationQuery.Empty, PageParams.First).map: page =>
         assertEquals(page.totalCount, Some(74))
+        assertEquals(page.isLast, false)
+        assertEquals(page.nextPage.map(_.value), Some(2))
+
+  test("a page whose response carries neither a total nor a Link header reports itself as the last one"):
+    onApi(responding(200, NotificationApiSuite.ThreadListBody)): api =>
+      api.list(NotificationQuery.Empty, PageParams.First).map: page =>
+        assertEquals(page.totalCount, None)
         assertEquals(page.isLast, true)
         assertEquals(page.nextPage, None)
 

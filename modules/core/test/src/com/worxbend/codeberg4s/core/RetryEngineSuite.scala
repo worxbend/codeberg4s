@@ -135,6 +135,32 @@ final class RetryEngineSuite extends FunSuite:
 
     assertEquals(attempts.toList, List(1, 2, 3))
 
+  test("an unclassified transport failure is not attempted again, because it is a programming error"):
+    // The adapter classifies every IOException as ConnectionFailed, Timeout or
+    // Dns, so what reaches here as Unknown is an IllegalStateException from a
+    // shut-down client or an IllegalArgumentException for a request the backend
+    // refused: the same request reproduces it, and three backed-off repeats
+    // would only delay the report.
+    val timer    = FakeTimer(0L)
+    val attempts = ListBuffer.empty[Int]
+    val last     = CodebergError.Transport(context, TransportCause.Unknown("client has been shut down"))
+
+    val result = engine(RetryPolicy.Default, timer, JitterSource.Deterministic)
+      .run("issues.list")(failing(attempts, last))
+
+    assertEquals(result, Left(last))
+    assertEquals(attempts.toList, List(1))
+    assert(timer.sleeps.isEmpty)
+
+  test("a lost connection is worth attempting again"):
+    val timer    = FakeTimer(0L)
+    val attempts = ListBuffer.empty[Int]
+    val last     = CodebergError.Transport(context, TransportCause.ConnectionFailed("connection reset"))
+
+    engine(RetryPolicy.Default, timer, JitterSource.Deterministic).run("issues.list")(failing(attempts, last)).discard
+
+    assertEquals(attempts.toList, List(1, 2, 3))
+
   test("an interrupted call is not attempted again"):
     val timer    = FakeTimer(0L)
     val attempts = ListBuffer.empty[Int]
@@ -221,15 +247,61 @@ final class RetryEngineSuite extends FunSuite:
     assertEquals(result, Right("ok"))
     assertEquals(timer.sleeps, Vector(2.seconds))
 
-  test("Retry-After is clamped to the policy's ceiling"):
+  test("a Retry-After beyond the policy's ceiling ends the call at once with the failure unwrapped"):
+    // Clamping the hint and retrying early — what this engine once did — burns
+    // an attempt and a unit of quota on a repeat the server said it would not
+    // accept yet. The failure carries the hint, so the caller can schedule it.
     val timer     = FakeTimer(0L)
-    val throttled = AttemptOutcome[String](Left(apiFailure(429)), Some(30.seconds))
+    val attempts  = ListBuffer.empty[Int]
+    val error     = CodebergError.Api(context, 429, ApiErrorBody.Empty, Some(30.seconds))
+    val throttled = AttemptOutcome[String](Left(error), Some(30.seconds))
+
+    val result = engine(RetryPolicy.Default, timer, JitterSource.Deterministic)
+      .runWith("issues.list", HttpMethod.Get, RetryEligibility.IdempotentOnly): number =>
+        attempts.append(number).discard
+        Right(throttled)
+
+    assertEquals(result, Left(error))
+    assertEquals(attempts.toList, List(1))
+    assertEquals(timer.sleeps, Vector.empty[FiniteDuration])
+
+  test("a Retry-After beyond the ceiling on a later attempt is still reported unwrapped, not as exhaustion"):
+    // The budget did not run out; the server's hint ended the loop. Wrapping it
+    // in RetriesExhausted would claim otherwise.
+    val timer     = FakeTimer(0L)
+    val attempts  = ListBuffer.empty[Int]
+    val error     = CodebergError.Api(context, 429, ApiErrorBody.Empty, Some(1.hour))
+    val throttled = AttemptOutcome[String](Left(error), Some(1.hour))
+
+    val result = engine(RetryPolicy.Default, timer, JitterSource.Deterministic)
+      .runWith("issues.list", HttpMethod.Get, RetryEligibility.IdempotentOnly): number =>
+        attempts.append(number).discard
+        if number < 2 then Right(AttemptOutcome.failed(apiFailure(503))) else Right(throttled)
+
+    assertEquals(result, Left(error))
+    assertEquals(attempts.toList, List(1, 2))
+    assertEquals(timer.sleeps, Vector(250.millis))
+
+  test("a Retry-After exactly at the policy's ceiling is waited for in full"):
+    val timer     = FakeTimer(0L)
+    val throttled = AttemptOutcome[String](Left(apiFailure(429)), Some(RetryPolicy.Default.maxDelay))
 
     engine(RetryPolicy.Default, timer, JitterSource.Deterministic)
       .runWith("issues.list", HttpMethod.Get, RetryEligibility.IdempotentOnly)(_ => Right(throttled))
       .discard
 
-    assertEquals(timer.sleeps, Vector(8.seconds, 8.seconds))
+    assertEquals(timer.sleeps, Vector(RetryPolicy.Default.maxDelay, RetryPolicy.Default.maxDelay))
+
+  test("a Retry-After beyond the ceiling is ignored, like any hint, when the policy does not honour it"):
+    val timer     = FakeTimer(0L)
+    val policy    = RetryPolicy.Default.copy(jitter = Jitter.None, respectRetryAfter = false)
+    val throttled = AttemptOutcome[String](Left(apiFailure(429)), Some(1.hour))
+
+    engine(policy, timer, JitterSource.Deterministic)
+      .runWith("issues.list", HttpMethod.Get, RetryEligibility.IdempotentOnly)(_ => Right(throttled))
+      .discard
+
+    assertEquals(timer.sleeps, Vector(250.millis, 500.millis))
 
   test("Retry-After is ignored when the policy does not honour it"):
     val timer     = FakeTimer(0L)

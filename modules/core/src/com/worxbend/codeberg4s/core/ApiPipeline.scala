@@ -89,7 +89,8 @@ final class ApiPipeline[F[_]](
   /** As [[call]], but assembles a [[com.worxbend.codeberg4s.paging.Page]] from the response's paging headers.
     *
     * Listing endpoints are `GET`s, so the call is retried under [[RetryEligibility.IdempotentOnly]]. Paging metadata
-    * comes from [[Pages.from]], which reads `rel="next"` and never the number of items returned.
+    * comes from [[Pages.from]]: `rel="next"` when the response offered a `Link` header, the `x-total-count` arithmetic
+    * when it did not, and never a comparison of the number of items returned with the number requested.
     *
     * @param request
     *   the listing call, with `page` and `limit` already in its query
@@ -99,6 +100,22 @@ final class ApiPipeline[F[_]](
   def callPage[A](request: CodebergRequest, params: PageParams)(using decode: Decode[Vector[A]]): F[Page[A]] =
     perform(request, RetryEligibility.IdempotentOnly, config.maxResponseBodyBytes): (ctx, response) =>
       decoded[Vector[A]](ctx, response.body).map(items => Pages.from(response, params, items))
+
+  /** As [[callPage]], for a listing whose body is an envelope object carrying its own total.
+    *
+    * The decoder answers a [[ListEnvelope]] rather than a bare `Vector`, and [[Pages.fromEnvelope]] reads the total
+    * from `x-total-count` where the instance sent it and from the envelope where it did not. Everything else — retry,
+    * telemetry, status mapping, the `CallContext` — is exactly [[callPage]].
+    *
+    * @param request
+    *   the listing call, with its paging parameters already in its query
+    * @param params
+    *   the window that was requested; it is kept on the returned page
+    */
+  def callEnvelopePage[A](request: CodebergRequest, params: PageParams)(using
+      decode: Decode[ListEnvelope[A]]): F[Page[A]] =
+    perform(request, RetryEligibility.IdempotentOnly, config.maxResponseBodyBytes): (ctx, response) =>
+      decoded[ListEnvelope[A]](ctx, response.body).map(envelope => Pages.fromEnvelope(response, params, envelope))
 
   /** Sends `request` under the archive bound and hands back the whole response, body included, undecoded.
     *
@@ -227,12 +244,27 @@ final class ApiPipeline[F[_]](
     * This is one of the few places that genuinely wants text: the injected parser takes a `String`, an error payload is
     * a few hundred bytes, and it is only ever read on the failure path. Decoding it here rather than at the transport
     * is what keeps the successful path — every listing, every read — free of the copy.
+    *
+    * The text handed to the parser is bounded at [[ApiPipeline.MaxErrorBodyBytes]]. A Forgejo error body is a small
+    * JSON object; anything larger is a reverse proxy's HTML page or a misrouted download, and a call that is already
+    * failing — and may be about to be retried — must not decode and parse the whole of it on every attempt. A body cut
+    * at the bound is not valid JSON, so the parser rejects it and the failure carries
+    * [[com.worxbend.codeberg4s.ApiErrorBody.Empty]], exactly as it does for any other unreadable payload; the status is
+    * never masked.
     */
   private def parsedErrorBody(body: ResponseBody): ApiErrorBody =
     if body.isBlank then ApiErrorBody.Empty
-    else Try(errorBody(body.text)).getOrElse(ApiErrorBody.Empty)
+    else Try(errorBody(body.leadingText(ApiPipeline.MaxErrorBodyBytes))).getOrElse(ApiErrorBody.Empty)
 
 object ApiPipeline:
+
+  /** The most bytes of a non-2xx body that are decoded and handed to the error-body parser: 64 KiB.
+    *
+    * Generous by two orders of magnitude for a Forgejo error object, and small enough that a failed attempt against a
+    * misbehaving proxy costs a bounded amount of work however large the payload it answered with. A body beyond the
+    * bound parses as [[com.worxbend.codeberg4s.ApiErrorBody.Empty]]; see the pipeline's error-body handling.
+    */
+  val MaxErrorBodyBytes: Int = 64 * 1024
 
   /** What a body is reported as when its [[Decode]] declared itself [[Decode.sensitive]].
     *

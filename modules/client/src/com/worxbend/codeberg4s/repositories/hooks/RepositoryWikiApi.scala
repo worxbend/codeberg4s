@@ -157,14 +157,17 @@ final class RepositoryWikiApi private[codeberg4s] (pipeline: ApiPipeline[Future]
   /** Lists one page's revisions — `GET /repos/{owner}/{repo}/wiki/revisions/{pageName}`.
     *
     * '''The body is an envelope, not an array.''' This endpoint answers `{"commits", "count"}`, unlike the page listing
-    * beside it; see [[com.worxbend.codeberg4s.repositories.hooks.wire.WikiCommitListDto]]. The body's own `count` is
-    * '''not''' what [[com.worxbend.codeberg4s.paging.Page.totalCount]] reports — that comes from the `X-Total-Count`
-    * header, as it does for every other paged call.
+    * beside it; see [[com.worxbend.codeberg4s.repositories.hooks.wire.WikiCommitListDto]].
+    * [[com.worxbend.codeberg4s.paging.Page.totalCount]] is the `X-Total-Count` header when the instance sends it, as on
+    * every other paged call, and the body's own `count` when it does not — the two are the same number in Forgejo's
+    * handler, so the fallback costs nothing and covers an instance or proxy that drops the header.
     *
     * '''Only `page` is sent, never `limit`.''' The spec declares no `limit` for this operation, so the instance chooses
     * the page size and the size half of the requested window does not reach the wire; see
-    * [[com.worxbend.codeberg4s.codec.PagingQuery.pageOnly]]. Where the collection ends is still decided by the `Link`
-    * header, as everywhere else.
+    * [[com.worxbend.codeberg4s.codec.PagingQuery.pageOnly]]. Where the collection ends is decided by the `Link` header
+    * when the response carries one, and otherwise from the total by the rule [[com.worxbend.codeberg4s.core.Pages]]
+    * states — Forgejo sets the total on this route and no `Link`, so without that rule every history reported its first
+    * page as its last.
     *
     * '''Failures.''' The group contract above.
     */
@@ -174,7 +177,7 @@ final class RepositoryWikiApi private[codeberg4s] (pipeline: ApiPipeline[Future]
       pageName: WikiPageName,
       params: PageParams,
   ): Future[Page[WikiCommit]] =
-    pipeline.callPage(RepositoryWikiApi.revisionsRequest(owner, name, pageName, params), params)(using
+    pipeline.callEnvelopePage(RepositoryWikiApi.revisionsRequest(owner, name, pageName, params), params)(using
       RepositoryHookDecoders.wikiRevisions)
 
 /** The requests this group issues, its operation ids, and its typed rail. */

@@ -276,7 +276,7 @@ final class UserApiSuite extends FunSuite:
     val config = CodebergConfig(Auth.Anonymous).copy(baseUri = Instance, retry = UserApiSuite.PromptRetry)
 
     val pipeline = ApiPipeline[Future](
-      SttpHttpPort(backend, config),
+      SttpHttpPort(backend, config, timer),
       config,
       timer,
       Telemetry.noOp[Future],

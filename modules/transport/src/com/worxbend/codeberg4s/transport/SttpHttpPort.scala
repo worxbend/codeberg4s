@@ -7,8 +7,10 @@ import com.worxbend.codeberg4s.core.{
   HttpPort,
   RequestBody,
   ResponseBody,
+  Timer,
   TransportFailure
 }
+import com.worxbend.codeberg4s.syntax.discard
 import com.worxbend.codeberg4s.{CodebergConfig, ContentType, TransportCause}
 
 import sttp.capabilities.{Effect, StreamMaxLengthExceededException}
@@ -29,10 +31,12 @@ import sttp.model.{Header, HeaderNames, MediaType, Method, Uri}
 
 import scala.annotation.tailrec
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.jdk.DurationConverters.ScalaDurationOps
 import scala.util.control.NonFatal
+import scala.util.{Failure, Success}
 
+import java.io.IOException
 import java.net.http.{HttpClient, HttpTimeoutException}
 import java.net.{
   Authenticator,
@@ -43,7 +47,7 @@ import java.net.{
   UnknownHostException
 }
 import java.util.Locale
-import java.util.concurrent.Executor
+import java.util.concurrent.{Executor, TimeoutException}
 
 /** The sttp implementation of [[com.worxbend.codeberg4s.core.HttpPort]] for `Future`.
   *
@@ -54,10 +58,15 @@ import java.util.concurrent.Executor
   * '''Failure contract.''' Every HTTP status — including `5xx` — is a `Right`, because deciding what a status means
   * belongs to [[com.worxbend.codeberg4s.core.StatusMapping]]. A `Left` means no complete response arrived, classified
   * into a [[com.worxbend.codeberg4s.TransportCause]] by walking the exception's cause chain; sttp wraps the original
-  * `java.net` exception in an `SttpClientException`, so the outermost type is never the interesting one. An
-  * unclassified non-fatal exception becomes [[com.worxbend.codeberg4s.TransportCause.Unknown]] rather than being
-  * dropped, and a fatal error stays fatal. Every cause but [[com.worxbend.codeberg4s.TransportCause.ResponseTooLarge]]
-  * means nothing arrived at all; see "Response size" below for the one that does not.
+  * `java.net` exception in an `SttpClientException`, so the outermost type is never the interesting one. Any
+  * `java.io.IOException` without a more specific case of its own is
+  * [[com.worxbend.codeberg4s.TransportCause.ConnectionFailed]], because an I/O failure is what a retry can heal; an
+  * exception that is not I/O at all — an `IllegalStateException` from a client that was shut down, an
+  * `IllegalArgumentException` for a request the backend could not build — becomes
+  * [[com.worxbend.codeberg4s.TransportCause.Unknown]] rather than being dropped, which the retry engine reads as a
+  * programming error and does not repeat. A fatal error stays fatal. Every cause but
+  * [[com.worxbend.codeberg4s.TransportCause.ResponseTooLarge]] and a whole-exchange timeout means nothing arrived at
+  * all; see "Response size" and "Timeouts" below for the two that do not.
   *
   * '''Security contract.''' Nothing here logs, and nothing here renders a credential: the `Authorization` header is
   * built and handed straight to sttp, `toString` is deliberately opaque, and a [[TransportFailure]] carries only the
@@ -70,9 +79,25 @@ import java.util.concurrent.Executor
   * A backend built by [[SttpHttpPort.defaultBackend]] owns a JDK `java.net.http.HttpClient` and releases it when it is
   * closed; see that method for what "released" means and for why sttp's own backend does not manage to do it.
   *
-  * '''Timeouts.''' `config.readTimeout` is applied per request. `config.connectTimeout` is a property of the backend in
-  * sttp, so it is honoured only by a backend built through [[SttpHttpPort.defaultBackend]]; a caller who supplies their
-  * own backend configures the connect timeout on that backend.
+  * '''Timeouts.''' `config.readTimeout` bounds the '''whole exchange''', per request: from the moment the request is
+  * handed to the backend until the last byte of the body has been read, or the read timeout has elapsed, whichever is
+  * first. That bound is this class's own, raced through `timer` — it is not something the HTTP stack offers. sttp's
+  * per-request `readTimeout` maps onto `java.net.http.HttpRequest.Builder.timeout`, which the JDK client applies only
+  * until the response '''headers''' arrive; a server that answers its headers and then stalls mid-body never trips it,
+  * and without the race such a request would hang its `Future` for as long as the process lived. Both bounds are armed:
+  * the JDK's, because when it fires the client aborts the exchange itself and frees the connection, and this class's,
+  * because it is the only one that covers the body. Either one elapsing fails the send with
+  * [[com.worxbend.codeberg4s.TransportCause.Timeout]], which the retry engine may repeat.
+  *
+  * When the race is lost the exchange is '''abandoned, not cancelled'''. sttp's `Future` backend does not expose the
+  * JDK request it submitted, so nothing here can call `cancel` on it: the JDK client goes on reading the stalled body
+  * until the server closes the connection or the body passes `maxBodyBytes`, and the result is discarded when it
+  * finally arrives. The connection is therefore held for that long. The deadline that lost — the `timer.sleep` armed
+  * for a send that finished in time — is likewise left to elapse: a [[com.worxbend.codeberg4s.core.Timer]] has no
+  * cancel, so each send costs one scheduled completion that lives for at most `readTimeout` and then completes a
+  * promise nobody is waiting on. `config.connectTimeout` is a property of the backend in sttp, so it is honoured only
+  * by a backend built through [[SttpHttpPort.defaultBackend]]; a caller who supplies their own backend configures the
+  * connect timeout on that backend.
   *
   * '''Response size.''' Every request carries a byte bound, because this library reads whole bodies into memory and
   * never streams. The bound is the `maxBodyBytes` the caller passes rather than one this class picks: the pipeline
@@ -84,10 +109,14 @@ import java.util.concurrent.Executor
   *   the sttp backend requests are sent on, owned and closed by the caller
   * @param config
   *   the instance to talk to, the credentials to use, the user agent to send, and the read timeout to apply
+  * @param timer
+  *   the scheduler the whole-exchange deadline is raced on — the client's own `FutureTimer`, so that the deadline costs
+  *   no thread and dies with the client
   */
 final class SttpHttpPort(
     backend: Backend[Future],
     config: CodebergConfig,
+    timer: Timer[Future],
 )(using ExecutionContext)
     extends HttpPort[Future]:
 
@@ -152,12 +181,39 @@ final class SttpHttpPort(
     root.flatMap(uri => build(request, uri, maxBodyBytes)) match
       case Left(failure) => Future.successful(Left(failure))
       case Right(built)  =>
-        built
-          .send(backend)
-          .map(onResponse)
-          .recover:
-            case error: InterruptedException => SttpHttpPort.fail(error)
-            case NonFatal(error)             => SttpHttpPort.fail(error)
+        bounded(
+          built
+            .send(backend)
+            .map(onResponse)
+            .recover:
+              case error: InterruptedException => SttpHttpPort.fail(error)
+              case NonFatal(error)             => SttpHttpPort.fail(error)
+        )
+
+  /** Races `sending` against a `config.readTimeout` deadline on the timer; whichever finishes first is the outcome.
+    *
+    * This is the whole-exchange bound the class note describes. The deadline elapsing first completes the outcome with
+    * [[com.worxbend.codeberg4s.TransportCause.Timeout]] and the send, when it eventually finishes, finds the promise
+    * already kept and is dropped. The send finishing first is the ordinary case, and the deadline is then left to
+    * elapse harmlessly.
+    *
+    * A deadline that '''fails''' rather than elapses is ignored, and the send alone decides. That happens when the
+    * timer has been closed — `FutureTimer.close` fails the sleeps it abandons, and rejects new ones — which means the
+    * client is shutting down or already shut. Failing an in-flight request because its owner closed the client would
+    * turn a response the server is about to deliver into an error, and a call made after close is a defect the
+    * caller-owned backend or the shut-down JDK client will report in its own way; the bound is simply not armed for it.
+    */
+  private def bounded[A](sending: Future[Either[TransportFailure, A]]): Future[Either[TransportFailure, A]] =
+    val outcome = Promise[Either[TransportFailure, A]]()
+
+    sending.onComplete(result => outcome.tryComplete(result).discard)
+    timer
+      .sleep(config.readTimeout)
+      .onComplete:
+        case Success(()) => outcome.trySuccess(Left(TransportFailure(SttpHttpPort.exchangeTimedOut(config)))).discard
+        case Failure(_)  => ()
+
+    outcome.future
 
   /** Builds the sttp request, reading '''every''' response body as bytes, or refuses to build it at all.
     *
@@ -170,8 +226,8 @@ final class SttpHttpPort(
     * `maxResponseBodyLength` is what keeps "read the whole body into memory" from meaning "read as much as the peer
     * cares to send". sttp stops reading at `maxBodyBytes` and fails the request with a
     * `sttp.capabilities.StreamMaxLengthExceededException`, which [[SttpHttpPort.classify]] turns into
-    * [[com.worxbend.codeberg4s.TransportCause.ResponseTooLarge]]. Without it the only bound on a response is
-    * `config.readTimeout` multiplied by the peer's bandwidth, which is not a bound.
+    * [[com.worxbend.codeberg4s.TransportCause.ResponseTooLarge]]. Without it the only bound on a response would be the
+    * whole-exchange `config.readTimeout` multiplied by the peer's bandwidth, which is not a bound on memory.
     *
     * The `Left` comes from [[SttpHttpPort.withBody]], which refuses a body whose media type cannot be written as a
     * header.
@@ -227,6 +283,14 @@ object SttpHttpPort:
     * A misbehaving proxy can fail with a multi-kilobyte message, and a transport detail is meant to fit in a log line.
     */
   val MaxDetailLength: Int = 200
+
+  /** The cause reported when the whole exchange — headers and body — did not finish within `config.readTimeout`.
+    *
+    * Internal, so a test can assert the exact value; the detail names the bound that fired and nothing about the
+    * request, because a transport detail may end up in a log line.
+    */
+  private[codeberg4s] def exchangeTimedOut(config: CodebergConfig): TransportCause =
+    TransportCause.Timeout(s"no complete response within the read timeout of ${config.readTimeout}")
 
   /** A `Future` backend built on the JDK HTTP client, with the Codeberg default connect timeout.
     *
@@ -422,19 +486,20 @@ object SttpHttpPort:
     */
   private def succeed(response: Response[Array[Byte]]): Either[TransportFailure, CodebergResponse] =
     val body = ResponseBody.of(response.body, ResponseBody.charsetOf(response.contentType))
-    Right(CodebergResponse(response.code.code, lowercased(response.headers), body))
+    Right(CodebergResponse(response.code.code, grouped(response.headers), body))
 
   /** Generic in the success type so the send and the pre-flight refusals share one classification. */
   private def fail[A](error: Throwable): Either[TransportFailure, A] =
     Left(TransportFailure(classify(error)))
 
-  /** Response header names are lowercased because Codeberg sends them lowercase over HTTP/2 and mixed-case elsewhere,
-    * and [[com.worxbend.codeberg4s.core.CodebergResponse]] promises its callers already-lowercased keys. A header the
-    * instance repeated keeps every value, in the order it sent them.
+  /** Response headers keyed by the name they arrived under. A header the instance repeated keeps every value, in the
+    * order it sent them. Codeberg sends names lowercase over HTTP/2 and mixed-case elsewhere; lowercasing them is
+    * [[com.worxbend.codeberg4s.core.CodebergResponse.apply]]'s job, done once for every adapter, so it is not repeated
+    * here.
     */
-  private def lowercased(headers: Seq[Header]): Map[String, List[String]] =
+  private def grouped(headers: Seq[Header]): Map[String, List[String]] =
     headers
-      .groupMap(header => header.name.toLowerCase(Locale.ROOT))(_.value)
+      .groupMap(_.name)(_.value)
       .map((name, values) => (name, values.toList))
 
   /** Walks the cause chain outward-in and reports the first cause this library recognises.
@@ -456,6 +521,13 @@ object SttpHttpPort:
       // It arrives wrapped in an SttpClientException.ReadException, which is why
       // this is a cause-chain walk and not a match on the outermost type.
       case _: StreamMaxLengthExceededException => TransportCause.ResponseTooLarge(detail(error))
+      case _: TimeoutException                 => TransportCause.Timeout(detail(error))
+      // Every other I/O failure — a closed channel, an unexpected end of stream,
+      // a protocol error the JDK client reports as a plain IOException — is the
+      // network misbehaving, which is what a retry exists for. Anything that is
+      // not an IOException at all is a programming error and falls through to
+      // Unknown, which the retry engine does not repeat.
+      case _: IOException                      => TransportCause.ConnectionFailed(detail(error))
       case _                                   =>
         Option(error.getCause).filterNot(_.eq(error)) match
           case Some(cause) => classify(cause)

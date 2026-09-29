@@ -114,12 +114,16 @@ final class RepositoryGitApi private[codeberg4s] (pipeline: ApiPipeline[Future])
     * '''This is the listing most likely to be enormous.''' A recursive listing of a large repository's root tree is
     * tens of thousands of entries, and the page is what stands between a caller and all of them.
     *
-    * '''Paging.''' The window is the `Link` header's and nothing else — `docs/HAZARDS.md` §5. Two things on this
-    * endpoint invite the opposite conclusion and both are refused here: the body's own `truncated` flag, and the size
-    * of the returned array. Forgejo clamps a requested page size to its own maximum while echoing the requested value
-    * back, so a short page is not the end of the collection. The body's `sha`, `total_count` and `truncated` are read
-    * by the DTO and deliberately not surfaced, because a second end-of-collection test is how a caller convinces itself
-    * an inhabited tree is exhausted.
+    * '''Paging.''' Forgejo sends '''no paging headers at all''' on this route — neither `Link` nor `X-Total-Count` — so
+    * the window is worked out from the body's `total_count`, the size of the whole tree, by the rule
+    * [[com.worxbend.codeberg4s.core.Pages]] states: another page is offered while `page × entries.size < total_count`,
+    * and [[com.worxbend.codeberg4s.paging.Page.totalCount]] is that count. Before this was read, every tree reported
+    * its first page as its last and a walk over a large repository silently stopped at one page. Two things on this
+    * endpoint are still refused as end-of-collection tests, for the reason `docs/HAZARDS.md` §5 gives: the size of the
+    * returned array measured against the size requested — Forgejo clamps `per_page` to its `default_git_trees_per_page`
+    * while echoing the requested value back — and the body's `truncated` flag, which is `true` on every page of a tree
+    * that does not fit in one and so cannot tell the last page from any other. A `Link` header, should an instance ever
+    * send one here, takes precedence over the count.
     *
     * The size parameter is spelled `per_page` on this route and `limit` on every other one; that is Forgejo's
     * inconsistency, and it is handled here.
@@ -147,8 +151,8 @@ final class RepositoryGitApi private[codeberg4s] (pipeline: ApiPipeline[Future])
       recursive: Boolean,
       params: PageParams,
   ): Future[Page[GitTreeEntry]] =
-    pipeline.callPage(RepositoryGitApi.treeRequest(owner, name, sha, recursive, params), params)(using
-      GitDataDecoders.treeEntries)
+    pipeline.callEnvelopePage(RepositoryGitApi.treeRequest(owner, name, sha, recursive, params), params)(using
+      GitDataDecoders.tree)
 
   /** Reads one commit — `GET /repos/{owner}/{repo}/git/commits/{sha}`.
     *
