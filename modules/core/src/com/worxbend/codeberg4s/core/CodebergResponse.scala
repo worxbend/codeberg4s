@@ -16,8 +16,9 @@ import java.util.Locale
   * @param status
   *   the HTTP status code, including `5xx` — a status is never a transport failure
   * @param headers
-  *   response headers with '''already lowercased''' keys, as the transport adapter normalises them; a key maps to every
-  *   value the server sent for it, in order
+  *   response headers keyed by '''lowercased''' name; a key maps to every value the server sent for it, in order.
+  *   [[CodebergResponse.apply]] lowercases whatever keys it is given, so an adapter may hand over names as they arrived
+  *   on the wire and every accessor here still matches case-insensitively. Only `copy` bypasses that normalisation
   * @param body
   *   the response body as the bytes that arrived, with the charset the response declared for them; empty for a `204`.
   *   See [[ResponseBody]] for why this is not a `String`
@@ -26,8 +27,10 @@ final case class CodebergResponse(status: Int, headers: Map[String, List[String]
 
   /** The first value of `name`, matched case-insensitively.
     *
-    * A header present but blank counts as absent, since that is what a gateway that strips a value leaves behind. The
-    * returned value is trimmed.
+    * Both sides are lowercased before the lookup — the keys by [[CodebergResponse.apply]] when the response was built,
+    * the name here — so `header("X-Total-Count")` finds a header the adapter stored as `x-total-count` or as
+    * `X-Total-Count`. A header present but blank counts as absent, since that is what a gateway that strips a value
+    * leaves behind. The returned value is trimmed.
     */
   def header(name: String): Option[String] =
     headers
@@ -47,8 +50,9 @@ final case class CodebergResponse(status: Int, headers: Map[String, List[String]
   /** How long the server asked the client to wait, from `Retry-After`.
     *
     * Only the delta-seconds form is understood; the HTTP-date form is treated as absent, because honouring it needs a
-    * trustworthy clock on both ends and Forgejo sends seconds. The retry engine clamps whatever comes back to the
-    * policy's maximum delay.
+    * trustworthy clock on both ends and Forgejo sends seconds. What the retry engine does with the value depends on the
+    * policy's maximum delay — see [[RetryEngine]]: a hint within it is waited for exactly, and a hint beyond it ends
+    * the call so the caller can schedule the wait themselves.
     */
   def retryAfter: Option[FiniteDuration] =
     header(CodebergResponse.RetryAfterHeader).flatMap(CodebergResponse.nonNegativeInt).map(_.seconds)
@@ -95,6 +99,24 @@ final case class CodebergResponse(status: Int, headers: Map[String, List[String]
 
 object CodebergResponse:
 
+  /** Builds a response, lowercasing every header name so that lookups are case-insensitive whatever the adapter did.
+    *
+    * HTTP header names are case-insensitive, and the two wire formats disagree about the case they arrive in: HTTP/2
+    * lowercases everything, HTTP/1.1 keeps whatever the server wrote. Normalising here rather than trusting each
+    * [[HttpPort]] to do it means a port — or a test — can pass names exactly as they arrived and
+    * [[CodebergResponse.header]] still finds them. Two names differing only in case are one header, so their values are
+    * joined; a map whose keys are already lowercase is used as it is.
+    *
+    * @param status
+    *   the HTTP status code
+    * @param headers
+    *   the response headers, keyed by name in any case, each mapped to every value sent for it in order
+    * @param body
+    *   the response body
+    */
+  def apply(status: Int, headers: Map[String, List[String]], body: ResponseBody): CodebergResponse =
+    new CodebergResponse(status, lowercased(headers), body)
+
   /** The header carrying the size of the whole collection. */
   val TotalCountHeader: String = "x-total-count"
 
@@ -109,6 +131,15 @@ object CodebergResponse:
 
   private def nonNegativeInt(value: String): Option[Int] =
     value.toIntOption.filter(_ >= 0)
+
+  /** `headers` with every key lowercased, merging keys that differed only in case. Left untouched when nothing needs
+    * lowercasing, which is the common case and costs one pass over the keys rather than a rebuilt map.
+    */
+  private def lowercased(headers: Map[String, List[String]]): Map[String, List[String]] =
+    if headers.keysIterator.forall(name => name.equals(name.toLowerCase(Locale.ROOT))) then headers
+    else
+      headers.toList
+        .groupMapReduce((name, _) => name.toLowerCase(Locale.ROOT))((_, values) => values)(_ ++ _)
 
   /** The `page` parameter of a link target as a validated page number, absent when the target carries none or carries
     * something that is not a page index.

@@ -6,8 +6,36 @@ import scala.concurrent.duration.DurationInt
 
 final class CodebergResponseSuite extends FunSuite:
 
-  test("a header is found case-insensitively, since the transport lowercases the keys"):
+  test("a header is found case-insensitively, since the constructor lowercases the keys"):
     assertEquals(headers("x-request-id" -> "abc123").header("X-Request-Id"), Some("abc123"))
+
+  test("a header stored under a mixed-case key is found whatever case the lookup uses"):
+    // An HttpPort that hands names over as they arrived on HTTP/1.1 must get
+    // the same answers as one that lowercased them; the constructor, not the
+    // adapter, owns that.
+    val response = headers("X-Request-Id" -> "abc123")
+
+    assertEquals(response.header("x-request-id"), Some("abc123"))
+    assertEquals(response.header("X-REQUEST-ID"), Some("abc123"))
+    assertEquals(response.requestId, Some("abc123"))
+
+  test("the stored keys themselves are lowercased, so a direct map lookup agrees with header"):
+    assertEquals(headers("X-Total-Count" -> "42").headers, Map("x-total-count" -> List("42")))
+
+  test("x-total-count and the Link header are read through mixed-case keys too"):
+    val response = CodebergResponse(
+      200,
+      Map("X-Total-Count" -> List("1590"), "Link" -> List("<a?page=2>; rel=\"next\"")),
+      ResponseBody.Empty,
+    )
+
+    assertEquals(response.totalCount, Some(1590))
+    assertEquals(response.nextPage.map(_.value), Some(2))
+
+  test("two keys differing only in case are one header, with every value kept"):
+    val response = CodebergResponse(200, Map("Link" -> List("<a>"), "link" -> List("<b>")), ResponseBody.Empty)
+
+    assertEquals(response.headers.get("link").map(_.sorted), Some(List("<a>", "<b>")))
 
   test("a header the instance did not send is absent"):
     assertEquals(headers().header("x-request-id"), None)
