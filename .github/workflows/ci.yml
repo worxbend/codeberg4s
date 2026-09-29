@@ -8,6 +8,14 @@ name: CI
 # who runs `./verify.sh` locally runs exactly what CI runs. The moment a check
 # is added here instead of there, the two drift and "green on my machine"
 # stops meaning anything. Add checks to verify.sh; leave this file alone.
+#
+# Two jobs, two modes of the same script. `verify` is `./verify.sh`, the
+# routine gate. `properties` is `./verify.sh --properties`, the ScalaCheck
+# suites the routine gate deliberately excludes (verify.sh's header says why
+# they are separated). They are separate jobs rather than two steps because
+# each is a result worth reading on its own — a red property is a different
+# finding from a red unit test — and because the two runs are independent, so
+# they may as well overlap.
 
 on:
   push:
@@ -42,10 +50,11 @@ jobs:
 
       - uses: ./.github/actions/scala-toolchain
 
-      # One job on purpose. Splitting format, compile and test across jobs
-      # would re-resolve dependencies and recompile from scratch in each of
-      # them, which costs more than it saves and loses verify.sh's ordering —
-      # the cheap checks are first so a formatting mistake fails in seconds.
+      # One job for the whole routine gate, on purpose. Splitting format,
+      # compile and test across jobs would re-resolve dependencies and
+      # recompile from scratch in each of them, which costs more than it saves
+      # and loses verify.sh's ordering — the cheap checks are first so a
+      # formatting mistake fails in seconds.
       - name: Verify
         run: ./verify.sh
 
@@ -72,3 +81,32 @@ jobs:
           path: out/modules/*/scoverage/xmlReport.dest/scoverage.xml
           if-no-files-found: ignore
           retention-days: 14
+
+  properties:
+    name: verify.sh --properties
+    runs-on: ubuntu-latest
+    # Nine ScalaCheck suites, compiled from a cold cache on a miss. Until
+    # 2026-09-29 this job ran only in nightly.yml, which meant a property broken
+    # by a pull request was found the following morning, after the merge. It
+    # runs here now, on the same commit as the routine gate. 30 minutes is the
+    # budget the nightly job had; the suites take a fraction of that.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - uses: ./.github/actions/scala-toolchain
+        with:
+          # Its own cache lane: the property run compiles the test modules but
+          # never produces a coverage report, so its Coursier footprint differs
+          # from the verify job's.
+          cache-prefix: coursier-properties
+
+      # `--properties` runs the suites tagged `Property` and nothing else: the
+      # routine gate excludes that tag, so without this job the suites would be
+      # compiled by CI and executed by nobody. The script asserts that a
+      # `*Props` suite actually reported tests, so a mis-scoped tag filter
+      # fails here rather than passing green with an empty run.
+      - name: Property suites
+        run: ./verify.sh --properties
