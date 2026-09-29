@@ -16,11 +16,6 @@ import com.worxbend.codeberg4s.repositories.gitdata.RefName
   * `stat`, `verification` and `files` — are not here; they change the shape of each commit rather than which commits
   * come back, and [[RepositoryApi.commits]] leaves them at the instance's defaults.
   *
-  * '''This type lives in the client module rather than in the domain''', unlike its siblings
-  * [[com.worxbend.codeberg4s.repositories.gitdata.CommitStatusQuery]] and
-  * [[com.worxbend.codeberg4s.issues.IssueQuery]], because it was added in a change that could not touch the domain. It
-  * is made of domain types and nothing else, and belongs beside them; moving it is a mechanical follow-up.
-  *
   * @param sha
   *   the commit, branch or tag to start listing from — Forgejo's `sha`, which despite its name takes any ref. Absent
   *   for the repository's default branch

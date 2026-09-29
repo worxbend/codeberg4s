@@ -1,5 +1,6 @@
 package com.worxbend.codeberg4s.users.social
 
+import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.{read, remove, write}
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
@@ -52,9 +53,11 @@ import scala.concurrent.Future
   *
   * `docs/HAZARDS.md` §2 measures that the spec carries no per-operation security information — the `optional` marking
   * on the listing is the global default and says nothing — so the fact above comes from the router, not the spec. This
-  * class cannot check the configured credentials before dialling, because an API group is built on the shared pipeline
-  * and never sees [[com.worxbend.codeberg4s.CodebergConfig]]; a client configured with a token learns of the mismatch
-  * as an `Api(401)` on its first call here.
+  * class therefore checks the configured credentials '''before dialling''': with anything but
+  * [[com.worxbend.codeberg4s.auth.Auth.Basic]] every operation here fails at once with
+  * [[com.worxbend.codeberg4s.CodebergError.Validation]] on the field `"auth"`, on both rails, and no request leaves the
+  * process. That is the pre-flight, context-free failure the `Validation` case exists for, and it names the fix where
+  * an `Api(401)` from the instance would not.
   *
   * A token can only be managed for the account the credentials belong to, unless they are an administrator's. Asking
   * about somebody else's tokens is `403`, not an empty listing.
@@ -81,8 +84,10 @@ import scala.concurrent.Future
   *
   * @param pipeline
   *   the shared request pipeline; the only thing here that reaches the network
+  * @param auth
+  *   the credentials the client was configured with, checked before any of these routes is dialled
   */
-final class UserTokenApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using exec: Exec[Future]):
+final class UserTokenApi private[codeberg4s] (pipeline: ApiPipeline[Future], auth: Auth)(using exec: Exec[Future]):
 
   /** The same operations, with failures as values instead of as a failed `Future`. */
   val attempt: UserTokenApi.Attempt = UserTokenApi.Attempt(this)
@@ -100,7 +105,7 @@ final class UserTokenApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usi
     * `GET` is safe, so the call is retried under [[com.worxbend.codeberg4s.core.RetryEligibility.IdempotentOnly]].
     */
   def list(username: Username, params: PageParams): Future[Page[AccessToken]] =
-    pipeline.callPage(UserTokenApi.listRequest(username, params), params)(using SocialDecoders.accessTokens)
+    basicOnly(pipeline.callPage(UserTokenApi.listRequest(username, params), params)(using SocialDecoders.accessTokens))
 
   /** Mints an access token — `POST /users/{username}/tokens`.
     *
@@ -145,8 +150,10 @@ final class UserTokenApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usi
     * text does not carry the credential either.
     */
   def create(username: Username, command: CreateAccessToken): Future[CreatedAccessToken] =
-    pipeline.call(UserTokenApi.createRequest(username, command), RetryEligibility.Never)(using
-      SocialDecoders.createdAccessToken)
+    basicOnly(
+      pipeline.call(UserTokenApi.createRequest(username, command), RetryEligibility.Never)(using
+        SocialDecoders.createdAccessToken)
+    )
 
   /** Revokes an access token — `DELETE /users/{username}/tokens/{token}`.
     *
@@ -164,10 +171,20 @@ final class UserTokenApi private[codeberg4s] (pipeline: ApiPipeline[Future])(usi
     * was never there".
     */
   def delete(username: Username, token: AccessTokenRef): Future[Unit] =
-    pipeline.callUnit(UserTokenApi.deleteRequest(username, token), UserTokenApi.deleteEligibility(token))
+    basicOnly(pipeline.callUnit(UserTokenApi.deleteRequest(username, token), UserTokenApi.deleteEligibility(token)))
+
+  /** Refuses the call before it is dialled unless the client holds basic credentials; see the class note. */
+  private def basicOnly[A](call: => Future[A]): Future[A] =
+    auth match
+      case _: Auth.Basic => call
+      case _             => exec.raise(CodebergError.Validation("auth", UserTokenApi.BasicOnlyMessage))
 
 /** The requests this group issues, its typed rail, and the one retry decision it makes from an argument. */
 object UserTokenApi:
+
+  /** What the pre-flight refusal says; one constant so the three operations and their tests agree on the wording. */
+  val BasicOnlyMessage: String =
+    "the /users/{username}/tokens routes accept only basic credentials — configure Auth.basic(username, password)"
 
   /** The stable operation id [[UserTokenApi.list]] copies into every failure's [[com.worxbend.codeberg4s.CallContext]].
     * Safe to alert on.

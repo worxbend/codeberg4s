@@ -644,8 +644,11 @@ val selfHosted: Either[ValidationError, CodebergConfig] =
 at that size — which is what listings and `PageWalk` should start from.
 
 Every field naming a domain concept is a validated type, so a misconfigured
-client fails at construction rather than on its first call. The timeouts and the
-two byte bounds are plain quantities and are taken as given.
+client fails at construction rather than on its first call. The timeouts, the
+two byte bounds and the retry policy's counts and delays are plain quantities:
+the constructor takes them as given, and `CodebergConfig.of` (or `validate` on
+a value you already hold) checks them and answers an `Either`, so a zero
+timeout or a `maxDelay` below `baseDelay` can be caught up front.
 `CodebergConfig.toString` is safe to log: the credential types redact
 themselves.
 
@@ -716,7 +719,8 @@ val shared: CodebergClient = CodebergClient.usingBackend(config, sharedBackend)
 
 sttp models the connect timeout as a property of the backend rather than of a
 request, so `connectTimeout` is ignored on this path — configure it on the
-backend. `readTimeout` is per request and is honoured either way.
+backend. `readTimeout` bounds the whole exchange of each request, headers and
+body, and is honoured either way.
 
 ## Tokens are not logged, ever
 

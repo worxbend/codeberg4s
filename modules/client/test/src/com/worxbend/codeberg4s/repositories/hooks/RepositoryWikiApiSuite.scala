@@ -62,6 +62,13 @@ final class RepositoryWikiApiSuite extends FunSuite with HookStubs:
       assertEquals(pathOf(edited), s"$Repository/wiki/page/Deployment%2FKubernetes")
       assertEquals(pathOf(deleted), s"$Repository/wiki/page/Deployment%2FKubernetes")
 
+  test("a revision listing for a slashed page name is one percent-encoded segment too"):
+    val backend = RecordingBackend(responding(200, RepositoryWikiApiSuite.RevisionsBody))
+
+    onApi(backend): api =>
+      api.revisions(Handle, Name, SubPage, window(1, 25)).map: _ =>
+        assertEquals(pathOf(backend), s"$Repository/wiki/revisions/Deployment%2FKubernetes")
+
   test("the revision listing unwraps the commits envelope and sends page without limit"):
     val backend = RecordingBackend(responding(200, RepositoryWikiApiSuite.RevisionsBody))
 

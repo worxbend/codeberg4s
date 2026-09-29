@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.users
 
 import com.worxbend.codeberg4s.CodebergError
+import com.worxbend.codeberg4s.auth.Auth
 import com.worxbend.codeberg4s.codec.PagingQuery
 import com.worxbend.codeberg4s.core.CodebergRequest.read
 import com.worxbend.codeberg4s.core.{ApiPipeline, CodebergRequest, Exec, RetryEligibility}
@@ -42,7 +43,7 @@ import scala.concurrent.Future
   * [[Username.from]] before a client is ever involved — which is why no operation here produces
   * [[com.worxbend.codeberg4s.CodebergError.Validation]].
   */
-final class UserApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using exec: Exec[Future]):
+final class UserApi private[codeberg4s] (pipeline: ApiPipeline[Future], auth: Auth)(using exec: Exec[Future]):
 
   /** The same operations, with failures as values instead of as a failed `Future`. */
   val attempt: UserApi.Attempt = UserApi.Attempt(this)
@@ -69,7 +70,7 @@ final class UserApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using ex
   val keys: UserKeyApi = UserKeyApi(pipeline)
 
   /** Access tokens. Creating one returns its only readable copy. */
-  val tokens: UserTokenApi = UserTokenApi(pipeline)
+  val tokens: UserTokenApi = UserTokenApi(pipeline, auth)
 
   /** Reads the account the configured credentials belong to — `GET /user`.
     *

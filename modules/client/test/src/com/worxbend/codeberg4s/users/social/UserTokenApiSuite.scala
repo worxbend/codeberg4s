@@ -7,6 +7,8 @@ import com.worxbend.codeberg4s.HttpMethod
 import com.worxbend.codeberg4s.Owner
 import com.worxbend.codeberg4s.RepoName
 import com.worxbend.codeberg4s.auth.ApiToken
+import com.worxbend.codeberg4s.auth.Auth
+import com.worxbend.codeberg4s.auth.Password
 import com.worxbend.codeberg4s.core.ApiPipeline
 import com.worxbend.codeberg4s.paging.PageParams
 import com.worxbend.codeberg4s.repositories.RepoSlug
@@ -37,6 +39,39 @@ final class UserTokenApiSuite extends FunSuite with ClientSuiteHarness:
   private val ById: AccessTokenRef = AccessTokenRef.ById(orFail(AccessTokenId.from(42L)))
 
   private val ByName: AccessTokenRef = AccessTokenRef.ByName(orFail(AccessTokenName.from("ci")))
+
+  /** What every test here dials with unless it says otherwise: the routes accept nothing else. */
+  private val BasicCredentials: Auth = orFail(Auth.basic("earl-warren", orFail(Password.from("hunter2"))))
+
+  // --- pre-flight -----------------------------------------------------------
+
+  test("without basic credentials the listing is refused before any request is sent"):
+    val backend = RecordingBackend(responding(200, UserTokenApiSuite.ListBody))
+
+    onApi(backend, Auth.Anonymous): api =>
+      api.attempt.list(Handle, PageParams.First).map:
+        case Left(CodebergError.Validation(field, message)) =>
+          assertEquals(field, "auth")
+          assertEquals(message, UserTokenApi.BasicOnlyMessage)
+          assertEquals(attemptsOn(backend), 0, "a request reached the instance")
+        case other                                          => fail(s"expected a Validation failure, got $other")
+
+  test("the same refusal covers create and delete, on the convenience rail too"):
+    val backend = RecordingBackend(responding(204, ""))
+
+    onApi(backend, Auth.Anonymous): api =>
+      for
+        created <- api.create(Handle, orFail(CreateAccessToken.named("ci"))).failed
+        deleted <- api.delete(Handle, ById).failed
+      yield
+        assertEquals(refusedField(created), Some("auth"))
+        assertEquals(refusedField(deleted), Some("auth"))
+        assertEquals(attemptsOn(backend), 0, "a request reached the instance")
+
+  private def refusedField(raised: Throwable): Option[String] =
+    raised match
+      case CodebergException(CodebergError.Validation(field, _)) => Some(field)
+      case _                                                     => None
 
   // --- listing --------------------------------------------------------------
 
@@ -218,8 +253,10 @@ final class UserTokenApiSuite extends FunSuite with ClientSuiteHarness:
     RepoSlug(orFail(Owner.from("forgejo")), orFail(RepoName.from("forgejo")))
 
   /** Builds the API under test on a pipeline over `backend`, releasing the timer whatever happens. */
-  private def onApi[A](backend: Backend[Future])(use: UserTokenApi => Future[A]): Future[A] =
-    onPipeline(backend)(pipeline => use(UserTokenApi(pipeline)))
+  private def onApi[A](backend: Backend[Future], auth: Auth = BasicCredentials)(
+      use: UserTokenApi => Future[A]
+  ): Future[A] =
+    onPipeline(backend)(pipeline => use(UserTokenApi(pipeline, auth)))
 
 /** The response bodies this suite stubs, hand-written from `spec/swagger.v1.json`; see the class note. */
 object UserTokenApiSuite:

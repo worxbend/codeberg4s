@@ -73,7 +73,7 @@ final class CodebergClient private (
   val repos: RepositoryApi = RepositoryApi(pipeline)
 
   /** User endpoints, such as `GET /user` and `GET /users/{username}`. */
-  val users: UserApi = UserApi(pipeline)
+  val users: UserApi = UserApi(pipeline, config.auth)
 
   /** Issue endpoints, including comments, labels and milestones. */
   val issues: IssueApi = IssueApi(pipeline)

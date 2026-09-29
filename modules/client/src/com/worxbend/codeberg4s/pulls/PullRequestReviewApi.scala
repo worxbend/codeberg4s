@@ -82,10 +82,11 @@ final class PullRequestReviewApi private[codeberg4s] (pipeline: ApiPipeline[Futu
     *
     * '''Paging is weaker here than on [[PullRequestApi.list]], and a caller has to know it.''' `golden/MANIFEST.md`
     * records that this endpoint sends `X-Total-Count` but '''no''' `Link` header. `page` and `limit` are still sent,
-    * because the spec declares them and they cost nothing, but two things follow:
+    * because the spec declares them and they cost nothing, and two things follow:
     *
-    *   - the returned page always reports itself as the last one, since `nextPage` is read from `rel="next"` and there
-    *     is no `Link` header to read it from;
+    *   - `nextPage` is derived from the total rather than from `rel="next"` — offered while `page × items.size` is
+    *     below `X-Total-Count`, the rule [[com.worxbend.codeberg4s.core.Pages]] states — so a walk reaches every
+    *     review, at the cost of one extra empty request when the last page is short;
     *   - an instance that ignores the parameters answers with the '''complete''' review list, so asking for page two
     *     may return the same rows as page one rather than nothing.
     *

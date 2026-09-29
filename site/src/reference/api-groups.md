@@ -62,7 +62,7 @@ record full of nullable fields.
 | `client.repos.actions.config` | `repositories.actions.RepositoryActionConfigApi` | 13 | what those runs run on and with: runners, secrets, variables |
 | `client.repos.git` | `repositories.gitdata.RepositoryGitApi` | 13 | raw Git data and commit-level reads: blobs, trees, refs, notes, annotated tags, comparison, diffpatch |
 | `client.repos.git.statuses` | `repositories.gitdata.CommitStatusApi` | 3 | what CI said about a commit, and which pull request brought it |
-| `client.repos.git.files` | `repositories.gitdata.RepositoryFileApi` | 4 | a repository's bytes: raw file, media file, archive, editor config |
+| `client.repos.git.files` | `repositories.gitdata.RepositoryFileApi` | 5 | a repository's bytes: raw file as text or as bytes, media file, archive, editor config |
 | `client.repos.publishing` | `repositories.publishing.RepositoryPublishingApi` | 14 | releases, tags, topics, forking, generating from a template |
 | `client.repos.publishing.assets` | `repositories.publishing.ReleaseAssetApi` | 5 | the files attached to a release |
 | `client.repos.hooks` | `repositories.hooks.RepositoryHookApi` | 10 | webhooks Forgejo delivers elsewhere, and the Git hooks it runs on its own machine |

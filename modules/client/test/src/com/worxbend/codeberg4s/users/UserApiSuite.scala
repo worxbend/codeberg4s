@@ -283,7 +283,7 @@ final class UserApiSuite extends FunSuite:
       ApiErrorBodyCodec.parse,
     )
 
-    use(UserApi(pipeline)).transform: outcome =>
+    use(UserApi(pipeline, Auth.Anonymous)).transform: outcome =>
       timer.close()
       outcome
 

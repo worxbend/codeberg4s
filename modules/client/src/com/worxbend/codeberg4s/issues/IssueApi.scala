@@ -219,9 +219,9 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
     *
     * '''Paging.''' The endpoint declares `page` and `limit` and reports `X-Total-Count`, but `golden/MANIFEST.md`
     * records that it sends no `Link` header, so — as with
-    * [[com.worxbend.codeberg4s.notifications.NotificationApi.list]] — the returned page reports itself as the last one
-    * whatever the total says. Compare [[Page.totalCount]] with [[Page.size]] to decide whether to ask for another
-    * window.
+    * [[com.worxbend.codeberg4s.notifications.NotificationApi.list]] — `nextPage` is derived from the total: offered
+    * while `page × items.size` is below `X-Total-Count`, the rule [[com.worxbend.codeberg4s.core.Pages]] states. A walk
+    * therefore reaches every label, at the cost of one extra empty request when the last page is short.
     *
     * '''Failures.''' The group contract above.
     *
@@ -248,7 +248,7 @@ final class IssueApi private[codeberg4s] (pipeline: ApiPipeline[Future])(using e
   /** Lists a repository's milestones — `GET /repos/{owner}/{repo}/milestones`.
     *
     * '''Paging.''' As [[listLabels]]: `page` and `limit` are declared and `X-Total-Count` is sent, but no `Link`
-    * header, so the returned page always reports itself as the last one.
+    * header, so `nextPage` is derived from the total.
     *
     * '''Failures.''' The group contract above.
     *

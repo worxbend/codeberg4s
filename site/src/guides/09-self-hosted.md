@@ -238,8 +238,8 @@ One trap: sttp models the **connect** timeout as a property of the backend rathe
 than of a request. So `connectTimeout` is honoured only by a client built with
 `CodebergClient(config)`, which creates its own backend from that value. A client
 built with `CodebergClient.usingBackend` ignores it — configure the connect
-timeout on the backend you supplied. `readTimeout` is applied per request and is
-honoured either way.
+timeout on the backend you supplied. `readTimeout` bounds the whole exchange of
+each request, headers and body, and is honoured either way.
 
 Raise the read timeout for endpoints that do real work on the instance:
 generating an archive, comparing two distant commits, migrating a repository.

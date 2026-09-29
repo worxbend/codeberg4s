@@ -164,6 +164,9 @@ final class RepositoryWikiApi private[codeberg4s] (pipeline: ApiPipeline[Future]
 
   /** Lists one page's revisions — `GET /repos/{owner}/{repo}/wiki/revisions/{pageName}`.
     *
+    * '''The page name is one segment, slash included''', for the reason the class note gives for [[page]]: this is a
+    * `{pageName}` route, not a wildcard, so `Deployment/Kubernetes` travels as `Deployment%2FKubernetes`.
+    *
     * '''The body is an envelope, not an array.''' This endpoint answers `{"commits", "count"}`, unlike the page listing
     * beside it; see [[com.worxbend.codeberg4s.repositories.hooks.wire.WikiCommitListDto]].
     * [[com.worxbend.codeberg4s.paging.Page.totalCount]] is the `X-Total-Count` header when the instance sends it, as on
@@ -297,7 +300,7 @@ object RepositoryWikiApi:
   ): CodebergRequest =
     read(
       ListRevisionsOperation,
-      wikiPath(owner, name) ++ ("revisions" :: pageName.segments),
+      wikiPath(owner, name) ++ List("revisions", pageName.value),
       PagingQuery.pageOnly(params),
     )
 

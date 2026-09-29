@@ -124,8 +124,11 @@ instance can do, and repeating the call only spends your rate-limit budget.
 ## `Retry-After`
 
 When the instance sends a `Retry-After` header and `respectRetryAfter` is on, it
-replaces the computed backoff — clamped to `maxDelay`, so a hostile or misconfigured
-instance cannot park your thread for an hour.
+replaces the computed backoff, up to `maxDelay`. A hint *beyond* `maxDelay` ends
+the call instead: the `Api` failure is returned at once with the hint attached,
+because sleeping a shorter time than the instance asked for and retrying would
+only spend more of your quota on an answer that is already known. Schedule the
+retry yourself from the hint, or raise `maxDelay` if waiting that long is fine.
 
 Two limits worth knowing:
 
@@ -136,8 +139,8 @@ Two limits worth knowing:
 - A header that is present but blank counts as absent, which is what a gateway
   that strips a value leaves behind.
 
-None of this can fail a call. A missing or unparseable `Retry-After` is always
-"no hint", never an error.
+A missing or unparseable `Retry-After` is always "no hint", never an error; the
+only hint that changes the outcome is one longer than `maxDelay`, described above.
 
 ## What you receive when it gives up
 

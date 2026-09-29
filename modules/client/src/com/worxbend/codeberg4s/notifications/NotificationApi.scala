@@ -83,14 +83,12 @@ final class NotificationApi private[codeberg4s] (pipeline: ApiPipeline[Future])(
   /** Lists the authenticated user's notification threads — `GET /notifications`.
     *
     * '''Paging.''' The spec declares `page` and `limit` for this operation and declares `X-Total-Count` on its
-    * response; it says nothing about a `Link` header, and no capture exists to settle it. Since
-    * [[com.worxbend.codeberg4s.core.Pages]] reads `nextPage` from `rel="next"` and from nothing else, an instance that
-    * sends no `Link` produces a page that reports itself as the last one however large `totalCount` is — the same
-    * situation as [[com.worxbend.codeberg4s.repositories.publishing.ReleaseAssetApi]] describes for a listing without
-    * paging, and the same remedy: compare [[com.worxbend.codeberg4s.paging.Page.totalCount]] with
-    * [[com.worxbend.codeberg4s.paging.Page.size]] to decide whether to ask for another window. Never infer the end from
-    * a short page: Forgejo clamps `limit` to its own maximum while echoing the requested value (`docs/HAZARDS.md` §5).
-    * A page past the end is `200` with `[]`.
+    * response; it says nothing about a `Link` header, and no capture exists to settle it. Either way the page ends
+    * where [[com.worxbend.codeberg4s.core.Pages]] says: `rel="next"` decides when a `Link` header is present, and
+    * otherwise `nextPage` is offered while `page × items.size` is below `X-Total-Count`, so an instance that sends no
+    * `Link` still yields every thread, at the cost of one extra empty request when the last page is short. Never infer
+    * the end from a short page yourself: Forgejo clamps `limit` to its own maximum while echoing the requested value
+    * (`docs/HAZARDS.md` §5). A page past the end is `200` with `[]`.
     *
     * '''Failures.''' The group contract above. A `422` here most often means a malformed `since` or `before`.
     *

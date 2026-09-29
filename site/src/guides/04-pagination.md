@@ -86,8 +86,11 @@ sufficient. The real ceiling lives at
 ## The signal that is correct
 
 The library decides "is there another page" from the response's `rel="next"`
-`Link` header, and from nothing else. It never looks at how many items arrived.
-Use the same signal:
+`Link` header when the response carries one. When it carries none but does send
+`X-Total-Count` — Forgejo's hook, tree, wiki-revision and topic listings do —
+the next page is offered while `page × items.size` is still below that total;
+the last page then costs one extra, empty request. Neither rule ever compares
+how many items arrived with how many were asked for. Use the same signal:
 
 ```scala mdoc:compile-only
 import com.worxbend.codeberg4s.issues.Issue

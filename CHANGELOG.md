@@ -12,6 +12,42 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Added
 
+- **`Pages` derives a next page from `X-Total-Count` when no `Link` header is
+  sent**, and from a listing envelope's own count where the total travels in
+  the body. Forgejo's hook, git tree, wiki revision, topic and issue dependency
+  listings set only the total, so `PageWalk` over them stopped after page one
+  and reported success. The next page is now offered while
+  `page × items.size < total` — `items.size`, not the requested limit, because
+  Forgejo clamps `limit` silently — at the cost of one extra empty request when
+  the last page is short. New `core.ListEnvelope`, `Pages.fromEnvelope` and
+  `ApiPipeline.callEnvelopePage`.
+- **`CodebergClient.released: Future[Unit]`** surfaces the outcome of closing an
+  owned backend, which `close()` used to discard.
+- **`CodebergConfig.of` / `validate` and `RetryPolicy.of` / `validate`** check
+  the invariants the primary constructors do not: positive timeouts and body
+  bounds, `maxAttempts ≥ 1`, non-negative delays, `maxDelay ≥ baseDelay`.
+- **`NotificationApi.markAllRead` and `markRepositoryRead` take `last_read_at`
+  and `to-status`; `markThreadRead(id, toStatus)`** — the cursor the spec offers
+  so a sweep cannot mark threads read that arrived after the listing, and the
+  status Forgejo accepts (`NotificationStatus`) so a thread can be set unread or
+  pinned.
+- **`IssueQuery.onlyOf(IssueKind)`, `mentioning`, `sortedBy`** — `type`,
+  `mentioned_by` and `sort` on the repository issue listing, which without
+  `type` returns pull requests too.
+- **`RepositoryApi.getContents(…, ref)` and `commits(…, CommitQuery, …)`** with
+  `sha`, `path` and `not`.
+- **`RepositoryFileApi.getRawFileBytes`** beside the textual `getRawFile`.
+- **`MergeStyle.RebaseUpdateOnly` and `MergeStyle.parse` / `UpdateStyle.parse`.**
+- **`Auth.basic(username, password)`**, validating the username.
+- **`Pages`, `LinkHeader` and `CodebergResponse` tolerate other `HttpPort`
+  implementations**: header keys are lowercased on construction, and `Link`
+  splitting keeps quoted parameter values whole.
+- Quality gates: the architecture-boundary checks in `verify.sh` run a self-test
+  that plants a violation before every run; the property suites run on every
+  push and pull request; the release workflow runs MIMA before publishing;
+  Renovate is configured for Mill, its plugins, the version pins and the
+  scala-cli, Coursier and PMD checksums.
+
 - **`PageWalk.attempt.all` / `.fold` / `.foreach`** — the page walk on the
   `.attempt` rail. They take an `.attempt` listing
   (`PageParams => Future[Either[CodebergError, Page[A]]]`) and answer
@@ -24,6 +60,90 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
   `Future`, and their behaviour is unchanged.
 
 ### Changed
+
+- **BREAKING — `readTimeout` bounds the whole exchange.** It used to reach the
+  JDK client as the header timeout only, so a body that stalled part-way hung
+  the call forever. The transport now races each exchange against the timer
+  and a stalled body fails with `TransportCause.Timeout`, retryable. The
+  losing exchange is abandoned rather than cancelled, because sttp's `Future`
+  backend exposes no handle to cancel it. `SttpHttpPort` takes a `Timer[Future]`.
+- **BREAKING — a `Retry-After` longer than `RetryPolicy.maxDelay` ends the call**
+  with the `Api` failure and the hint attached, instead of being clamped and
+  retried early, which spent quota on an answer already known.
+- **BREAKING — `TransportCause.Unknown` is no longer retried.** A failure the
+  adapter cannot name is a programming error more often than a transient one.
+  Every `IOException` without a case of its own is `ConnectionFailed`, and
+  `java.util.concurrent.TimeoutException` is `Timeout`, so retryable I/O never
+  lands in `Unknown`.
+- **BREAKING — `getArchive` and `getMediaFile` return `CodebergResponse`**, read
+  as bytes under `maxDownloadBodyBytes`. They decoded binary bodies as UTF-8
+  text under the 16 MiB JSON bound, which corrupted every archive and refused
+  a 20 MB tarball the download bound allows.
+- **BREAKING — `IssueApi.listComments` takes a `CommentQuery` and returns
+  `Vector[Comment]`; `ReleaseAssetApi.assets` returns `Vector[ReleaseAsset]`.**
+  Neither endpoint pages; both used to send `page` and `limit` the instance
+  ignored and hand back a `Page` that lied about its window.
+- **BREAKING — `IssueQuery.matching` and `IssueSearchQuery.matching` return
+  `Either`**, through the same `SearchKeyword` normalisation the repository and
+  user searches use: a blank keyword clears the filter instead of sending
+  `q=%20`, a control character is refused.
+- **BREAKING — `BranchRuleName` accepts `/`**, so `release/*` protection rules
+  can be read, edited and deleted by name. The name is sent as one
+  percent-encoded segment, which Forgejo's `{name}` route unescapes.
+- **BREAKING — `repositories.access.TeamName` is `TeamSlug`**, and the
+  `*WhitelistTeams` vectors on `BranchProtectionSettings`, `CreateTagProtection`
+  and `EditTagProtection` are `Vector[TeamSlug]` rather than `Vector[String]`.
+- **BREAKING — one type per concept.** `AvatarImage` is
+  `com.worxbend.codeberg4s.AvatarImage`, used by the user, organisation and
+  repository avatar endpoints; the `users.account` and `repositories.admin`
+  copies are gone, `ofBase64` validates and `ofBytes` is total. `MergeStyle` and
+  `UpdateStyle` live only in `pulls`; `ObjectFormat` and `TrustModel` only in
+  `repositories.admin`.
+- **BREAKING — `MergePullRequest.using` returns `Either`**, refusing
+  `MergeStyle.RebaseUpdateOnly`, which only a repository's default merge style
+  accepts.
+- **BREAKING — `Auth.Basic` is constructed through `Auth.basic`**, which trims
+  the username and refuses a blank one, a control character, or a `:` — the
+  wire format joins the pair with a colon, so `a:b` silently authenticated as
+  `a`.
+- **BREAKING — `RunnerId.of(Long)` returns `Either`**, refusing `0` and
+  negatives like every other numeric identifier.
+- **BREAKING — `EditIssue` and `EditPullRequest` model milestone and deadline
+  changes as ADTs.** `milestone` is `Option[MilestoneChange]` (`Assign` /
+  `Clear`), `dueDate` is `Option[DueDateChange]` (`DueBy` / `Clear`),
+  `unsetDueDate` is gone. `withoutMilestone` sends `milestone: 0`, which is how
+  Forgejo clears one and was previously impossible. `MigrateRepository` carries
+  one `auth: Option[RemoteAuth]` (`Password` / `Token`) instead of three fields
+  that could send both.
+- **BREAKING — `Other` cases carry the trimmed value in its own casing** on
+  `HookEvent`, `HookType`, `HookContentType`, `IssueFormFieldType` and
+  `AttachmentKind`, so `wireValue` round-trips; they used to lower-case it.
+- **BREAKING — `ResponseBody.bytes` returns a defensive copy**; `utf8Bytes`
+  remains the uncopied path the JSON decoder reads.
+- **BREAKING — `JsonValue.Num(Double)` is removed**; it threw on `NaN` and
+  infinity. Use `Num(BigDecimal.exact(d))`.
+- **BREAKING (behaviour) — retry policy.** `PullRequestReviewApi.dismiss` is
+  never retried, because Forgejo writes a timeline comment and sends
+  notifications on every call. Hook `edit` on repositories, organisations and
+  users is never retried, like every other partial PATCH. Username-keyed
+  membership and blocking toggles on `OrganizationMemberApi` and the
+  organisation avatar delete are now retried, like their user-side twins.
+- **The token routes refuse anything but basic credentials before dialling.**
+  Forgejo wraps `/users/{username}/tokens` in basic-or-reverse-proxy auth, so a
+  token-authenticated client got `401` with nothing pointing at the cause; now
+  `list`, `create` and `delete` fail at once with `Validation` on `"auth"`.
+- **`Wire.required`'s message** reads `required field 'x' is missing, null, or
+  not of the expected JSON kind`, since the field view folds all three.
+- **Credential types hash a SHA-256 digest of their material** instead of
+  `String.hashCode`; equality is unchanged.
+- **`PageNumber.next` and `PageParams.next` saturate at `Int.MaxValue`.**
+- **`LabelName` and `MilestoneTitle` refuse `.` and `..`**, so a label removed
+  by name cannot render a dot segment on a DELETE route.
+- **GitHub is the canonical forge.** The POM, SCM, issue templates, security
+  policy and site point at `github.com/worxbend/codeberg4s`; the Forgejo CI
+  workflow is a mirror gate. The nightly job is split into a must-be-green
+  `with-slow` job and a `mutation` job that is allowed to fail and says why.
+- **Non-2xx bodies are parsed from at most 64 KiB** (`ApiPipeline.MaxErrorBodyBytes`).
 
 - **The pinned spec moved to `16.0.0-dev-753-6bcc6da0+gitea-1.22.0`**, the
   document codeberg.org served on 2026-09-29. A structural diff against the
@@ -446,6 +566,46 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
   `case CodebergError.Validation(field, message) => field`. Reading `.field` and
   `.message` off a value already typed as the failure is unchanged, and so is
   every smart constructor's result type.
+
+### Fixed
+
+- **Slashed names on single-segment routes.** `/wiki/page/{pageName}`,
+  `/wiki/revisions/{pageName}`, `/releases/tags/{tag}`, `/sync_fork/{branch}`
+  and `/editorconfig/{filename}` are `{param}` routes in Forgejo, not wildcards
+  like `/branches/*`; the client split a slashed value into several segments and
+  got `404` for a page or release that existed. Each is now one percent-encoded
+  segment.
+- **Strings over 4,194,304 characters failed to decode.** The parser kept
+  jsoniter's default character-buffer cap while the transport allowed 16 MiB
+  bodies, so a `contents` or `blob` response of about 3 MiB failed with a
+  size-blind decoding error. The bounds now cover twice
+  `CodebergConfig.DefaultMaxResponseBodyBytes`.
+- **A whole number outside the `Long` range wrapped silently**;
+  `JsonFields.number` and `JsonValue.longOpt` answer `None` and
+  `JsonDecoder[Long]` fails with "does not fit an int64".
+- **Webhook decoders are `Decode.sensitive`**, so a body carrying
+  `authorization_header` is never quoted in a decoding failure or telemetry.
+- **`OrganizationMemberApi.isMember` no longer depends on the backend following
+  redirects**; a `3xx` falls back to the public-members probe.
+- **`PageWalk`: a synchronously throwing `fetch` fails the walk's `Future`**
+  instead of escaping the call.
+- **`Json.parse` no longer throws from its own exception handler** when a
+  parser exception carries an empty message.
+- **Topics a repository response carries that `Topic.from` rejects are dropped**
+  instead of failing the whole listing.
+- **The wide-object hash index is under half full at every width**, not only at
+  powers of two.
+- `verify.sh`: the multi-directory architecture-boundary checks were inert —
+  the directory list reached grep as one non-existent path — and the `Await`,
+  bare-exception and `CodebergRequest` constructor bans had never run. The
+  `Future` import ban now catches braced, wildcard and fully-qualified forms; a
+  failing test run prints its step and counts instead of exiting early; every
+  test module must report a fresh non-zero total; `scripts/cpd.sh` refuses an
+  unpinned PMD version without a checksum.
+- The one timing-dependent `FutureTimerSuite` test is deterministic.
+- Stale `CLAUDE.md` citations point at `CONTRIBUTING.md` and `build.mill`;
+  `docs/waves/REMAINING.md` is gone; the golden manifest records what personal
+  data the captures hold and how a takedown is handled.
 
 ### Removed
 
