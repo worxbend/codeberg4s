@@ -120,16 +120,28 @@ final class AdminRequestsSuite extends FunSuite:
     assert(body.contains(""""auth_username":"octocat""""), body)
     assert(body.contains(""""auth_password":"ghp_SECRET""""), body)
 
-  test("a migrate emits both credential keys when both were set, because Forgejo decides which it wants"):
-    val command = MigrateRepository
+  test("a migrate carries one form of authentication, and the later builder replaces the earlier"):
+    // The previous shape emitted auth_password and auth_token together when
+    // both had been set and left Forgejo to choose. Authentication is one
+    // RemoteAuth field now, so the body can only ever carry one form.
+    val tokenLast = MigrateRepository
       .from("https://github.com/a/b.git", repo("b"))
       .authenticatedAs("octocat", credential("pw"))
       .authenticatedWith(credential("tok"))
 
-    val body = MigrateRepoOptionsDto.render(command)
+    val passwordLast = MigrateRepository
+      .from("https://github.com/a/b.git", repo("b"))
+      .authenticatedWith(credential("tok"))
+      .authenticatedAs("octocat", credential("pw"))
 
-    assert(body.contains(""""auth_password":"pw""""), body)
-    assert(body.contains(""""auth_token":"tok""""), body)
+    val tokenBody    = MigrateRepoOptionsDto.render(tokenLast)
+    val passwordBody = MigrateRepoOptionsDto.render(passwordLast)
+
+    assert(tokenBody.contains(""""auth_token":"tok""""), tokenBody)
+    assert(!tokenBody.contains("auth_password"), tokenBody)
+    assert(!tokenBody.contains("auth_username"), tokenBody)
+    assert(passwordBody.contains(""""auth_username":"octocat","auth_password":"pw""""), passwordBody)
+    assert(!passwordBody.contains("auth_token"), passwordBody)
 
   test("a credential is escaped into the JSON string and cannot break out of it"):
     val command = MigrateRepository

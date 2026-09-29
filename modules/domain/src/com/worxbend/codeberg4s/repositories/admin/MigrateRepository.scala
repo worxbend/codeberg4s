@@ -10,11 +10,16 @@ import com.worxbend.codeberg4s.{Owner, RepoName}
   *
   * ==This request carries a credential for somebody else's forge==
   *
-  * [[credential]] is a [[RemoteCredential]] and it is the reason this type exists rather than a bag of strings: the
-  * value is a GitHub token or a GitLab password, it travels in a request body, and it must never appear in a log line,
-  * a [[com.worxbend.codeberg4s.CallContext]] or a [[com.worxbend.codeberg4s.CodebergError]]. `RemoteCredential`'s own
-  * `toString` is the mask, so the `toString` this case class generates is masked too — a command may be logged whole
-  * without leaking.
+  * [[auth]] holds a [[RemoteCredential]] and it is the reason this type exists rather than a bag of strings: the value
+  * is a GitHub token or a GitLab password, it travels in a request body, and it must never appear in a log line, a
+  * [[com.worxbend.codeberg4s.CallContext]] or a [[com.worxbend.codeberg4s.CodebergError]]. `RemoteCredential`'s own
+  * `toString` is the mask, so the `toString` this case class generates — through [[RemoteAuth]]'s — is masked too, and
+  * a command may be logged whole without leaking.
+  *
+  * The credential is one field of one [[RemoteAuth]], not a password field beside a token field. Two fields let
+  * `authenticatedAs(user, password).authenticatedWith(token)` send `auth_password` and `auth_token` in the same body
+  * and left Forgejo to choose between them; with one field the later builder replaces the earlier, and a body carries
+  * one form of authentication or none.
   *
   * ==Mirror or copy==
   *
@@ -38,13 +43,9 @@ import com.worxbend.codeberg4s.{Owner, RepoName}
   *   the new repository's description
   * @param service
   *   which kind of forge is at [[cloneAddress]] — see [[MigrationService]]
-  * @param username
-  *   the account to authenticate to the remote as
-  * @param credential
-  *   the password or token for the remote, sent as `auth_password`. Write-only — see [[RemoteCredential]]
-  * @param token
-  *   the token for the remote, sent as `auth_token`. Forgejo accepts either this or [[credential]] depending on the
-  *   service; both are write-only for the same reason
+  * @param auth
+  *   how to authenticate to the remote, when it needs authenticating to — a username and password, or a token; see
+  *   [[RemoteAuth]] for which Forgejo wants for which service. Write-only — see [[RemoteCredential]]
   * @param isPrivate
   *   whether the new repository is private
   * @param isMirror
@@ -74,9 +75,7 @@ final case class MigrateRepository(
     repoOwner: Option[Owner],
     description: Option[String],
     service: Option[MigrationService],
-    username: Option[String],
-    credential: Option[RemoteCredential],
-    token: Option[RemoteCredential],
+    auth: Option[RemoteAuth],
     isPrivate: Boolean,
     isMirror: Boolean,
     mirrorInterval: Option[String],
@@ -99,12 +98,17 @@ final case class MigrateRepository(
   /** States which kind of forge is being migrated from. */
   def usingService(kind: MigrationService): MigrateRepository = copy(service = Some(kind))
 
-  /** Authenticates to the remote as `user` with `password`. The credential never leaves the request body. */
+  /** Authenticates to the remote as `user` with `password`, replacing any token set before. The credential never leaves
+    * the request body.
+    */
   def authenticatedAs(user: String, password: RemoteCredential): MigrateRepository =
-    copy(username = Some(user), credential = Some(password))
+    copy(auth = Some(RemoteAuth.Password(user, password)))
 
-  /** Authenticates to the remote with a token rather than a password. Write-only, as [[authenticatedAs]] is. */
-  def authenticatedWith(remoteToken: RemoteCredential): MigrateRepository = copy(token = Some(remoteToken))
+  /** Authenticates to the remote with a token rather than a password, replacing any password set before. Write-only, as
+    * [[authenticatedAs]] is.
+    */
+  def authenticatedWith(remoteToken: RemoteCredential): MigrateRepository =
+    copy(auth = Some(RemoteAuth.Token(remoteToken)))
 
   /** Creates the new repository private. */
   def asPrivate: MigrateRepository = copy(isPrivate = true)
@@ -170,9 +174,7 @@ object MigrateRepository:
       repoOwner            = None,
       description          = None,
       service              = None,
-      username             = None,
-      credential           = None,
-      token                = None,
+      auth                 = None,
       isPrivate            = false,
       isMirror             = false,
       mirrorInterval       = None,
@@ -185,6 +187,28 @@ object MigrateRepository:
       includesReleases     = false,
       includesWiki         = false,
     )
+
+/** How a migration authenticates to the forge it is copying from.
+  *
+  * Forgejo's `MigrateRepoOptions` offers three properties for this — `auth_username`, `auth_password` and `auth_token`
+  * — and which of them a migration should fill depends on the [[MigrationService]]: a token for the forges Forgejo
+  * talks to over an API, a username and password for a bare remote over HTTP basic authentication. The two forms are
+  * alternatives, so they are two cases of one type rather than three optional fields: a [[MigrateRepository]] carries
+  * one of them or neither, and a body that named both — which the previous shape allowed and Forgejo resolved however
+  * it liked — cannot be built.
+  *
+  * Both cases hold a [[RemoteCredential]], so the `toString` either generates is masked and a command may be logged
+  * whole. Both are write-only, for the reason that type gives.
+  */
+enum RemoteAuth:
+
+  /** A username and password, for a remote that takes HTTP basic authentication. Sends `auth_username` and
+    * `auth_password`.
+    */
+  case Password(username: String, password: RemoteCredential)
+
+  /** A token for the remote's API. Sends `auth_token`. */
+  case Token(token: RemoteCredential)
 
 /** Everything `POST /repos/{owner}/{repo}/transfer` may be told, as one value.
   *

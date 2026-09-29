@@ -3,6 +3,7 @@ package com.worxbend.codeberg4s.repositories.wire
 import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.codec.GoldenFixtures
 import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.WireModel
 import com.worxbend.codeberg4s.repositories.Repository
 import com.worxbend.codeberg4s.repositories.RepositoryPermissions
 import com.worxbend.codeberg4s.wire.SearchEnvelopeDto
@@ -191,11 +192,28 @@ final class RepositoryDtoSuite extends FunSuite with GoldenFixtures:
       case Left(failure)     => assertEquals(failure.path.render, "$.id")
       case Right(repository) => fail(s"expected a failure, converted $repository")
 
-  test("a topic that could not go back into a request path fails the repository, by position"):
-    Json.decode[RepositoryDto]("""{"id":1,"name":"r","owner":{"id":2,"login":"o"},"topics":["ok","bad/topic"]}""")
-      .flatMap(_.toDomain) match
-      case Left(failure)     => assertEquals(failure.path.render, "$.topics[1]")
-      case Right(repository) => fail(s"expected a failure, converted $repository")
+  test("a topic that could not go back into a request path is dropped, and the repository still converts"):
+    // The one array in the module that departs from first-failure-wins; the
+    // DTO's Scaladoc argues why. In short: topics are shown, not sent back from
+    // here, and Forgejo's own grammar cannot produce a value Topic.from
+    // rejects, so failing a page over one is protecting nothing.
+    Json.decode[RepositoryDto](
+      """{"id":1,"name":"r","owner":{"id":2,"login":"o"},"topics":["ok","bad/topic","  ","..","also-ok"]}"""
+    ).flatMap(_.toDomain) match
+      case Right(repository) => assertEquals(repository.topics.map(_.value), Vector("ok", "also-ok"))
+      case Left(failure) => fail(s"a bad topic must not fail the repository: ${failure.path.render} ${failure.message}")
+
+  test("one bad topic on one repository does not cost a listing the other repositories"):
+    val page =
+      """[{"id":1,"name":"a","owner":{"id":2,"login":"o"},"topics":["forge"]},""" +
+        """{"id":3,"name":"b","owner":{"id":2,"login":"o"},"topics":["ok","bad/topic"]},""" +
+        """{"id":4,"name":"c","owner":{"id":2,"login":"o"},"topics":[]}]"""
+
+    Json.decode[Vector[RepositoryDto]](page).flatMap(WireModel.all(JsonPath.Root, _)) match
+      case Right(repositories) =>
+        assertEquals(repositories.map(_.slug.value), Vector("o/a", "o/b", "o/c"))
+        assertEquals(repositories.map(_.topics.map(_.value)), Vector(Vector("forge"), Vector("ok"), Vector.empty))
+      case Left(failure)       => fail(s"the page must convert: ${failure.path.render} ${failure.message}")
 
   test("a default branch that could not be addressed fails the repository"):
     Json.decode[RepositoryDto]("""{"id":1,"name":"r","owner":{"id":2,"login":"o"},"default_branch":".."}""")

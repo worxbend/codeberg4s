@@ -90,6 +90,29 @@ final class IssueRequestBodySuite extends FunSuite:
   test("an unset unset_due_date is not sent as false"):
     assertEquals(EditIssueOptionDto.render(EditIssue.Empty.dueBy(Friday)), """{"due_date":"2026-08-07T17:00:00Z"}""")
 
+  test("setting and clearing a deadline are one field, so the later call is the only one sent"):
+    // The previous shape sent due_date and unset_due_date: true together for
+    // dueBy(friday).withoutDueDate and left Forgejo to pick, which it did by
+    // ignoring the flag — the opposite of what the caller said last.
+    assertEquals(EditIssueOptionDto.render(EditIssue.Empty.dueBy(Friday).withoutDueDate), """{"unset_due_date":true}""")
+    assertEquals(
+      EditIssueOptionDto.render(EditIssue.Empty.withoutDueDate.dueBy(Friday)),
+      """{"due_date":"2026-08-07T17:00:00Z"}""",
+    )
+
+  test("an edit's milestone is sent as its id"):
+    assertEquals(EditIssueOptionDto.render(EditIssue.Empty.inMilestone(Release)), """{"milestone":3109}""")
+
+  test("clearing a milestone sends 0, the value Forgejo reads as none, and the later call wins"):
+    // A MilestoneId cannot be 0, so this spelling is reachable only through
+    // withoutMilestone — which is what keeps it out of every other request.
+    assertEquals(EditIssueOptionDto.render(EditIssue.Empty.withoutMilestone), """{"milestone":0}""")
+    assertEquals(EditIssueOptionDto.render(EditIssue.Empty.inMilestone(Release).withoutMilestone), """{"milestone":0}""")
+    assertEquals(
+      EditIssueOptionDto.render(EditIssue.Empty.withoutMilestone.inMilestone(Release)),
+      """{"milestone":3109}""",
+    )
+
   test("a comment sends its body and nothing else"):
     assertEquals(
       CreateIssueCommentOptionDto.render(orFail(CreateComment.of("looks right"))),

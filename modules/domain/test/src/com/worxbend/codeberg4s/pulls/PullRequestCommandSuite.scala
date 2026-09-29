@@ -1,8 +1,10 @@
 package com.worxbend.codeberg4s.pulls
 
 import com.worxbend.codeberg4s.ValidationError
+import com.worxbend.codeberg4s.issues.DueDateChange
 import com.worxbend.codeberg4s.issues.IssueStateChange
 import com.worxbend.codeberg4s.issues.LabelId
+import com.worxbend.codeberg4s.issues.MilestoneChange
 import com.worxbend.codeberg4s.issues.MilestoneId
 import com.worxbend.codeberg4s.repositories.BranchName
 import com.worxbend.codeberg4s.repositories.CommitSha
@@ -101,7 +103,6 @@ final class PullRequestCommandSuite extends FunSuite:
     assertEquals(EditPullRequest.Empty.state, None)
     assertEquals(EditPullRequest.Empty.base, None)
     assertEquals(EditPullRequest.Empty.dueDate, None)
-    assertEquals(EditPullRequest.Empty.unsetDueDate, false)
     assertEquals(EditPullRequest.Empty.allowMaintainerEdit, None)
 
   test("every edit builder sets its own field and leaves every sibling alone"):
@@ -111,12 +112,13 @@ final class PullRequestCommandSuite extends FunSuite:
     assertEquals(edit.withBody("replaced"), edit.copy(body = Some("replaced")))
     assertEquals(edit.assignedTo(Vector("crystal")), edit.copy(assignees = Some(Vector("crystal"))))
     assertEquals(edit.labelled(Vector(Chore)), edit.copy(labels = Some(Vector(Chore))))
-    assertEquals(edit.inMilestone(Next), edit.copy(milestone = Some(Next)))
+    assertEquals(edit.inMilestone(Next), edit.copy(milestone = Some(MilestoneChange.Assign(Next))))
+    assertEquals(edit.withoutMilestone, edit.copy(milestone = Some(MilestoneChange.Clear)))
     assertEquals(edit.close, edit.copy(state = Some(IssueStateChange.Close)))
     assertEquals(edit.reopen, edit.copy(state = Some(IssueStateChange.Reopen)))
     assertEquals(edit.withBase(Stable), edit.copy(base = Some(Stable)))
-    assertEquals(edit.dueBy(Monday), edit.copy(dueDate = Some(Monday)))
-    assertEquals(edit.withoutDueDate, edit.copy(unsetDueDate = true))
+    assertEquals(edit.dueBy(Monday), edit.copy(dueDate = Some(DueDateChange.DueBy(Monday))))
+    assertEquals(edit.withoutDueDate, edit.copy(dueDate = Some(DueDateChange.Clear)))
     assertEquals(edit.allowingMaintainerEdit, edit.copy(allowMaintainerEdit = Some(true)))
     assertEquals(edit.forbiddingMaintainerEdit, edit.copy(allowMaintainerEdit = Some(false)))
 
@@ -128,17 +130,21 @@ final class PullRequestCommandSuite extends FunSuite:
     assertEquals(EditPullRequest.Empty.withTitle("t").assignees, None)
     assertEquals(EditPullRequest.Empty.withTitle("t").labels, None)
 
-  test("clearing a deadline is its own flag and not a deadline of some sentinel instant"):
-    val cleared = EditPullRequest.Empty.withoutDueDate
+  test("clearing a deadline is its own case and not a deadline of some sentinel instant"):
+    assertEquals(EditPullRequest.Empty.withoutDueDate.dueDate, Some(DueDateChange.Clear))
 
-    assertEquals(cleared.unsetDueDate, true)
-    assertEquals(cleared.dueDate, None)
+  test("setting and clearing a deadline are one field, so the later call replaces the earlier"):
+    assertEquals(EditPullRequest.Empty.dueBy(Friday).dueDate, Some(DueDateChange.DueBy(Friday)))
+    assertEquals(EditPullRequest.Empty.dueBy(Friday).withoutDueDate.dueDate, Some(DueDateChange.Clear))
+    assertEquals(EditPullRequest.Empty.withoutDueDate.dueBy(Friday).dueDate, Some(DueDateChange.DueBy(Friday)))
 
-  test("setting a deadline does not raise the unset flag"):
-    val deadlined = EditPullRequest.Empty.dueBy(Friday)
-
-    assertEquals(deadlined.dueDate, Some(Friday))
-    assertEquals(deadlined.unsetDueDate, false)
+  test("moving into a milestone and leaving one are one field, so the later call replaces the earlier"):
+    assertEquals(EditPullRequest.Empty.withoutMilestone.milestone, Some(MilestoneChange.Clear))
+    assertEquals(EditPullRequest.Empty.inMilestone(Next).withoutMilestone.milestone, Some(MilestoneChange.Clear))
+    assertEquals(
+      EditPullRequest.Empty.withoutMilestone.inMilestone(Next).milestone,
+      Some(MilestoneChange.Assign(Next)),
+    )
 
   test("close and reopen set opposite transitions, and the later call wins"):
     assertEquals(EditPullRequest.Empty.close.state, Some(IssueStateChange.Close))
@@ -231,11 +237,10 @@ final class PullRequestCommandSuite extends FunSuite:
       body                = Some("original body"),
       assignees           = Some(Vector("earl-warren")),
       labels              = Some(Vector(Bug)),
-      milestone           = Some(Release),
+      milestone           = Some(MilestoneChange.Assign(Release)),
       state               = Some(IssueStateChange.Reopen),
       base                = Some(Main),
-      dueDate             = Some(Friday),
-      unsetDueDate        = false,
+      dueDate             = Some(DueDateChange.DueBy(Friday)),
       allowMaintainerEdit = Some(false),
     )
 

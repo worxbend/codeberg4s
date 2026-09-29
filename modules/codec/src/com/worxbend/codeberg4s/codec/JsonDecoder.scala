@@ -101,13 +101,18 @@ object JsonDecoder:
     case JsonValue.Bool(value) => Right(value)
     case other                 => Left(DecodeFailure(JsonPath.Root, s"expected a boolean but found ${other.kind}"))
 
-  /** A JSON number, truncated toward zero.
+  /** A JSON number, truncated toward zero, that fits an `int64`.
     *
     * The two number cases are named rather than matched through `JsonValue.Num`, whose extractor would build a
     * `BigDecimal` for the [[JsonValue.Int64]] case that this decoder would then throw away — which is the cost the two
     * cases exist to avoid.
+    *
+    * A whole number past the `Long` range is a failure, not the low 64 bits of itself: [[JsonValue.longOpt]] is the
+    * shared rule, and a decoder that answered `Long.MinValue` for `9223372036854775808` would be handing the domain a
+    * different identifier from the one the instance sent.
     */
   given long: JsonDecoder[Long] =
-    case JsonValue.Int64(value)   => Right(value)
-    case JsonValue.Decimal(value) => Right(value.toLong)
-    case other                    => Left(DecodeFailure(JsonPath.Root, s"expected a number but found ${other.kind}"))
+    case JsonValue.Int64(value)         => Right(value)
+    case decimal @ JsonValue.Decimal(_) =>
+      decimal.longOpt.toRight(DecodeFailure(JsonPath.Root, "expected a number that fits an int64, but it does not"))
+    case other => Left(DecodeFailure(JsonPath.Root, s"expected a number but found ${other.kind}"))

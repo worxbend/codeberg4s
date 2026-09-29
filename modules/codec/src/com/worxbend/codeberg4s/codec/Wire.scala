@@ -18,6 +18,11 @@ object Wire:
 
   /** Demands a field the domain cannot represent without.
     *
+    * The message names all three wire shapes [[JsonFields]] folds into one `None` — absent, `null`, and present with a
+    * value of the wrong JSON kind — because from here they are indistinguishable, and an earlier wording that said only
+    * "missing" sent a reader of the log looking for a key that was in the payload the whole time, holding a string
+    * where a number was wanted.
+    *
     * @param at
     *   the path of the model being converted
     * @param field
@@ -26,7 +31,9 @@ object Wire:
     *   the value, or a failure at `at.field(field)`
     */
   def required[A](at: JsonPath, field: String, value: Option[A]): Either[DecodeFailure, A] =
-    value.toRight(DecodeFailure(at.field(field), s"required field '$field' is missing"))
+    value.toRight(
+      DecodeFailure(at.field(field), s"required field '$field' is missing, null, or not of the expected JSON kind")
+    )
 
   /** Demands a field and puts it through a domain smart constructor in one step.
     *

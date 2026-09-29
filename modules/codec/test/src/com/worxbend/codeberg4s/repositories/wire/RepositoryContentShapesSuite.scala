@@ -55,7 +55,7 @@ final class RepositoryContentShapesSuite extends FunSuite:
         |]""".stripMargin
 
     assertEquals(failure(body).path.render, "$[0].path")
-    assertEquals(failure(body).message, "required field 'path' is missing")
+    assertEquals(failure(body).message, "required field 'path' is missing, null, or not of the expected JSON kind")
 
   test("a directory whose entries all convert is not a failure at all"):
     val body = """[{"name": "a", "path": "a", "sha": "abcdef12", "type": "file"}]"""

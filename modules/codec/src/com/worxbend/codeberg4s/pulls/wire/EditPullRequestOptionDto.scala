@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.pulls.wire
 
-import com.worxbend.codeberg4s.codec.{Json, JsonValue, Timestamps, WireValues}
+import com.worxbend.codeberg4s.codec.{Json, JsonValue, WireValues}
+import com.worxbend.codeberg4s.issues.wire.EditIssueOptionDto
 import com.worxbend.codeberg4s.pulls.EditPullRequest
 
 /** Forgejo's `EditPullRequestOption` request model — the body of `PATCH /repos/{owner}/{repo}/pulls/{index}`.
@@ -8,14 +9,18 @@ import com.worxbend.codeberg4s.pulls.EditPullRequest
   * An object rather than a case class, for the reason [[CreatePullRequestOptionDto]] gives.
   *
   * '''Only what the caller set is emitted, and here that is the entire semantics of the request.''' A `PATCH` leaves
-  * alone whatever the body does not mention, so an unset field must not become a key. Three consequences are worth
+  * alone whatever the body does not mention, so an unset field must not become a key. Four consequences are worth
   * spelling out because they are easy to get wrong:
   *
   *   - `assignees` and `labels` are emitted whenever the corresponding builder was called, '''including with an empty
   *     vector''' — Forgejo replaces each list rather than adding to it, so `[]` is how a caller clears one, and it must
   *     be distinguishable from never having mentioned it;
   *   - clearing a deadline is `unset_due_date: true`, not `due_date: null`, because Forgejo cannot tell a null from an
-  *     absent key. The flag is emitted only when set;
+  *     absent key. The flag is emitted only when set, and never beside a `due_date`, because both are spellings of one
+  *     [[com.worxbend.codeberg4s.issues.DueDateChange]];
+  *   - clearing a milestone is `milestone: 0`, the value Forgejo reads as none. The `milestone` and deadline keys are
+  *     rendered by [[com.worxbend.codeberg4s.issues.wire.EditIssueOptionDto]], because `EditPullRequestOption` has them
+  *     with the same meaning as `EditIssueOption` and the spelling of "none" belongs in one place;
   *   - `allow_maintainer_edit` is emitted for both `true` and `false`, since the caller asking to switch it off is a
   *     real request and is not the same as leaving it alone. That is why the field is an `Option[Boolean]` and why
   *     [[com.worxbend.codeberg4s.pulls.EditPullRequest]] offers two named methods rather than one taking a `Boolean`.
@@ -31,14 +36,13 @@ private[codeberg4s] object EditPullRequestOptionDto:
 
   private def fields(command: EditPullRequest): List[(String, JsonValue)] =
     List(
-      command.title.map(text       => "title" -> JsonValue.Str(text)),
-      command.body.map(text        => "body" -> JsonValue.Str(text)),
-      command.assignees.map(logins => "assignees" -> WireValues.strings(logins)),
-      command.labels.map(ids       => "labels" -> WireValues.identifiers(ids.map(_.value))),
-      command.milestone.map(id     => "milestone" -> WireValues.identifier(id.value)),
-      command.state.map(change     => "state" -> JsonValue.Str(change.wireValue)),
-      command.base.map(branch      => "base" -> JsonValue.Str(branch.value)),
-      command.dueDate.map(moment   => "due_date" -> JsonValue.Str(Timestamps.render(moment))),
-      Option.when(command.unsetDueDate)("unset_due_date" -> JsonValue.Bool(true)),
+      command.title.map(text                  => "title" -> JsonValue.Str(text)),
+      command.body.map(text                   => "body" -> JsonValue.Str(text)),
+      command.assignees.map(logins            => "assignees" -> WireValues.strings(logins)),
+      command.labels.map(ids                  => "labels" -> WireValues.identifiers(ids.map(_.value))),
+      command.milestone.map(EditIssueOptionDto.milestoneField),
+      command.state.map(change                => "state" -> JsonValue.Str(change.wireValue)),
+      command.base.map(branch                 => "base" -> JsonValue.Str(branch.value)),
+      command.dueDate.map(EditIssueOptionDto.dueDateField),
       command.allowMaintainerEdit.map(allowed => "allow_maintainer_edit" -> JsonValue.Bool(allowed)),
     ).flatten

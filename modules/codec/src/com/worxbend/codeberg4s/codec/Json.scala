@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.codec
 
-import com.worxbend.codeberg4s.JsonPath
 import com.worxbend.codeberg4s.core.{Decode, DecodeFailure, ResponseBody}
+import com.worxbend.codeberg4s.{CodebergConfig, JsonPath}
 
 import com.github.plokhotnyuk.jsoniter_scala.core.{ReaderConfig, readFromArray, readFromString, writeToString}
 
@@ -39,16 +39,41 @@ object Json:
 
   private val Ellipsis: String = "..."
 
-  /** Parsing is configured to keep the message short and free of payload.
+  /** How large a body, and how long a single string inside it, the parser accepts: twice
+    * [[com.worxbend.codeberg4s.CodebergConfig.DefaultMaxResponseBodyBytes]].
+    *
+    * '''This is coupled to `maxResponseBodyBytes`, and the coupling runs one way.''' The transport refuses a response
+    * past that bound before any of it reaches this parser, so under the default configuration nothing this size is ever
+    * parsed and the parser's own bound never fires. It exists because jsoniter has its own, smaller default —
+    * `maxCharBufSize` is 4,194,304 characters in 2.40.1 — and a body well inside the transport's bound could carry one
+    * string past it: a `contents` or `blob` response holds a whole file as one base64 string, so a file of about three
+    * mebibytes was answered with a `DecodeFailure` that said nothing about size. A string can never hold more
+    * characters than the body held bytes, so a character bound equal to the byte bound covers every string the
+    * transport lets through.
+    *
+    * The factor of two is headroom for a consumer who raises `maxResponseBodyBytes` moderately. One who raises it past
+    * this figure gets the old failure back — `too long string exceeded 'maxCharBufSize'` — for a body between the two
+    * bounds, which is why the two are stated next to each other here rather than tuned independently.
+    */
+  val MaxParsedBytes: Int = (2L * CodebergConfig.DefaultMaxResponseBodyBytes).toInt
+
+  /** Parsing is configured to keep the message short and free of payload, and to accept what the transport accepts.
     *
     * `appendHexDumpToParseException` is off because a hex dump of a response body is payload, and this library's
     * failures are logged. The nesting limit is a second guard alongside [[JsonValue.MaxDepth]] — jsoniter enforces it
     * while reading rather than after.
+    *
+    * `maxCharBufSize` is the bound that matters for size — see [[MaxParsedBytes]]. `maxBufSize` is set to the same
+    * figure for the record rather than for effect: it bounds the byte buffer jsoniter '''grows''' while reading from an
+    * `InputStream`, and both entry points below hand it a complete array — `readFromString` encodes to one first —
+    * which it adopts as the buffer without consulting the bound at all. Checked against the 2.40.1 bytecode: the only
+    * caller of `maxBufSize` is the reader's private `growBuf`, which the array path never reaches.
     */
   private val Config: ReaderConfig =
     ReaderConfig
       .withAppendHexDumpToParseException(false)
-      .withMaxBufSize(1 << 22)
+      .withMaxBufSize(MaxParsedBytes)
+      .withMaxCharBufSize(MaxParsedBytes)
       .withPreferredBufSize(1 << 14)
 
   /** Decodes a body into `A`, from the bytes that arrived.
@@ -119,9 +144,22 @@ object Json:
     try Right(parsed)
     catch case NonFatal(error) => Left(DecodeFailure(JsonPath.Root, reasonOf(error)))
 
-  private def reasonOf(error: Throwable): String =
-    Option(error.getMessage).map(bound).getOrElse(error.getClass.getName)
+  /** The one line a failure quotes from a parser exception: the first line of its message, bounded at
+    * [[MaxReasonLength]], or the exception's class name when there is no message to quote.
+    *
+    * "No message to quote" covers a `null` message and an empty or blank one alike. The blank case matters because this
+    * runs inside the `catch` in [[read]]: an earlier version took `linesIterator.next()` of the trimmed message, which
+    * on an empty message throws `NoSuchElementException` from the very handler that exists to stop exceptions escaping.
+    *
+    * Package-visible so that case can be tested — nothing `parse` reads from bytes makes jsoniter raise a blank
+    * message, so the guarantee has to be proved on the method itself.
+    */
+  private[codec] def reasonOf(error: Throwable): String =
+    Option(error.getMessage)
+      .map(_.trim)
+      .flatMap(_.linesIterator.nextOption())
+      .map(bound)
+      .getOrElse(error.getClass.getName)
 
-  private def bound(message: String): String =
-    val trimmed = message.trim.linesIterator.next()
-    if trimmed.length <= MaxReasonLength then trimmed else s"${trimmed.take(MaxReasonLength)}$Ellipsis"
+  private def bound(line: String): String =
+    if line.length <= MaxReasonLength then line else s"${line.take(MaxReasonLength)}$Ellipsis"

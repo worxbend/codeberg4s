@@ -65,6 +65,26 @@ final class JsonFieldsSuite extends FunSuite:
     assertEquals(mistyped.nested("o"), None)
     assertEquals(mistyped.texts("list"), Vector.empty[String])
 
+  test("a whole number past the Long range reads as absent rather than as a wrapped Long"):
+    // The same rule as JsonValue.longOpt, seen from the accessor every DTO
+    // uses: a field the domain needs then fails at its own name in toDomain
+    // instead of arriving as a different identifier.
+    val huge = fieldsOf("""{"id":9223372036854775808,"n":1e30,"max":9223372036854775807,"frac":2.9}""")
+
+    assertEquals(huge.number("id"), None)
+    assertEquals(huge.number("n"), None)
+    assertEquals(huge.number("max"), Some(Long.MaxValue))
+    assertEquals(huge.number("frac"), Some(2L))
+
+  test("a wide object reads correctly at the widths the old index sizing filled past 90%"):
+    // 15 and 31 fields used to get 16 and 32 slots. Every field must still be
+    // found, and an absent name must still terminate the probe.
+    Vector(15, 31).foreach: width =>
+      val wide = fieldsOf((0 until width).map(at => s""""f$at":$at""").mkString("{", ",", "}"))
+
+      (0 until width).foreach(at => assertEquals(wide.number(s"f$at"), Some(at.toLong), s"field f$at of $width"))
+      assertEquals(wide.number("absent"), None)
+
   test("Forgejo's empty string for unset text is folded into absence"):
     val blank = fieldsOf("""{"login_name":"","language":"   "}""")
 
