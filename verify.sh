@@ -24,8 +24,8 @@
 # nothing else. Separation is what the constitution asks for — property tests
 # stay out of the routine gate, out of coverage and out of mutation runs — but
 # separation only means something if something still executes them, so
-# `--properties` is a mode of its own and the nightly workflow gives it a job of
-# its own. See docs/CONSTITUTION_MAPPING.md.
+# `--properties` is a mode of its own and both CI workflows give it a job of its
+# own, beside the routine gate. See docs/CONSTITUTION_MAPPING.md.
 
 set -euo pipefail
 
@@ -191,11 +191,17 @@ if $properties; then
   done
 
   property_log="$work_dir/properties.log"
-  set -o pipefail
+  # `set +e` around the pipeline, as the CPD step does. pipefail is on for the
+  # whole script, so under `set -e` a failing Mill run ended the script from
+  # inside the pipeline — before PIPESTATUS was read, before the "FAILED at
+  # step N" line, and before any count below could be printed. (The previous
+  # `set +o pipefail` after the pipeline also switched pipefail off for the
+  # rest of the script; nothing toggles it now.)
+  set +e
   "$MILL" "${property_targets[@]}" 2>&1 |
     sed 's/\x1b\[[0-9;]*m//g' | tee "$property_log"
   property_status=${PIPESTATUS[0]}
-  set +o pipefail
+  set -e
   [[ "$property_status" -eq 0 ]] || fail "property suites"
 
   property_failed=$(grep -oE 'finished: [0-9]+ failed' "$property_log" |
@@ -303,11 +309,18 @@ test_log="$work_dir/tests.log"
 # prints "finished: \e[91m3 failed\e[39m". A count that matched a bare digit
 # skipped exactly the suites that failed — undercounting the total AND reading
 # zero failures. Strip first, then count.
-set -o pipefail
+#
+# And `set +e` around the pipeline, as the CPD step does: pipefail is on for the
+# whole script, so under `set -e` a failing Mill run ended the script from
+# inside the pipeline — before PIPESTATUS was read and before the "FAILED at
+# step N" line or any count below could be printed. Got wrong once as well.
+test_started="$work_dir/tests.started"
+touch "$test_started"
+set +e
 "$MILL" "${test_targets[@]}" 2>&1 |
   sed 's/\x1b\[[0-9;]*m//g' | tee "$test_log"
 test_status=${PIPESTATUS[0]}
-set +o pipefail
+set -e
 [[ "$test_status" -eq 0 ]] || fail "unit tests"
 
 failed=$(grep -oE 'finished: [0-9]+ failed' "$test_log" | awk '{ sum += $2 } END { print sum + 0 }')
@@ -315,10 +328,41 @@ failed=$(grep -oE 'finished: [0-9]+ failed' "$test_log" | awk '{ sum += $2 } END
 
 executed=$(grep -oE 'finished: [0-9]+ failed, [0-9]+ ignored, [0-9]+ total' "$test_log" |
   awk '{ sum += $6 } END { print sum + 0 }')
-if [[ "$executed" -lt 100 ]]; then
-  fail "only $executed tests executed — the suite is not actually running"
+# The floor catches a run that executed almost nothing — a mis-scoped filter, a
+# broken discovery, a chain that Mill read as name filters — not a target to
+# grow towards. It sat at 100 against a suite thirty-six times that size, which
+# would have let four of the five modules vanish unnoticed.
+#
+# MEASURED, NOT RECALLED: the routine gate executed 3646 tests on 2026-09-29
+# (domain 1183, core 193, codec 1242, transport 45, client 992 — the per-module
+# figures from the JUnit reports below, which count the 9 ignored as well).
+# 3000 leaves room for suites to be merged or trimmed and none for a module to
+# drop out. To remeasure, read the "tests executed" line of a green run and the
+# per-module lines under it, then move both this number and this comment.
+readonly UNIT_TEST_FLOOR=3000
+if [[ "$executed" -lt "$UNIT_TEST_FLOOR" ]]; then
+  fail "only $executed tests executed, floor is $UNIT_TEST_FLOOR — the suite is not actually running"
 fi
 echo "  $executed tests executed"
+
+# Every module in the chain has to have reported tests of its own. The total
+# above cannot tell a run in which one module executed nothing — an empty test
+# tree, a mis-spelled target, a discovery failure — from a healthy one, as long
+# as the others are large enough to carry it over the floor. Mill writes a
+# JUnit report per test module; its root element carries the module's total.
+# A report older than this run is a cached artifact, not evidence, and is
+# treated as missing.
+for target in "${UNIT_MODULES[@]}"; do
+  report="out/${target//./\/}/testForked.dest/test-report.xml"
+  if [[ ! -f "$report" || ! "$report" -nt "$test_started" ]]; then
+    fail "$target left no fresh test report at $report — did the module run at all?"
+  fi
+  module_total=$(sed -n 's/.*<testsuites [^>]*tests="\([0-9]*\)".*/\1/p' "$report" | head -1)
+  if [[ -z "$module_total" || "$module_total" -eq 0 ]]; then
+    fail "$target reported ${module_total:-no} tests — the module executed nothing"
+  fi
+  printf '    %-24s %5s tests\n' "$target" "$module_total"
+done
 
 # An excluded suite still reports a line, with everything ignored and a total of
 # zero. So a `*Props` suite with a non-zero total is a property suite that ran
@@ -338,19 +382,95 @@ echo "  no property suite ran inside the gate"
 # ---------------------------------------------------------------------------
 announce "Architecture boundary check"
 # These are the reviewer's veto list from PLAN.md §8, cheap enough to automate.
+#
+# Usage: boundary_violation PATTERN WHY DIR...
+#
+# The directories are separate arguments, and that is load-bearing. Until
+# 2026-09-29 the multi-directory calls below passed their roots as ONE quoted,
+# space-joined string, which grep took as a single path called
+# "modules/domain/src modules/core/src …". No such path exists, grep exited 2,
+# its stderr was discarded, and the Await ban, the bare-exception ban and the
+# CodebergRequest constructor ban passed on every commit without reading a line
+# of Scala. boundary_self_test below plants a violation in the second of two
+# directories and asserts this function sees it, so the check cannot go inert
+# again without failing the gate.
 boundary_violation() {
-  local where="$1" pattern="$2" why="$3"
-  if grep -rInE "$pattern" "$where" --include='*.scala' >/dev/null 2>&1; then
-    printf '\033[31m  %s\033[0m\n' "$why"
-    grep -rInE "$pattern" "$where" --include='*.scala' | sed 's/^/    /'
-    return 1
+  local pattern="$1" why="$2"
+  shift 2
+  local dir
+  for dir in "$@"; do
+    if [[ ! -d "$dir" ]]; then
+      printf '\033[31m  %s: source tree %s does not exist — nothing was checked\033[0m\n' "$why" "$dir"
+      return 1
+    fi
+  done
+  # grep exits 0 on a match, 1 on none and 2 on an error. Only 1 is a clean
+  # result. An error is reported as loudly as a violation, because it means the
+  # check did not run — which is exactly what used to pass silently.
+  local hits status=0
+  hits=$(grep -rInE "$pattern" --include='*.scala' -- "$@" 2>&1) || status=$?
+  case "$status" in
+    1) return 0 ;;
+    0) printf '\033[31m  %s\033[0m\n' "$why" ;;
+    *) printf '\033[31m  %s: grep exited %s\033[0m\n' "$why" "$status" ;;
+  esac
+  sed 's/^/    /' <<<"$hits"
+  return 1
+}
+
+# Proves boundary_violation can still see a violation before anything below
+# trusts it. Two trees, with the violation planted in the SECOND: a single
+# directory worked all along, so that is the shape the space-joined bug missed.
+# Every spelling the Future ban claims to catch is planted in turn, and the
+# permitted `scala.concurrent.duration` imports are planted once to prove they
+# are not caught.
+boundary_self_test() {
+  local root="$work_dir/boundary-self-test"
+  local clean="$root/clean/src" planted="$root/planted/src"
+  mkdir -p "$clean" "$planted"
+  printf 'package p\n\nimport scala.concurrent.duration.FiniteDuration\n\nobject Clean\n' >"$clean/Clean.scala"
+  printf 'package p\n\nobject Bad:\n  def run = scala.concurrent.Await.result(???, ???)\n' >"$planted/Bad.scala"
+
+  if ! boundary_violation 'Await\.(result|ready)' 'self-test' "$clean" >/dev/null; then
+    fail "boundary self-test: a clean tree was reported as a violation"
   fi
-  return 0
+  if boundary_violation 'Await\.(result|ready)' 'self-test' "$clean" "$planted" >/dev/null; then
+    fail "boundary self-test: a planted Await in the second of two directories went unseen — the check is inert"
+  fi
+
+  local form
+  for form in \
+    'import scala.concurrent.Future' \
+    'import scala.concurrent.{ExecutionContext, Future}' \
+    'import scala.concurrent.*' \
+    'import scala.concurrent._' \
+    'import scala.concurrent.{' \
+    'def f: scala.concurrent.Future[Unit] = ???'; do
+    printf 'package p\n\n%s\n' "$form" >"$planted/Bad.scala"
+    if boundary_violation "$FORBIDDEN_IN_DOMAIN_AND_CORE" 'self-test' "$clean" "$planted" >/dev/null; then
+      fail "boundary self-test: the Future ban does not match \`$form\`"
+    fi
+  done
+  printf 'package p\n\nimport scala.concurrent.duration.*\nimport scala.concurrent.duration.{Duration, FiniteDuration}\n' \
+    >"$planted/Bad.scala"
+  if ! boundary_violation "$FORBIDDEN_IN_DOMAIN_AND_CORE" 'self-test' "$clean" "$planted" >/dev/null; then
+    fail "boundary self-test: scala.concurrent.duration was reported as a violation"
+  fi
+  rm -rf "$root"
+  echo "  self-test: a planted violation is seen, a duration import is not"
 }
 
 # scala.concurrent.duration is fine everywhere — FiniteDuration is how timeouts
-# and backoff are typed. It is Future and ExecutionContext that must not appear
-# below the client module.
+# and backoff are typed. Future, ExecutionContext, Await, Promise and blocking
+# must not appear in domain or core: docs/adr/0005-future-public-api.md keeps
+# retry and pagination in core over the abstract `Exec[F]`, tested with
+# `F = Either`, and lets `Future` appear only at the outermost projection. That
+# projection is the client module, and transport is Future-aware by design —
+# SttpHttpPort implements `HttpPort[Future]` over sttp's `Backend[Future]` — so
+# neither is in this list. Nor is codec: CONTRIBUTING.md § "Architecture
+# boundaries" gives it one rule, no sttp, and that is what is checked below.
+# (An earlier version of this comment said "below the client module", which
+# would have included transport; the directory list never did.)
 #
 # The JSON alternatives are the other half of PLAN.md §3.1: domain and core know
 # neither the transport nor a JSON library. Until this commit the list read
@@ -372,25 +492,49 @@ boundary_violation() {
 # loudly, and it is also what covers the case where the offending symbol arrives
 # through a module that is on the graph.
 readonly FORBIDDEN_JSON='com\.github\.plokhotnyuk|upickle|ujson|io\.circe|play\.api\.libs\.json|zio\.json|com\.fasterxml\.jackson|org\.json4s|com\.google\.gson'
-readonly FORBIDDEN_BELOW_CLIENT="^import (sttp|$FORBIDDEN_JSON|scala\\.concurrent\\.(Future|ExecutionContext|Await|Promise|blocking))"
+
+# The concurrency half, in every spelling Scala allows: a plain import, a braced
+# import (`import scala.concurrent.{ExecutionContext, Future}` — the form
+# scalafmt writes when two names are imported), a wildcard import
+# (`scala.concurrent.*` or `._`), the opening line of a braced import that
+# scalafmt broke across lines, and a fully-qualified reference in code with no
+# import at all (`scala.concurrent.Future[A]`). Until 2026-09-29 only the plain
+# import was matched, so a braced import walked straight past this check.
+#
+# `scala.concurrent.duration` is deliberately not matched: the wildcard
+# alternative must follow `scala.concurrent.` directly, and the braced
+# alternative names the banned members rather than matching any brace.
+readonly FORBIDDEN_CONCURRENT='scala\.concurrent\.(\{[^}]*\b(Future|ExecutionContext|Await|Promise|blocking)\b|\{[^}]*$|[*_]|(Future|ExecutionContext|Await|Promise|blocking)\b)'
+readonly FORBIDDEN_IN_DOMAIN_AND_CORE="^import (sttp|$FORBIDDEN_JSON)|$FORBIDDEN_CONCURRENT"
+
+# Every production source tree. modules/it and modules/examples are absent on
+# purpose: neither is published, and the rules below are about what ships.
+readonly PRODUCTION_SRC=(
+  modules/domain/src
+  modules/core/src
+  modules/codec/src
+  modules/transport/src
+  modules/client/src
+)
+
+boundary_self_test
 
 boundaries_ok=true
-boundary_violation modules/domain/src "$FORBIDDEN_BELOW_CLIENT" \
-  'domain must depend on nothing but the standard library' || boundaries_ok=false
-boundary_violation modules/core/src "$FORBIDDEN_BELOW_CLIENT" \
-  'core must not know about sttp, a JSON library or Future' || boundaries_ok=false
-boundary_violation modules/codec/src '^import sttp' \
-  'codec must not know about the transport' || boundaries_ok=false
+boundary_violation "$FORBIDDEN_IN_DOMAIN_AND_CORE" \
+  'domain must depend on nothing but the standard library' modules/domain/src || boundaries_ok=false
+boundary_violation "$FORBIDDEN_IN_DOMAIN_AND_CORE" \
+  'core must not know about sttp, a JSON library or Future' modules/core/src || boundaries_ok=false
+boundary_violation '^import sttp' \
+  'codec must not know about the transport' modules/codec/src || boundaries_ok=false
 # The mirror image of the line above, and stated in docs/adr/0003 as the reason
 # the unused sttp-upickle integration was dropped: the transport reads every
 # body as a String and hands it to codec, so the JSON library stays out of it.
-boundary_violation modules/transport/src "^import ($FORBIDDEN_JSON)" \
-  'transport must not know about a JSON library — it reads bodies as String' || boundaries_ok=false
-boundary_violation 'modules/domain/src modules/core/src modules/codec/src modules/transport/src modules/client/src' \
-  'Await\.(result|ready)' 'Await is banned in production code' || boundaries_ok=false
-boundary_violation 'modules/domain/src modules/core/src modules/codec/src modules/transport/src modules/client/src' \
-  'new (Exception|RuntimeException|IllegalStateException)\(' \
-  'bare exceptions are banned — every failure carries a CallContext' || boundaries_ok=false
+boundary_violation "^import ($FORBIDDEN_JSON)" \
+  'transport must not know about a JSON library — it reads bodies as String' modules/transport/src || boundaries_ok=false
+boundary_violation 'Await\.(result|ready)' \
+  'Await is banned in production code' "${PRODUCTION_SRC[@]}" || boundaries_ok=false
+boundary_violation 'new (Exception|RuntimeException|IllegalStateException)\(' \
+  'bare exceptions are banned — every failure carries a CallContext' "${PRODUCTION_SRC[@]}" || boundaries_ok=false
 # The security contract on `CodebergRequest` says no call site can set an
 # `Authorization` header, and the reason it holds is that no endpoint spells the
 # constructor out: the builders in `object CodebergRequest` take no headers
@@ -402,9 +546,9 @@ boundary_violation 'modules/domain/src modules/core/src modules/codec/src module
 # builds a request bearing an Authorization header on purpose, to prove the
 # transport strips it, and that test is the evidence for the other half of the
 # contract.
-boundary_violation 'modules/codec/src modules/transport/src modules/client/src' \
-  '[^.[:alnum:]]CodebergRequest\(' \
-  'build requests with the CodebergRequest builders, not the constructor' || boundaries_ok=false
+boundary_violation '[^.[:alnum:]]CodebergRequest\(' \
+  'build requests with the CodebergRequest builders, not the constructor' \
+  modules/codec/src modules/transport/src modules/client/src || boundaries_ok=false
 $boundaries_ok || fail "architecture boundaries"
 echo "  boundaries clean"
 
