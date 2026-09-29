@@ -68,7 +68,6 @@ final class RetryEngineProps extends PropertyBase:
           TransportCause.ConnectionFailed("connection reset"),
           TransportCause.Timeout("read timed out"),
           TransportCause.Dns("name not resolved"),
-          TransportCause.Unknown("unclassified"),
         )
         .map(cause  => CodebergError.Transport(context, cause)),
     )
@@ -85,6 +84,9 @@ final class RetryEngineProps extends PropertyBase:
           TransportCause.Tls("certificate expired"),
           TransportCause.Interrupted("cancelled"),
           TransportCause.ResponseTooLarge("Stream length limit of 16777216 bytes exceeded"),
+          // Not I/O: the adapter maps every IOException to one of the three
+          // retryable causes, so what is left here is a programming error.
+          TransportCause.Unknown("client has been shut down"),
         )
         .map(cause  => CodebergError.Transport(context, cause)),
       Gen.const(CodebergError.DecodingFailed(context, "{", JsonPath.Root, "unexpected end of input")),
@@ -219,7 +221,21 @@ final class RetryEngineProps extends PropertyBase:
         runFailing(honouring, HttpMethod.Get, RetryEligibility.AlwaysRetry, error, Some(hint.millis))
       val ignored   =
         runFailing(ignoring, HttpMethod.Get, RetryEligibility.AlwaysRetry, error, Some(hint.millis))
+      // A hint within the ceiling is waited for exactly; one beyond it ends the
+      // call before any wait, so the honouring engine sleeps not at all.
+      val expected  = if hint <= ceiling then Vector(hint.millis) else Vector.empty[FiniteDuration]
 
-      (honoured.sleeps ?= Vector(math.min(hint, ceiling).millis)).label("the hint, clamped to the ceiling") &&
+      (honoured.sleeps ?= expected).label("the hint when within the ceiling, no wait at all beyond it") &&
       (ignored.sleeps ?= Vector(math.min(10L, ceiling).millis)).label("the policy's own backoff")
+    }
+
+  property("a hint beyond the ceiling ends the call with the failure unwrapped, whatever attempts remain".tag(Property)):
+    forAll(Gen.choose(1L, 20000L), Gen.choose(1L, 40000L), retryableErrors) { (ceiling, excess, error) =>
+      val policy = RetryPolicy(6, 10.millis, ceiling.millis, Jitter.None, respectRetryAfter = true)
+      val run    =
+        runFailing(policy, HttpMethod.Get, RetryEligibility.AlwaysRetry, error, Some((ceiling + excess).millis))
+
+      (run.result ?= Left(error)).label("reported unwrapped, not as exhaustion") &&
+      (run.attempts.size ?= 1).label("no second attempt") &&
+      (run.sleeps ?= Vector.empty[FiniteDuration]).label("no wait")
     }

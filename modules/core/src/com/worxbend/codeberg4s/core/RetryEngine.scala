@@ -12,16 +12,24 @@ import scala.concurrent.duration.{DurationLong, FiniteDuration}
   *   1. is the call allowed to be repeated at all — [[RetryEligibility]], which the caller states;
   *   1. is this particular failure worth repeating — a transport failure that can heal, or one of
   *      [[StatusMapping.RetryableStatuses]];
-  *   1. how long to wait — the server's `Retry-After` when the policy honours it, otherwise `baseDelay * 2^(n - 1)`
-  *      after the *n*-th failed attempt, clamped to `maxDelay` and then jittered.
+  *   1. how long to wait — the server's `Retry-After` when the policy honours it and the hint is within `maxDelay`,
+  *      otherwise `baseDelay * 2^(n - 1)` after the *n*-th failed attempt, clamped to `maxDelay` and then jittered.
+  *
+  * '''A `Retry-After` beyond `maxDelay` ends the call.''' The ceiling is the longest wait the caller agreed to, and a
+  * server asking for more than that is asking for a wait this engine has no mandate to take. Clamping the hint and
+  * retrying early — what this engine once did — is worse than either honouring or refusing it: the repeat arrives
+  * before the server said it would accept one, is answered with the same `429`, and burns an attempt and a unit of
+  * rate-limit quota to learn nothing. So the failure is surfaced at once and unwrapped — the
+  * [[com.worxbend.codeberg4s.CodebergError.Api]] carrying the status and the server's `retryAfter` — and the caller,
+  * who knows the hint, decides whether to wait that long.
   *
   * Nothing is lost when it gives up: a call the engine was repeating and could not repeat again reports
   * [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]], carrying the number of attempts and the last underlying
   * error verbatim. Every other failure is reported unwrapped, because there is nothing to explain: a call that fails
   * once and is not repeated — a `404`, a `POST` under [[RetryEligibility.IdempotentOnly]], a policy of
-  * [[com.worxbend.codeberg4s.retry.RetryPolicy.Off]] — and equally a call whose last attempt failed in a way no
-  * repetition could fix, such as a `503` followed by a `404`. `RetriesExhausted` therefore means the attempt budget ran
-  * out, never merely that more than one attempt was made.
+  * [[com.worxbend.codeberg4s.retry.RetryPolicy.Off]], a hint beyond the ceiling — and equally a call whose last attempt
+  * failed in a way no repetition could fix, such as a `503` followed by a `404`. `RetriesExhausted` therefore means the
+  * attempt budget ran out, never merely that more than one attempt was made.
   *
   * Waiting goes through [[Timer]] and jitter through [[JitterSource]], so the whole schedule is observable in a unit
   * test without a single real millisecond passing.
@@ -69,7 +77,8 @@ final class RetryEngine[F[_]](policy: RetryPolicy, timer: Timer[F])(using exec: 
       outcome.result match
         case Right(value) => exec.pure(value)
         case Left(error)  =>
-          if shouldRetry(method, eligibility, number, error) then
+          if beyondCeiling(outcome.retryAfter) then exec.raise(error)
+          else if shouldRetry(method, eligibility, number, error) then
             waitThenRetry(operation, method, eligibility, number, attempt, outcome.retryAfter)
           else exec.raise(giveUp(operation, method, eligibility, number, error))
 
@@ -92,6 +101,13 @@ final class RetryEngine[F[_]](policy: RetryPolicy, timer: Timer[F])(using exec: 
   ): Boolean =
     number < policy.maxAttempts && eligibility.allows(method) && RetryEngine.isRetryable(error)
 
+  /** Whether the server asked for a longer wait than the policy allows — tested before anything else, because such a
+    * hint ends the call whatever attempts remain. See the class note. Only a policy that honours `Retry-After` reads
+    * the hint at all; under one that does not, the hint is ignored here as everywhere.
+    */
+  private def beyondCeiling(hint: Option[FiniteDuration]): Boolean =
+    policy.respectRetryAfter && hint.exists(_ > policy.maxDelay)
+
   /** The failure the caller receives once the loop has stopped.
     *
     * Wrapping in [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]] is a claim that the attempt budget is what
@@ -112,16 +128,17 @@ final class RetryEngine[F[_]](policy: RetryPolicy, timer: Timer[F])(using exec: 
       CodebergError.RetriesExhausted(RetryEngine.contextOf(operation, method, error), attempts, error)
     else error
 
+  /** The wait before the next attempt. A honoured hint is used exactly and never jittered — it is the server's
+    * schedule, not this engine's guess — and by the time it gets here [[beyondCeiling]] has already ruled out one
+    * longer than `maxDelay`, so there is nothing left to clamp.
+    */
   private def delayAfter(failedAttempts: Int, hint: Option[FiniteDuration]): FiniteDuration =
     hint match
-      case Some(retryAfter) if policy.respectRetryAfter => capped(retryAfter)
+      case Some(retryAfter) if policy.respectRetryAfter => retryAfter
       case _                                            => jittered(backoff(failedAttempts))
 
   private def backoff(failedAttempts: Int): FiniteDuration =
     RetryEngine.doubled(policy.baseDelay.toMillis, failedAttempts - 1, policy.maxDelay.toMillis).millis
-
-  private def capped(delay: FiniteDuration): FiniteDuration =
-    if delay > policy.maxDelay then policy.maxDelay else delay
 
   private def jittered(delay: FiniteDuration): FiniteDuration =
     policy.jitter match
@@ -150,16 +167,27 @@ object RetryEngine:
       // even in principle.
       case CodebergError.WalkTruncated(_, _)        => false
 
-  /** A TLS failure does not heal by itself, an interruption was asked for, and an oversized body would arrive oversized
-    * again — repeating that one would download the body the bound exists to refuse once per attempt. Everything else
-    * may be transient.
+  /** Only a failure of the network itself is worth repeating: a connection that could not be made or was lost, a
+    * timeout, a name that did not resolve.
+    *
+    * A TLS failure does not heal by itself, an interruption was asked for, and an oversized body would arrive oversized
+    * again — repeating that one would download the body the bound exists to refuse once per attempt.
+    *
+    * [[com.worxbend.codeberg4s.TransportCause.Unknown]] is '''not''' repeated either, and that is a deliberate reading
+    * of what "unknown" means once the adapter classifies every I/O failure. The transport adapter maps any
+    * `java.io.IOException` it has no more specific case for to `ConnectionFailed`, so what is left as `Unknown` is what
+    * a backend threw that was not I/O at all: an `IllegalArgumentException` for a request it could not build, an
+    * `IllegalStateException` from a client that has been shut down, an `UnsupportedOperationException` from a
+    * user-supplied backend that does not implement something — and this library's own pre-flight refusals, an
+    * unparseable base URI or an unsafe multipart media type. Every one of those is a programming error that the same
+    * request would reproduce, and repeating it three times with backoff only delays the report by several seconds.
     */
   private[core] def isRetryable(cause: TransportCause): Boolean =
     cause match
       case TransportCause.ConnectionFailed(_) => true
       case TransportCause.Timeout(_)          => true
       case TransportCause.Dns(_)              => true
-      case TransportCause.Unknown(_)          => true
+      case TransportCause.Unknown(_)          => false
       case TransportCause.Tls(_)              => false
       case TransportCause.Interrupted(_)      => false
       case TransportCause.ResponseTooLarge(_) => false
