@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.hooks.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, NestedMembers, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.hooks.{WikiCommit, WikiPage, WikiPageMeta}
 import com.worxbend.codeberg4s.repositories.wire.GitIdentityDto
@@ -192,13 +192,18 @@ final case class WikiCommitListDto(entries: Vector[WikiCommitDto], count: Option
 
 object WikiCommitListDto:
 
+  /** Validates only consumed array members, including embedded DTOs, before lenient projection. */
+  private[codeberg4s] def validateMembers(fields: JsonFields, at: JsonPath): Either[DecodeFailure, Unit] =
+    NestedMembers.objectArray(fields, at, EntriesKey)
+
   /** The wire key the revisions sit under. */
   val EntriesKey: String = "commits"
 
   /** Reads a `WikiCommitList` envelope. A missing or `null` `commits` key is an empty listing, not a failure. */
   given JsonDecoder[WikiCommitListDto] =
-    JsonFields.reader: fields =>
+    JsonDecoder.checkedObjectOf(fields =>
       WikiCommitListDto(
         entries = fields.nestedAll(EntriesKey).map(WikiCommitDto.fromFields),
         count   = fields.number("count"),
       )
+    )(validateMembers)

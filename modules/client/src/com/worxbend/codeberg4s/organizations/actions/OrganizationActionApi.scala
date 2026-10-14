@@ -236,7 +236,7 @@ final class OrganizationActionApi private[codeberg4s] (pipeline: ApiPipeline[Fut
     * digit and one using a reserved `GITHUB_` or `GITEA_` prefix.
     */
   def setSecret(org: OrgName, secret: SecretName, value: SecretValue): Future[Unit] =
-    pipeline.callUnit(OrganizationActionApi.setSecretRequest(org, secret, value), RetryEligibility.AlwaysRetry)
+    pipeline.callUnitSensitive(OrganizationActionApi.setSecretRequest(org, secret, value), RetryEligibility.AlwaysRetry)
 
   /** Deletes an organisation secret — `DELETE /orgs/{org}/actions/secrets/{secretname}`.
     *

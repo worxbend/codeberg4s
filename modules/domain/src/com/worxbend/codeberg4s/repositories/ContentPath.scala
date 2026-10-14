@@ -25,6 +25,14 @@ object ContentPath:
   def from(value: String): Either[ValidationError, ContentPath] =
     PathSegment.segmented("filepath", value)
 
+  /** Parses a wire filename verbatim, including leading/trailing spaces and nonempty all-space segments.
+    *
+    * Rejects empty paths, every control character, absolute/trailing slashes, empty segments and `.`/`..` segments.
+    * Unlike [[from]], never repairs identity by trimming. Literal construction keeps its existing stricter policy.
+    */
+  def fromExact(value: String): Either[ValidationError, ContentPath] =
+    PathSegment.segmentedExact("filepath", value)
+
   /** Builds a repository-relative path from a string literal, checked while the code compiles.
     *
     * `ContentPath("...")` '''is''' the repository-relative path, with no `Either` to unwrap: a literal is either valid

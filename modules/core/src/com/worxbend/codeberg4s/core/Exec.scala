@@ -11,8 +11,8 @@ import com.worxbend.codeberg4s.CodebergError
   *
   * An instance is expected to be lawful in the usual sense: `map` preserves identity and composition, `flatMap` is
   * associative with `pure` as its unit, `attempt` turns a raised error into a `Left` without losing it, and `suspend`
-  * defers evaluation of its thunk until the effect runs. Core logic tested with [[Exec.Result]] therefore behaves
-  * identically under `Future`.
+  * evaluates its thunk at the interpreter's suspended boundary. Synchronous [[Exec.Result]] tests prove policy and
+  * sequencing, not Future scheduling, lifecycle or wider defect behavior; those require the Future integration tests.
   *
   * @tparam F
   *   the effect the client runs in
@@ -33,7 +33,8 @@ trait Exec[F[_]]:
 
   /** Materialises the error channel, so a failure becomes a `Left` value the caller can branch on.
     *
-    * The resulting effect always succeeds. Only [[CodebergError]] is caught; a defect stays a defect.
+    * Raised [[CodebergError]] becomes a successful Left. A wider interpreter failure remains failed; a defect stays a
+    * defect.
     */
   def attempt[A](fa: F[A]): F[Either[CodebergError, A]]
 

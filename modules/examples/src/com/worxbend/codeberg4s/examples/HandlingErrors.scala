@@ -24,16 +24,16 @@ import scala.concurrent.{Await, ExecutionContext, Future}
   *
   * Every operation appears twice. `client.repos.get(owner, name)` returns `Future[Repository]` and fails that `Future`
   * with [[com.worxbend.codeberg4s.CodebergException]]; `client.repos.attempt.get(owner, name)` returns
-  * `Future[Either[CodebergError, Repository]]` and never fails. The second is the first with its failure channel
-  * materialised, so the two cannot disagree about what an operation does — choosing a rail is a choice of style, never
-  * of behaviour.
+  * `Future[Either[CodebergError, Repository]]` for library failures. Defects and lifecycle failures remain failed
+  * Futures on both rails. The second is the first with its library failure channel materialised, so the two cannot
+  * disagree about what an operation does — choosing a rail is a choice of style, never of behaviour.
   *
   * ==There is no `NotFound` case==
   *
   * This is the single most common wrong assumption about the library, so the program prints the proof. The ADT has
   * exactly six cases:
   *
-  *   - `Transport` — nothing reached the server;
+  *   - `Transport` — no complete usable response arrived; the server may already have applied the request;
   *   - `Api` — the server answered, and `status` is the HTTP status;
   *   - `DecodingFailed` — a 2xx body did not match the model;
   *   - `Validation` — an argument was rejected before a request was built;

@@ -20,7 +20,7 @@ Five artifacts, one version, one tag.
 | `modules.domain` | `com.worxbend:codeberg4s-domain_3` | nothing |
 | `modules.core` | `com.worxbend:codeberg4s-core_3` | domain |
 | `modules.codec` | `com.worxbend:codeberg4s-codec_3` | domain, core |
-| `modules.transport` | `com.worxbend:codeberg4s-transport_3` | core, codec |
+| `modules.transport` | `com.worxbend:codeberg4s-transport_3` | core |
 | `modules.client` | `com.worxbend:codeberg4s-client_3` | core, codec, transport |
 
 The `_3` suffix is Mill's Scala binary-version suffix; the `artifactName`
@@ -78,12 +78,13 @@ is actually in the jar.
 - Add a new value to an *open* enum such as `NotificationSubjectType`, which
   already carries an `Other(raw)` case precisely so that upstream additions are
   not breaking.
-- **Add a field to a response model** — a model decoded from a Forgejo payload
-  and never built by a caller, such as `Repository`, `Issue`, `PullRequest`,
-  `User` or `ServerApiSettings`. Their constructors are `private[codeberg4s]`,
-  so no caller outside this library can be calling `apply` or `copy`, and a
-  new field cannot break source compatibility for anyone. See the note below
-  on why this exemption exists and what it does not cover.
+- **Add a field to a response model only as a deliberate shape change.** A
+  `private[codeberg4s]` constructor prevents external Scala callers from
+  constructing or copying these models; it does not stabilize their public
+  extractor, `Product`, or `Mirror` shape. Named-field readers of unchanged
+  fields remain source-compatible. Fixed-arity patterns and product derivations
+  can break when a field is appended, so this is a breaking change under the
+  policy below, even when MIMA reports only a static forwarder.
 
 ### These are breaking, and are never a patch
 
@@ -96,32 +97,30 @@ is actually in the jar.
   default arguments are banned here anyway, and they would not make it binary
   compatible.
 
-#### Why response models are exempt
+#### Response construction is private; extraction is public
 
-Forgejo adds fields to its response payloads routinely. When every model was a
-public case class, each of those additions changed a generated `<init>`,
-`apply`, `copy` and `copy$default$N` in this library, so tracking upstream
-meant a breaking release — a major version, once `0.1.0` is the baseline. That
-would have been a major version of this library for a field nobody asked for.
+Response constructors are `private[codeberg4s]`, so DTOs and in-library fixtures
+can construct them while external Scala callers read their fields. This reduces
+accidental construction coupling but does not exempt response growth from source
+compatibility review: public fixed-arity extractors and `Product`/`Mirror`
+consumers observe the case-class shape.
 
-The constructors of response models are therefore `private[codeberg4s]`. Every
-source tree in this repository lives under `com.worxbend.codeberg4s`, so each
-DTO's `toDomain` and every test fixture still builds them; only code outside
-the library loses the constructor. Reading fields and pattern matching are
-untouched, so a caller can still destructure a `Repository` in a `match`.
+A Scala 3.8.4 external-package compiler probe demonstrated this distinction:
+`case ServerApiSettings(max, _, _, _)` compiles against the current four-field
+model. The same source fails with `Wrong number of argument patterns` against a
+synthetic copy with one appended field and the same qualified-private
+constructor. Prefer named-field reads in long-lived consumer code.
 
-Two things this exemption does **not** cover:
+- Adding, removing, reordering, renaming or retyping response fields must be
+  reviewed as a source/API shape change, not merely an inaccessible constructor
+  change. During `0.x`, such a break requires a minor-version bump.
+- Qualified-private members remain public in bytecode. MIMA's measured behavior
+  below still explains static-forwarder filtering, but a successful binary check
+  is not proof that old extractor source recompiles. Append rather than insert
+  when growth is intentional; inspect external source consumers as well as MIMA.
 
-- **Removing, renaming or retyping an existing field is still breaking**, on
-  both source and binary compatibility. The exemption is for growth only.
-- **A qualified-private constructor is still public in the bytecode**, so a
-  binary-compatibility checker can still complain about one. It complains far
-  less than expected, and only about one member — see
-  ["What MIMA reports for a response model"](#what-mima-reports-for-a-response-model)
-  below, which measures it. The short version: put a new field **last**, and
-  the whole cost is one filter line for that model. Those filters are lines to
-  write, not releases to renumber, because no external caller can have
-  compiled against the member being filtered.
+The following changes are also breaking:
+
 - **Adding a case to a closed `enum`.** `CodebergError` has exactly six
   cases — `Transport`, `Api`, `DecodingFailed`, `Validation`,
   `RetriesExhausted`, `WalkTruncated` — and every consumer that matches on it
@@ -235,9 +234,9 @@ carries the snippet.
 
 #### What MIMA reports for a response model
 
-The policy above lets a `0.x.0` add a field to a response model, on the
-grounds that its constructor is `private[codeberg4s]` and no outside caller
-can be calling it. Scala erases qualified private to plain `public` bytecode,
+The policy above requires a deliberate source-compatibility decision when a
+`0.x.0` adds a response field: old positional extractors can stop compiling.
+Separately, Scala erases qualified private to plain `public` bytecode,
 so the obvious worry is that MIMA sees `<init>`, `apply` and `copy` on all
 131 of those classes and objects to a field being added to any of them.
 
@@ -278,7 +277,7 @@ Two consequences, both practical:
   when a field is inserted ahead of them. Row three above is the same
   one-field change as row two, moved to the front, and it costs five extra
   reports that are not synthetic noise. Appending keeps the bill at one line.
-- **The exemption really is about response models.** Row four is the same
+- **The private-constructor filtering is specific to response models.** Row four is the same
   insertion into a command model, whose constructor is public: `this`, `copy`,
   every `copy$default$N`, both `apply`s and the `_N` accessors are all
   reported. That is the check doing its job, and it is why the filter written
@@ -309,8 +308,9 @@ import com.github.lolgab.mill.mima.{DirectMissingMethodProblem, Mima, ProblemFil
 
   /** One line per response model that gained a field since the versions in
     * `Publish.binaryCompatibleWith`. Each entry filters the static `apply`
-    * forwarder Scala 3 emits for a `private[codeberg4s]` constructor, which no
-    * caller outside this library can have compiled against.
+    * forwarder Scala 3 emits for a `private[codeberg4s]` constructor. External
+    * Scala-source construction cannot use it; public JVM bytecode consumers can.
+    * Accept a filter only under an explicit consumer compatibility decision.
     */
   def mimaBinaryIssueFilters = Task {
     Seq(
@@ -322,6 +322,10 @@ import com.github.lolgab.mill.mima.{DirectMissingMethodProblem, Mima, ProblemFil
 
 Note it is `ProblemFilter.exclude`, singular — sbt-mima spells the same thing
 `ProblemFilters.exclude`, and the plural does not compile here.
+
+Public JVM members are part of the binary surface, including for Java callers.
+A missing forwarder is not universally harmless merely because Scala source
+access was restricted: apply the breaking-change policy before adding a filter.
 
 Every entry carries a comment naming the release and the field, so the list
 can be pruned when the compatibility window resets at the next minor bump.

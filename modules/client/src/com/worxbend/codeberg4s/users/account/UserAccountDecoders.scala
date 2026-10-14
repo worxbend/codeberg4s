@@ -40,15 +40,9 @@ import com.worxbend.codeberg4s.users.account.wire.{EmailDto, OAuth2ApplicationDt
   */
 private[account] object UserAccountDecoders:
 
-  /** One OAuth2 application object as a '''read''' returns it — never with a secret in it.
-    *
-    * Forgejo stores the secret hashed, so `GET /user/applications/oauth2/{id}` cannot carry one. That is why this keeps
-    * the ordinary body excerpt on a decoding failure while [[issuedApplication]] does not: the two responses have the
-    * same shape and different consequences, and one decoder for both would have to be as cautious as the more dangerous
-    * of them.
-    */
+  /** One OAuth2 application. Treat reads as sensitive too: an untrusted response may carry `client_secret`. */
   val application: Decode[OAuth2Application] =
-    WireDecode.single(Json.decoder[OAuth2ApplicationDto])(_.toDomain)
+    Decode.sensitive(WireDecode.single(Json.decoder[OAuth2ApplicationDto])(_.toDomain))
 
   /** The same object as [[application]], from the responses that '''do''' carry `client_secret`.
     *
@@ -59,11 +53,11 @@ private[account] object UserAccountDecoders:
     * that credential.
     */
   val issuedApplication: Decode[OAuth2Application] =
-    Decode.sensitive(application)
+    application
 
-  /** A bare array of OAuth2 application objects, as the listing returns it — never with a secret in it. */
+  /** A bare array of OAuth2 applications, with credential-bearing diagnostics withheld as for [[application]]. */
   val applications: Decode[Vector[OAuth2Application]] =
-    WireDecode.vector(Json.decoder[Vector[OAuth2ApplicationDto]])
+    Decode.sensitive(WireDecode.vector(Json.decoder[Vector[OAuth2ApplicationDto]]))
 
   /** A bare array of email objects, which is what both the listing and the `201` of an add return. */
   val emails: Decode[Vector[Email]] =

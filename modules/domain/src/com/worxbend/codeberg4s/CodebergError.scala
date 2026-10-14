@@ -10,7 +10,8 @@ import scala.concurrent.duration.FiniteDuration
   * case carries a [[CallContext]] so a caller can tell *which* call failed without correlating logs.
   *
   * Choosing a reaction:
-  *   - [[CodebergError.Transport]] — nothing reached the server; safe to retry a safe method.
+  *   - [[CodebergError.Transport]] — no complete usable response arrived; the server may already have applied the call.
+  *     Retry only under the operation's replay policy.
   *   - [[CodebergError.Api]] — the server answered; branch on `status`.
   *   - [[CodebergError.DecodingFailed]] — the server answered successfully but the payload did not match the model;
   *     retrying will not help, and `path` plus `snippet` is what a bug report needs.
@@ -84,12 +85,13 @@ object CodebergError:
 
   extension (error: CodebergError)
 
-    /** A bounded, secret-free, human-readable rendering.
+    /** A human-readable rendering with bounded diagnostic fragments.
       *
-      * Safe to log and to put in an exception message: it is built only from the redacted [[CallContext]] and from
-      * server-supplied text, and never from [[CodebergConfig]], so no token or password can reach it. Every free-form
-      * fragment is truncated at [[MaxSnippetLength]], which bounds the output of a single level; nested
-      * [[CodebergError.RetriesExhausted]] adds one bounded level per nesting step.
+      * The client's pipeline sanitizes configured credentials and withholds sensitive-operation failure material before
+      * constructing an error or observing it. This formatter cannot sanitize an independently constructed error:
+      * server-supplied text is untrusted, and arbitrary unrelated/transformed secrets are not detected. Keep
+      * sink-specific escaping and application log policy. Free-form fragments are truncated at [[MaxSnippetLength]];
+      * nested [[CodebergError.RetriesExhausted]] adds one bounded level per nesting step.
       */
     def describe: String =
       error match

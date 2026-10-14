@@ -100,7 +100,7 @@ object ReviewCommentDto:
       id                  = fields.number("id"),
       pullRequestReviewId = fields.number("pull_request_review_id"),
       body                = fields.text("body"),
-      path                = fields.text("path"),
+      path                = fields.rawText("path").filter(_.nonEmpty),
       position            = fields.number("position"),
       originalPosition    = fields.number("original_position"),
       extraLinesCount     = fields.number("extra_lines_count"),

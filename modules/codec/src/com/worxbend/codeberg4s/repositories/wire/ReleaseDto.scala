@@ -106,7 +106,7 @@ object ReleaseDto:
 
   /** Reads a `Release` object. */
   given JsonDecoder[ReleaseDto] =
-    JsonFields.reader(fromFields)
+    JsonDecoder.objectWithMembers(fromFields, "assets")
 
   /** Projects an already-decoded object. */
   def fromFields(fields: JsonFields): ReleaseDto =

@@ -33,11 +33,10 @@ final case class CodebergResponse(status: Int, headers: Map[String, List[String]
     * leaves behind. The returned value is trimmed.
     */
   def header(name: String): Option[String] =
-    headers
-      .get(name.toLowerCase(Locale.ROOT))
-      .flatMap(_.headOption)
-      .map(_.trim)
-      .filter(_.nonEmpty)
+    rawHeader(name).map(_.trim).filter(_.nonEmpty)
+
+  private def rawHeader(name: String): Option[String] =
+    headers.get(name.toLowerCase(Locale.ROOT)).flatMap(_.headOption)
 
   /** How many items the whole collection holds, from `x-total-count`.
     *
@@ -60,6 +59,9 @@ final case class CodebergResponse(status: Int, headers: Map[String, List[String]
   /** The instance's correlation id, from `x-request-id`, when it sent one. Copied into every failure's call context. */
   def requestId: Option[String] =
     header(CodebergResponse.RequestIdHeader)
+
+  /** The unnormalized first value, so diagnostic scrubbing precedes whitespace normalization. */
+  private[core] def rawRequestId: Option[String] = rawHeader(CodebergResponse.RequestIdHeader)
 
   /** Every RFC 5988 link the response carried, keyed by lowercased relation type.
     *

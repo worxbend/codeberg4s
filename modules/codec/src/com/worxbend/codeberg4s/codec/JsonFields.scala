@@ -41,14 +41,16 @@ import scala.annotation.tailrec
   *   - a wide object has its field positions indexed by name hash once, at construction, and a lookup probes that index
   *     instead. This is what keeps a wide object off the quadratic path: `RepositoryDto` reads 63 fields out of a
   *     64-key object, and scanning for each of them would compare about two thousand names to assemble one repository.
-  *     The index costs one small `Array[Int]`, which on the same fifty-repository page adds 35,200 bytes back — so the
-  *     measured saving over the whole decode is 785,200 bytes rather than the full 819,600.
+  *     The original index's small `Array[Int]` added 35,200 bytes on that fifty-repository page, leaving a historical
+  *     saving of 785,200 bytes. The bounded collision index also carries private metadata; compare the current normal
+  *     workload benchmark rather than treating that older allocation measurement as a current guarantee.
   *
   * '''No field can be shadowed by another.''' Both strategies answer with the *first* field of a given name — a scan
-  * because it stops there, the index because a colliding name inserted later probes past the earlier one — and
-  * [[JsonValue.field]] answers the same way. The question does not arise in a parsed document at all: [[Json.parse]]
-  * rejects one that names a field twice, for the reasons set out on [[JsonValue.Obj]].
+  * because it stops there, the index because a repeated name retains its earlier position — and [[JsonValue.field]]
+  * answers the same way. The question does not arise in a parsed document at all: [[Json.parse]] rejects one that names
+  * a field twice, for the reasons set out on [[JsonValue.Obj]].
   *
+  * Wide indexes cap linear probing and switch hostile collision clusters to ordered positions; see [[FieldIndex]].
   * Instances are immutable and safe to share.
   *
   * @param entries
@@ -56,8 +58,8 @@ import scala.annotation.tailrec
   */
 final case class JsonFields(entries: Vector[(String, JsonValue)]):
 
-  /** Field positions by name hash for a wide object, empty for a narrow one; see `JsonFields.index`. */
-  private val slots: Array[Int] = JsonFields.index(entries)
+  /** Bounded name index for a wide object, absent for a narrow one; see `JsonFields.index`. */
+  private val index: Option[FieldIndex] = JsonFields.index(entries)
 
   /** The raw value at `name`, absent when the key is missing or explicitly `null`. */
   def value(name: String): Option[JsonValue] =
@@ -65,7 +67,9 @@ final case class JsonFields(entries: Vector[(String, JsonValue)]):
 
   /** The first field named `name`, or `None` when the object has no such field. */
   private def lookup(name: String): Option[JsonValue] =
-    val at = if slots.isEmpty then scanFor(name, 0) else probeFor(name, JsonFields.slotFor(name, slots.length))
+    val at = index match
+      case None        => scanFor(name, 0)
+      case Some(built) => built.lookup(entries, name)
 
     if at < 0 then None else Some(entries(at)._2)
 
@@ -79,20 +83,6 @@ final case class JsonFields(entries: Vector[(String, JsonValue)]):
     if index >= entries.length then -1
     else if entries(index)._1.contentEquals(name) then index
     else scanFor(name, index + 1)
-
-  /** The position [[slots]] records for `name`, or `-1`, probing on from `slot` while the slot is taken by another
-    * name.
-    *
-    * Names are compared in full on a hash hit: a hash agreeing is not two names agreeing, and answering on the hash
-    * alone would return a neighbouring field's value whenever two names in one object collided.
-    */
-  @tailrec
-  private def probeFor(name: String, slot: Int): Int =
-    val taken = slots(slot) - 1
-
-    if taken < 0 then -1
-    else if entries(taken)._1.contentEquals(name) then taken
-    else probeFor(name, (slot + 1) & (slots.length - 1))
 
   /** The string at `name`, verbatim — the empty string is preserved. Use [[text]] to fold Forgejo's `""`-for-absent
     * convention away.
@@ -168,46 +158,9 @@ object JsonFields:
   /** An empty view — every accessor answers as though the object had no keys. */
   val Empty: JsonFields = JsonFields(Vector.empty)
 
-  /** An open-addressed table of field positions, keyed by the hash of the field name.
-    *
-    * A narrow object gets `Array.emptyIntArray`, the standard library's shared zero-length array, so that being narrow
-    * costs no allocation at all — and so that this answer cannot depend on a field of this object being initialised.
-    *
-    * A slot holds a position plus one, so a fresh array of zeroes already reads as an empty table. Insertion runs
-    * forwards through `entries`, which is what makes a probe answer with the first of two fields sharing a name: the
-    * earlier one already occupies the slot the later one would want, and the later one is pushed past it.
-    */
-  private def index(entries: Vector[(String, JsonValue)]): Array[Int] =
-    val size = entries.length
-
-    if size <= MaxScannedFields then Array.emptyIntArray
-    else
-      // A power of two at least twice the field count, sized by the same rule
-      // as the parser's repeated-key table — see JsonValue.indexSize.
-      val slots = new Array[Int](JsonValue.indexSize(size))
-
-      @tailrec def place(position: Int, slot: Int): Unit =
-        if slots(slot) < 1 then slots(slot) = position + 1
-        else place(position, (slot + 1) & (slots.length - 1))
-
-      @tailrec def placeFrom(position: Int): Unit =
-        if position < size then
-          place(position, slotFor(entries(position)._1, slots.length))
-          placeFrom(position + 1)
-
-      placeFrom(0)
-      slots
-
-  /** Where a name's probe starts in a table of `length` slots.
-    *
-    * The high bits of a `String` hash carry most of its entropy for the short, similar names a JSON object has, and the
-    * mask keeps only the low ones. Folding one half onto the other is what `java.util.HashMap` does about that, for the
-    * same reason.
-    */
-  private def slotFor(name: String, length: Int): Int =
-    val hash = name.hashCode
-
-    (hash ^ (hash >>> 16)) & (length - 1)
+  /** Narrow views keep the allocation-free scan; wider views share the parser's bounded collision fallback. */
+  private def index(entries: Vector[(String, JsonValue)]): Option[FieldIndex] =
+    if entries.size <= MaxScannedFields then None else Some(FieldIndex.build(entries))
 
   /** Builds a decoder for a type assembled field by field from one JSON object.
     *

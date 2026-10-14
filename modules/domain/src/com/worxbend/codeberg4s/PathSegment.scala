@@ -56,6 +56,10 @@ private[codeberg4s] object PathSegment:
     if hasHardControl(value) then Left(ValidationError(field, "must not contain a control character"))
     else segmentedTrimmed(field, value.trim)
 
+  /** Validates a wire filename without trimming or folding whitespace-only names into absence. */
+  def segmentedExact(field: String, value: String): Either[ValidationError, String] =
+    segmentedTrimmed(field, value)
+
   private def segmentedTrimmed(field: String, trimmed: String): Either[ValidationError, String] =
     if trimmed.isEmpty then Left(ValidationError(field, "must not be blank"))
     else if trimmed.exists(_.isControl) then Left(ValidationError(field, "must not contain a control character"))

@@ -19,28 +19,23 @@ trait Decode[A]:
   /** Decodes `body`, or explains where and why it could not be decoded. */
   def apply(body: ResponseBody): Either[DecodeFailure, A]
 
-  /** Whether the successful body this instance reads is credential material.
+  /** Whether this response can contain credential material or echo an unknown request secret.
     *
-    * `false` for every endpoint but a handful, and that default is deliberate: when a payload does not decode,
-    * [[ApiPipeline]] puts a bounded excerpt of it into [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]],
-    * because an excerpt is what makes such a failure diagnosable at all.
+    * Ordinary decoders retain bounded, configured-credential-scrubbed failure diagnostics. Sensitive decoders instead
+    * make [[ApiPipeline]] withhold excerpts, payload-derived paths/reasons, non-2xx error fields, response request ids
+    * and free-form transport details. Status, operation, timing, category and Retry-After remain available.
     *
-    * A few endpoints answer `2xx` with a body that '''is''' a live secret — the `201` of a token creation carries a
-    * usable access token, an OAuth2 application registration carries a client secret, and a runner registration carries
-    * the credential the runner authenticates with. On those, the excerpt that helps everywhere else is a credential
-    * disclosure into whatever the application logs. Setting this to `true` tells the pipeline to substitute a fixed
-    * placeholder — see [[ApiPipeline.redactedSnippet]] — which reports that a body arrived and how big it was without
-    * reproducing any of it.
-    *
-    * Sensitivity is a property of the '''endpoint's response''', not of the decoded type: a listing that names tokens
-    * without carrying their material keeps its excerpt, and only the response that carries material is marked.
+    * Mark token/OAuth/hook credential readers and issuers conservatively, including lists: an upstream field addition
+    * or malformed body must not turn a diagnostic into a disclosure. Request-secret writes may independently select the
+    * pipeline's sensitive call path even when the successful result contains no secret. Successful values and the
+    * response bytes handed to the decoder are unchanged; this is a failure-diagnostic policy, not data scrubbing.
     */
   def sensitive: Boolean = false
 
 /** How an instance declares that the body it reads is a credential. */
 object Decode:
 
-  /** `decode`, marked so that a decoding failure reports a placeholder instead of an excerpt of the body.
+  /** `decode`, marked so that the pipeline withholds payload-derived failure diagnostics, not only excerpts.
     *
     * Wrapping rather than requiring an `override` at each definition site is what lets an existing instance — a SAM
     * lambda, or whatever the `client` module composes out of a codec — be marked without changing how it is built. The

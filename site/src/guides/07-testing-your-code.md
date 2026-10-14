@@ -157,7 +157,7 @@ final class ReleaseCheckerSuite extends FunSuite:
   test("a 404 reaches the caller as an Api failure carrying the status"):
     onBackend(responding(404, NotFoundBody)): client =>
       ReleaseChecker(client).latestTag(Handle, Name).failed.map:
-        case CodebergException(CodebergError.Api(_, status, _)) => assertEquals(status, 404)
+        case CodebergException(CodebergError.Api(_, status, _, _)) => assertEquals(status, 404)
         case other                                              => fail(s"expected a CodebergException, got $other")
 
   test("the request goes to /repos/{owner}/{repo}/releases on the configured instance"):
@@ -271,7 +271,7 @@ and tells you nothing about which part was wrong.
 Every failure this library reports can be produced from a stub.
 
 **Any status.** `ResponseStub.adjust(body, StatusCode(403))` produces
-`CodebergError.Api(ctx, 403, body)` with the body parsed as a Forgejo error
+`CodebergError.Api(ctx, 403, body, retryAfter)` with the body parsed as a Forgejo error
 payload. Assert on the status and on `ApiErrorBody.errors`, not on `message` —
 Forgejo's `message` is often a raw Go symbol name.
 
@@ -358,8 +358,10 @@ absent. See [Retries and rate limits](./05-retries-and-rate-limits.md).
 
 ## Testing pagination
 
-Pagination is decided by the `Link` header and by nothing else, so a stub that
-sets one is a complete pagination fixture:
+A readable `Link` header is authoritative. Without one, pagination falls back
+to `X-Total-Count` or an envelope total, using the number of items actually
+served rather than the requested limit. A stub with `Link` tests the linked
+path; separately test total-only and absent-metadata responses:
 
 ```scala mdoc:compile-only
 import sttp.model.Header

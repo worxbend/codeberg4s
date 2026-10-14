@@ -86,7 +86,7 @@ final case class ContentEntryDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, ContentEntry] =
     for
       entryName <- Wire.required(at, "name", name)
-      entryPath <- Wire.validated(at, "path", path)(ContentPath.from)
+      entryPath <- Wire.validated(at, "path", path)(ContentPath.fromExact)
       objectId  <- Wire.validated(at, "sha", sha)(CommitSha.from)
       kind      <- kindAt(at)
     yield
@@ -96,7 +96,7 @@ final case class ContentEntryDto(
         sha            = objectId,
         size           = size.getOrElse(0L),
         lastCommitSha  = lastCommitSha.flatMap(value => CommitSha.from(value).toOption),
-        lastCommitWhen = Timestamps.parseOptional(lastCommitWhen),
+        lastCommitWhen = Timestamps.parseGitOptional(lastCommitWhen),
         url            = url,
         htmlUrl        = htmlUrl,
         gitUrl         = gitUrl,
@@ -136,8 +136,8 @@ object ContentEntryDto:
   /** Projects an already-decoded object, for the union DTO that reads both arms. */
   def fromFields(fields: JsonFields): ContentEntryDto =
     ContentEntryDto(
-      name            = fields.text("name"),
-      path            = fields.text("path"),
+      name            = fields.rawText("name").filter(_.nonEmpty),
+      path            = fields.rawText("path"),
       sha             = fields.text("sha"),
       lastCommitSha   = fields.text("last_commit_sha"),
       lastCommitWhen  = fields.text("last_commit_when"),
@@ -145,7 +145,7 @@ object ContentEntryDto:
       size            = fields.number("size"),
       encoding        = fields.text("encoding"),
       content         = fields.rawText("content"),
-      target          = fields.text("target"),
+      target          = fields.rawText("target").filter(_.nonEmpty),
       submoduleGitUrl = fields.text("submodule_git_url"),
       url             = fields.text("url"),
       htmlUrl         = fields.text("html_url"),

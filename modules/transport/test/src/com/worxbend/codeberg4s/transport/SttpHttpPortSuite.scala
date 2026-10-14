@@ -38,7 +38,7 @@ import scala.concurrent.Promise
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 
-import java.io.EOFException
+import java.io.{ByteArrayInputStream, EOFException}
 import java.net.ConnectException
 import java.net.SocketException
 import java.net.SocketTimeoutException
@@ -47,6 +47,7 @@ import java.net.http.HttpTimeoutException
 import java.nio.channels.ClosedChannelException
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** Request-shape and failure-classification tests for [[SttpHttpPort]].
   *
@@ -279,26 +280,53 @@ final class SttpHttpPortSuite extends FunSuite:
     causeOf(wrapped).map: cause =>
       assertEquals(cause, TransportCause.ResponseTooLarge("Stream length limit of 1024 bytes exceeded"))
 
-  test("a request carries the bound the caller asked for, not one the adapter chose"):
+  test("the decoded response map accepts the exact bound without a native wire guard"):
     val backend = recording(respondingOk)
     val port    = SttpHttpPort(backend, configFor(Auth.Anonymous), Idle)
 
-    send(port, awkwardRequest).map: _ =>
-      assertEquals(sent(backend).options.maxResponseBodyLength, Some(CodebergConfig.DefaultMaxResponseBodyBytes))
+    send(port, awkwardRequest, 2L).map: outcome =>
+      assertEquals(outcome.map(_.body.text), Right("{}"))
+      assertEquals(sent(backend).options.maxResponseBodyLength, None)
 
-  test("a larger bound reaches sttp unchanged, which is how an archive download is served"):
-    val backend = recording(respondingOk)
+  test("the decoded response map rejects a body over the explicit bound"):
+    val backend = recording(responding(200, Nil, "123"))
     val port    = SttpHttpPort(backend, configFor(Auth.Anonymous), Idle)
 
-    send(port, awkwardRequest, CodebergConfig.DefaultMaxDownloadBodyBytes).map: _ =>
-      assertEquals(sent(backend).options.maxResponseBodyLength, Some(CodebergConfig.DefaultMaxDownloadBodyBytes))
+    send(port, awkwardRequest, 2L).map: outcome =>
+      outcome match
+        case Left(TransportFailure(_: TransportCause.ResponseTooLarge)) => ()
+        case other => fail(s"expected the response map to enforce the decoded-byte limit, got $other")
+      assertEquals(sent(backend).options.maxResponseBodyLength, None)
 
-  test("the bound is whatever the caller passed, never a number the adapter kept"):
-    val backend = recording(respondingOk)
+  test("the mapped unsafe response adjusts stub byte arrays without textual conversion"):
+    val bytes   = Array[Byte](0, -1, 42)
+    val backend = BackendStub.asynchronousFuture.whenAnyRequest.thenRespondAdjust(bytes, StatusCode.InternalServerError)
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous), Idle)
+    send(port, awkwardRequest, 3L).map: outcome =>
+      assertEquals(outcome.map(_.body.bytes.toList), Right(bytes.toList))
+      assertEquals(outcome.map(_.status), Right(500))
+
+  test("the mapped unsafe response closes an injected stub InputStream on decoded refusal"):
+    val closed  = AtomicBoolean()
+    val stream  = new ByteArrayInputStream(Array[Byte](0, -1, 42)):
+      override def close(): Unit =
+        super.close()
+        closed.set(true)
+    val backend = BackendStub.asynchronousFuture.whenAnyRequest.thenRespondAdjust(stream)
+    val port    = SttpHttpPort(backend, configFor(Auth.Anonymous), Idle)
+    send(port, awkwardRequest, 2L).map: outcome =>
+      outcome match
+        case Left(TransportFailure(_: TransportCause.ResponseTooLarge)) => ()
+        case other                                                      => fail(s"expected decoded refusal, got $other")
+      assert(closed.get(), "response map did not close the transferred stream")
+
+  test("the explicit per-call decoded bound wins over the configured textual default"):
+    val body    = "x".repeat(200)
+    val backend = recording(responding(200, Nil, body))
     val port    = SttpHttpPort(backend, configFor(Auth.Anonymous).copy(maxResponseBodyBytes = 111L), Idle)
 
-    send(port, awkwardRequest, 222L).map: _ =>
-      assertEquals(sent(backend).options.maxResponseBodyLength, Some(222L))
+    send(port, awkwardRequest, 222L).map: outcome =>
+      assertEquals(outcome.map(_.body.text), Right(body))
 
   test("an exception this library does not recognise is unknown, never dropped"):
     causeOf(new IllegalStateException("something else entirely")).map: cause =>
@@ -354,10 +382,12 @@ final class SttpHttpPortSuite extends FunSuite:
 
       assertEquals(result.map(_.status), Right(200))
 
-  test("a deadline the timer refuses leaves the send to decide, so a closed client does not fail an answered call"):
+  test("a refused required deadline fails an answered call rather than silently sending without its bound"):
     val port = SttpHttpPort(respondingOk, configFor(Auth.Anonymous), ClosedTimer)
 
-    send(port, awkwardRequest).map(result => assertEquals(result.map(_.status), Right(200)))
+    send(port, awkwardRequest).failed.map: error =>
+      assert(error.isInstanceOf[RejectedExecutionException])
+      assertEquals(error.getMessage, "timer closed")
 
   test("the JDK's own header timeout is still armed on the request, alongside the whole-exchange bound"):
     val backend = recording(respondingOk)

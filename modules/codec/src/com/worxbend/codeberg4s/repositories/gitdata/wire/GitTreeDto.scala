@@ -51,7 +51,7 @@ object GitTreeDto:
 
   /** Reads a `GitTreeResponse` object. */
   given JsonDecoder[GitTreeDto] =
-    JsonFields.reader(fromFields)
+    JsonDecoder.objectWithMembers(fromFields, "tree")
 
   /** Projects an already-decoded object. */
   def fromFields(fields: JsonFields): GitTreeDto =

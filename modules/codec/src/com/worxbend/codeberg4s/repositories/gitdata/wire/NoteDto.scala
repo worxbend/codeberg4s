@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, NestedMembers, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.gitdata.GitNote
 import com.worxbend.codeberg4s.repositories.wire.CommitDto
@@ -29,9 +29,13 @@ final case class NoteDto(message: Option[String], commit: Option[CommitDto]) ext
 
 object NoteDto:
 
+  /** Validates only consumed array members, including embedded DTOs, before lenient projection. */
+  private[codeberg4s] def validateMembers(fields: JsonFields, at: JsonPath): Either[DecodeFailure, Unit] =
+    NestedMembers.nested(fields, at, "commit")(CommitDto.validateMembers)
+
   /** Reads a `Note` object. */
   given JsonDecoder[NoteDto] =
-    JsonFields.reader(fromFields)
+    JsonDecoder.checkedObjectOf(fromFields)(validateMembers)
 
   /** Projects an already-decoded object. */
   def fromFields(fields: JsonFields): NoteDto =

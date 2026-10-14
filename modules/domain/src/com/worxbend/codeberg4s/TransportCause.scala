@@ -6,17 +6,17 @@ package com.worxbend.codeberg4s
   * becomes [[TransportCause.Unknown]] rather than being dropped. A status code — including `5xx` — is never a transport
   * cause: that is [[CodebergError.Api]].
   *
-  * All but one of these mean nothing arrived at all. [[TransportCause.ResponseTooLarge]] is the exception: a response
-  * did begin to arrive, and reading it was abandoned once it passed the bound in [[CodebergConfig]]. It is here rather
-  * than under [[CodebergError.Api]] because the status is not what went wrong and the body was never completed, so
-  * there is nothing to hand a status-mapping decision.
+  * None proves that the server did not receive or apply a request. A read timeout or reset may follow headers or a
+  * partial body. [[TransportCause.ResponseTooLarge]] specifically means the decoded body exceeded its configured bound.
+  * These belong here rather than under [[CodebergError.Api]] because no complete usable response was available to
+  * classify by status; mutation replay must follow the operation's policy, not this diagnostic text.
   *
   * Each case carries a short `detail` taken from the underlying exception message. Details are for humans; callers
   * branch on the case, not on the text.
   */
 enum TransportCause:
 
-  /** The connection could not be established or was reset before a response arrived. */
+  /** The connection could not be established or was reset before a complete usable response arrived. */
   case ConnectionFailed(detail: String)
 
   /** The connect or read timeout configured in [[CodebergConfig]] elapsed. */
@@ -46,7 +46,7 @@ enum TransportCause:
   /** The transport failed in a way this library does not classify. */
   case Unknown(detail: String)
 
-  /** A short, secret-free rendering suitable for embedding in [[CodebergError.describe]]. */
+  /** A human-readable category and detail; sanitization belongs to the client diagnostic boundary. */
   def describe: String =
     this match
       case ConnectionFailed(detail) => s"connection failed ($detail)"

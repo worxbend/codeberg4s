@@ -41,7 +41,7 @@ final case class GitEntryDto(
     */
   def toDomainAt(at: JsonPath): Either[DecodeFailure, GitTreeEntry] =
     for
-      entryPath <- Wire.validated(at, "path", path)(ContentPath.from)
+      entryPath <- Wire.validated(at, "path", path)(ContentPath.fromExact)
       objectId  <- Wire.validated(at, "sha", sha)(CommitSha.from)
     yield GitTreeEntry(
       path = entryPath,
@@ -61,7 +61,7 @@ object GitEntryDto:
   /** Projects an already-decoded object, for the envelope DTO that embeds these. */
   def fromFields(fields: JsonFields): GitEntryDto =
     GitEntryDto(
-      path      = fields.text("path"),
+      path      = fields.rawText("path"),
       mode      = fields.text("mode"),
       entryType = fields.text("type"),
       size      = fields.number("size"),

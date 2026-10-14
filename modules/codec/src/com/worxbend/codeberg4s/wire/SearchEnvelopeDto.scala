@@ -25,10 +25,11 @@ object SearchEnvelopeDto:
     *
     * Elements are decoded one at a time, so an element that fails fails the whole envelope — the same contract as a
     * bare list body. Each element is handed straight to the element reader rather than re-parsed, which keeps the
-    * failure a plain the JSON parser abort; the trade-off is that [[com.worxbend.codeberg4s.codec.Json.decode]] reports
-    * it at the envelope's own path rather than at `$.data[n]`, because the outer parse has already finished by the time
-    * an element is built.
+    * failure a plain decoder result. Checked DTO readers retain the original `$.data[n]` position plus the path within
+    * the element; optional whole wrong-kind containers still become empty.
     */
   given [A](using JsonDecoder[A]): JsonDecoder[SearchEnvelopeDto[A]] =
-    JsonDecoder.objectOfEither: fields =>
-      JsonDecoder.all(fields.values("data")).map(decoded => SearchEnvelopeDto(ok = fields.boolean("ok"), data = decoded))
+    JsonDecoder.objectOfEitherAt: (fields, at) =>
+      JsonDecoder.allAt(at.field("data"), fields.values("data")).map(decoded =>
+        SearchEnvelopeDto(ok = fields.boolean("ok"), data = decoded)
+      )

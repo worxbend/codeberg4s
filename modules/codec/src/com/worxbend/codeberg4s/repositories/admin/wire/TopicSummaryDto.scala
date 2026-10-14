@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, NestedMembers, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.admin.{TopicId, TopicSummary}
 
@@ -82,11 +82,15 @@ final case class TopicSearchEnvelopeDto(entries: Vector[TopicSummaryDto])
 
 object TopicSearchEnvelopeDto:
 
+  /** Validates only consumed array members, including embedded DTOs, before lenient projection. */
+  private[codeberg4s] def validateMembers(fields: JsonFields, at: JsonPath): Either[DecodeFailure, Unit] =
+    NestedMembers.objectArray(fields, at, EntriesKey)
+
   /** The wire key the results sit under, so the decoder can report `$.topics[2].id` rather than `$[2].id`. */
   val EntriesKey: String = "topics"
 
   /** Reads a `TopicSearchResults` object. */
   given JsonDecoder[TopicSearchEnvelopeDto] =
-    JsonFields.reader(fields =>
+    JsonDecoder.checkedObjectOf(fields =>
       TopicSearchEnvelopeDto(fields.nestedAll(EntriesKey).map(TopicSummaryDto.fromFields))
-    )
+    )(validateMembers)

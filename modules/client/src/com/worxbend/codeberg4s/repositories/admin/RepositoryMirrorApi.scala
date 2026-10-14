@@ -127,7 +127,7 @@ final class RepositoryMirrorApi private[codeberg4s] (pipeline: ApiPipeline[Futur
     * '''Failures.''' The group contract above. `400` is what an unusable remote address produces.
     */
   def addPushMirror(owner: Owner, name: RepoName, command: CreatePushMirror): Future[PushMirror] =
-    pipeline.call(RepositoryMirrorApi.addPushMirrorRequest(owner, name, command), RetryEligibility.Never)(using
+    pipeline.callSensitive(RepositoryMirrorApi.addPushMirrorRequest(owner, name, command), RetryEligibility.Never)(using
       RepositoryAdminDecoders.pushMirror)
 
   /** Removes a push mirror — `DELETE /repos/{owner}/{repo}/push_mirrors/{name}`.

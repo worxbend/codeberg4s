@@ -132,7 +132,7 @@ final class UserHookApiSuite extends AccountApiSuite:
       api.get(Hook).failed.map: failure =>
         assertEquals(
           summary(unwrap(failure)),
-          (UserHookApi.GetOperation, 401, Some("token is required")),
+          (UserHookApi.GetOperation, 401, None),
         )
 
   test("a 401 reaches the typed rail as a Left reporting the very same failure"):
@@ -149,9 +149,9 @@ final class UserHookApiSuite extends AccountApiSuite:
         typed  <- api.attempt.delete(Hook)
       yield assertRailsAgree(raised, typed)
 
-  test("a 200 whose payload has no id becomes DecodingFailed at the id's own path"):
+  test("a malformed sensitive hook read reports DecodingFailed with a withheld path"):
     onApi(responding(200, """{"type":"forgejo"}""")): api =>
-      api.attempt.get(Hook).map(outcome => assertEquals(decodingPathOf(outcome), "$.id"))
+      api.attempt.get(Hook).map(outcome => assertEquals(decodingPathOf(outcome), "$"))
 
   test("a hook body that does not decode is never quoted, because it carries the authorization header"):
     val undecodable = """{"type":"forgejo","authorization_header":"Bearer hunter2"}"""
@@ -164,9 +164,9 @@ final class UserHookApiSuite extends AccountApiSuite:
         case other                                                        =>
           fail(s"expected a decoding failure, got $other")
 
-  test("a bad element of a listing reports its own position"):
+  test("a malformed sensitive hook listing withholds payload-derived paths"):
     onApi(responding(200, """[{"id":1},{"type":"forgejo"}]""")): api =>
-      api.attempt.list(PageParams.First).map(outcome => assertEquals(decodingPathOf(outcome), "$[1].id"))
+      api.attempt.list(PageParams.First).map(outcome => assertEquals(decodingPathOf(outcome), "$"))
 
   private def unwrap(failure: Throwable): CodebergError =
     failure match

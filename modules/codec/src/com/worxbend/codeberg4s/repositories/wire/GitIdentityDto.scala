@@ -32,7 +32,7 @@ final case class GitIdentityDto(
     * absence.
     */
   def toDomain: GitIdentity =
-    GitIdentity(name = name, email = email, username = username, date = Timestamps.parseOptional(date))
+    GitIdentity(name = name, email = email, username = username, date = Timestamps.parseGitOptional(date))
 
 object GitIdentityDto:
 

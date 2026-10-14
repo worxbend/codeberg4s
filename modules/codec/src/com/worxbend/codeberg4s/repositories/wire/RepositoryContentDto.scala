@@ -54,12 +54,16 @@ object RepositoryContentDto:
 
   /** Reads whichever arm arrived.
     *
-    * Decodes to `JsonValue` first and branches on its kind, because that is the only discriminator the endpoint offers.
-    * The raw value goes no further than this object: what leaves is a typed DTO, so no `JsonValue` reaches the domain
-    * or a caller.
+    * Branches on the parsed JSON kind, because that is the only discriminator the endpoint offers. Array members are
+    * decoded at their original positions before projection; a non-object member fails at its own path. The public
+    * [[fromJson]] projection remains infallible, including its `Unexpected` arm. The raw value goes no further than
+    * this object: what leaves is a typed DTO, so no `JsonValue` reaches the domain or a caller.
     */
   given JsonDecoder[RepositoryContentDto] =
-    JsonDecoder[JsonValue].map(fromJson)
+    JsonDecoder.contextual: (value, at) =>
+      value match
+        case JsonValue.Arr(elements) => JsonDecoder.allAt[ContentEntryDto](at, elements).map(Listing.apply)
+        case other                   => Right(fromJson(other))
 
   /** Branches on the JSON kind of an already-parsed body. Total by construction — every shape maps to a case. */
   def fromJson(value: JsonValue): RepositoryContentDto =

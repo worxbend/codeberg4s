@@ -64,7 +64,7 @@ final case class PayloadCommitDto(
           author       = author.map(_.toDomain),
           committer    = committer.map(_.toDomain),
           verification = verification.map(_.toDomain),
-          timestamp    = Timestamps.parseOptional(timestamp),
+          timestamp    = Timestamps.parseGitOptional(timestamp),
         )
 
 object PayloadCommitDto:

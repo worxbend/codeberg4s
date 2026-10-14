@@ -33,6 +33,6 @@ object CommitAffectedFileDto:
   /** Projects an already-decoded object, for the commit DTO that embeds these. */
   def fromFields(fields: JsonFields): CommitAffectedFileDto =
     CommitAffectedFileDto(
-      filename = fields.text("filename"),
+      filename = fields.rawText("filename").filter(_.nonEmpty),
       status   = fields.text("status"),
     )

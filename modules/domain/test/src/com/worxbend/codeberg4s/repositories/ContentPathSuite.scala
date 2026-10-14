@@ -24,6 +24,12 @@ final class ContentPathSuite extends FunSuite:
   test("rejects an empty value"):
     assertEquals(field(ContentPath.from("")), Some("filepath"))
 
+  test("the legacy trim constructor still rejects whitespace-only input"):
+    assertEquals(field(ContentPath.from("   ")), Some("filepath"))
+
+  test("the legacy trim constructor keeps its normalized multisegment result"):
+    assertEquals(ContentPath.from("  dir / file  ").toOption.map(_.value), Some("dir / file"))
+
   test("rejects a traversal, which is the reason this type validates at all"):
     assertEquals(field(ContentPath.from("../../../etc/passwd")), Some("filepath"))
 
@@ -38,6 +44,14 @@ final class ContentPathSuite extends FunSuite:
 
   test("rejects an embedded control character"):
     assertEquals(field(ContentPath.from("READ\tME.md")), Some("filepath"))
+
+  Vector(" file ", "   ", " dir / file ", " / ", "é/%?#").foreach: value =>
+    test(s"exact constructor preserves filename identity [$value]"):
+      assertEquals(ContentPath.fromExact(value).toOption.map(_.value), Some(value))
+
+  Vector("", "/file", "file/", "a//b", ".", "..", "a/../b", "a/./b", "\tfile", "file\n", "a\u0001b").foreach: value =>
+    test(s"exact constructor rejects unsafe filename [$value]"):
+      assertEquals(field(ContentPath.fromExact(value)), Some("filepath"))
 
   private def field(result: Either[ValidationError, ?]): Option[String] =
     result.swap.toOption.map(_.field)

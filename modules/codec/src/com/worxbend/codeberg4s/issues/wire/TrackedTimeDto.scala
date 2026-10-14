@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, NestedMembers, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.{TrackedTime, TrackedTimeId}
 
@@ -58,11 +58,15 @@ final case class TrackedTimeDto(
 
 object TrackedTimeDto:
 
+  /** Validates only consumed array members, including embedded DTOs, before lenient projection. */
+  private[codeberg4s] def validateMembers(fields: JsonFields, at: JsonPath): Either[DecodeFailure, Unit] =
+    NestedMembers.nested(fields, at, "issue")(IssueDto.validateMembers)
+
   /** Reads a `TrackedTime` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
   given JsonDecoder[TrackedTimeDto] =
-    JsonFields.reader(fromFields)
+    JsonDecoder.checkedObjectOf(fromFields)(validateMembers)
 
   /** Projects an already-decoded object, reusing [[IssueDto.fromFields]] for the embedded issue. */
   def fromFields(fields: JsonFields): TrackedTimeDto =

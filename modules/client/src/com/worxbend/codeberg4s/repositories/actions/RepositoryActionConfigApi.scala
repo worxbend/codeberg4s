@@ -175,7 +175,7 @@ final class RepositoryActionConfigApi private[codeberg4s] (pipeline: ApiPipeline
     * digit and one using a reserved `GITHUB_` or `GITEA_` prefix.
     */
   def setSecret(owner: Owner, name: RepoName, secret: SecretName, value: SecretValue): Future[Unit] =
-    pipeline.callUnit(
+    pipeline.callUnitSensitive(
       RepositoryActionConfigApi.setSecretRequest(owner, name, secret, value),
       RetryEligibility.AlwaysRetry
     )

@@ -12,6 +12,11 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Added
 
+- Exact repository-path construction for wire filenames and follow-up operations,
+  preserving nonempty whitespace-only and padded filenames. The existing
+  trimming `ContentPath.from` and literal behavior remain available.
+- ADR-0007 records the concrete ownership, transport and diagnostic boundaries.
+
 - **`Pages` derives a next page from `X-Total-Count` when no `Link` header is
   sent**, and from a listing envelope's own count where the total travels in
   the body. Forgejo's hook, git tree, wiki revision, topic and issue dependency
@@ -60,6 +65,25 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
   `Future`, and their behaviour is unchanged.
 
 ### Changed
+
+- Automatic HTTP redirects are disabled for every method, including downloads.
+  A 3xx response is now an API error rather than an implicit replay to a
+  `Location` destination. Injected sttp backends must support input-stream
+  response handling; their ownership and connect-timeout policy are unchanged.
+- Credential-bearing reads, issuance and writes withhold payload-derived failure
+  details on both rails and telemetry. Successful token/OAuth/runner values
+  remain available. Configured credential echoes are scrubbed before clipping,
+  including request ids, decoder reasons/paths and backend exception details.
+- Malformed nested-array members now fail with their original location rather
+  than disappearing from decoded results. Missing/null/wrong-kind optional
+  containers and deliberate optional scalar leniency remain unchanged.
+
+The Future API, failure rails, module artifacts, dependency footprint,
+Scala 3.8.4/JDK 25 requirements and endpoint scope are unchanged. Tightened
+redirect/diagnostic/decoding behavior above is deliberate. Logical timeout and
+close do not promise physical Future cancellation, and there is no total
+call/walk elapsed-time budget. No released binary baseline exists for MIMA;
+external compiler and packaged-consumer checks supplement, not replace, it.
 
 - **BREAKING — `readTimeout` bounds the whole exchange.** It used to reach the
   JDK client as the header timeout only, so a body that stalled part-way hung
@@ -568,6 +592,39 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
   every smart constructor's result type.
 
 ### Fixed
+
+- Decoded response-byte limits now apply after decompression to text, binary and
+  non-2xx bodies; bounded stream readers close on completion and failure.
+- Logical exchange wrappers settle when required deadlines fail or the client
+  closes. Timer promises are tracked independently of scheduler queue membership,
+  and positive sleeps preserve nanosecond precision.
+- Library-owned blocking body reads no longer occupy the caller executor.
+  Positive native timeouts round up to milliseconds rather than becoming zero.
+- Synchronous backend throws and nested specific I/O causes use the same failure
+  adapter as asynchronous failures; cause cycles terminate and boxed fatal
+  failures remain failed Futures.
+- Authored Git dates preserve epoch and pre-epoch values without changing the
+  legacy service timestamp sentinel policy.
+- Request-id diagnostics scrub Basic-password edge-normalized representations
+  before trimming; public header normalization remains unchanged. Telemetry
+  cause cycles terminate, nested fatal failures remain failed effects, and an
+  uncertain over-budget cause chain is not silently swallowed.
+- Nonfatal stream-close failures no longer replace established byte-limit or
+  read failures. The transport owns bounded stream closure rather than relying
+  on a second callback finalizer; boxed fatal/interrupt cleanup causes remain
+  observable. A shared bounded failure snapshot inspects suppressed native
+  cleanup as well as causes; unsafe library-exception carriers remain failed
+  effects instead of being materialized and silently ignored.
+- Computed retry waits retain nanosecond precision and saturate safely before
+  overflow. Full jitter keeps the existing millisecond grid for integral
+  computed delays and uses nanoseconds for fractional delays. The public jitter
+  source safely supports an inclusive Long.MaxValue tick bound.
+- Adversarial JSON key-collision work is bounded by a fallback shared between
+  duplicate-key detection and field lookup, preserving document order and
+  first-field behavior.
+- Executable documentation uses the current four-field API-error extractor.
+  Release guidance no longer claims private constructors make response-model
+  extractor growth source-compatible.
 
 - **Slashed names on single-segment routes.** `/wiki/page/{pageName}`,
   `/wiki/revisions/{pageName}`, `/releases/tags/{tag}`, `/sync_fork/{branch}`

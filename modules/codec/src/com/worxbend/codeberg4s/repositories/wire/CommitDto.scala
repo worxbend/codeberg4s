@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, NestedMembers, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.{Commit, CommitSha}
 import com.worxbend.codeberg4s.users.wire.UserDto
@@ -65,7 +65,7 @@ final case class CommitDto(
       sha       = identifier,
       url       = url,
       htmlUrl   = htmlUrl,
-      created   = Timestamps.parseOptional(created),
+      created   = Timestamps.parseGitOptional(created),
       author    = authorUser,
       committer = committerUser,
       details   = details,
@@ -76,9 +76,13 @@ final case class CommitDto(
 
 object CommitDto:
 
+  /** Validates consumed members before lenient projection. */
+  private[codeberg4s] def validateMembers(fields: JsonFields, at: JsonPath): Either[DecodeFailure, Unit] =
+    NestedMembers.objectArrays(fields, at, "parents", "files")
+
   /** Reads a `Commit` object. */
   given JsonDecoder[CommitDto] =
-    JsonFields.reader(fromFields)
+    JsonDecoder.checkedObjectOf(fromFields)(validateMembers)
 
   /** Projects an already-decoded object. */
   def fromFields(fields: JsonFields): CommitDto =
