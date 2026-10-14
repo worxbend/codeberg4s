@@ -4,6 +4,7 @@ import com.worxbend.codeberg4s.core.Exec.flatMap
 import com.worxbend.codeberg4s.retry.{Jitter, RetryPolicy}
 import com.worxbend.codeberg4s.{CallContext, CodebergError, HttpMethod, TransportCause}
 
+import scala.annotation.tailrec
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
 
 /** Repeats a failed call according to a [[com.worxbend.codeberg4s.retry.RetryPolicy]].
@@ -138,12 +139,18 @@ final class RetryEngine[F[_]](policy: RetryPolicy, timer: Timer[F])(using exec: 
       case _                                            => jittered(backoff(failedAttempts))
 
   private def backoff(failedAttempts: Int): FiniteDuration =
-    RetryEngine.doubled(policy.baseDelay.toMillis, failedAttempts - 1, policy.maxDelay.toMillis).millis
+    RetryEngine.doubled(policy.baseDelay.toNanos, failedAttempts - 1, policy.maxDelay.toNanos).nanos
 
+  /** Integral-millisecond computed bounds retain the original source units and sampling grid. Fractional bounds use
+    * nanosecond ticks so neither their ceiling nor a sampled wait loses precision. The computed bound, not the policy's
+    * duration storage unit, determines the grid.
+    */
   private def jittered(delay: FiniteDuration): FiniteDuration =
     policy.jitter match
       case Jitter.None => delay
-      case Jitter.Full => jitter.upTo(delay.toMillis).millis
+      case Jitter.Full =>
+        if (delay.toNanos % 1L.milli.toNanos).equals(0L) then jitter.upTo(delay.toMillis).millis
+        else jitter.upTo(delay.toNanos).nanos
 
 object RetryEngine:
 
@@ -201,9 +208,13 @@ object RetryEngine:
       case CodebergError.Validation(_, _)             => CallContext(operation, method, UnknownUri, None, 0L)
       case CodebergError.WalkTruncated(_, _)          => CallContext(operation, method, UnknownUri, None, 0L)
 
-  /** `value` doubled `times` over, stopping at `cap`. Written as a fold rather than a shift so that a large attempt
-    * count cannot overflow the exponent.
+  /** `value` nanoseconds doubled `times` over, stopping at `cap` before multiplication can overflow. A zero base stops
+    * immediately; a positive base reaches any nonnegative finite cap in at most 63 steps, irrespective of the attempt
+    * count. Integer arithmetic preserves fractional milliseconds all the way to the timer.
     */
+  @tailrec
   private def doubled(value: Long, times: Int, cap: Long): Long =
     if times <= 0 || value >= cap then math.min(value, cap)
+    else if value.equals(0L) then 0L
+    else if value > cap / 2L then cap
     else doubled(value * 2, times - 1, cap)

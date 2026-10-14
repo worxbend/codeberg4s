@@ -27,15 +27,16 @@ import java.util.concurrent.atomic.AtomicBoolean
   * given ExecutionContext = ExecutionContext.global
   *
   * val client = CodebergClient(CodebergConfig(Auth.Token(token)))
-  * try client.repos.get(owner, name).map(_.starsCount)
-  * finally client.close()
+  * client.repos.get(owner, name).map(_.starsCount).transform: outcome =>
+  *   client.close()
+  *   outcome
   * }}}
   *
   * '''Two rails, one implementation.''' Every operation appears twice — once on the resource group, failing the
-  * `Future` with [[CodebergException]], and once under `.attempt`, returning `Either[CodebergError, A]` and never
-  * failing. The second is the first with its failure channel materialised by
-  * [[com.worxbend.codeberg4s.core.Exec.attempt]], so choosing a rail is a choice of error style and never a choice of
-  * behaviour (ADR-0005).
+  * `Future` with [[CodebergException]], and once under `.attempt`, returning `Either[CodebergError, A]` for library
+  * failures. Defects, lifecycle failures and fatal effects remain failed Futures on both rails. The second is the first
+  * with its library failure channel materialised by [[com.worxbend.codeberg4s.core.Exec.attempt]], so choosing a rail
+  * is a choice of error style and never a choice of behaviour (ADR-0005).
   *
   * {{{
   * client.repos.get(owner, name)         // Future[Repository]
@@ -107,37 +108,21 @@ final class CodebergClient private (
     * "Idempotent" below. The `ExecutionContext` the client was built with is untouched, because that one belongs to the
     * caller.
     *
-    * Idempotent and safe to call from any thread: the second and later calls do nothing. Nothing here blocks, so this
-    * method returns before the last in-flight response has been delivered; nothing in this library observes that, and
-    * waiting for it would make an ordinary `finally` block block.
+    * Idempotent and safe to call from any thread: later calls do nothing. This initiates shutdown without waiting for
+    * physical HTTP drainage. The owned backend observes admitted physical send settlement to retain its I/O lane for
+    * late acquisition and cleanup; that lane shuts down only after the last physical send settles.
     *
-    * '''What this method does not report.''' sttp answers a backend's own `close()` with a `Future[Unit]`, and this
-    * method neither waits for it nor returns it — it returns before the pool has finished shutting down, and a
-    * `finally client.close()` stays a one-liner. That outcome is available as [[released]]; an application that wants
-    * to know whether its connection pool shut down cleanly, or to log a backend that failed to, observes that `Future`.
-    * Nothing else in this library looks at it, so a failed backend close that nobody observes is discarded silently.
+    * '''Logical lifecycle failures.''' A send reaching the closed timer fails with
+    * [[java.util.concurrent.RejectedExecutionException]] before backend admission, whether the backend is owned or
+    * injected. A pending exchange deadline or retry wait claimed by close fails with
+    * [[java.util.concurrent.CancellationException]]. These remain failed Futures on both rails, not retryable
+    * [[CodebergError]] values. A close/admission race can already have admitted a physical exchange; ending its logical
+    * wrapper does not cancel the underlying Future or undo a remote mutation.
     *
-    * '''Using a client after closing it is a defect, and not one this library detects up front.''' A call made
-    * afterwards fails only when it reaches something this method released, and succeeds otherwise:
-    *
-    *   - a call that needs the scheduler for a retry backoff fails with a
-    *     `java.util.concurrent.RejectedExecutionException` from it, and a call that was already sitting in a backoff
-    *     when `close()` arrived fails with a `java.util.concurrent.CancellationException` — see
-    *     [[com.worxbend.codeberg4s.client.FutureTimer.close]]. The read-timeout deadline every send arms on the same
-    *     scheduler does not count: a deadline the scheduler refuses is simply not armed, so the send goes on unbounded
-    *     rather than failing;
-    *   - a call that reaches a backend this client owns is refused by the shut-down JDK client with an `IOException` —
-    *     measured, on JDK 25: `java.io.IOException: closed` — which the transport classifies as
-    *     [[TransportCause.ConnectionFailed]]. Under a retry policy that repeats such a failure, the repeat's backoff
-    *     then meets the released scheduler, so what the caller sees is the `RejectedExecutionException` above; under
-    *     [[com.worxbend.codeberg4s.retry.RetryPolicy.Off]], or an eligibility that forbids repeating, it is a
-    *     [[CodebergError.Transport]] carrying that cause;
-    *   - a first attempt on a backend the caller supplied reaches neither, goes through, and succeeds.
-    *
-    * None of the failures is laundered into a [[CodebergError]] the caller would be told to retry, because a closed
-    * client is a programming mistake and not a remote failure. And every one of them '''is''' a failure, which is the
-    * guarantee that matters at shutdown: no `Future` this client handed out is left without an outcome, so an
-    * application closing down never waits on one that cannot finish.
+    * '''Limits.''' Close settles timer-owned waits and logical exchange wrappers, not arbitrary public work stalled in
+    * a telemetry callback or an undeliverable caller continuation. Keep the caller executor alive for delivery. The
+    * outcome of an owned backend's close acknowledgement or failure is available as [[released]]; acknowledgement is
+    * not proof that sockets, selector threads or all outstanding exchanges have terminated.
     */
   def close(): Unit =
     if closing.compareAndSet(false, true) then
@@ -151,10 +136,9 @@ final class CodebergClient private (
     * client built by [[CodebergClient.usingBackend]] there is nothing to release, so it completes as soon as [[close]]
     * is called. It never completes on a client that is never closed.
     *
-    * This exists because [[close]] returns nothing about the backend: a `finally` block has no use for a `Future`, and
-    * most applications have no use for the outcome of a connection pool's shutdown. The ones that do — a service that
-    * logs every resource it failed to release, a test that asserts the pool really went away — observe this instead of
-    * being made to wait on it.
+    * This reports close acknowledgement, not physical drainage. Admitted requests may still hold native connections or
+    * the owned body-I/O lane until they settle; caller-owned requests are never canceled or drained here. Observe this
+    * Future to report close failures, not to infer that every backend worker or socket has terminated.
     */
   def released: Future[Unit] = release.future
 
@@ -171,7 +155,7 @@ object CodebergClient:
   /** Builds a client that creates and owns its own HTTP backend.
     *
     * The backend is a JDK-HTTP-client sttp backend configured with [[CodebergConfig.connectTimeout]], and [[close]]
-    * shuts it down — the connection pool and the JDK client's own selector thread go with it. This is the right
+    * initiates orderly shutdown; physical termination follows outstanding request settlement. This is the right
     * constructor unless the application already has an sttp backend it wants reused.
     *
     * @param config
@@ -189,8 +173,8 @@ object CodebergClient:
     * request's own outcome is what the caller receives. A fatal error — an `OutOfMemoryError`, say — is not swallowed,
     * because it says the process is no longer sound.
     *
-    * The callbacks receive a [[CallContext]] whose URI is already redacted, so an implementation cannot leak a token by
-    * logging what it is handed.
+    * Callbacks receive the same configured-credential-sanitized diagnostics as callers. Sensitive-operation failure
+    * fields are withheld. Unrelated or transformed server secrets still require application logging policy.
     *
     * @param config
     *   the instance to talk to, the credentials, the retry policy and the timeouts

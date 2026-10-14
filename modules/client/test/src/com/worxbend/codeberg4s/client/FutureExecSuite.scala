@@ -85,6 +85,21 @@ final class FutureExecSuite extends FunSuite:
     assertEquals(settled(first, context), Success(1))
     assertEquals(settled(second, context), Success(2))
 
+  for suppressed <- List(false, true) do
+    test(
+      s"attempt does not hide a fatal ${if suppressed then "suppressed" else "cause"} on a library exception wrapper"
+    ):
+      val context = QueuedExecutionContext()
+      val primary = CodebergException(Failed)
+      val unsafe  = LinkageError("synthetic only; fatal state is not an ordinary library failure")
+      if suppressed then primary.addSuppressed(unsafe)
+      else
+        val attached = primary.initCause(unsafe)
+        assert(attached.eq(primary))
+      settled(execOn(context).attempt(Future.failed[Int](primary)), context) match
+        case Failure(delivered) => assert(delivered.eq(primary), "materialization changed or hid the unsafe wrapper")
+        case other              => fail(s"fatal wrapper was converted into an ordinary Left: $other")
+
   // --- fixtures -------------------------------------------------------------
 
   private def execOn(context: QueuedExecutionContext): Exec[Future] =

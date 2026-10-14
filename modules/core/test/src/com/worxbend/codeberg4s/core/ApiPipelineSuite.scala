@@ -206,8 +206,8 @@ final class ApiPipelineSuite extends FunSuite:
     result match
       case Left(error @ CodebergError.DecodingFailed(_, snippet, path, cause)) =>
         assertEquals(snippet, ApiPipeline.redactedSnippet(payload.length))
-        assertEquals(path, JsonPath.of("id"))
-        assertEquals(cause, "no such field")
+        assertEquals(path, JsonPath.Root)
+        assert(!cause.contains("no such field"), "sensitive reader reasons must be withheld")
         assert(!error.describe.contains(credential), s"the body reached the rendered failure: ${error.describe}")
       case other                                                               =>
         fail(s"expected a decoding failure, got $other")
@@ -332,7 +332,7 @@ final class ApiPipelineSuite extends FunSuite:
       Left(CodebergError.Api(contextOf("issues.list", HttpMethod.Get, None), 422, ApiErrorBody.Empty, None)),
     )
 
-  test("an error body beyond the bound is handed to the parser cut at MaxErrorBodyBytes, never whole"):
+  test("an error body beyond the bound is withheld without handing a clipped credential to the parser"):
     // A reverse proxy answering a 502 with a multi-megabyte page must not make
     // every failed attempt decode and parse the whole of it.
     given Decode[String]                  = body => Right(body.text)
@@ -344,7 +344,7 @@ final class ApiPipelineSuite extends FunSuite:
 
     val result = pipelineOf(http, FakeTimer(0L), silent, recording).call[String](listing, RetryEligibility.Never)
 
-    assertEquals(handed.get(), ApiPipeline.MaxErrorBodyBytes.toLong)
+    assertEquals(handed.get(), 0L)
     assertEquals(
       result,
       Left(CodebergError.Api(contextOf("issues.list", HttpMethod.Get, None), 502, ApiErrorBody.Empty, None)),

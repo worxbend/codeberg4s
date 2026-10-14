@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.users.social.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, NestedMembers, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.users.social.{GpgKey, GpgKeyEmail, GpgKeyId, OpenPgpKeyId}
 
@@ -147,11 +147,18 @@ final case class GpgKeyDto(
 
 object GpgKeyDto:
 
+  /** Validates only consumed array members, including embedded DTOs, before lenient projection. */
+  private[codeberg4s] def validateMembers(fields: JsonFields, at: JsonPath): Either[DecodeFailure, Unit] =
+    for
+      _ <- NestedMembers.objectArray(fields, at, "emails")
+      _ <- NestedMembers.objects(fields, at, "subkeys")(GpgKeyDto.validateMembers)
+    yield ()
+
   /** Reads a `GPGKey` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
   given JsonDecoder[GpgKeyDto] =
-    JsonFields.reader(fromFields)
+    JsonDecoder.checkedObjectOf(fromFields)(validateMembers)
 
   /** Projects an already-decoded object, so the field spellings exist in exactly one place.
     *

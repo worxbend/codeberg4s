@@ -13,10 +13,10 @@ import scala.util.control.NoStackTrace
   *   case CodebergException(CodebergError.Api(_, 404, _, _)) => fallbackRepository
   * }}}
   *
-  * '''Security contract.''' The message is [[CodebergError.describe]], which is built only from the redacted
-  * [[CallContext]] and from server-supplied text. A token or password therefore cannot reach `getMessage`, a stack
-  * trace, or any logger that prints an uncaught failure — which is why the exception is constructed from `describe`
-  * rather than from the raw ADT rendering.
+  * '''Diagnostic contract.''' The message is [[CodebergError.describe]]. Client-produced errors have already passed
+  * configured-credential scrubbing and sensitive-operation withholding before this wrapper is constructed. The
+  * formatter is not an arbitrary-secret detector, and independently constructed errors do not inherit that policy. Use
+  * application log policy and sink-specific escaping for untrusted server text.
   *
   * '''No stack trace.''' The exception is a value carrier, not a defect report: it is created at the boundary of a
   * pipeline the caller never appears in, so its stack trace would name this library's internals and nothing the caller

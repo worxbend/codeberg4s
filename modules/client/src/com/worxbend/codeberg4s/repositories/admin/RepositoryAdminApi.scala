@@ -196,7 +196,7 @@ final class RepositoryAdminApi private[codeberg4s] (pipeline: ApiPipeline[Future
     * could not read the remote, and `413` that the account is over its quota.
     */
   def migrate(command: MigrateRepository): Future[Repository] =
-    pipeline.call(RepositoryAdminApi.migrateRequest(command), RetryEligibility.Never)(using
+    pipeline.callSensitive(RepositoryAdminApi.migrateRequest(command), RetryEligibility.Never)(using
       RepositoryAdminDecoders.repository)
 
   /** Offers a repository to another owner — `POST /repos/{owner}/{repo}/transfer`.

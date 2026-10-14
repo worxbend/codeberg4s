@@ -24,12 +24,14 @@ import munit.FunSuite
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 import scala.jdk.DurationConverters.ScalaDurationOps
 import scala.util.Failure
 import scala.util.Success
 
+import java.util.concurrent.CancellationException
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
 
@@ -155,11 +157,9 @@ final class CodebergClientSuite extends FunSuite with ClientSuiteHarness:
     finally executor.shutdown()
 
   test("a call made after close on an owned backend fails with the scheduler's rejection, as close documents"):
-    // The shut-down JDK client refuses the request with an IOException, which
-    // the transport classifies as a connection failure and the retry policy
-    // would repeat — but the backoff needs the scheduler close() released, and
-    // that is where the call fails. See the same note on the sibling test
-    // about the interrupt flag.
+    // The required deadline is refused before any backend admission, so this
+    // lifecycle failure remains a failed Future instead of entering retry.
+    // See the sibling test's note about the interrupt flag.
     Thread.interrupted().discard
 
     val executor = ExecutionContext.fromExecutorService(Executors.newSingleThreadExecutor())
@@ -237,6 +237,30 @@ final class CodebergClientSuite extends FunSuite with ClientSuiteHarness:
         val rendered = List(thrown.getMessage, thrown.toString, thrown.getStackTrace.mkString(" ")).mkString(" | ")
 
         assert(!rendered.contains(CodebergClientSuite.Secret), rendered)
+
+  test("close settles an outstanding convenience call without closing an injected backend"):
+    assertOutstandingSettles(client => client.version.get())
+
+  test("close preserves lifecycle failure on the typed rail instead of leaving it pending"):
+    assertOutstandingSettles(client => client.version.attempt.get())
+
+  private def assertOutstandingSettles[A](call: CodebergClient => Future[A]): Unit =
+    val pending = Promise[Nothing]()
+    val backend = new Backend[Future]:
+      override def send[T](request: GenericRequest[T, Any & Effect[Future]]): Future[Response[T]] = pending.future
+      override def close(): Future[Unit]     = fail("the client must not close an injected backend")
+      override def monad: MonadError[Future] = responding(200, CodebergClientSuite.VersionBody).monad
+    val client  = CodebergClient.usingBackend(configFor(Auth.Anonymous), backend)(using ExecutionContext.parasitic)
+    try
+      val outcome = call(client)
+      assert(!outcome.isCompleted, "the backend has not answered")
+      client.close()
+      outcome.value match
+        case Some(Failure(_: CancellationException)) => ()
+        case other => fail(s"close must settle the outstanding call with lifecycle failure, got $other")
+    finally
+      client.close()
+      pending.tryFailure(CancellationException("test teardown")).discard
 
   // --- fixtures -------------------------------------------------------------
 

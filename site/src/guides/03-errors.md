@@ -1,7 +1,7 @@
 # Errors
 
 For anyone deciding how their code should react when a call does not work: what
-each of the five failures means, which of the two error rails to use, and how a
+each of the six failures means, which of the two error rails to use, and how a
 `404` and a rate limit actually arrive.
 
 ## Everything that can go wrong, as one closed family
@@ -12,8 +12,8 @@ a match.
 
 | Case | What happened | What to do |
 | --- | --- | --- |
-| `Transport(ctx, cause)` | nothing reached the server at all | a safe read may be retried; the library already did, unless you turned retries off |
-| `Api(ctx, status, body)` | the server answered with a non-2xx status | branch on `status` |
+| `Transport(ctx, cause)` | no complete usable response arrived; the server may already have applied the request | a safe read may be retried; the library already did, unless you turned retries off |
+| `Api(ctx, status, body, retryAfter)` | the server answered with a non-2xx status | branch on `status` |
 | `DecodingFailed(ctx, snippet, path, cause)` | a 2xx payload did not match the model | retrying will not help; `path` and `snippet` are what a bug report needs |
 | `Validation(field, message)` | a smart constructor rejected an argument, before any request was built | fix the argument |
 | `RetriesExhausted(ctx, attempts, last)` | the retry engine gave up | react to `last`; it is preserved verbatim |
@@ -23,7 +23,7 @@ Two things are deliberately absent, and getting this wrong is the single most
 common mistake when writing against this library:
 
 > **There is no `NotFound` case and no `RateLimited` case.** A `404` is
-> `Api(ctx, 404, body)`. A `429` is `Api(ctx, 429, body)`, or
+> `Api(ctx, 404, body, retryAfter)`. A `429` is `Api(ctx, 429, body, retryAfter)`, or
 > `RetriesExhausted` wrapping one.
 
 The status code is preserved verbatim rather than being sorted into named cases,
@@ -71,7 +71,8 @@ def viaConvenience(client: CodebergClient, owner: Owner, name: RepoName): Future
 ```
 
 **The typed rail** is the same operation under `.attempt`. It returns
-`Future[Either[CodebergError, A]]` and the `Future` never fails:
+`Future[Either[CodebergError, A]]`. Library failures become `Left`; defects,
+lifecycle failures and fatal effects remain failed Futures:
 
 ```scala mdoc:compile-only
 import com.worxbend.codeberg4s.CodebergClient
@@ -112,7 +113,7 @@ forwards results.
 ## How a `404` actually arrives
 
 On the convenience rail, as a failed `Future` holding
-`CodebergException(CodebergError.Api(ctx, 404, body))`. `CodebergException` is a
+`CodebergException(CodebergError.Api(ctx, 404, body, retryAfter))`. `CodebergException` is a
 case class, so it pattern-matches directly:
 
 ```scala mdoc:compile-only
@@ -132,7 +133,7 @@ def repositoryOrNone(client: CodebergClient, owner: Owner, name: RepoName)(using
     .get(owner, name)
     .map(Some.apply)
     .recover:
-      case CodebergException(CodebergError.Api(_, 404, _)) => None
+      case CodebergException(CodebergError.Api(_, 404, _, _)) => None
 ```
 
 Any case you do not handle stays a failed `Future`, carrying the same value, so
@@ -154,7 +155,7 @@ def typedRepositoryOrNone(client: CodebergClient, owner: Owner, name: RepoName)(
     ExecutionContext): Future[Either[CodebergError, Option[Repository]]] =
   client.repos.attempt.get(owner, name).map:
     case Right(repository)                     => Right(Some(repository))
-    case Left(CodebergError.Api(_, 404, _))    => Right(None)
+    case Left(CodebergError.Api(_, 404, _, _))    => Right(None)
     case Left(other)                           => Left(other)
 ```
 
@@ -183,7 +184,7 @@ What you will see depends on your retry policy. With the default policy, the
 retry engine treats `429` as retryable, honours `Retry-After` when the instance
 sent one, waits, and tries again. By the time a rate limit reaches your code,
 the library has usually already given up — so the value you receive is
-`RetriesExhausted(ctx, attempts, Api(ctx2, 429, body))`, not a bare `Api`.
+`RetriesExhausted(ctx, attempts, Api(ctx2, 429, body, retryAfter))`, not a bare `Api`.
 
 Handle both, because a `429` on a call that was not eligible for retry — most
 writes are not — arrives unwrapped:
@@ -193,8 +194,8 @@ import com.worxbend.codeberg4s.CodebergError
 
 def isRateLimited(error: CodebergError): Boolean =
   error match
-    case CodebergError.Api(_, 429, _)                                 => true
-    case CodebergError.RetriesExhausted(_, _, CodebergError.Api(_, 429, _)) => true
+    case CodebergError.Api(_, 429, _, _)                                 => true
+    case CodebergError.RetriesExhausted(_, _, CodebergError.Api(_, 429, _, _)) => true
     case _                                                            => false
 ```
 
@@ -241,7 +242,7 @@ Every remote failure carries one:
 | `operation` | a stable id such as `"repos.get"` or `"issues.list"`, one per endpoint; it never changes, so it is safe to alert on |
 | `method` | the `HttpMethod` used |
 | `uri` | the request URI, **already redacted** |
-| `requestId` | the `x-request-id` response header, when the instance sent one |
+| `requestId` | the sanitized `x-request-id` response header; withheld on sensitive operations |
 | `durationMs` | wall-clock duration of the attempt |
 
 `Validation` is the one case with no context, because there is no call yet: the
@@ -254,10 +255,17 @@ constructor and a client call sequence in one `for`-comprehension:
 `Either`'s `flatMap` widens the left type to `CodebergError` on its own, and
 nothing has to be mapped from one error type to another in between.
 
-`error.describe` renders all of it as one bounded, secret-free line — every
-free-form fragment is truncated at 512 characters, and a `422` carrying hundreds
-of field errors is elided with a count rather than logged in full. That is also
-what `CodebergException.getMessage` returns.
+`error.describe` bounds free-form fragments at 512 characters, and a `422`
+carrying hundreds of field errors is elided with a count. That is also what
+`CodebergException.getMessage` returns. The client scrubs configured token,
+password and Basic wire echoes before clipping and before telemetry. Sensitive
+credential reads, issuers and writes withhold payload-derived diagnostics:
+paths become Root, snippets become placeholders, and free-form API fields and
+transport details are withheld. Successful secret values remain unchanged.
+
+The formatter itself is not an arbitrary-secret detector. Server text remains
+untrusted; unrelated or transformed secrets and independently constructed errors
+require application log policy and sink-specific control-character escaping.
 
 ## A complete worked recovery
 
@@ -290,13 +298,13 @@ def lookUp(client: CodebergClient, owner: Owner, name: RepoName)(using
     .get(owner, name)
     .map(repository => LookupOutcome.Found(repository))
     .recover:
-      case CodebergException(CodebergError.Api(_, 404, _)) =>
+      case CodebergException(CodebergError.Api(_, 404, _, _)) =>
         LookupOutcome.Absent
 
-      case CodebergException(CodebergError.Api(_, 429, _)) =>
+      case CodebergException(CodebergError.Api(_, 429, _, _)) =>
         LookupOutcome.Throttled(1)
 
-      case CodebergException(CodebergError.RetriesExhausted(_, attempts, CodebergError.Api(_, 429, _))) =>
+      case CodebergException(CodebergError.RetriesExhausted(_, attempts, CodebergError.Api(_, 429, _, _))) =>
         LookupOutcome.Throttled(attempts)
 
       case CodebergException(failure @ CodebergError.DecodingFailed(_, _, _, _)) =>
@@ -337,7 +345,7 @@ def typedLookUp(client: CodebergClient, owner: Owner, name: RepoName)(using
     ExecutionContext): Future[Either[String, Option[Repository]]] =
   client.repos.attempt.get(owner, name).map:
     case Right(repository)                  => Right(Some(repository))
-    case Left(CodebergError.Api(_, 404, _)) => Right(None)
+    case Left(CodebergError.Api(_, 404, _, _)) => Right(None)
     case Left(other)                        => Left(other.describe)
 ```
 

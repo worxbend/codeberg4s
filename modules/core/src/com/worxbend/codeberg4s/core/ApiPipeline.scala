@@ -3,10 +3,12 @@ package com.worxbend.codeberg4s.core
 import com.worxbend.codeberg4s.core.Exec.{flatMap, map}
 import com.worxbend.codeberg4s.paging.{Page, PageParams}
 import com.worxbend.codeberg4s.syntax.discard
-import com.worxbend.codeberg4s.{ApiErrorBody, CallContext, CodebergConfig, CodebergError}
+import com.worxbend.codeberg4s.{ApiErrorBody, CallContext, CodebergConfig, CodebergError, JsonPath}
 
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
+
+import java.util.Locale
 
 /** The single path every API call takes: send, retry, classify, decode, observe.
   *
@@ -33,13 +35,15 @@ import scala.util.Try
   *   - a 2xx payload that does not decode becomes [[com.worxbend.codeberg4s.CodebergError.DecodingFailed]] with the
   *     failing JSON path and an excerpt of the body bounded at
   *     [[com.worxbend.codeberg4s.CodebergError.MaxSnippetLength]] — or, when the [[Decode]] instance declared itself
-  *     [[Decode.sensitive]] because the endpoint answers with a credential, [[ApiPipeline.redactedSnippet]] in place of
-  *     the excerpt;
+  *     [[Decode.sensitive]] because the endpoint can carry a credential, [[ApiPipeline.redactedSnippet]] in place of
+  *     the excerpt, the root path and a fixed reason. Sensitive calls also withhold server error fields, response ids
+  *     and transport details, since those can echo credentials unknown to this client;
   *   - a failure the retry engine gave up on becomes [[com.worxbend.codeberg4s.CodebergError.RetriesExhausted]],
   *     preserving the last underlying failure.
   *
-  * Duration is measured with [[Timer.nowMillis]] on both sides of the send rather than with a system clock, so the
-  * `durationMs` on every context is exact and reproducible under a fake timer.
+  * Duration uses [[Timer.nowMillis]] around the send and is reproducible with a fake timer. The production clock is
+  * wall-clock milliseconds, can jump, and includes continuation scheduling/observation delays; it is not monotonic wire
+  * latency or a total-call elapsed-time budget.
   *
   * @param http
   *   the transport port; the only thing here that touches the network
@@ -64,6 +68,7 @@ final class ApiPipeline[F[_]](
 )(using exec: Exec[F])(using JitterSource):
 
   private val engine: RetryEngine[F] = RetryEngine[F](config.retry, timer)
+  private val diagnostics            = DiagnosticRedaction(config.auth)
 
   /** Sends `request` under the retry policy and decodes a successful body into `A`.
     *
@@ -76,7 +81,14 @@ final class ApiPipeline[F[_]](
     *   the decoded value, or a [[com.worxbend.codeberg4s.CodebergError]] in `F`'s error channel
     */
   def call[A](request: CodebergRequest, eligibility: RetryEligibility)(using decode: Decode[A]): F[A] =
-    perform(request, eligibility, config.maxResponseBodyBytes)((ctx, response) => decoded[A](ctx, response.body))
+    perform(request, eligibility, config.maxResponseBodyBytes, decode.sensitive)((ctx, response) =>
+      decoded[A](ctx, response.body)
+    )
+
+  /** As [[call]], withholding payload-derived diagnostics when the request carries a secret. */
+  private[codeberg4s] def callSensitive[A](request: CodebergRequest, eligibility: RetryEligibility)(using
+      decode: Decode[A]): F[A] =
+    call[A](request, eligibility)(using Decode.sensitive(decode))
 
   /** As [[call]], but for an endpoint that answers `204` or whose body is deliberately ignored.
     *
@@ -84,7 +96,11 @@ final class ApiPipeline[F[_]](
     * call. Non-2xx statuses are classified exactly as in [[call]].
     */
   def callUnit(request: CodebergRequest, eligibility: RetryEligibility): F[Unit] =
-    perform(request, eligibility, config.maxResponseBodyBytes)((_, _) => Right(()))
+    perform(request, eligibility, config.maxResponseBodyBytes, false)((_, _) => Right(()))
+
+  /** As [[callUnit]], withholding response and transport diagnostics for a secret-bearing request. */
+  private[codeberg4s] def callUnitSensitive(request: CodebergRequest, eligibility: RetryEligibility): F[Unit] =
+    perform(request, eligibility, config.maxResponseBodyBytes, true)((_, _) => Right(()))
 
   /** As [[call]], but assembles a [[com.worxbend.codeberg4s.paging.Page]] from the response's paging headers.
     *
@@ -98,8 +114,13 @@ final class ApiPipeline[F[_]](
     *   the window that was requested; it is kept on the returned page
     */
   def callPage[A](request: CodebergRequest, params: PageParams)(using decode: Decode[Vector[A]]): F[Page[A]] =
-    perform(request, RetryEligibility.IdempotentOnly, config.maxResponseBodyBytes): (ctx, response) =>
+    perform(request, RetryEligibility.IdempotentOnly, config.maxResponseBodyBytes, decode.sensitive): (ctx, response) =>
       decoded[Vector[A]](ctx, response.body).map(items => Pages.from(response, params, items))
+
+  /** As [[callPage]], withholding diagnostics for a secret-bearing request independently of the decoder. */
+  private[codeberg4s] def callPageSensitive[A](request: CodebergRequest, params: PageParams)(using
+      decode: Decode[Vector[A]]): F[Page[A]] =
+    callPage[A](request, params)(using Decode.sensitive(decode))
 
   /** As [[callPage]], for a listing whose body is an envelope object carrying its own total.
     *
@@ -114,8 +135,13 @@ final class ApiPipeline[F[_]](
     */
   def callEnvelopePage[A](request: CodebergRequest, params: PageParams)(using
       decode: Decode[ListEnvelope[A]]): F[Page[A]] =
-    perform(request, RetryEligibility.IdempotentOnly, config.maxResponseBodyBytes): (ctx, response) =>
+    perform(request, RetryEligibility.IdempotentOnly, config.maxResponseBodyBytes, decode.sensitive): (ctx, response) =>
       decoded[ListEnvelope[A]](ctx, response.body).map(envelope => Pages.fromEnvelope(response, params, envelope))
+
+  /** As [[callEnvelopePage]], withholding diagnostics for a secret-bearing request. */
+  private[codeberg4s] def callEnvelopePageSensitive[A](request: CodebergRequest, params: PageParams)(using
+      decode: Decode[ListEnvelope[A]]): F[Page[A]] =
+    callEnvelopePage[A](request, params)(using Decode.sensitive(decode))
 
   /** Sends `request` under the archive bound and hands back the whole response, body included, undecoded.
     *
@@ -135,7 +161,13 @@ final class ApiPipeline[F[_]](
     * Always [[RetryEligibility.IdempotentOnly]] — every endpoint that answers an archive in this API is a `GET`.
     */
   def callDownload(request: CodebergRequest): F[CodebergResponse] =
-    perform(request, RetryEligibility.IdempotentOnly, config.maxDownloadBodyBytes)((_, response) => Right(response))
+    perform(request, RetryEligibility.IdempotentOnly, config.maxDownloadBodyBytes, false)((_, response) =>
+      Right(response)
+    )
+
+  /** As [[callDownload]], withholding diagnostics without changing the successful bytes or headers. */
+  private[codeberg4s] def callDownloadSensitive(request: CodebergRequest): F[CodebergResponse] =
+    perform(request, RetryEligibility.IdempotentOnly, config.maxDownloadBodyBytes, true)((_, response) => Right(response))
 
   /** Runs one call to completion: retry the attempts, then report and raise whatever the engine gave up with.
     *
@@ -149,12 +181,13 @@ final class ApiPipeline[F[_]](
       request: CodebergRequest,
       eligibility: RetryEligibility,
       maxBodyBytes: Long,
+      sensitive: Boolean,
   )(
       onSuccess: (CallContext, CodebergResponse) => Either[CodebergError, A]
   ): F[A] =
     val uri      = redactedUri(request)
-    val attempts = engine.runWith(request.operation, request.method, eligibility)(_ =>
-      attemptOnce(request, uri, maxBodyBytes, onSuccess)
+    val attempts = engine.runWith(diagnostics.text(request.operation), request.method, eligibility)(_ =>
+      attemptOnce(request, uri, maxBodyBytes, sensitive, onSuccess)
     )
     exec.attempt(attempts).flatMap:
       case Right(value) => exec.pure(value)
@@ -168,39 +201,52 @@ final class ApiPipeline[F[_]](
     * query once instead of five times.
     */
   private def redactedUri(request: CodebergRequest): String =
-    Redaction.uri(config.baseUri.value, request.path, request.query)
+    val query = request.query.map: (name, value) =>
+      val safeValue =
+        if Redaction.SensitiveQueryParameters.contains(name.toLowerCase(Locale.ROOT)) then Redaction.Mask
+        else diagnostics.text(value)
+      (diagnostics.text(name), safeValue)
+    diagnostics.text(Redaction.uri(
+      diagnostics.text(config.baseUri.value),
+      request.path.map(diagnostics.text),
+      query,
+    ))
 
   private def attemptOnce[A](
       request: CodebergRequest,
       uri: String,
       maxBodyBytes: Long,
+      sensitive: Boolean,
       onSuccess: (CallContext, CodebergResponse) => Either[CodebergError, A],
   ): F[AttemptOutcome[A]] =
     timer.nowMillis.flatMap: started =>
-      observe(telemetry.onRequest(contextOf(request, uri, None, 0L))).flatMap: _ =>
+      observe(telemetry.onRequest(contextOf(request, uri, None, 0L, sensitive))).flatMap: _ =>
         http.send(request, uri, maxBodyBytes).flatMap: sent =>
           timer.nowMillis.flatMap: finished =>
-            settle(request, uri, finished - started, sent, onSuccess)
+            settle(request, uri, finished - started, sent, sensitive, onSuccess)
 
   private def settle[A](
       request: CodebergRequest,
       uri: String,
       elapsedMs: Long,
       sent: Either[TransportFailure, CodebergResponse],
+      sensitive: Boolean,
       onSuccess: (CallContext, CodebergResponse) => Either[CodebergError, A],
   ): F[AttemptOutcome[A]] =
     sent match
       case Left(failure)   =>
-        val ctx = contextOf(request, uri, None, elapsedMs)
-        failedWith(ctx, CodebergError.Transport(ctx, failure.cause), None)
+        val ctx   = contextOf(request, uri, None, elapsedMs, sensitive)
+        val cause = if sensitive then diagnostics.withheldCause(failure.cause) else diagnostics.cause(failure.cause)
+        failedWith(ctx, CodebergError.Transport(ctx, cause), None)
       case Right(response) =>
-        val ctx    = contextOf(request, uri, response.requestId, elapsedMs)
+        val ctx    = contextOf(request, uri, response.rawRequestId, elapsedMs, sensitive)
         val status = response.status
         observe(telemetry.onResponse(ctx, status)).flatMap: _ =>
           if StatusMapping.isSuccess(status) then succeed(ctx, response, onSuccess)
           else
             val retryAfter = response.retryAfter
-            val error      = StatusMapping.toError(ctx, status, parsedErrorBody(response.body), retryAfter)
+            val body       = if sensitive then ApiErrorBody.Empty else parsedErrorBody(response.body)
+            val error      = StatusMapping.toError(ctx, status, body, retryAfter)
             failedWith(ctx, error, retryAfter)
 
   private def succeed[A](
@@ -220,7 +266,7 @@ final class ApiPipeline[F[_]](
     observe(telemetry.onError(ctx, error)).map(_ => AttemptOutcome(Left(error), retryAfter))
 
   private def reportFinal(request: CodebergRequest, error: CodebergError): F[Unit] =
-    observe(telemetry.onError(RetryEngine.contextOf(request.operation, request.method, error), error))
+    observe(telemetry.onError(RetryEngine.contextOf(diagnostics.text(request.operation), request.method, error), error))
 
   /** Runs an observation hook, discarding whatever it reports. See the class-level note on telemetry failures. */
   private def observe(effect: F[Unit]): F[Unit] =
@@ -231,13 +277,35 @@ final class ApiPipeline[F[_]](
       uri: String,
       requestId: Option[String],
       elapsedMs: Long,
+      sensitive: Boolean,
   ): CallContext =
-    CallContext(request.operation, request.method, uri, requestId, elapsedMs)
+    val safeId =
+      if sensitive then None
+      else requestId.flatMap(value => diagnostics.prefixHeader(value, CodebergError.MaxSnippetLength))
+    CallContext(diagnostics.text(request.operation), request.method, uri, safeId, elapsedMs)
 
   private def decoded[A](ctx: CallContext, body: ResponseBody)(using decode: Decode[A]): Either[CodebergError, A] =
-    decode(body).left.map(failure =>
-      CodebergError.DecodingFailed(ctx, ApiPipeline.snippetOf(body, decode.sensitive), failure.path, failure.message)
-    )
+    decode(body).left.map: failure =>
+      if decode.sensitive then
+        CodebergError.DecodingFailed(
+          ctx,
+          diagnostics.text(ApiPipeline.snippetOf(body, true)),
+          JsonPath.Root,
+          diagnostics.text("sensitive response could not be decoded")
+        )
+      else
+        val renderedPath = failure.path.render
+        val safePath     =
+          if diagnostics.text(renderedPath).contentEquals(renderedPath) &&
+            renderedPath.length <= CodebergError.MaxSnippetLength
+          then failure.path
+          else JsonPath.Root
+        CodebergError.DecodingFailed(
+          ctx,
+          diagnostics.excerpt(body, CodebergError.MaxSnippetLength),
+          safePath,
+          diagnostics.prefix(failure.message, CodebergError.MaxSnippetLength)
+        )
 
   /** Reads a non-2xx payload, tolerating both an empty body and an injected parser that fails outright.
     *
@@ -245,20 +313,23 @@ final class ApiPipeline[F[_]](
     * a few hundred bytes, and it is only ever read on the failure path. Decoding it here rather than at the transport
     * is what keeps the successful path — every listing, every read — free of the copy.
     *
-    * The text handed to the parser is bounded at [[ApiPipeline.MaxErrorBodyBytes]]. A Forgejo error body is a small
-    * JSON object; anything larger is a reverse proxy's HTML page or a misrouted download, and a call that is already
-    * failing — and may be about to be retried — must not decode and parse the whole of it on every attempt. A body cut
-    * at the bound is not valid JSON, so the parser rejects it and the failure carries
-    * [[com.worxbend.codeberg4s.ApiErrorBody.Empty]], exactly as it does for any other unreadable payload; the status is
-    * never masked.
+    * Bodies beyond [[ApiPipeline.MaxErrorBodyBytes]] are withheld without decoding or parsing. Handing a clipped body
+    * to an injected tolerant parser could disclose a credential prefix at the bound, before exact-value scrubbing can
+    * recognise it. The failure carries [[com.worxbend.codeberg4s.ApiErrorBody.Empty]]; the status is never masked.
     */
   private def parsedErrorBody(body: ResponseBody): ApiErrorBody =
-    if body.isBlank then ApiErrorBody.Empty
-    else Try(errorBody(body.leadingText(ApiPipeline.MaxErrorBodyBytes))).getOrElse(ApiErrorBody.Empty)
+    if body.isBlank || body.size > ApiPipeline.MaxErrorBodyBytes then ApiErrorBody.Empty
+    else
+      val parsed = Try(errorBody(body.text)).getOrElse(ApiErrorBody.Empty)
+      ApiErrorBody(
+        parsed.message.map(value        => diagnostics.prefix(value, CodebergError.MaxSnippetLength)),
+        parsed.url.map(value            => diagnostics.prefix(value, CodebergError.MaxSnippetLength)),
+        parsed.errors.take(8).map(value => diagnostics.prefix(value, CodebergError.MaxSnippetLength)),
+      )
 
 object ApiPipeline:
 
-  /** The most bytes of a non-2xx body that are decoded and handed to the error-body parser: 64 KiB.
+  /** The largest non-2xx body decoded and handed whole to the error-body parser: 64 KiB.
     *
     * Generous by two orders of magnitude for a Forgejo error object, and small enough that a failed attempt against a
     * misbehaving proxy costs a bounded amount of work however large the payload it answered with. A body beyond the

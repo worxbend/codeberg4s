@@ -151,13 +151,13 @@ final class UserApplicationApiSuite extends AccountApiSuite:
         typed  <- api.attempt.delete(Application)
       yield assertRailsAgree(raised, typed)
 
-  test("a 200 whose payload has no id becomes DecodingFailed at the id's own path"):
+  test("a malformed OAuth read reports DecodingFailed with a withheld path"):
     onApi(responding(200, """{"name":"no id"}""")): api =>
-      api.attempt.get(Application).map(outcome => assertEquals(decodingPathOf(outcome), "$.id"))
+      api.attempt.get(Application).map(outcome => assertEquals(decodingPathOf(outcome), "$"))
 
-  test("a bad element of a listing reports its own position"):
+  test("a malformed OAuth listing withholds payload-derived paths"):
     onApi(responding(200, """[{"id":1},{"name":"no id"}]""")): api =>
-      api.attempt.list(PageParams.First).map(outcome => assertEquals(decodingPathOf(outcome), "$[1].id"))
+      api.attempt.list(PageParams.First).map(outcome => assertEquals(decodingPathOf(outcome), "$"))
 
   test("a successful result never leaks the secret through any rendering path"):
     onApi(responding(201, UserApplicationApiSuite.CreatedBody)): api =>
@@ -169,18 +169,20 @@ final class UserApplicationApiSuite extends AccountApiSuite:
   test("a creation body that failed to decode is withheld, not snippetted, because it carries the secret"):
     onApi(responding(201, UserApplicationApiSuite.SecretWithoutIdBody)): api =>
       api.attempt.create(definition).map: outcome =>
-        assertEquals(decodingPathOf(outcome), "$.id")
+        assertEquals(decodingPathOf(outcome), "$")
         assertEquals(
           snippetOf(outcome),
           ApiPipeline.redactedSnippet(UserApplicationApiSuite.SecretWithoutIdBody.length),
         )
         assert(!describe(outcome).contains("gto_"), s"the snippet leaked the secret: ${describe(outcome)}")
 
-  test("a read that failed to decode keeps its snippet, because no read can carry a secret"):
+  test("a failed OAuth read withholds the snippet of its potentially credential-bearing wire shape"):
     val body = """{"name":"no id"}"""
 
     onApi(responding(200, body)): api =>
-      api.attempt.get(Application).map(outcome => assertEquals(snippetOf(outcome), body))
+      api.attempt.get(Application).map(outcome =>
+        assertEquals(snippetOf(outcome), ApiPipeline.redactedSnippet(body.length))
+      )
 
   private def snippetOf[A](outcome: Either[CodebergError, A]): String =
     outcome match

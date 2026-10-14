@@ -62,6 +62,14 @@ final class DefaultBackendSuite extends FunSuite:
       assertEquals(client.connectTimeout.toScala, Some(DefaultBackendSuite.ConnectTimeout.toJava))
       assertEquals(client.executor.toScala, Option[Executor](executor))
 
+  test("default backend close is idempotent and never shuts down its caller execution context"):
+    withExecutor: executor =>
+      val backend  = SttpHttpPort.defaultBackend(DefaultBackendSuite.ConnectTimeout, executor)
+      val first    = backend.close()
+      val repeated = backend.close()
+      assert(first eq repeated, "close did not reuse its release outcome")
+      assert(!executor.isShutdown, "default backend closed its caller executor")
+
   test("a proxy's credentials answer the proxy's own challenge"):
     val answer = SttpHttpPort.proxyCredentialsFor(Authenticator.RequestorType.PROXY, DefaultBackendSuite.ProxyAuth)
 

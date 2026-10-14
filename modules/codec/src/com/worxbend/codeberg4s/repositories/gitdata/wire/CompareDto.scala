@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, WireModel}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, NestedMembers, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.gitdata.CommitComparison
 import com.worxbend.codeberg4s.repositories.wire.{CommitAffectedFileDto, CommitDto}
@@ -38,9 +38,16 @@ final case class CompareDto(
 
 object CompareDto:
 
+  /** Validates only consumed array members, including embedded DTOs, before lenient projection. */
+  private[codeberg4s] def validateMembers(fields: JsonFields, at: JsonPath): Either[DecodeFailure, Unit] =
+    for
+      _ <- NestedMembers.objects(fields, at, "commits")(CommitDto.validateMembers)
+      _ <- NestedMembers.objectArray(fields, at, "files")
+    yield ()
+
   /** Reads a `Compare` object. */
   given JsonDecoder[CompareDto] =
-    JsonFields.reader(fromFields)
+    JsonDecoder.checkedObjectOf(fromFields)(validateMembers)
 
   /** Projects an already-decoded object. */
   def fromFields(fields: JsonFields): CompareDto =

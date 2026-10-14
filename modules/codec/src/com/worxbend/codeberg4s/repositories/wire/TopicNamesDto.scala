@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, NestedMembers}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.publishing.Topic
 
@@ -37,12 +37,16 @@ final case class TopicNamesDto(topics: Vector[String]):
 
 object TopicNamesDto:
 
+  /** Validates only consumed array members, including embedded DTOs, before lenient projection. */
+  private[codeberg4s] def validateMembers(fields: JsonFields, at: JsonPath): Either[DecodeFailure, Unit] =
+    NestedMembers.strings(fields, at, EntriesKey)
+
   /** The wire key the names sit under, so a rejected one is reported at `$.topics[2]` rather than at `$[2]`. */
   val EntriesKey: String = "topics"
 
   /** Reads a `TopicNames` object. */
   given JsonDecoder[TopicNamesDto] =
-    JsonFields.reader(fromFields)
+    JsonDecoder.checkedObjectOf(fromFields)(validateMembers)
 
   /** Projects an already-decoded object. */
   def fromFields(fields: JsonFields): TopicNamesDto =

@@ -206,7 +206,7 @@ final class RepositoryHookApiSuite extends FunSuite with HookStubs:
   test("a 200 whose payload does not fit the model becomes DecodingFailed, never an escaping codec exception"):
     onApi(responding(200, """{"type":"forgejo"}""")): api =>
       api.attempt.get(Handle, Name, Identifier).map:
-        case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$.id")
+        case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$")
         case other                                             => fail(s"expected a decoding failure, got $other")
 
   test("a hook body that does not decode is never quoted, because it carries the authorization header"):
@@ -226,10 +226,10 @@ final class RepositoryHookApiSuite extends FunSuite with HookStubs:
           case other                                                        =>
             fail(s"expected a decoding failure, got $other")
 
-  test("a bad element of a hook listing reports its position, all the way through the pipeline"):
+  test("a malformed sensitive hook listing withholds the decoder path"):
     onApi(responding(200, """[{"id":1},{"type":"forgejo"}]""")): api =>
       api.attempt.list(Handle, Name, window(1, 30)).map:
-        case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$[1].id")
+        case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$")
         case other                                             => fail(s"expected a decoding failure, got $other")
 
   private def materialise[A](result: Either[CodebergError, A]): CodebergError =

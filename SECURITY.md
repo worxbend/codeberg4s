@@ -63,13 +63,18 @@ Anything reachable through the published API of the five artifacts.
 
 ### Credential leakage — the sharpest class of bug this library can have
 
-The library's central promise is that a token cannot escape through a
-diagnostic path. `ApiToken` renders as `***` in `toString` and in string
-interpolation, `reveal` is the only accessor, `CallContext` holds a URI that
-was redacted before the context was built, and `CodebergException`'s message is
-`CodebergError.describe`, which is assembled only from that redacted context
-and from server-supplied text. There are tests asserting each of these, and
-property suites over the rendering paths.
+`ApiToken` renders as `***`; `reveal` is its deliberate material accessor.
+The client's diagnostic boundary scrubs the configured token, password and
+actual UTF-8 Basic wire credential from contexts, server fields, decoder
+failures and transport details before clipping or telemetry. Sensitive
+credential reading, issuing and writing operations withhold unknown
+payload-derived failure details without changing successful results.
+
+This is not detection of unrelated secrets or arbitrary transformations in
+ordinary server text. Independently constructed errors are outside that
+client-bound policy. Keep application logging policy; report bypasses of the
+explicit protections privately. Regression suites inspect whole errors and
+callback arguments, not merely their formatted descriptions.
 
 **Any way to get credential material out through one of these is a
 vulnerability, not a bug**, however unlikely the path:
@@ -96,7 +101,9 @@ a smuggled query parameter, a CRLF injected into a header — is in scope.
 ### Transport and configuration
 
 - Anything that would cause a request to be sent to a host other than the
-  configured `BaseUri`, including redirect handling.
+  configured `BaseUri`, including redirect handling. Automatic HTTP redirects
+  are disabled for every method: 3xx responses remain API errors, not body or
+  credential replay to a `Location` destination.
 - Anything that weakens TLS verification.
 - A retry of a non-idempotent operation. `POST` and `PATCH` that create or edit
   are deliberately never retried; a change that makes one retryable can file
@@ -109,16 +116,21 @@ a smuggled query parameter, a CRLF injected into a header — is in scope.
   documented guard: every response is read under a byte bound —
   `CodebergConfig.maxResponseBodyBytes`, 16 MiB by default, and
   `maxDownloadBodyBytes`, 50 MiB, for the two archive downloads — and a body
-  that passes it is abandoned as `TransportCause.ResponseTooLarge` rather than
-  read to the end. A payload that exhausts memory while staying *inside* that
+  that passes it is rejected as `TransportCause.ResponseTooLarge` rather than
+  materialized to the end. Limits count decompressed bytes for every HTTP
+  status; the bounded stream reader closes on exit. Logical Future timeout is
+  not a guarantee of immediate physical stream cancellation. A payload that
+  exhausts memory while staying *inside* that
   bound is a report.
-- A `Link` header that drives a pagination walk into an infinite loop. Note the
-  documented guard: a walk stops when the server stops offering a next page,
-  and callers are told to guard on an empty page as well.
+- A `Link` header that defeats bounded pagination. `PageWalk.collect` and
+  `fold` follow advertised metadata and fail if another page remains at their
+  validated `maxPages` bound; `exists` may return earlier on a match. Manual
+  walkers must impose their own bound. Empty linked pages alone are not a
+  termination promise.
 
 ### Dependencies
 
-A known vulnerability in sttp client4 or upickle that this library exposes.
+A known vulnerability in sttp client4 or jsoniter-scala that this library exposes.
 The dependency surface is deliberately two libraries; `codeberg4s-domain` has
 none at all.
 

@@ -156,7 +156,7 @@ final class UserTokenApiSuite extends FunSuite with ClientSuiteHarness:
     onApi(responding(201, UserTokenApiSuite.CreatedWithoutIdBody)): api =>
       api.attempt.create(Handle, orFail(CreateAccessToken.named("ci"))).map:
         case Left(error @ CodebergError.DecodingFailed(_, snippet, path, _)) =>
-          assertEquals(path.render, "$.id")
+          assertEquals(path.render, "$")
           assertEquals(snippet, ApiPipeline.redactedSnippet(UserTokenApiSuite.CreatedWithoutIdBody.length))
           assert(
             !error.describe.contains(UserTokenApiSuite.Material),
@@ -172,11 +172,11 @@ final class UserTokenApiSuite extends FunSuite with ClientSuiteHarness:
           assert(!error.describe.contains(UserTokenApiSuite.Material), s"the credential reached: ${error.describe}")
         case other                    => fail(s"expected a CodebergException, got $other")
 
-  test("every other call keeps the body excerpt, because only the token endpoint's body is a credential"):
+  test("a malformed token listing withholds its excerpt because the wire shape can carry credential material"):
     onApi(responding(200, UserTokenApiSuite.MalformedListBody)): api =>
       api.attempt.list(Handle, PageParams.First).map:
         case Left(CodebergError.DecodingFailed(_, snippet, _, _)) =>
-          assertEquals(snippet, UserTokenApiSuite.MalformedListBody)
+          assertEquals(snippet, ApiPipeline.redactedSnippet(UserTokenApiSuite.MalformedListBody.length))
         case other                                                => fail(s"expected a decoding failure, got $other")
 
   // --- revocation -----------------------------------------------------------
@@ -211,7 +211,7 @@ final class UserTokenApiSuite extends FunSuite with ClientSuiteHarness:
     onApi(responding(403, UserTokenApiSuite.ForbiddenBody)): api =>
       api.list(Handle, PageParams.First).failed.map:
         case CodebergException(error) =>
-          assertEquals(summary(error), (UserTokenApi.ListOperation, 403, Some(UserTokenApiSuite.ForbiddenText)))
+          assertEquals(summary(error), (UserTokenApi.ListOperation, 403, None))
         case other                    => fail(s"expected a CodebergException, got $other")
 
   test("a 403 reaches the typed rail as a Left reporting the very same failure"):

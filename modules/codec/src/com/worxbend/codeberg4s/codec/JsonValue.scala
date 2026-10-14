@@ -392,38 +392,10 @@ object JsonValue:
 
     compare(1, 0)
 
-  /** The hashed check: one open-addressed table of field positions, probed linearly.
-    *
-    * A slot holds a field's position plus one, so that a fresh array of zeroes already reads as an empty table. Names
-    * are still compared in full on a hash hit — a hash agreeing is not two names agreeing, and a check that took it for
-    * one would reject a document over a collision.
-    */
+  /** Uses the same bounded probing / comparison fallback as DTO field lookup. */
   private def indexFields(in: JsonReader, entries: Vector[(String, JsonValue)], size: Int): Unit =
-    // A power of two at least twice the field count — see indexSize for why
-    // that is what keeps a probe short, and for the width the old sizing got
-    // wrong.
-    val slots = new Array[Int](indexSize(size))
-    val mask  = slots.length - 1
-
-    @tailrec def probe(index: Int, slot: Int): Unit =
-      val taken = slots(slot) - 1
-
-      if taken < 0 then slots(slot) = index + 1
-      else if entries(taken)._1.contentEquals(entries(index)._1) then repeatedKeyError(in, entries(index)._1)
-      else probe(index, (slot + 1) & mask)
-
-    @tailrec def indexFrom(index: Int): Unit =
-      if index < size then
-        // The high bits of a String hash carry most of its entropy for the
-        // short, similar names a JSON object has, and the mask below keeps only
-        // the low ones. Folding one half onto the other is what java.util.HashMap
-        // does about that, for the same reason.
-        val hash = entries(index)._1.hashCode
-
-        probe(index, (hash ^ (hash >>> 16)) & mask)
-        indexFrom(index + 1)
-
-    indexFrom(0)
+    val duplicate = FieldIndex.build(entries).firstDuplicate
+    if duplicate >= 0 && duplicate < size then repeatedKeyError(in, entries(duplicate)._1)
 
   /** The failure a repeated field produces, worded as jsoniter's own `duplicatedKeyError` words it.
     *

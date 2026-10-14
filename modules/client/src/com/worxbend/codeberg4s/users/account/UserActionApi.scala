@@ -197,7 +197,7 @@ final class UserActionApi private[codeberg4s] (pipeline: ApiPipeline[Future])(us
     * digit and one using a reserved `GITHUB_` or `GITEA_` prefix.
     */
   def setSecret(secret: SecretName, value: SecretValue): Future[Unit] =
-    pipeline.callUnit(UserActionApi.setSecretRequest(secret, value), RetryEligibility.AlwaysRetry)
+    pipeline.callUnitSensitive(UserActionApi.setSecretRequest(secret, value), RetryEligibility.AlwaysRetry)
 
   /** Deletes one of the account's secrets — `DELETE /user/actions/secrets/{secretname}`.
     *

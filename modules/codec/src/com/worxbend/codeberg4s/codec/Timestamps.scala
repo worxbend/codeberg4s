@@ -26,8 +26,8 @@ object Timestamps:
     *
     * '''Never throws.''' Answers `None` for a blank string, for anything that is not RFC-3339 with an offset, and for
     * any instant at or before the Unix epoch — see the sentinels above. The epoch boundary means this cannot represent
-    * a genuine pre-1970 timestamp; Forgejo has no field that could carry one, since every timestamp it emits describes
-    * an event on a Git forge.
+    * a genuine pre-1970 timestamp. Git metadata therefore uses [[parseGit]] instead; service consumers keep this legacy
+    * sentinel policy.
     *
     * Two parsers sit behind this. [[fixedLayout]] reads the one shape Forgejo actually sends, character by character,
     * with no formatter and no intermediate date objects. Anything it does not recognise — a lowercase `t`, an offset
@@ -36,10 +36,21 @@ object Timestamps:
     * the speed of the common case changes.
     */
   def parse(value: String): Option[Instant] =
+    parseInstant(value).filter(_.isAfter(Instant.EPOCH))
+
+  /** Parses Git metadata dates, preserving epoch/pre-epoch values; only the exact Go zero instant is absent. */
+  def parseGit(value: String): Option[Instant] =
+    parseInstant(value).filterNot(_.equals(GoZero))
+
+  /** [[parseGit]] lifted over an optional wire date. Service timestamps still use [[parseOptional]]. */
+  def parseGitOptional(value: Option[String]): Option[Instant] =
+    value.flatMap(parseGit)
+
+  private val GoZero: Instant = Instant.parse("0001-01-01T00:00:00Z")
+
+  private def parseInstant(value: String): Option[Instant] =
     val trimmed = value.trim
-    fixedLayout(trimmed)
-      .orElse(Try(OffsetDateTime.parse(trimmed).toInstant).toOption)
-      .filter(_.isAfter(Instant.EPOCH))
+    fixedLayout(trimmed).orElse(Try(OffsetDateTime.parse(trimmed).toInstant).toOption)
 
   /** [[parse]] lifted over an optional wire value, for the common `dto.createdAt.flatMap(...)` shape. */
   def parseOptional(value: Option[String]): Option[Instant] =

@@ -68,7 +68,7 @@ object IssueConfigDto:
 
   /** Reads an `IssueConfig` object. A missing or `null` `contact_links` key is an empty list, not a failure. */
   given JsonDecoder[IssueConfigDto] =
-    JsonFields.reader(fromFields)
+    JsonDecoder.objectWithMembers(fromFields, ContactLinksKey)
 
   /** Projects an already-decoded object. */
   def fromFields(fields: JsonFields): IssueConfigDto =

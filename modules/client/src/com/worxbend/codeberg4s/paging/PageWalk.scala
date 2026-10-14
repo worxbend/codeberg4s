@@ -36,9 +36,9 @@ import scala.concurrent.{ExecutionContext, Future}
   * '''Two rails, like every operation.''' [[all]], [[fold]] and [[foreach]] take a convenience-rail operation and fail
   * the returned `Future` with [[com.worxbend.codeberg4s.CodebergException]], the way that operation would.
   * [[attempt.all]], [[attempt.fold]] and [[attempt.foreach]] take an `.attempt`-rail operation — one returning
-  * `Either[CodebergError, Page[A]]` — and return `Either[CodebergError, B]`, never failing. Both rails run the one
-  * loop, so choosing between them is a choice of error style and never a choice of behaviour, exactly as it is on the
-  * client itself.
+  * `Either[CodebergError, Page[A]]` — and return `Either[CodebergError, B]` for library failures. Defects remain failed
+  * Futures on either rail. Both rails run the one loop, so choosing between them is a choice of error style and never a
+  * choice of behaviour, exactly as it is on the client itself.
   *
   * '''Failure.''' A failure part-way through a walk discards the pages already gathered, on either rail; use [[fold]]
   * if partial progress needs to be kept somewhere.

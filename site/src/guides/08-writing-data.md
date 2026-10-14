@@ -301,7 +301,7 @@ import com.worxbend.codeberg4s.CodebergException
 
 def isStale(failure: Throwable): Boolean =
   failure match
-    case CodebergException(CodebergError.Api(_, 409, _)) => true
+    case CodebergException(CodebergError.Api(_, 409, _, _)) => true
     case _                                              => false
 ```
 

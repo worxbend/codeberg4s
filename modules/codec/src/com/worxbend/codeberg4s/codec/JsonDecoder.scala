@@ -20,14 +20,31 @@ trait JsonDecoder[A]:
   /** Interprets a parsed document, or says why it could not. */
   def decode(value: JsonValue): Either[DecodeFailure, A]
 
+  /** Internal contextual entry point. Checked DTO readers retain original outer and inner member indexes. */
+  private[codeberg4s] def decodeAt(value: JsonValue, at: JsonPath): Either[DecodeFailure, A] =
+    decode(value).left.map(failure => if at.isRoot then failure else failure.copy(path = at))
+
   /** Adapts this decoder's result, for a DTO that wraps another. */
   final def map[B](f: A => B): JsonDecoder[B] =
-    (value: JsonValue) => decode(value).map(f)
+    new JsonDecoder[B]:
+      def decode(value: JsonValue): Either[DecodeFailure, B] = JsonDecoder.this.decode(value).map(f)
+      override private[codeberg4s] def decodeAt(value: JsonValue, at: JsonPath): Either[DecodeFailure, B] =
+        JsonDecoder.this.decodeAt(value, at).map(f)
 
 object JsonDecoder:
 
   /** Summons the decoder for `A`. */
   def apply[A](using decoder: JsonDecoder[A]): JsonDecoder[A] = decoder
+
+  /** Builds an internal reader whose child paths are derived from its actual position, including through `map`. */
+  private[codeberg4s] def contextual[A](
+      read: (JsonValue, JsonPath) => Either[DecodeFailure, A]
+  ): JsonDecoder[A] =
+    new JsonDecoder[A]:
+      def decode(value: JsonValue): Either[DecodeFailure, A] = read(value, JsonPath.Root)
+
+      override private[codeberg4s] def decodeAt(value: JsonValue, at: JsonPath): Either[DecodeFailure, A] =
+        read(value, at)
 
   /** A decoder for a type assembled from the fields of one JSON object.
     *
@@ -49,15 +66,34 @@ object JsonDecoder:
     * malformed element would under-report, which is worse than failing.
     */
   def arrayOf[A](element: JsonDecoder[A]): JsonDecoder[Vector[A]] =
-    case JsonValue.Arr(values) =>
-      ArrayElements.convert(values): (raw, at) =>
-        element.decode(raw).left.map(failure => failure.copy(path = JsonPath.Root.index(at)))
-    case other                 => Left(DecodeFailure(JsonPath.Root, s"expected an array but found ${other.kind}"))
+    contextual: (value, at) =>
+      value match
+        case JsonValue.Arr(values) => ArrayElements.convert(at, values)((raw, path) => element.decodeAt(raw, path))
+        case other                 => Left(DecodeFailure(at, s"expected an array but found ${other.kind}"))
 
   /** As [[objectOf]], for a build step that can itself fail — an envelope whose elements are decoded, say. */
   def objectOfEither[A](build: JsonFields => Either[DecodeFailure, A]): JsonDecoder[A] =
     case JsonValue.Obj(fields) => build(JsonFields(fields))
     case other                 => Left(DecodeFailure(JsonPath.Root, s"expected an object but found ${other.kind}"))
+
+  /** Contextual object reader for generic envelopes; ordinary `objectOfEither` keeps its existing contract. */
+  private[codeberg4s] def objectOfEitherAt[A](
+      build: (JsonFields, JsonPath) => Either[DecodeFailure, A]
+  ): JsonDecoder[A] =
+    contextual: (value, at) =>
+      value match
+        case JsonValue.Obj(fields) => build(JsonFields(fields), at)
+        case other                 => Left(DecodeFailure(at, s"expected an object but found ${other.kind}"))
+
+  /** Checks selected DTO members before projection, retaining this object's original contextual path. */
+  private[codeberg4s] def checkedObjectOf[A](build: JsonFields => A)(
+      check: (JsonFields, JsonPath) => Either[DecodeFailure, Unit]
+  ): JsonDecoder[A] =
+    objectOfEitherAt((fields, at) => check(fields, at).map(_ => build(fields)))
+
+  /** Reader for DTOs whose only additional boundary rule is that named arrays contain objects. */
+  private[codeberg4s] def objectWithMembers[A](build: JsonFields => A, names: String*): JsonDecoder[A] =
+    checkedObjectOf(build)((fields, at) => NestedMembers.objectArrays(fields, at, names*))
 
   /** Decodes every element of an already-extracted array, failing on the first element that will not decode.
     *
@@ -66,6 +102,12 @@ object JsonDecoder:
     */
   def all[A](values: Vector[JsonValue])(using element: JsonDecoder[A]): Either[DecodeFailure, Vector[A]] =
     ArrayElements.convert(values)((raw, _) => element.decode(raw))
+
+  /** Internal envelope traversal retaining the member's original index and checked DTO child paths. */
+  private[codeberg4s] def allAt[A](at: JsonPath, values: Vector[JsonValue])(
+      using element: JsonDecoder[A]
+  ): Either[DecodeFailure, Vector[A]] =
+    ArrayElements.convert(at, values)((raw, path) => element.decodeAt(raw, path))
 
   /** A decoder that hands the parsed document over untouched, for the few payloads whose shape is not fixed. */
   given identity: JsonDecoder[JsonValue] = (value: JsonValue) => Right(value)

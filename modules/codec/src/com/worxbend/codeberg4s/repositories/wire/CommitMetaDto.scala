@@ -29,7 +29,7 @@ final case class CommitMetaDto(url: Option[String], sha: Option[String], created
   def toDomainAt(at: JsonPath): Either[DecodeFailure, CommitRef] =
     Wire
       .validated(at, "sha", sha)(CommitSha.from)
-      .map(id => CommitRef(sha = id, url = url, created = Timestamps.parseOptional(created)))
+      .map(id => CommitRef(sha = id, url = url, created = Timestamps.parseGitOptional(created)))
 
 object CommitMetaDto:
 

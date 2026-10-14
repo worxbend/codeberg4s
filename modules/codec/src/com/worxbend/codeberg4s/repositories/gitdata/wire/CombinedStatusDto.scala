@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.gitdata.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.CommitSha
 import com.worxbend.codeberg4s.repositories.gitdata.{CombinedCommitStatus, CommitStatusState}
@@ -47,7 +47,7 @@ final case class CombinedStatusDto(
   def toDomainAt(at: JsonPath): Either[DecodeFailure, CombinedCommitStatus] =
     for
       commit   <- Wire.validated(at, "sha", sha)(CommitSha.from)
-      reported <- ArrayElements.convert(at.field("statuses"), statuses)((dto, path) => dto.toDomainAt(path))
+      reported <- WireModel.all(at.field("statuses"), statuses)
       repo     <- Wire.nested(at, "repository", repository)(_.toDomainAt(_))
     yield CombinedCommitStatus(
       sha        = commit,
@@ -63,7 +63,7 @@ object CombinedStatusDto:
 
   /** Reads a `CombinedStatus` object. */
   given JsonDecoder[CombinedStatusDto] =
-    JsonFields.reader(fromFields)
+    JsonDecoder.objectWithMembers(fromFields, "statuses")
 
   /** Projects an already-decoded object. */
   def fromFields(fields: JsonFields): CombinedStatusDto =

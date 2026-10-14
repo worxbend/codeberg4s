@@ -38,11 +38,10 @@ object WorkflowRunsEnvelopeDto:
   /** Reads the envelope around any element type that already has a reader.
     *
     * Elements are decoded one at a time, so an element that fails fails the whole envelope — the same contract a bare
-    * list body has. The path-reporting trade-off is [[com.worxbend.codeberg4s.wire.SearchEnvelopeDto]]'s and is
-    * described there.
+    * list body has. Original member indexes are reported below `workflow_runs`, including checked DTO child paths.
     */
   given [A](using JsonDecoder[A]): JsonDecoder[WorkflowRunsEnvelopeDto[A]] =
-    JsonDecoder.objectOfEither: fields =>
-      JsonDecoder.all(fields.values(EntriesKey)).map(decoded =>
+    JsonDecoder.objectOfEitherAt: (fields, at) =>
+      JsonDecoder.allAt(at.field(EntriesKey), fields.values(EntriesKey)).map(decoded =>
         WorkflowRunsEnvelopeDto(totalCount = fields.number("total_count"), entries = decoded)
       )

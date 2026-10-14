@@ -121,7 +121,7 @@ object AccessTokenDto:
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
   given JsonDecoder[AccessTokenDto] =
-    JsonFields.reader(fromFields)
+    JsonDecoder.objectWithMembers(fromFields, "repositories")
 
   /** Projects an already-decoded object, so the field spellings exist in exactly one place.
     *

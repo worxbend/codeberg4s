@@ -67,8 +67,8 @@ final class RepositoryContentDtoSuite extends FunSuite with GoldenFixtures:
   test("a body that is the JSON literal null is a decoding failure"):
     assertEquals(failure("null"), Some("$"))
 
-  test("an array holding something that is not an entry is a decoding failure"):
-    assertEquals(failure("[1, 2, 3]"), Some("$"))
+  test("an array holding something that is not an entry fails at the original member index"):
+    assertEquals(failure("[1, 2, 3]"), Some("$[0]"))
 
   test("an entry whose type this library does not know is a decoding failure at that field"):
     val body = """{"name": "x", "path": "x", "sha": "abcdef12", "type": "wormhole"}"""

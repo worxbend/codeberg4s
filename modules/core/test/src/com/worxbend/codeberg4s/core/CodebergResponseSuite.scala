@@ -46,10 +46,28 @@ final class CodebergResponseSuite extends FunSuite:
   test("a header value is trimmed"):
     assertEquals(headers("x-request-id" -> " abc123 ").requestId, Some("abc123"))
 
+  test("request-id access normalizes OWS while stored headers retain raw credential-edge input"):
+    val raw      = " \t diagnostic-only-header-password \t "
+    val response = headers("X-Request-Id" -> raw)
+    assertEquals(response.headers.get("x-request-id"), Some(List(raw)))
+    assertEquals(response.rawRequestId, Some(raw))
+    assertEquals(response.requestId, Some("diagnostic-only-header-password"))
+    assertEquals(response.header("X-Request-Id"), response.requestId)
+
+  test("request-id access accepts values whose native adapter already removed OWS"):
+    val response = headers("X-Request-Id" -> "diagnostic-only-header-password")
+    assertEquals(response.requestId, Some("diagnostic-only-header-password"))
+
   test("only the first value of a repeated header is used"):
     val response = CodebergResponse(200, Map("x-total-count" -> List("42", "7")), ResponseBody.Empty)
 
     assertEquals(response.totalCount, Some(42))
+
+  test("diagnostic request-id access retains the first raw value even when normalization would discard it"):
+    val response = CodebergResponse(200, Map("X-Request-Id" -> List(" \t ", "second-id")), ResponseBody.Empty)
+    assertEquals(response.rawRequestId, Some(" \t "))
+    assertEquals(response.requestId, None)
+    assertEquals(headers().rawRequestId, None)
 
   test("x-total-count is parsed when the instance sends it"):
     assertEquals(headers("x-total-count" -> "42").totalCount, Some(42))

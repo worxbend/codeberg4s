@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, NestedMembers, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.{Issue, IssueNumber, LifecycleState}
 import com.worxbend.codeberg4s.users.User
@@ -115,6 +115,10 @@ final case class IssueDto(
 
 object IssueDto:
 
+  /** Validates only consumed array members, including embedded DTOs, before lenient projection. */
+  private[codeberg4s] def validateMembers(fields: JsonFields, at: JsonPath): Either[DecodeFailure, Unit] =
+    NestedMembers.objectArrays(fields, at, "assignees", "labels")
+
   /** The key whose mere presence marks an issue as a pull request; see the class note. */
   private val PullRequestKey: String = "pull_request"
 
@@ -122,7 +126,7 @@ object IssueDto:
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
   given JsonDecoder[IssueDto] =
-    JsonFields.reader(fromFields)
+    JsonDecoder.checkedObjectOf(fromFields)(validateMembers)
 
   /** Projects an already-decoded object, reusing the `fromFields` of every model it embeds so that no field spelling is
     * written twice.

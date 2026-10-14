@@ -1,9 +1,10 @@
 package com.worxbend.codeberg4s.client
 
-import com.worxbend.codeberg4s.core.Exec
+import com.worxbend.codeberg4s.core.{Exec, FailureCauses}
 import com.worxbend.codeberg4s.{CodebergError, CodebergException}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
 /** The [[com.worxbend.codeberg4s.core.Exec]] instance the published client runs on.
@@ -20,9 +21,9 @@ import scala.util.{Failure, Success}
   *     it, which is what makes a second attempt a second request. `FutureExecSuite` pins this down by counting
   *     invocations against an execution context that runs nothing until it is told to.
   *   - '''`attempt` only catches this library's failures.''' A [[com.worxbend.codeberg4s.CodebergException]] becomes a
-  *     `Left`; anything else stays a failed `Future`, because a `NullPointerException` from a caller's telemetry
-  *     callback is a defect and must not be laundered into a [[com.worxbend.codeberg4s.CodebergError]] nobody can act
-  *     on.
+  *     `Left` only when its inspected graph contains no fatal/interrupt state; anything else stays a failed `Future`,
+  *     because a `NullPointerException` from a caller's telemetry callback is a defect and must not be laundered into a
+  *     [[com.worxbend.codeberg4s.CodebergError]] nobody can act on.
   *
   * @param executionContext
   *   where continuations run; supplied by the caller, never created by this library
@@ -51,9 +52,15 @@ final class FutureExec(using executionContext: ExecutionContext) extends Exec[Fu
     */
   override def attempt[A](fa: Future[A]): Future[Either[CodebergError, A]] =
     fa.transform:
-      case Success(value)                    => Success(Right(value))
-      case Failure(CodebergException(error)) => Success(Left(error))
-      case Failure(other)                    => Failure(other)
+      case Success(value)                                                   => Success(Right(value))
+      case Failure(raised: CodebergException) if safeLibraryFailure(raised) => Success(Left(raised.error))
+      case Failure(other)                                                   => Failure(other)
+
+  /** A caller can attach foreign fatal/interrupt cleanup to the public exception carrier. Do not hide that graph just
+    * because its root happens to be this library's wrapper; unknown tails also retain their failed outcome.
+    */
+  private def safeLibraryFailure(error: CodebergException): Boolean =
+    FailureCauses.inspect(error).exists(_.all.forall(NonFatal.apply))
 
   /** Defers `thunk` until the returned effect is composed, so each retry issues a fresh request. See the class note. */
   override def suspend[A](thunk: () => Future[A]): Future[A] = Future.delegate(thunk())

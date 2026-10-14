@@ -1,6 +1,7 @@
 package com.worxbend.codeberg4s.quota.wire
 
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields}
+import com.worxbend.codeberg4s.JsonPath
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, NestedMembers}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.quota.{QuotaGroup, QuotaInfo, QuotaRule, QuotaUsedSize}
 
@@ -38,13 +39,17 @@ final case class QuotaInfoDto(groups: Vector[QuotaGroupDto], used: QuotaUsedSize
   /** Converts to the domain.
     *
     * '''Cannot fail''', and there is no `toDomainAt`: nothing in this payload is required, because nothing in it
-    * addresses anything. A group whose rules the instance sent in a shape this library cannot read loses those rules
-    * and keeps the group, which is the leniency `docs/HAZARDS.md` §1 demands.
+    * addresses anything. Whole wrong-kind containers still become empty; the decoder rejects malformed individual
+    * object-array members before this compatibility projection can discard them.
     */
   def toDomain: Either[DecodeFailure, QuotaInfo] =
     Right(QuotaInfo(groups = groups.map(_.toDomain), used = used))
 
 object QuotaInfoDto:
+
+  /** Validates only consumed array members, including embedded DTOs, before lenient projection. */
+  private[codeberg4s] def validateMembers(fields: JsonFields, at: JsonPath): Either[DecodeFailure, Unit] =
+    NestedMembers.objects(fields, at, "groups")(QuotaGroupDto.validateMembers)
 
   /** The key holding the size tree inside `used`. */
   val SizeKey: String = "size"
@@ -56,7 +61,7 @@ object QuotaInfoDto:
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
   given JsonDecoder[QuotaInfoDto] =
-    JsonFields.reader(fromFields)
+    JsonDecoder.checkedObjectOf(fromFields)(validateMembers)
 
   /** Projects an already-decoded object, flattening the `used` tree; see the class note. */
   def fromFields(fields: JsonFields): QuotaInfoDto =
@@ -105,9 +110,13 @@ final case class QuotaGroupDto(name: Option[String], rules: Vector[QuotaRuleDto]
 
 object QuotaGroupDto:
 
+  /** Validates only consumed array members, including embedded DTOs, before lenient projection. */
+  private[codeberg4s] def validateMembers(fields: JsonFields, at: JsonPath): Either[DecodeFailure, Unit] =
+    NestedMembers.objectArray(fields, at, "rules")
+
   /** Reads a `QuotaGroup` object. */
   given JsonDecoder[QuotaGroupDto] =
-    JsonFields.reader(fromFields)
+    JsonDecoder.checkedObjectOf(fromFields)(validateMembers)
 
   /** Projects an already-decoded object. */
   def fromFields(fields: JsonFields): QuotaGroupDto =

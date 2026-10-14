@@ -208,7 +208,7 @@ widest common subset: operations the spec marks `deprecated: true` are not
 offered at all, so a caller who needs one of those routes on an old instance has
 to send it by hand. An older instance will not have every
 endpoint, and a missing endpoint arrives as an ordinary
-`CodebergError.Api(ctx, 404, body)` — indistinguishable, at the type level, from
+`CodebergError.Api(ctx, 404, body, retryAfter)` — indistinguishable, at the type level, from
 a repository that does not exist. `client.version.get()` at startup is how you
 tell the two apart before they confuse you.
 

@@ -21,20 +21,22 @@ REST API v1.
   another page exists.
 - **Small dependency footprint** — sttp client4 and jsoniter-scala. That is the list.
 
-> Status: pre-release, `0.1.0` in progress. **All 432 in-scope operations are
+> Status: first release `v0.1.0`. **All 432 in-scope operations are
 > implemented** on both rails — the whole Forgejo v1 API except `admin`,
 > `activitypub` and `package`, which `PLAN.md` puts out of scope for v1, and
 > the seven operations the spec itself marks deprecated.
 > [`docs/ROADMAP.md`](docs/ROADMAP.md) tracks phases;
 > [`docs/API_INVENTORY.md`](docs/API_INVENTORY.md) has the endpoint-level
-> checklist and the honest percentage. Nothing is published to Maven Central
-> yet — see "Install".
+> checklist and the honest percentage. Maven Central publication is asynchronous
+> after the tag is pushed — see "Install".
 
 ## Install
 
-**Nothing is published to Maven Central yet.** The build is configured for it —
-five artifacts under `com.worxbend`, currently at `0.1.0-SNAPSHOT` — but until
-the `0.1.0` tag is cut these coordinates resolve only against a local publish.
+The release version is `0.1.0`, across five artifacts under `com.worxbend`.
+The `v0.1.0` tag starts the publication workflow; a pushed tag alone does not
+prove Central availability. Check the [release workflow](https://github.com/worxbend/codeberg4s/actions/workflows/release.yml)
+and use `RELEASING.md`'s verification steps before relying on public resolution.
+Until publication succeeds, build the tag and use a local publish.
 
 ```scala
 // Mill
@@ -660,9 +662,11 @@ contains one would silently authenticate as somebody else.
 
 ### Response size
 
-This library reads a whole response into memory; it does not stream. So every
-request carries a byte bound, and a body that passes it is abandoned part-read
-as `CodebergError.Transport(ctx, TransportCause.ResponseTooLarge(detail))`.
+The public API returns materialized values, not a stream. The transport reads
+incrementally under a byte bound after decompression, for every HTTP status,
+and closes the response stream when its reader exits. A body over the bound
+becomes `CodebergError.Transport(ctx, TransportCause.ResponseTooLarge(detail))`
+before full materialization. Compressed wire size is not the decoded-byte limit.
 
 - `maxResponseBodyBytes` — 16 MiB, applied to every textual response. The
   largest JSON body Forgejo produces is a file's contents, a blob capped by the
@@ -682,7 +686,12 @@ oversized body once per attempt, which turns one oversized response into
 
 `RetryPolicy.Default` is 3 attempts, 250 ms base delay, 8 s ceiling, full
 jitter, and it honours `Retry-After`. `RetryPolicy.Off` disables retrying
-entirely.
+entirely. Computed backoff preserves nanoseconds and caps before multiplication
+can overflow. Full jitter retains the millisecond sampling grid for exactly
+integral-millisecond computed delays; fractional computed delays sample
+nanosecond ticks. Injected `JitterSource` implementations receive scalar ticks
+in that selected unit, not invariably milliseconds. Retry-After is separate
+and is never jittered when honored.
 
 Eligibility is decided per operation, not per policy:
 
@@ -697,8 +706,10 @@ Eligibility is decided per operation, not per policy:
 
 ### Sharing an sttp backend
 
-`CodebergClient(config)` creates and owns a backend, and `close()` shuts it
-down. If your application already has one:
+`CodebergClient(config)` creates and owns a backend, its blocking-body I/O
+executor and its deadline timer. Body reads do not monopolize the caller
+execution context. `close()` initiates owned-resource release; `released`
+observes the close result. If your application already has a backend:
 
 ```scala
 import com.worxbend.codeberg4s.CodebergClient
@@ -719,17 +730,44 @@ val shared: CodebergClient = CodebergClient.usingBackend(config, sharedBackend)
 
 sttp models the connect timeout as a property of the backend rather than of a
 request, so `connectTimeout` is ignored on this path — configure it on the
-backend. `readTimeout` bounds the whole exchange of each request, headers and
-body, and is honoured either way.
+backend. `readTimeout` bounds the logical whole exchange of each attempt,
+headers and body, and is honoured either way. An injected backend must support
+sttp input-stream response handling and provide its own body-reader executor.
+A positive native timeout is rounded up to milliseconds; the logical deadline
+keeps its original precision.
 
-## Tokens are not logged, ever
+A deadline or `close()` settles outstanding logical wrappers; Scala `Future`
+does not cancel the physical exchange. A late-acquired stream is still read
+under the bound and closed on reader exit. `released` is not a proof that all
+caller-owned backend requests or remote mutations stopped. There is no total
+call/walk elapsed-time budget: retries, backoff, queueing, telemetry and decode
+work are separate from an individual exchange deadline.
+
+Automatic redirects are disabled for all methods, including downloads. A 3xx
+response is surfaced as `CodebergError.Api`; credentials and mutation bodies
+are not replayed to a redirect destination. Deployments with object-storage
+redirects need an application-level, separately authorized download path.
+The organization-member explicit 303 probe still uses the original endpoint;
+it does not follow `Location`.
+
+## Diagnostic credential protection
 
 `ApiToken` is a redacting type. Its `toString` is `***`, string interpolation of
 it is `***`, and `reveal` is the only way to get the material out — a method
-name you will notice in review. No `CodebergError` can contain a credential:
-the URI inside `CallContext` is redacted before the context is built, and
-`CodebergException`'s message is `CodebergError.describe`, which is assembled
-only from that redacted context and from server-supplied text.
+name you will notice in review. Client-produced diagnostics scrub configured
+token/password material and the actual Basic wire credential before clipping
+and before telemetry, including server/backend echoes and request ids. Secret
+issuing, reading and writing operations withhold payload-derived failure
+details; successful credential-bearing results remain accessible.
+
+These are explicit policies, not a detector for arbitrary secrets or their
+transformations. Ordinary server text can contain unrelated sensitive data,
+and a caller can construct a `CodebergError` independently of the client.
+Treat errors as untrusted diagnostics and keep application log policy. Raw
+fatal/defect failed effects retain their throwable identity and are not the
+structured, scrubbed library-error rail. Cause and suppressed-cleanup graphs
+are bounded before adaptation; unsafe state is not retried or materialized as
+an ordinary `Left`, even when attached to a public library-exception carrier.
 
 There are tests that assert exactly this, because a leaked token in an exception
 message is the failure mode that matters most in a library like this one.
@@ -771,8 +809,9 @@ Three guarantees worth knowing:
 
 - **A telemetry failure never fails the call it was observing.**
   Instrumentation that breaks must not break the application it instruments.
-- **Everything a callback receives is already redacted**, so an implementation
-  cannot leak a credential by logging what it is handed.
+- **Callbacks receive the same sanitized diagnostics as callers.** Configured
+  credentials are scrubbed, and sensitive-operation failure details are
+  withheld. This is not detection of arbitrary unrelated server secrets.
 - **`onRequest` and `onResponse` fire once per *attempt*.** A retried call
   produces several of each, which is how you see a retry storm.
   `onError` fires once per failed attempt and once more for the failure the

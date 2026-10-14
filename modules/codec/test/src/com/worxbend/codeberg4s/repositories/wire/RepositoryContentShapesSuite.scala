@@ -1,6 +1,6 @@
 package com.worxbend.codeberg4s.repositories.wire
 
-import com.worxbend.codeberg4s.codec.Json
+import com.worxbend.codeberg4s.codec.{Json, JsonValue}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.RepositoryContent
 
@@ -34,17 +34,33 @@ final class RepositoryContentShapesSuite extends FunSuite:
   test("a body that is JSON false is named as a boolean, not confused with absence"):
     assertEquals(message("false"), s"${Preamble}a boolean")
 
-  test("an array holding something that is not an entry blames the array, not the element"):
-    assertEquals(message("[1, 2, 3]"), s"${Preamble}an array holding a value that is not an object")
+  test("the JSON reader blames the first non-object member, not the whole array"):
+    assertEquals(failure("[1, 2, 3]").path.render, "$[0]")
 
-  test("an array is a directory only when every element is an object, one bad element is enough"):
+  test("the JSON reader keeps a non-object member's index after valid entries"):
     val body = """[{"name": "a", "path": "a", "sha": "abcdef12", "type": "file"}, "not an entry"]"""
 
-    assertEquals(message(body), s"${Preamble}an array holding a value that is not an object")
+    assertEquals(failure(body).path.render, "$[1]")
 
-  test("every unusable shape is reported at the root, since the whole body is the problem"):
-    List("null", "42", "true", """"README.md"""", "[1, 2, 3]").foreach: body =>
+  test("non-container whole-body shapes remain root failures"):
+    List("null", "42", "true", """"README.md"""").foreach: body =>
       assertEquals(failure(body).path.render, "$", s"wrong path for $body")
+
+  test("public fromJson remains an infallible Unexpected projection for malformed arrays"):
+    val value                           = Json.parse("[{}, null, 7]").fold(problem => fail(problem.message), identity)
+    val projected: RepositoryContentDto = RepositoryContentDto.fromJson(value)
+
+    assertEquals(projected, RepositoryContentDto.Unexpected("an array holding a value that is not an object"))
+    assertEquals(projected.toDomain.swap.toOption.map(_.path.render), Some("$"))
+    assertEquals(
+      projected.toDomain.swap.toOption.map(_.message),
+      Some(s"${Preamble}an array holding a value that is not an object"),
+    )
+
+  test("public fromJson still projects null as Unexpected with a root conversion failure"):
+    val projected: RepositoryContentDto = RepositoryContentDto.fromJson(JsonValue.Null)
+    assertEquals(projected, RepositoryContentDto.Unexpected("null"))
+    assertEquals(projected.toDomain.swap.toOption.map(_.path.render), Some("$"))
 
   test("the first unconvertible entry of a directory is the one reported, and a later one does not replace it"):
     val body =

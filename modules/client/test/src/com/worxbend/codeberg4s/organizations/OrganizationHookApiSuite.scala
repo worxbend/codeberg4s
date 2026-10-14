@@ -173,7 +173,7 @@ final class OrganizationHookApiSuite extends FunSuite with OrganizationStubs:
   test("a 2xx payload with no id becomes DecodingFailed, never an escaping codec exception"):
     onApi(responding(200, """{"type":"forgejo"}""")): api =>
       api.hooks.attempt.get(Org, Hook).map:
-        case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$.id")
+        case Left(CodebergError.DecodingFailed(_, _, path, _)) => assertEquals(path.render, "$")
         case other                                             => fail(s"expected a decoding failure, got $other")
 
   test("a hook body that does not decode is never quoted, because it carries the authorization header"):

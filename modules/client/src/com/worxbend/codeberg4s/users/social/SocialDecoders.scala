@@ -95,9 +95,9 @@ private[social] object SocialDecoders:
   val publicKey: Decode[PublicKey] =
     WireDecode.single(Json.decoder[PublicKeyDto])(_.toDomain)
 
-  /** A bare array of access-token objects, with the credential field dropped unconditionally. */
+  /** A bare array of access-token objects. The model drops credentials, but malformed wire data may carry them. */
   val accessTokens: Decode[Vector[AccessToken]] =
-    WireDecode.vector(Json.decoder[Vector[AccessTokenDto]])
+    Decode.sensitive(WireDecode.vector(Json.decoder[Vector[AccessTokenDto]]))
 
   /** The `201` of a token creation — the one decoder in this library that yields a usable personal access token.
     *

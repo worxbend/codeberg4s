@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.issues.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, Timestamps, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{JsonDecoder, JsonFields, NestedMembers, Timestamps, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.issues.{CommentId, TimelineEvent}
 import com.worxbend.codeberg4s.users.wire.UserDto
@@ -113,11 +113,19 @@ final case class TimelineCommentDto(
 
 object TimelineCommentDto:
 
+  /** Validates consumed members before lenient projection. */
+  private[codeberg4s] def validateMembers(fields: JsonFields, at: JsonPath): Either[DecodeFailure, Unit] =
+    for
+      _ <- NestedMembers.nested(fields, at, "ref_issue")(IssueDto.validateMembers)
+      _ <- NestedMembers.nested(fields, at, "dependent_issue")(IssueDto.validateMembers)
+      _ <- NestedMembers.nested(fields, at, "tracked_time")(TrackedTimeDto.validateMembers)
+    yield ()
+
   /** Reads a `TimelineComment` object. Absent and `null` are the same thing for every field; see
     * [[com.worxbend.codeberg4s.codec.JsonFields]].
     */
   given JsonDecoder[TimelineCommentDto] =
-    JsonFields.reader(fromFields)
+    JsonDecoder.checkedObjectOf(fromFields)(validateMembers)
 
   /** Projects an already-decoded object, reusing the `fromFields` of every model it embeds so that no field spelling is
     * written twice.

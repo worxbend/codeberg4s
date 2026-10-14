@@ -95,8 +95,8 @@ object ObservingRequests:
       Future.successful(ExampleConsole.line(s"  <- $status ${render(ctx)}"))
 
     override def onError(ctx: CallContext, error: CodebergError): Future[Unit] =
-      // `describe` is bounded and secret-free, which is what makes it safe to
-      // put straight into a log line.
+      // The client sanitizes configured credentials before this callback.
+      // A production sink should additionally escape untrusted server text.
       Future.successful(ExampleConsole.line(s"  !! ${ctx.operation}: ${error.describe}"))
 
     private def render(ctx: CallContext): String =

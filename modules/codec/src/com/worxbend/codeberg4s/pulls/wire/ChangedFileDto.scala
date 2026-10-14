@@ -60,12 +60,12 @@ object ChangedFileDto:
   /** Projects an already-decoded object. */
   def fromFields(fields: JsonFields): ChangedFileDto =
     ChangedFileDto(
-      filename         = fields.text("filename"),
+      filename         = fields.rawText("filename").filter(_.nonEmpty),
       status           = fields.text("status"),
       additions        = fields.number("additions"),
       deletions        = fields.number("deletions"),
       changes          = fields.number("changes"),
-      previousFilename = fields.text("previous_filename"),
+      previousFilename = fields.rawText("previous_filename").filter(_.nonEmpty),
       htmlUrl          = fields.text("html_url"),
       contentsUrl      = fields.text("contents_url"),
       rawUrl           = fields.text("raw_url"),

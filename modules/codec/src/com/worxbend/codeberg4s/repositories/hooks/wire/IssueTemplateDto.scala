@@ -100,7 +100,7 @@ object IssueTemplateDto:
 
   /** Reads an `IssueTemplate` object. Absent and `null` are the same thing for every field; see [[JsonFields]]. */
   given JsonDecoder[IssueTemplateDto] =
-    JsonFields.reader(fromFields)
+    JsonDecoder.objectWithMembers(fromFields, FieldsKey)
 
   /** Projects an already-decoded object. */
   def fromFields(fields: JsonFields): IssueTemplateDto =

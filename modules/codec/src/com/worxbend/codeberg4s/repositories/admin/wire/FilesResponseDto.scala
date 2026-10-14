@@ -1,7 +1,7 @@
 package com.worxbend.codeberg4s.repositories.admin.wire
 
 import com.worxbend.codeberg4s.JsonPath
-import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, Wire, WireModel}
+import com.worxbend.codeberg4s.codec.{ArrayElements, JsonDecoder, JsonFields, NestedMembers, Wire, WireModel}
 import com.worxbend.codeberg4s.core.DecodeFailure
 import com.worxbend.codeberg4s.repositories.admin.FileChangeSet
 import com.worxbend.codeberg4s.repositories.gitdata.wire.FileCommitDto
@@ -43,9 +43,16 @@ final case class FilesResponseDto(
 
 object FilesResponseDto:
 
+  /** Validates only consumed array members, including embedded DTOs, before lenient projection. */
+  private[codeberg4s] def validateMembers(fields: JsonFields, at: JsonPath): Either[DecodeFailure, Unit] =
+    for
+      _ <- NestedMembers.nested(fields, at, "commit")(FileCommitDto.validateMembers)
+      _ <- NestedMembers.objectArray(fields, at, "files")
+    yield ()
+
   /** Reads a `FilesResponse` object. */
   given JsonDecoder[FilesResponseDto] =
-    JsonFields.reader(fromFields)
+    JsonDecoder.checkedObjectOf(fromFields)(validateMembers)
 
   /** Projects an already-decoded object, so the field spellings exist in exactly one place. */
   def fromFields(fields: JsonFields): FilesResponseDto =
