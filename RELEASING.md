@@ -5,9 +5,10 @@ should not have. The tag-driven half is automated in
 [`.github/workflows/release.yml`](.github/workflows/release.yml); this document
 is that workflow explained, plus the parts a machine cannot do.
 
-Nothing has been published yet. `Publish.version` in `build.mill` reads
-`0.1.0-SNAPSHOT`, and the Maven Central coordinates in `README.md` resolve to
-nothing until the first `v0.1.0` tag is pushed.
+The first release is `v0.1.0`; `Publish.version` in `build.mill` is `0.1.0`
+at that tag. Pushing the tag starts publication, not proof of availability:
+the Maven Central coordinates in `README.md` resolve publicly only after the
+release workflow and Central validation complete. Verify them as described below.
 
 ---
 

@@ -10,6 +10,17 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-10-14
+
+### Migration from development snapshots
+
+Automatic redirects are no longer followed, including downloads. Injected
+backends must support input-stream response handling. Malformed nested members
+now fail at their original indexes, and sensitive failure diagnostics withhold
+payload-derived details. Both Future rails remain; timeout and close do not
+promise physical cancellation. See `docs/ARCHITECTURE_REVIEW.md` for evidence
+and the complete compatibility notes.
+
 ### Added
 
 - Exact repository-path construction for wire filenames and follow-up operations,
@@ -689,10 +700,11 @@ external compiler and packaged-consumer checks supplement, not replace, it.
   replacement in the table; every replacement takes the same arguments minus the
   issue number the deprecated comment routes carried and ignored.
 
-## [0.1.0] — unreleased
+### Initial implementation history
 
-First release. `build.mill` publishes `0.1.0-SNAPSHOT` until the tag is cut;
-this entry is the release note that tag will carry.
+The following notes record the initial implementation before the fixes above.
+Their original operation counts and descriptions are historical, not the final
+release contract; the later corrections and removals above take precedence.
 
 Nothing has been published to Maven Central yet, so "Changed" and "Fixed" below
 are not a migration path from an earlier release — there is no earlier release.

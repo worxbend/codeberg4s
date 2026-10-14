@@ -21,20 +21,22 @@ REST API v1.
   another page exists.
 - **Small dependency footprint** — sttp client4 and jsoniter-scala. That is the list.
 
-> Status: pre-release, `0.1.0` in progress. **All 432 in-scope operations are
+> Status: first release `v0.1.0`. **All 432 in-scope operations are
 > implemented** on both rails — the whole Forgejo v1 API except `admin`,
 > `activitypub` and `package`, which `PLAN.md` puts out of scope for v1, and
 > the seven operations the spec itself marks deprecated.
 > [`docs/ROADMAP.md`](docs/ROADMAP.md) tracks phases;
 > [`docs/API_INVENTORY.md`](docs/API_INVENTORY.md) has the endpoint-level
-> checklist and the honest percentage. Nothing is published to Maven Central
-> yet — see "Install".
+> checklist and the honest percentage. Maven Central publication is asynchronous
+> after the tag is pushed — see "Install".
 
 ## Install
 
-**Nothing is published to Maven Central yet.** The build is configured for it —
-five artifacts under `com.worxbend`, currently at `0.1.0-SNAPSHOT` — but until
-the `0.1.0` tag is cut these coordinates resolve only against a local publish.
+The release version is `0.1.0`, across five artifacts under `com.worxbend`.
+The `v0.1.0` tag starts the publication workflow; a pushed tag alone does not
+prove Central availability. Check the [release workflow](https://github.com/worxbend/codeberg4s/actions/workflows/release.yml)
+and use `RELEASING.md`'s verification steps before relying on public resolution.
+Until publication succeeds, build the tag and use a local publish.
 
 ```scala
 // Mill
