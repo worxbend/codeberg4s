@@ -1,0 +1,63 @@
+name: Publish GitHub Packages
+
+on:
+  push:
+    tags: ["v*"]
+  # Choose the existing release tag in the Run workflow ref selector.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-packages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Require a release tag
+    if: ${{ !github.event.repository.fork }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: test "$GITHUB_REF_TYPE" = tag
+
+  validate:
+    needs: tag
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    env:
+      MAVEN_REPOSITORY: https://maven.pkg.github.com/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.validate.outputs.validated-sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/scala-toolchain
+      - name: Tag, validated commit, versions and com.worxbend coordinates agree
+        env:
+          VALIDATED_SHA: ${{ needs.validate.outputs.validated-sha }}
+        run: python3 .github/scripts/validate-release.py
+      - name: Publish libraries to GitHub Packages
+        timeout-minutes: 25
+        env:
+          MILL_MAVEN_USERNAME: ${{ github.actor }}
+          MILL_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./mill mill.javalib.MavenPublishModule/publishAll \
+            --publishArtifacts 'modules.{domain,core,codec,transport,client}.publishArtifacts' \
+            --releaseUri "$MAVEN_REPOSITORY" --snapshotUri "$MAVEN_REPOSITORY"
+      - name: Verify every GitHub Packages POM and jar
+        timeout-minutes: 10
+        env:
+          GITHUB_PACKAGES_USERNAME: ${{ github.actor }}
+          GITHUB_PACKAGES_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 .github/scripts/verify-published.py "$MAVEN_REPOSITORY"

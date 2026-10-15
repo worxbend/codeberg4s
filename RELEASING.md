@@ -413,18 +413,32 @@ read out of Mill 1.1.7's own sources
 
 | Repository secret | Environment variable Mill reads | What it is |
 | --- | --- | --- |
-| `SONATYPE_USERNAME` | `MILL_SONATYPE_USERNAME` | the *token* username generated in the Central portal, not the account login |
-| `SONATYPE_PASSWORD` | `MILL_SONATYPE_PASSWORD` | the matching token password |
-| `PGP_SECRET_BASE64` | `MILL_PGP_SECRET_BASE64` | output of the `gpg --armor --export-secret-keys …` piped through `base64 -w0`, above |
-| `PGP_PASSPHRASE` | `MILL_PGP_PASSPHRASE` | the key's passphrase; may be empty if the key has none |
+| `MILL_SONATYPE_USERNAME` | `MILL_SONATYPE_USERNAME` | the *token* username generated in the Central portal, not the account login |
+| `MILL_SONATYPE_PASSWORD` | `MILL_SONATYPE_PASSWORD` | the matching token password |
+| `MILL_PGP_SECRET_BASE64` | `MILL_PGP_SECRET_BASE64` | output of the `gpg --armor --export-secret-keys …` piped through `base64 -w0`, above |
+| `MILL_PGP_PASSPHRASE` | `MILL_PGP_PASSPHRASE` | the generated signing key's passphrase |
 
 They are passed as environment variables rather than as command-line
 arguments, so they never reach the process table or Mill's own logs. The
-workflow fails early, before signing anything, if the first three are empty.
+workflow checks all four before signing anything.
 
-The workflow also runs in a `maven-central` GitHub environment. Configure that
-environment with a required reviewer: it is the last human checkpoint before
-an artifact becomes immutable.
+Both publishing workflows read repository Actions secrets. On a `v*` tag push,
+`release.yml` publishes to Central and `publish-packages.yml` publishes to GitHub
+Packages. Both call the complete CI workflow, including property tests, and check
+out its validated SHA. The tag, all five versions, `com.worxbend` POM coordinates,
+and internal dependency coordinates must agree before uploading.
+
+For a retry, select an existing release tag in **Run workflow**. Branches and
+snapshots are rejected. Both workflows download every published POM and
+main/source/javadoc jar and compare SHA-256 with the local build; Central allows
+15 minutes for public repository propagation. Inspect a partial upload before
+retrying an immutable version.
+
+GitHub Packages uses the built-in `GITHUB_TOKEN` with `packages: write`; it needs
+no additional repository secrets. Consumers add
+`https://maven.pkg.github.com/worxbend/codeberg4s` as a Maven resolver and supply a
+GitHub token with `read:packages`. The coordinates are the same `com.worxbend`
+coordinates listed above.
 
 ---
 
@@ -500,8 +514,9 @@ an artifact becomes immutable.
    The workflow refuses to publish when the two disagree, and refuses a tag
    whose version still ends in `-SNAPSHOT`.
 
-9. **Watch the workflow.** It re-runs `./verify.sh` from a clean checkout,
-   then `./mill modules.__.mimaReportBinaryIssues` when
+9. **Watch both publishing workflows.** They run the full CI workflow, including
+   `./verify.sh` and `./verify.sh --properties`, from the release commit. Central runs
+   `./mill modules.__.mimaReportBinaryIssues` when
    `Publish.binaryCompatibleWith` names a release to compare against, before
    publishing anything. A release is not exempt from the gate; it is the build
    that most needs it.
@@ -524,7 +539,9 @@ an artifact becomes immutable.
   automatically once validation passes. To stage a bundle and inspect it in
   the portal before it becomes public, run
   `./mill mill.javalib.SonatypeCentralPublishModule/publishAll --shouldRelease false`
-  and press the button by hand. That is worth doing for `0.1.0`.
+  and publish from the portal. The manual `Release` dispatch also supports
+  this through its `release: false` input; public verification is skipped until
+  the deployment is released.
 
 ### Snapshots
 

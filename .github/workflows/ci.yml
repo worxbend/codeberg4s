@@ -18,6 +18,11 @@ name: CI
 # they may as well overlap.
 
 on:
+  workflow_call:
+    outputs:
+      validated-sha:
+        description: Commit checked by the complete CI workflow
+        value: ${{ jobs.verify.outputs.validated-sha }}
   push:
     branches: [main]
   pull_request:
@@ -29,11 +34,13 @@ permissions:
 # main is excluded from cancellation because its history is what nightly and
 # release runs are judged against.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   verify:
+    outputs:
+      validated-sha: ${{ steps.commit.outputs.sha }}
     name: verify.sh
     runs-on: ubuntu-latest
     # The fast gate compiles five modules and runs ~3500 tests from a cold
@@ -46,7 +53,12 @@ jobs:
           # verify.sh's scalafmt step asks Git which Scala sources are tracked
           # (.scalafmt.conf sets project.git = true). A shallow checkout is
           # enough for that, but the working tree must be a real repository.
+          persist-credentials: false
           fetch-depth: 1
+
+      - name: Record validated commit
+        id: commit
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - uses: ./.github/actions/scala-toolchain
 
@@ -55,6 +67,9 @@ jobs:
       # recompile from scratch in each of them, which costs more than it saves
       # and loses verify.sh's ordering — the cheap checks are first so a
       # formatting mistake fails in seconds.
+      - name: Publishing guard tests
+        run: python3 -m unittest discover -s .github/scripts -p 'test_*.py'
+
       - name: Verify
         run: ./verify.sh
 
@@ -94,6 +109,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 1
 
       - uses: ./.github/actions/scala-toolchain
