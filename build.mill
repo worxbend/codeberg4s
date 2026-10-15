@@ -45,7 +45,7 @@ object Versions:
   */
 object Publish:
   val group      = "com.worxbend"
-  val version    = "0.1.0"
+  val version    = "0.1.1"
   /** The canonical forge. GitHub hosts the repository, the issue tracker, the release and nightly workflows and the
     * documentation site; a Forgejo mirror only re-runs the gate (`.forgejo/workflows/ci.yml`). Every link that names
     * the project — the issue-template contact links, `CONTRIBUTING.md`, the site — follows this value.

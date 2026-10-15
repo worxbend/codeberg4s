@@ -21,7 +21,7 @@ REST API v1.
   another page exists.
 - **Small dependency footprint** — sttp client4 and jsoniter-scala. That is the list.
 
-> Status: first release `v0.1.0`. **All 432 in-scope operations are
+> Status: release `v0.1.1`. **All 432 in-scope operations are
 > implemented** on both rails — the whole Forgejo v1 API except `admin`,
 > `activitypub` and `package`, which `PLAN.md` puts out of scope for v1, and
 > the seven operations the spec itself marks deprecated.
@@ -32,18 +32,18 @@ REST API v1.
 
 ## Install
 
-The release version is `0.1.0`, across five artifacts under `com.worxbend`.
-The `v0.1.0` tag starts the publication workflow; a pushed tag alone does not
+The release version is `0.1.1`, across five artifacts under `com.worxbend`.
+The `v0.1.1` tag starts the publication workflow; a pushed tag alone does not
 prove Central availability. Check the [release workflow](https://github.com/worxbend/codeberg4s/actions/workflows/release.yml)
 and use `RELEASING.md`'s verification steps before relying on public resolution.
 Until publication succeeds, build the tag and use a local publish.
 
 ```scala
 // Mill
-def mvnDeps = Seq(mvn"com.worxbend::codeberg4s-client:0.1.0")
+def mvnDeps = Seq(mvn"com.worxbend::codeberg4s-client:0.1.1")
 
 // sbt
-libraryDependencies += "com.worxbend" %% "codeberg4s-client" % "0.1.0"
+libraryDependencies += "com.worxbend" %% "codeberg4s-client" % "0.1.1"
 ```
 
 ### Requires a Java 25 runtime

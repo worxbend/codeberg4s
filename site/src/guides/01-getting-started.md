@@ -24,20 +24,19 @@ Two things shape everything else in these guides:
 
 ## Adding the dependency
 
-**Nothing is published to Maven Central yet.** The build is configured for it —
-five artifacts under the `com.worxbend` organisation, currently at
-`0.1.0-SNAPSHOT` — but until the `0.1.0` tag is cut, the coordinates below
-resolve only against a local publish. This is the first thing to know, because
-a dependency line that does not resolve is where most people stop.
+Version `0.1.1` publishes five artifacts under `com.worxbend` to Maven Central
+and GitHub Packages. The release tag starts both publishing workflows; public
+coordinates become available when those workflows finish. Until then, build the
+tag and publish it locally.
 
 ```scala
 // Mill
-def mvnDeps = Seq(mvn"com.worxbend::codeberg4s-client:0.1.0")
+def mvnDeps = Seq(mvn"com.worxbend::codeberg4s-client:0.1.1")
 ```
 
 ```scala
 // sbt
-libraryDependencies += "com.worxbend" %% "codeberg4s-client" % "0.1.0"
+libraryDependencies += "com.worxbend" %% "codeberg4s-client" % "0.1.1"
 ```
 
 `codeberg4s-client` is the artifact you want. It pulls in `codeberg4s-transport`,

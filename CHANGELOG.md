@@ -10,6 +10,16 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-10-15
+
+### Fixed
+
+- Configure signed Maven Central publication with repository signing and token
+  secrets, and add GitHub Packages publication for all five library modules.
+- Require complete CI, matching release tags and `com.worxbend` POM coordinates
+  before publication; download and verify every published POM and jar.
+- Preserve the 0.1.0 library API and runtime behavior.
+
 ## [0.1.0] — 2026-10-14
 
 ### Migration from development snapshots

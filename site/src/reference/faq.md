@@ -269,12 +269,12 @@ transitively. The exception is a module that needs to *handle* a `CodebergError`
 without making requests — a shared error-rendering module, say. That can depend
 on `codeberg4s-domain` and link no HTTP client at all.
 
-## Why is nothing on Maven Central?
+## When are release artifacts available on Maven Central?
 
-Because `0.1.0` has not been tagged. The build is configured for it and the
-coordinates are stable; until then they resolve only against a local publish.
-This is the first thing a stranger hits, and it is tracked as blocking in
-[`docs/READINESS.md`](../project/READINESS.md).
+The `v0.1.1` tag triggers publication of all five `com.worxbend` artifacts.
+Public coordinates resolve after the Central publishing workflow finishes.
+Check the repository Actions runs before relying on a new version; the same
+release is also published to GitHub Packages.
 
 ## Is it thread-safe? Can I share one client?
 

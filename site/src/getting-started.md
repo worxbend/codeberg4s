@@ -5,21 +5,20 @@ this site. If a snippet here stops matching the API, the site build fails.
 
 ## Install
 
-**Nothing is published to Maven Central yet.** The build is configured for it —
-five artifacts under `com.worxbend`, currently at `0.1.0-SNAPSHOT` — but until
-the `0.1.0` tag is cut, these coordinates resolve only against a local publish.
-That is the honest state of affairs, and the first thing you would otherwise
-discover the hard way.
+Version `0.1.1` publishes five artifacts under `com.worxbend` to Maven Central
+and GitHub Packages. The release tag starts both publishing workflows; public
+coordinates become available when those workflows finish. Until then, build the
+tag and publish it locally.
 
 ```scala
 // Mill
-def mvnDeps = Seq(mvn"com.worxbend::codeberg4s-client:0.1.0")
+def mvnDeps = Seq(mvn"com.worxbend::codeberg4s-client:0.1.1")
 
 // sbt
-libraryDependencies += "com.worxbend" %% "codeberg4s-client" % "0.1.0"
+libraryDependencies += "com.worxbend" %% "codeberg4s-client" % "0.1.1"
 
 // scala-cli
-//> using dep com.worxbend::codeberg4s-client:0.1.0
+//> using dep com.worxbend::codeberg4s-client:0.1.1
 ```
 
 `codeberg4s-client` pulls in `-transport`, `-codec`, `-core` and `-domain`
